@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ClipboardCheck, X } from 'lucide-react';
+import { Check, ClipboardCheck, Paperclip, X } from 'lucide-react';
 import { leaveApi } from '../../api/leave';
+import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { qk } from '../../api/keys';
 import {
   Avatar,
@@ -102,7 +103,10 @@ export function LeaveApprovalsPage() {
                     {r.toDate !== r.fromDate && <> – {formatDate(r.toDate)}</>}
                   </Td>
                   <Td className="text-right tabular-nums">{formatNumber(r.days)}</Td>
-                  <Td className="max-w-xs truncate" title={r.reason ?? undefined}>{r.reason ?? '—'}</Td>
+                  <Td className="max-w-xs truncate" title={r.reason ?? undefined}>
+                    {r.attachmentCount > 0 && <Paperclip className="mr-1 inline size-3.5 text-zinc-400" aria-label={`${r.attachmentCount} file(s)`} />}
+                    {r.reason ?? '—'}
+                  </Td>
                   <Td>{formatDateTimeUtc(status === 'Pending' ? r.createdAtUtc : r.decidedAtUtc)}</Td>
                   {status === 'Pending' ? (
                     <Td className="text-right">
@@ -172,6 +176,7 @@ function DecisionModal({ request, approve, onClose }: { request: LeaveRequest; a
       {request.reason && (
         <p className="mb-4 rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">“{request.reason}”</p>
       )}
+      {request.attachmentCount > 0 && <AttachmentList owner="Leave" ownerId={request.id} className="mb-4" />}
       <Field label="Note to employee" hint="Optional">
         <Textarea value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} />
       </Field>

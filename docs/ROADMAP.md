@@ -13,7 +13,7 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 | Piece | What it gives every module | Status |
 |---|---|---|
 | Approval workflows | Per request type: auto-approve, line manager, manager's manager, HR, specific employee, in any order (up to 5 steps); approve/reject with notes; one "Approvals" inbox; timeline on every request | ✅ for leave and expenses; each new module adds its request type |
-| Attachments | Upload files on any request; stored per company; images and PDF preview | 🟡 (expense receipts only) |
+| Attachments | Files on leave requests and separations, employee document folder with type and expiry date; PDF/images/Word/Excel up to 5 MB; open in browser | ✅ (expense receipts kept on claim items) |
 | Notifications | In-app bell + email on submit/approve/reject; templates with insertable fields | ⬜ |
 | Excel import/export | Download sample template, upload, validate row by row, export any grid | ⬜ |
 | Reports | "View report" on every grid: filter, print, export | ⬜ |

@@ -139,6 +139,27 @@ public enum ApprovalRequestType
     Expense = 2,
 }
 
+/// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
+public enum AttachmentOwner
+{
+    Leave = 1,
+    Separation = 2,
+    /// <summary>The employee's own document folder (owner id = employee id).</summary>
+    EmployeeDocument = 3,
+}
+
+public enum DocumentCategory
+{
+    Cnic = 1,
+    Passport = 2,
+    Degree = 3,
+    ExperienceLetter = 4,
+    Contract = 5,
+    Medical = 6,
+    Photo = 7,
+    Other = 8,
+}
+
 public enum ApproverKind
 {
     LineManager = 1,

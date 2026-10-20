@@ -149,7 +149,9 @@ function defaultTitle(status: number): string {
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  const isForm = options.body instanceof FormData;
+  // The browser sets the multipart boundary itself for FormData.
+  if (options.body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
   const bearer = options.token ?? token;
   if (bearer) headers.Authorization = `Bearer ${bearer}`;
 
@@ -158,7 +160,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     res = await fetch(`/api${path}${buildQuery(options.query)}`, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
     });
   } catch {
     throw new ApiError(0, { title: 'Cannot reach the server. Check your connection and try again.' });
@@ -187,9 +189,45 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+/** Downloads a protected file (the bearer token cannot go in a link) so it can be shown through an object URL. */
+export async function fetchBlob(path: string): Promise<Blob> {
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  } catch {
+    throw new ApiError(0, { title: 'Cannot reach the server. Check your connection and try again.' });
+  }
+  if (!res.ok) throw new ApiError(res.status, { status: res.status, title: defaultTitle(res.status) });
+  return res.blob();
+}
+
+/** Opens a protected file in a new tab (images and PDFs show, other types download). */
+export async function openProtectedFile(path: string, fileName: string): Promise<void> {
+  // Open the tab synchronously so pop-up blockers allow it, then point it at the file.
+  const tab = window.open('', '_blank');
+  try {
+    const url = URL.createObjectURL(await fetchBlob(path));
+    const viewable = /\.(pdf|png|jpe?g|webp)$/i.test(fileName);
+    if (viewable && tab) {
+      tab.location.href = url;
+    } else {
+      tab?.close();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  } catch (err) {
+    tab?.close();
+    throw err;
+  }
+}
+
 export const http = {
   get: <T>(path: string, query?: Query) => request<T>(path, { query }),
   post: <T = void>(path: string, body?: unknown) => request<T>(path, { method: 'POST', body: body ?? {} }),
   put: <T = void>(path: string, body?: unknown) => request<T>(path, { method: 'PUT', body: body ?? {} }),
   del: <T = void>(path: string) => request<T>(path, { method: 'DELETE' }),
+  upload: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
 };

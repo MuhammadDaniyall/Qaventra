@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, Plus } from 'lucide-react';
+import { CalendarDays, Paperclip, Plus, X } from 'lucide-react';
+import { ATTACHMENT_ACCEPT, attachmentProblem, attachmentsApi } from '../../api/attachments';
 import { leaveApi } from '../../api/leave';
+import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { errorMessage } from '../../api/client';
 import { useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -14,6 +16,7 @@ import {
   ErrorState,
   Field,
   FormError,
+  IconButton,
   Input,
   Modal,
   PageHeader,
@@ -40,6 +43,7 @@ export function MyLeavePage() {
   const qc = useQueryClient();
   const [applyOpen, setApplyOpen] = useState(false);
   const [cancelling, setCancelling] = useState<LeaveRequest | null>(null);
+  const [filesFor, setFilesFor] = useState<LeaveRequest | null>(null);
   const balances = useQuery({ queryKey: qk.leaveBalances, queryFn: () => leaveApi.balances() });
   const requests = useQuery({ queryKey: qk.leaveMy, queryFn: leaveApi.my });
 
@@ -116,6 +120,7 @@ export function MyLeavePage() {
                 <Th>Status</Th>
                 <Th>Reason</Th>
                 <Th>Decision note</Th>
+                <Th>Files</Th>
                 <Th className="text-right">
                   <span className="sr-only">Actions</span>
                 </Th>
@@ -135,6 +140,13 @@ export function MyLeavePage() {
                   </Td>
                   <Td className="max-w-xs truncate" title={r.reason ?? undefined}>{r.reason ?? '—'}</Td>
                   <Td className="max-w-xs truncate" title={r.decisionNote ?? undefined}>{r.decisionNote ?? '—'}</Td>
+                  <Td>
+                    {(r.attachmentCount > 0 || r.status === 'Pending') && (
+                      <Button variant="ghost" size="sm" icon={<Paperclip className="size-3.5" />} onClick={() => setFilesFor(r)}>
+                        {r.attachmentCount > 0 ? r.attachmentCount : 'Add'}
+                      </Button>
+                    )}
+                  </Td>
                   <Td className="text-right">
                     {r.status === 'Pending' && (
                       <Button variant="ghost" size="sm" onClick={() => setCancelling(r)}>
@@ -150,6 +162,11 @@ export function MyLeavePage() {
       </Card>
 
       {applyOpen && <ApplyLeaveModal balances={balances.data ?? []} onClose={() => setApplyOpen(false)} />}
+      {filesFor && (
+        <Modal open onClose={() => setFilesFor(null)} title="Files" description={`${filesFor.leaveType} · ${formatDate(filesFor.fromDate)}`}>
+          <AttachmentList owner="Leave" ownerId={filesFor.id} emptyText="No files attached to this request." />
+        </Modal>
+      )}
 
       <ConfirmDialog
         open={!!cancelling}
@@ -205,6 +222,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(todayIso());
   const [reason, setReason] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const typeId = leaveTypeId || active[0]?.id || '';
@@ -220,9 +238,16 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   const over = balance && days.data && days.data.days > balance.available;
 
   const apply = useMutation({
-    mutationFn: () => leaveApi.apply({ leaveTypeId: typeId, fromDate: from, toDate: to, reason: reason.trim() || null }),
-    onSuccess: (r) => {
+    mutationFn: async () => {
+      const r = await leaveApi.apply({ leaveTypeId: typeId, fromDate: from, toDate: to, reason: reason.trim() || null });
+      // The request exists now; a failed upload must not hide that, so it is reported separately.
+      const failed: string[] = [];
+      for (const f of files) await attachmentsApi.upload('Leave', r.id, f).catch(() => failed.push(f.name));
+      return { r, failed };
+    },
+    onSuccess: ({ r, failed }) => {
       toast.success('Leave requested', `${formatNumber(r.days)} day(s) of ${r.leaveType} sent for approval.`);
+      if (failed.length) toast.error('Some files did not upload', `${failed.join(', ')}. Add them from the Files button.`);
       qc.invalidateQueries({ queryKey: qk.leave });
       qc.invalidateQueries({ queryKey: qk.approvals });
       qc.invalidateQueries({ queryKey: qk.dashboard });
@@ -300,6 +325,37 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         <Field label="Reason">
           <Textarea value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} placeholder="Optional" />
         </Field>
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Supporting documents <span className="font-normal text-zinc-500">(e.g. medical certificate)</span>
+          </p>
+          {files.map((f) => (
+            <div key={f.name} className="flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-800/50">
+              <Paperclip className="size-4 text-zinc-400" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate">{f.name}</span>
+              <IconButton label={`Remove ${f.name}`} onClick={() => setFiles((l) => l.filter((x) => x !== f))}>
+                <X className="size-4" />
+              </IconButton>
+            </div>
+          ))}
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-sm text-zinc-600 hover:border-accent-400 hover:text-accent-700 dark:border-zinc-700 dark:text-zinc-300">
+            <Paperclip className="size-4" aria-hidden="true" />
+            Attach file
+            <input
+              type="file"
+              multiple
+              accept={ATTACHMENT_ACCEPT}
+              className="sr-only"
+              onChange={(e) => {
+                const chosen = Array.from(e.target.files ?? []);
+                const problem = chosen.map(attachmentProblem).find(Boolean);
+                if (problem) setError(problem);
+                else setFiles((l) => [...l, ...chosen.filter((c) => !l.some((x) => x.name === c.name))]);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        </div>
       </form>
     </Modal>
   );

@@ -17,7 +17,7 @@ public record DecideLeaveRequest([StringLength(1000)] string? Note);
 public record LeaveRequestDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, Guid LeaveTypeId, string LeaveType,
     DateOnly FromDate, DateOnly ToDate, decimal Days, string? Reason, LeaveStatus Status,
-    DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote);
+    DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, int AttachmentCount);
 
 public record LeaveBalanceDto(Guid LeaveTypeId, string LeaveType, string Code, decimal Entitled, decimal Used, decimal Pending, decimal Available);
 
@@ -109,9 +109,10 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
 
     private Guid MyEmployeeId() => me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
 
-    private static IQueryable<LeaveRequestDto> Project(IQueryable<Domain.Entities.LeaveRequest> q) =>
+    private IQueryable<LeaveRequestDto> Project(IQueryable<Domain.Entities.LeaveRequest> q) =>
         q.OrderByDescending(r => r.CreatedAtUtc).Select(r => new LeaveRequestDto(
             r.Id, r.EmployeeId, r.Employee!.FirstName + " " + r.Employee.LastName, r.Employee.EmployeeCode,
             r.LeaveTypeId, r.LeaveType!.Name, r.FromDate, r.ToDate, r.Days, r.Reason, r.Status,
-            r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote));
+            r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
+            db.Attachments.Count(a => a.OwnerType == AttachmentOwner.Leave && a.OwnerId == r.Id)));
 }

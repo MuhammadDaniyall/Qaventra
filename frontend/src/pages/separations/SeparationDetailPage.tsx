@@ -5,6 +5,7 @@ import { Check, CheckCircle2, Circle, FileText, Plus, ThumbsDown, ThumbsUp, Tras
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { separationsApi } from '../../api/separations';
+import { AttachmentList } from '../../components/attachments/AttachmentList';
 import {
   Avatar,
   Button,
@@ -80,13 +81,29 @@ export function SeparationDetailPage() {
         </CardBody>
       </Card>
 
-      {status === 'Requested' && <DecisionCard s={s} />}
+      {status === 'Requested' && (
+        <div className="space-y-6">
+          <DecisionCard s={s} />
+          <Card>
+            <CardHeader title="Documents" />
+            <CardBody>
+              <AttachmentList owner="Separation" ownerId={s.summary.id} emptyText="No documents attached." />
+            </CardBody>
+          </Card>
+        </div>
+      )}
 
       {(status === 'InProgress' || status === 'Completed') && (
         <div className="grid gap-6 xl:grid-cols-5">
           <div className="space-y-6 xl:col-span-2">
             <ClearanceCard s={s} />
             <ExitInterviewCard s={s} />
+            <Card>
+              <CardHeader title="Documents" description="Resignation letter, clearance forms, settlement receipts" />
+              <CardBody>
+                <AttachmentList owner="Separation" ownerId={s.summary.id} emptyText="No documents attached." />
+              </CardBody>
+            </Card>
           </div>
           <div className="xl:col-span-3">{s.settlement && <SettlementCard s={s} st={s.settlement} />}</div>
         </div>

@@ -12,6 +12,8 @@ try {
     $offline = Join-Path $env:TEMP 'app_offline.htm'
     Set-Content $offline '<h1>Qaventra is being updated. Please try again in a minute.</h1>'
     curl.exe -s -S --ssl-reqd -K $cfg -T $offline "$base/app_offline.htm" | Out-Null
+    # IIS needs a moment to shut the app down; until then its DLLs are locked (curl exit 25).
+    Start-Sleep -Seconds 20
 
     # The host is Windows IIS: Linux and macOS native runtimes are never loaded, and the 38 MB ones break the FTPS link.
     $files = Get-ChildItem $site -Recurse -File |

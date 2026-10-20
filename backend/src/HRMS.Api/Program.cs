@@ -34,6 +34,7 @@ builder.Services.AddScoped<AuditWriter>();
 builder.Services.AddScoped<TenantClock>();
 builder.Services.AddScoped<ApprovalPolicy>();
 builder.Services.AddScoped<ApprovalEngine>();
+builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<LeaveService>();
 builder.Services.AddScoped<LetterService>();
 builder.Services.AddScoped<SeparationService>();

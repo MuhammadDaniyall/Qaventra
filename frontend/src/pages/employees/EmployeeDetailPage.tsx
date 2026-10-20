@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { KeyRound, UserRound, Wallet } from 'lucide-react';
+import { FolderOpen, KeyRound, UserRound, Wallet } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
+import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { ApiError, errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
-import { Avatar, Badge, Card, ErrorState, PageHeader, PageSpinner, StatusBadge, Tabs, useToast } from '../../components/ui';
+import { Avatar, Badge, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge, Tabs, useToast } from '../../components/ui';
 import { formatDate, roleLabel } from '../../lib/format';
 import type { Employee, SaveEmployeeRequest } from '../../types';
 import { EmployeeForm, toSaveRequest } from './EmployeeForm';
 import { LoginTab } from './LoginTab';
 import { SalaryTab } from './SalaryTab';
 
-type Tab = 'profile' | 'salary' | 'login';
+type Tab = 'profile' | 'documents' | 'salary' | 'login';
 
 export function EmployeeDetailPage() {
   const { id = '' } = useParams();
@@ -68,6 +69,7 @@ export function EmployeeDetailPage() {
           onChange={(t) => setParams(t === 'profile' ? {} : { tab: t }, { replace: true })}
           items={[
             { value: 'profile', label: 'Profile', icon: <UserRound className="size-4" /> },
+            { value: 'documents', label: 'Documents', icon: <FolderOpen className="size-4" /> },
             { value: 'salary', label: 'Salary', icon: <Wallet className="size-4" /> },
             { value: 'login', label: 'Login', icon: <KeyRound className="size-4" /> },
           ]}
@@ -75,6 +77,14 @@ export function EmployeeDetailPage() {
       )}
 
       {tab === 'profile' && <ProfileTab key={e.id} employee={e} readOnly={!hr} />}
+      {tab === 'documents' && (
+        <Card>
+          <CardHeader title="Documents" description="CNIC, degrees, contracts and other records. Add an expiry date to get reminded before it lapses." />
+          <CardBody>
+            <AttachmentList owner="EmployeeDocument" ownerId={e.id} emptyText="No documents yet." />
+          </CardBody>
+        </Card>
+      )}
       {tab === 'salary' && <SalaryTab employeeId={e.id} />}
       {tab === 'login' && <LoginTab employee={e} />}
     </>

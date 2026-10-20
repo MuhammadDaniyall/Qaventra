@@ -424,6 +424,7 @@ export interface LeaveRequest {
   createdAtUtc: string;
   decidedAtUtc: string | null;
   decisionNote: string | null;
+  attachmentCount: number;
 }
 
 export interface LeaveBalance {

@@ -5,7 +5,8 @@ import { employeesApi } from '../../api/employees';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { ChangePasswordDialog } from '../../components/layout/ChangePasswordDialog';
-import { Avatar, Badge, Button, Card, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge } from '../../components/ui';
+import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { Avatar, Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge } from '../../components/ui';
 import { formatDate, humanize, roleLabel } from '../../lib/format';
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
@@ -96,6 +97,12 @@ export function MyProfilePage() {
           </Card>
         </div>
       </div>
+      <Card className="mt-6">
+        <CardHeader title="My documents" description="Upload your CNIC, degrees and certificates so HR has them on file." />
+        <CardBody>
+          <AttachmentList owner="EmployeeDocument" ownerId={e.id} emptyText="No documents yet." />
+        </CardBody>
+      </Card>
       <ChangePasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
     </>
   );

@@ -169,6 +169,83 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("ApprovalSteps");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.Attachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly?>("ExpiresOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("OwnerType")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("UploadedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "ExpiresOn");
+
+                    b.HasIndex("TenantId", "OwnerType", "OwnerId");
+
+                    b.ToTable("Attachments");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.AttachmentContent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AttachmentContents");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.AttendanceRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1635,6 +1712,15 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasOne("HRMS.Domain.Entities.ApprovalRequest", null)
                         .WithMany("Steps")
                         .HasForeignKey("ApprovalRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.AttachmentContent", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Attachment", null)
+                        .WithOne()
+                        .HasForeignKey("HRMS.Domain.Entities.AttachmentContent", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

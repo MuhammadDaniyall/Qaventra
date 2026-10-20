@@ -40,6 +40,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ApprovalFlowStep> ApprovalFlowSteps => Set<ApprovalFlowStep>();
     public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<AttachmentContent> AttachmentContents => Set<AttachmentContent>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -258,6 +260,17 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Note).HasMaxLength(1000);
         });
 
+        b.Entity<Attachment>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.OwnerType, x.OwnerId });
+            e.HasIndex(x => new { x.TenantId, x.ExpiresOn });
+            e.Property(x => x.FileName).HasMaxLength(200);
+            e.Property(x => x.ContentType).HasMaxLength(100);
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.Property(x => x.UploadedByName).HasMaxLength(200);
+            e.HasOne<AttachmentContent>().WithOne().HasForeignKey<AttachmentContent>(x => x.Id).OnDelete(DeleteBehavior.Cascade);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -288,7 +301,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
     private static bool IsOwnedChild(Type t) =>
         t == typeof(TaxSlab) || t == typeof(SalaryComponent) || t == typeof(Payslip) || t == typeof(PayslipLine)
-        || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep);
+        || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
+        || t == typeof(AttachmentContent);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

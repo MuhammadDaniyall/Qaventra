@@ -4,6 +4,7 @@ import { CheckCircle2, Circle, DoorOpen } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { separationsApi } from '../../api/separations';
+import { AttachmentList } from '../../components/attachments/AttachmentList';
 import {
   Button,
   Card,
@@ -156,6 +157,13 @@ function ExitStatus({ s }: { s: Separation }) {
           {s.decisionNote && status !== 'Requested' && (
             <p className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">HR: “{s.decisionNote}”</p>
           )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="Documents" description="Your resignation letter or anything HR should have." />
+        <CardBody>
+          <AttachmentList owner="Separation" ownerId={s.summary.id} emptyText="No documents attached." />
         </CardBody>
       </Card>
 
