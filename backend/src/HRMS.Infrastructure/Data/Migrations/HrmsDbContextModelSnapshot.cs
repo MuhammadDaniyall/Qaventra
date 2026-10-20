@@ -990,6 +990,47 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("LetterTemplates");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.Notification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Link")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("ReadAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ReadAtUtc", "CreatedAtUtc");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.OfficeLocation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1652,6 +1693,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<bool>("EmailNotifications")
+                        .HasColumnType("bit");
+
                     b.Property<Guid?>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1844,6 +1888,15 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Navigation("Employee");
 
                     b.Navigation("LeaveType");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.Payslip", b =>

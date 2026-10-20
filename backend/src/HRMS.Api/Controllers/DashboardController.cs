@@ -30,11 +30,11 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
         var current = db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
         var isHr = me.IsHr();
 
-        var pending = db.LeaveRequests.Where(r => r.Status == LeaveStatus.Pending && r.EmployeeId != me.EmployeeId);
-        if (me.Role == UserRole.Manager)
-            pending = pending.Where(r => r.Employee!.ManagerId == me.EmployeeId);
-        else if (!isHr)
-            pending = pending.Where(_ => false);
+        // Same as the Approvals inbox: every module's requests, all of them for HR, otherwise those waiting on me.
+        var mine = me.EmployeeId;
+        var pending = db.ApprovalRequests.Where(a => a.Status == ApprovalStatus.Pending && a.EmployeeId != mine);
+        if (!isHr)
+            pending = pending.Where(a => a.Steps.Any(s => s.Status == ApprovalStepStatus.Current && s.ApproverEmployeeId == mine));
 
         var trendFrom = today.AddDays(-13);
         var trend = await db.AttendanceRecords.Where(a => a.Date >= trendFrom && a.Date <= today)

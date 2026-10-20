@@ -65,6 +65,8 @@ public class User : BaseEntity, ITenantEntity
     public Guid? EmployeeId { get; set; }
     public Employee? Employee { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>Also send notifications by email (in-app ones always appear).</summary>
+    public bool EmailNotifications { get; set; } = true;
 }
 
 public class Department : TenantEntity

@@ -16,7 +16,7 @@ namespace HRMS.Api.Services;
 /// Requests submitted before the engine existed have no <see cref="ApprovalRequest"/> and keep the old rule
 /// (line manager or HR, one step).
 /// </summary>
-public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalPolicy legacy)
+public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalPolicy legacy, NotificationService notify)
 {
     public async Task<IReadOnlyList<FlowStep>> FlowAsync(ApprovalRequestType type)
     {
@@ -62,6 +62,8 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
             request.CurrentStep = 1;
         }
         db.ApprovalRequests.Add(request);
+        if (request.Status == ApprovalStatus.Pending)
+            await NotifyApproversAsync(request);
         return request;
     }
 
@@ -104,6 +106,14 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         {
             next.Status = ApprovalStepStatus.Current;
             request.CurrentStep = next.Order;
+            await NotifyApproversAsync(request);
+        }
+
+        if (request.Status != ApprovalStatus.Pending)
+        {
+            var verb = request.Status == ApprovalStatus.Approved ? "approved" : "rejected";
+            await notify.ToEmployeesAsync([request.EmployeeId], NotificationKind.RequestDecided,
+                $"Your {Noun(type)} was {verb}", request.Summary + (string.IsNullOrWhiteSpace(note) ? "" : $"\n“{note}”"), MyPage(type));
         }
         return request.Status;
     }
@@ -156,6 +166,32 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         var userId = me.UserId;
         return db.ApprovalRequests.Where(a => a.RequestType == type && a.Steps.Any(s => s.DecidedByUserId == userId)).Select(a => a.SubjectId);
     }
+
+    /// <summary>Tells whoever must decide the current step: the named person, or everyone in HR for an HR step.</summary>
+    private async Task NotifyApproversAsync(ApprovalRequest request)
+    {
+        var step = request.Steps.First(s => s.Status == ApprovalStepStatus.Current);
+        var name = await db.Employees.Where(e => e.Id == request.EmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstAsync();
+        var title = $"{name} needs your approval ({Noun(request.RequestType)})";
+        if (step.ApproverEmployeeId is { } approver)
+            await notify.ToEmployeesAsync([approver], NotificationKind.ApprovalNeeded, title, request.Summary, "/approvals");
+        else
+            await notify.ToHrAsync(NotificationKind.ApprovalNeeded, title, request.Summary, "/approvals");
+    }
+
+    private static string Noun(ApprovalRequestType type) => type switch
+    {
+        ApprovalRequestType.Leave => "leave request",
+        ApprovalRequestType.Expense => "expense claim",
+        _ => "request",
+    };
+
+    private static string MyPage(ApprovalRequestType type) => type switch
+    {
+        ApprovalRequestType.Leave => "/me/leave",
+        ApprovalRequestType.Expense => "/me/expenses",
+        _ => "/dashboard",
+    };
 
     private bool CanAct(ApprovalRequest request, ApprovalStep step) =>
         request.EmployeeId != me.EmployeeId

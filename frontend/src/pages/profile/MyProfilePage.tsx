@@ -1,12 +1,13 @@
 import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
+import { notificationsApi } from '../../api/notifications';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { ChangePasswordDialog } from '../../components/layout/ChangePasswordDialog';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
-import { Avatar, Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge } from '../../components/ui';
+import { Avatar, Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge, Switch, useToast } from '../../components/ui';
 import { formatDate, humanize, roleLabel } from '../../lib/format';
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
@@ -97,6 +98,7 @@ export function MyProfilePage() {
           </Card>
         </div>
       </div>
+      <EmailPreference />
       <Card className="mt-6">
         <CardHeader title="My documents" description="Upload your CNIC, degrees and certificates so HR has them on file." />
         <CardBody>
@@ -105,5 +107,34 @@ export function MyProfilePage() {
       </Card>
       <ChangePasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
     </>
+  );
+}
+
+/** Lets people stop notification emails; the bell keeps working. */
+function EmailPreference() {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const feed = useQuery({ queryKey: qk.notifications, queryFn: notificationsApi.feed });
+  const save = useMutation({
+    mutationFn: (on: boolean) => notificationsApi.setEmail(on),
+    onSuccess: (_, on) => {
+      toast.success(on ? 'Email notifications on' : 'Email notifications off');
+      qc.invalidateQueries({ queryKey: qk.notifications });
+    },
+    onError: (err) => toast.error(err),
+  });
+  if (!feed.data) return null;
+  return (
+    <Card className="mt-6">
+      <CardBody>
+        <Switch
+          checked={feed.data.emailEnabled}
+          disabled={save.isPending}
+          onChange={(on) => save.mutate(on)}
+          label="Email me notifications"
+          description="Approvals waiting for you, decisions on your requests, new letters and payslips. They always appear under the bell."
+        />
+      </CardBody>
+    </Card>
   );
 }

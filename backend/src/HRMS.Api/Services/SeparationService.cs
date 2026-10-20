@@ -19,7 +19,7 @@ public record LeaveBalanceLeft(string LeaveType, decimal Remaining);
 
 public record PayableClaim(Guid Id, string Title, decimal Total);
 
-public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock clock, LeaveService leave)
+public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock clock, LeaveService leave, NotificationService notify)
 {
     public static readonly IReadOnlyList<(string Department, string Title)> DefaultChecklist =
     [
@@ -48,6 +48,9 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             InitiatedByUserId = me.UserId,
         };
         db.Separations.Add(separation);
+        var name = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.FirstName + " " + e.LastName).FirstAsync();
+        await notify.ToHrAsync(NotificationKind.Separation, $"{name} has resigned",
+            $"Proposed last working day: {LetterService.LongDate(proposedLastDay)}", $"/separations/{separation.Id}");
         await db.SaveChangesAsync();
         return separation;
     }
@@ -101,6 +104,8 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         s.DecisionNote = note;
         s.RecoverNoticeShortfall = true;
         AddDefaultChecklist(s);
+        await notify.ToEmployeesAsync([s.EmployeeId], NotificationKind.Separation, "Your resignation was accepted",
+            $"Last working day: {LetterService.LongDate(lastWorkingDay)}. Please complete your exit interview and clearance.", "/me/resignation");
         await db.SaveChangesAsync();
     }
 
@@ -114,6 +119,7 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         s.DecidedByUserId = me.UserId;
         s.DecidedAtUtc = clock.UtcNow;
         s.DecisionNote = note;
+        await notify.ToEmployeesAsync([s.EmployeeId], NotificationKind.Separation, "Your resignation was declined", note, "/me/resignation");
         await db.SaveChangesAsync();
     }
 

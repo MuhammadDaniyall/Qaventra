@@ -1,0 +1,83 @@
+using System.Net;
+using HRMS.Domain;
+using HRMS.Domain.Entities;
+using HRMS.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace HRMS.Api.Services;
+
+/// <summary>
+/// Creates in-app notifications and queues the matching emails. Rows are added to the context and saved with the
+/// caller's change; emails go out only after that save succeeds, so nobody is told about something that was rolled back.
+/// The person who caused the event is never notified about it.
+/// </summary>
+public class NotificationService
+{
+    private readonly HrmsDbContext _db;
+    private readonly ICurrentUser _me;
+    private readonly EmailQueue _queue;
+    private readonly string? _baseUrl;
+    private readonly List<EmailMessage> _pending = [];
+
+    public NotificationService(HrmsDbContext db, ICurrentUser me, EmailQueue queue, IHttpContextAccessor http)
+    {
+        _db = db;
+        _me = me;
+        _queue = queue;
+        var request = http.HttpContext?.Request;
+        _baseUrl = request is null ? null : $"{request.Scheme}://{request.Host}";
+        _db.SavedChanges += (_, _) => Flush();
+    }
+
+    public async Task ToEmployeesAsync(IEnumerable<Guid> employeeIds, NotificationKind kind, string title, string? body, string? link)
+    {
+        var ids = employeeIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return;
+        await ToUsersAsync(_db.Users.Where(u => u.EmployeeId != null && ids.Contains(u.EmployeeId.Value)), kind, title, body, link);
+    }
+
+    /// <summary>Everyone with HR rights in the company: HR managers and company admins.</summary>
+    public Task ToHrAsync(NotificationKind kind, string title, string? body, string? link) =>
+        ToUsersAsync(_db.Users.Where(u => u.Role == UserRole.HrManager || u.Role == UserRole.CompanyAdmin), kind, title, body, link);
+
+    private async Task ToUsersAsync(IQueryable<User> users, NotificationKind kind, string title, string? body, string? link)
+    {
+        var me = _me.UserId;
+        var recipients = await users.Where(u => u.IsActive && u.Id != me)
+            .Select(u => new { u.Id, u.Email, u.EmailNotifications }).ToListAsync();
+        title = Trim(title, 200)!;
+        body = Trim(body, 1000);
+        foreach (var r in recipients)
+        {
+            _db.Notifications.Add(new Notification { UserId = r.Id, Kind = kind, Title = title, Body = body, Link = link });
+            if (r.EmailNotifications)
+                _pending.Add(new EmailMessage(r.Email, title, Html(title, body, link)));
+        }
+    }
+
+    private void Flush()
+    {
+        foreach (var m in _pending)
+            _queue.Enqueue(m);
+        _pending.Clear();
+    }
+
+    private string Html(string title, string? body, string? link)
+    {
+        static string e(string? s) => WebUtility.HtmlEncode(s ?? "");
+        var button = link is not null && _baseUrl is not null
+            ? $"<p style=\"margin:24px 0\"><a href=\"{e(_baseUrl + link)}\" style=\"background:#4f46e5;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600\">Open in Qaventra</a></p>"
+            : "";
+        return $"""
+            <div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px;margin:auto;color:#18181b">
+              <h2 style="font-size:18px;margin:0 0 8px">{e(title)}</h2>
+              {(body is null ? "" : $"<p style=\"font-size:14px;line-height:1.6;color:#3f3f46;white-space:pre-line\">{e(body)}</p>")}
+              {button}
+              <p style="font-size:12px;color:#a1a1aa">You get this because notifications are on for your Qaventra account. Turn emails off under My profile.</p>
+            </div>
+            """;
+    }
+
+    private static string? Trim(string? s, int max) => s is { Length: > 0 } && s.Length > max ? s[..max] : s;
+}

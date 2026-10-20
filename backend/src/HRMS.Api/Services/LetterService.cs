@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock)
+public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock, NotificationService notify)
 {
     private static readonly CultureInfo Pk = CultureInfo.GetCultureInfo("en-PK");
 
@@ -56,6 +56,8 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock)
             SharedWithEmployee = shareWithEmployee,
         };
         db.IssuedLetters.Add(letter);
+        if (shareWithEmployee)
+            await notify.ToEmployeesAsync([employeeId], NotificationKind.Letter, $"New letter: {letter.Subject}", letter.ReferenceNo, $"/letters/{letter.Id}");
         await db.SaveChangesAsync();
         return letter;
     }

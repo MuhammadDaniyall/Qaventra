@@ -9,6 +9,7 @@ import { cn } from '../../lib/cn';
 import { useTheme } from '../../lib/theme';
 import { IconButton } from '../ui';
 import { Sidebar } from './Sidebar';
+import { NotificationBell } from './NotificationBell';
 import { UserMenu } from './UserMenu';
 
 const COLLAPSE_KEY = 'hrms.sidebar.collapsed';
@@ -94,6 +95,7 @@ export function AppLayout() {
             <IconButton label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>
               {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
             </IconButton>
+            {!isPlatformOwner(user) && <NotificationBell />}
             <UserMenu />
           </div>
         </header>

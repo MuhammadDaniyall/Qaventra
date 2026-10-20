@@ -1,0 +1,26 @@
+import { http } from './client';
+
+export type NotificationKind = 'ApprovalNeeded' | 'RequestDecided' | 'Separation' | 'Letter' | 'Payslip';
+
+export interface AppNotification {
+  id: string;
+  kind: NotificationKind;
+  title: string;
+  body: string | null;
+  link: string | null;
+  createdAtUtc: string;
+  readAtUtc: string | null;
+}
+
+export interface NotificationFeed {
+  unread: number;
+  emailEnabled: boolean;
+  items: AppNotification[];
+}
+
+export const notificationsApi = {
+  feed: () => http.get<NotificationFeed>('/notifications'),
+  read: (id: string) => http.post(`/notifications/${id}/read`),
+  readAll: () => http.post('/notifications/read-all'),
+  setEmail: (emailEnabled: boolean) => http.put('/notifications/preferences', { emailEnabled }),
+};

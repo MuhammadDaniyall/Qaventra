@@ -62,7 +62,7 @@ export function DashboardPage() {
               loading={loading}
               hint={
                 approver && d && d.pendingApprovals > 0 ? (
-                  <Link to="/leave/approvals" className="font-medium text-accent-600 hover:underline dark:text-accent-400">
+                  <Link to="/approvals" className="font-medium text-accent-600 hover:underline dark:text-accent-400">
                     Review
                   </Link>
                 ) : undefined

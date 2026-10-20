@@ -139,6 +139,17 @@ public enum ApprovalRequestType
     Expense = 2,
 }
 
+public enum NotificationKind
+{
+    /// <summary>Something waits for the user's approval.</summary>
+    ApprovalNeeded = 1,
+    /// <summary>The user's own request was approved or rejected.</summary>
+    RequestDecided = 2,
+    Separation = 3,
+    Letter = 4,
+    Payslip = 5,
+}
+
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
 public enum AttachmentOwner
 {

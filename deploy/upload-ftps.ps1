@@ -19,18 +19,32 @@ try {
     $files = Get-ChildItem $site -Recurse -File |
         Where-Object { $_.FullName -notmatch '\\runtimes\\(linux|osx|unix)' } |
         Sort-Object { $_.Name -eq 'web.config' }
+    function Send($f, [int]$tries) {
+        $rel = $f.FullName.Substring($site.Length + 1).Replace('\', '/')
+        for ($attempt = 1; $attempt -le $tries; $attempt++) {
+            curl.exe -s -S --ssl-reqd --ftp-create-dirs --connect-timeout 30 --max-time 300 -K $cfg -T $f.FullName "$base/$rel" 2>$null
+            if ($LASTEXITCODE -eq 0) { return $true }
+            Write-Host "retry $attempt for $rel (curl exit $LASTEXITCODE)"
+            Start-Sleep -Seconds (5 * $attempt)
+        }
+        return $false
+    }
+
+    # The link drops now and then (curl 56), and IIS can hold a DLL for minutes after going offline (curl 25).
+    # Files that still fail are left for a second pass, which has always succeeded once the old app is gone.
+    $failed = @()
     $i = 0
     foreach ($f in $files) {
-        $rel = $f.FullName.Substring($site.Length + 1).Replace('\', '/')
-        # The link drops now and then (curl 25/56); retry each file with a growing pause.
-        $ok = $false
-        for ($attempt = 1; $attempt -le 6 -and -not $ok; $attempt++) {
-            curl.exe -s -S --ssl-reqd --ftp-create-dirs --connect-timeout 30 --max-time 300 -K $cfg -T $f.FullName "$base/$rel" 2>$null
-            if ($LASTEXITCODE -eq 0) { $ok = $true } else { Write-Host "retry $attempt for $rel (curl exit $LASTEXITCODE)"; Start-Sleep -Seconds (5 * $attempt) }
+        if (Send $f 3) { $i++ } else { $failed += $f }
+        if (($i + $failed.Count) % 20 -eq 0) { Write-Host "uploaded $i / $($files.Count)" }
+    }
+    if ($failed.Count) {
+        Write-Host "Second pass for $($failed.Count) locked file(s) in 60 seconds..."
+        Start-Sleep -Seconds 60
+        foreach ($f in $failed) {
+            if (-not (Send $f 6)) { throw "Upload failed for $($f.Name). The site still shows the 'updating' page; run this script again." }
+            $i++
         }
-        if (-not $ok) { throw "Upload failed for $rel after 6 attempts. The site still shows the 'updating' page; run this script again." }
-        $i++
-        if ($i % 20 -eq 0) { Write-Host "uploaded $i / $($files.Count)" }
     }
     Write-Host "uploaded $i / $($files.Count)"
 

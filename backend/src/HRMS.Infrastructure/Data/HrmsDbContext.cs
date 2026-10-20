@@ -42,6 +42,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<AttachmentContent> AttachmentContents => Set<AttachmentContent>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -271,6 +272,15 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.HasOne<AttachmentContent>().WithOne().HasForeignKey<AttachmentContent>(x => x.Id).OnDelete(DeleteBehavior.Cascade);
         });
 
+        b.Entity<Notification>(e =>
+        {
+            e.HasIndex(x => new { x.UserId, x.ReadAtUtc, x.CreatedAtUtc });
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Body).HasMaxLength(1000);
+            e.Property(x => x.Link).HasMaxLength(300);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -345,7 +355,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         var logs = new List<AuditLog>();
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            if (entry.Entity is AuditLog or Notification || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
                 continue;
 
             var changes = new Dictionary<string, object?>();

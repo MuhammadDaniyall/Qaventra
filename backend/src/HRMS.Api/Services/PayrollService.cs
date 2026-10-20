@@ -10,7 +10,7 @@ namespace HRMS.Api.Services;
 
 public record PayrollProcessResult(PayrollRun Run, IReadOnlyList<string> Warnings);
 
-public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock clock)
+public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock clock, NotificationService notify)
 {
     /// <summary>Calculates (or recalculates) a draft run for the month. A finalized run is locked.</summary>
     public async Task<PayrollProcessResult> ProcessAsync(int year, int month)
@@ -166,6 +166,10 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             c.PaidAtUtc = run.FinalizedAtUtc;
             c.PaidVia = $"Payroll {new DateOnly(run.Year, run.Month, 1):MMMM yyyy}";
         }
+
+        var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var paid = await db.Payslips.Where(p => p.PayrollRunId == run.Id).Select(p => p.EmployeeId).ToListAsync();
+        await notify.ToEmployeesAsync(paid, NotificationKind.Payslip, $"Your payslip for {month} is ready", null, "/me/payslips");
         await db.SaveChangesAsync();
     }
 }
