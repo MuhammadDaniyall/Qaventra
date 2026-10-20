@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, CalendarHeart, Clock, Layers, MapPin, Palmtree } from 'lucide-react';
+import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, MapPin, Palmtree } from 'lucide-react';
 import { PageHeader, Tabs } from '../../components/ui';
+import { ApprovalFlowsTab } from './ApprovalFlowsTab';
 import { DepartmentsTab } from './DepartmentsTab';
 import { DesignationsTab } from './DesignationsTab';
 import { HolidaysTab } from './HolidaysTab';
@@ -8,8 +9,8 @@ import { LeaveTypesTab } from './LeaveTypesTab';
 import { OfficesTab } from './OfficesTab';
 import { ShiftsTab } from './ShiftsTab';
 
-type Tab = 'departments' | 'designations' | 'shifts' | 'offices' | 'holidays' | 'leave-types';
-const TABS: Tab[] = ['departments', 'designations', 'shifts', 'offices', 'holidays', 'leave-types'];
+type Tab = 'departments' | 'designations' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals';
+const TABS: Tab[] = ['departments', 'designations', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals'];
 
 export function OrganizationPage() {
   const [params, setParams] = useSearchParams();
@@ -18,7 +19,7 @@ export function OrganizationPage() {
 
   return (
     <>
-      <PageHeader title="Organization" description="Structure, working hours, locations and leave policy." />
+      <PageHeader title="Organization" description="Structure, working hours, locations, leave policy and who approves what." />
       <Tabs<Tab>
         className="mb-6"
         value={tab}
@@ -30,6 +31,7 @@ export function OrganizationPage() {
           { value: 'offices', label: 'Office locations', icon: <MapPin className="size-4" /> },
           { value: 'holidays', label: 'Holidays', icon: <CalendarHeart className="size-4" /> },
           { value: 'leave-types', label: 'Leave types', icon: <Palmtree className="size-4" /> },
+          { value: 'approvals', label: 'Approval chains', icon: <GitBranch className="size-4" /> },
         ]}
       />
       {tab === 'departments' && <DepartmentsTab />}
@@ -38,6 +40,7 @@ export function OrganizationPage() {
       {tab === 'offices' && <OfficesTab />}
       {tab === 'holidays' && <HolidaysTab />}
       {tab === 'leave-types' && <LeaveTypesTab />}
+      {tab === 'approvals' && <ApprovalFlowsTab />}
     </>
   );
 }

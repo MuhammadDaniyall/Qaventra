@@ -10,6 +10,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 
 const DailyAttendancePage = lazy(() => import('./pages/attendance/DailyAttendancePage').then((m) => ({ default: m.DailyAttendancePage })));
 const MyAttendancePage = lazy(() => import('./pages/attendance/MyAttendancePage').then((m) => ({ default: m.MyAttendancePage })));
+const ApprovalsInboxPage = lazy(() => import('./pages/approvals/ApprovalsInboxPage').then((m) => ({ default: m.ApprovalsInboxPage })));
 const AuditLogsPage = lazy(() => import('./pages/audit/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })));
 const EmployeeDetailPage = lazy(() => import('./pages/employees/EmployeeDetailPage').then((m) => ({ default: m.EmployeeDetailPage })));
@@ -87,6 +88,7 @@ export default function App() {
             <Route path="/letters/:id" element={<LetterPage />} />
 
             <Route element={<RequireRole roles={APPROVER_ROLES} />}>
+              <Route path="/approvals" element={<ApprovalsInboxPage />} />
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/employees/:id" element={<EmployeeDetailPage />} />
               <Route path="/attendance/daily" element={<DailyAttendancePage />} />

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalPolicy approvals)
+public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals)
 {
     /// <summary>Creates missing balances for every active paid leave type, prorated in the joining year.</summary>
     public async Task EnsureBalancesAsync(Guid employeeId, int year)
@@ -88,22 +88,35 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             Reason = reason,
         };
         db.LeaveRequests.Add(request);
+
+        var summary = $"{type.Name} · {days:0.#} day{(days == 1 ? "" : "s")} · {from:d MMM}" + (to != from ? $" – {to:d MMM}" : "");
+        var approval = await approvals.StartAsync(ApprovalRequestType.Leave, request.Id, employeeId, summary);
         await db.SaveChangesAsync();
+        if (approval.Status == ApprovalStatus.Approved)
+            await ApplyDecisionAsync(request, approve: true, note: "Approved automatically");
         return request;
     }
 
-    /// <summary>HR and admins may decide any request; a manager only their direct reports'. Nobody decides their own.</summary>
-    public Task<bool> CanDecideAsync(LeaveRequest request) => approvals.CanApproveForAsync(request.EmployeeId);
-
+    /// <summary>
+    /// Records the signed-in approver's decision on the current step of the request's chain. The leave is approved
+    /// (and the balance used) only after the last step.
+    /// </summary>
     public async Task DecideAsync(Guid requestId, bool approve, string? note)
     {
         var request = await db.LeaveRequests.Include(r => r.LeaveType).FirstOrDefaultAsync(r => r.Id == requestId)
             ?? throw new NotFoundException("Leave request");
         if (request.Status != LeaveStatus.Pending)
             throw new DomainException($"This request is already {request.Status.ToString().ToLowerInvariant()}.");
-        if (!await CanDecideAsync(request))
-            throw new ForbiddenException("You cannot approve or reject this request.");
 
+        var outcome = await approvals.DecideAsync(ApprovalRequestType.Leave, request.Id, request.EmployeeId, approve, note);
+        if (outcome == ApprovalStatus.Pending)
+            await db.SaveChangesAsync();
+        else
+            await ApplyDecisionAsync(request, outcome == ApprovalStatus.Approved, note);
+    }
+
+    private async Task ApplyDecisionAsync(LeaveRequest request, bool approve, string? note)
+    {
         request.Status = approve ? LeaveStatus.Approved : LeaveStatus.Rejected;
         request.DecidedByUserId = me.UserId;
         request.DecidedAtUtc = clock.UtcNow;
@@ -129,6 +142,7 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         if (request.Status == LeaveStatus.Pending && (isOwner || isHr))
         {
             request.Status = LeaveStatus.Cancelled;
+            await approvals.CancelAsync(ApprovalRequestType.Leave, request.Id);
         }
         else if (request.Status == LeaveStatus.Approved && isHr)
         {

@@ -141,6 +141,7 @@ function DecisionModal({ request, approve, onClose }: { request: LeaveRequest; a
     onSuccess: () => {
       toast.success(approve ? 'Leave approved' : 'Leave rejected', request.employeeName);
       qc.invalidateQueries({ queryKey: qk.leave });
+      qc.invalidateQueries({ queryKey: qk.approvals });
       qc.invalidateQueries({ queryKey: qk.dashboard });
       qc.invalidateQueries({ queryKey: qk.attendance });
       onClose();

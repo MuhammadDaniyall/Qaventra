@@ -26,7 +26,7 @@ public record LeaveDaysDto(decimal Days);
 [ApiController]
 [Route("api/leave")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class LeaveController(HrmsDbContext db, LeaveService leave, ICurrentUser me) : ControllerBase
+public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngine approvals, ICurrentUser me) : ControllerBase
 {
     [HttpGet("balances")]
     public async Task<List<LeaveBalanceDto>> MyBalances([FromQuery] int? year)
@@ -66,13 +66,23 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ICurrentUser 
         return await Project(db.LeaveRequests.Where(r => r.Id == request.Id)).FirstAsync();
     }
 
-    /// <summary>Requests waiting for the signed-in approver: all for HR, direct reports for a manager.</summary>
+    /// <summary>
+    /// For HR, every request. For a manager: pending ones whose current approval step is theirs, and decided ones they
+    /// took part in or that belong to their direct reports. Requests from before approval chains use the direct-report rule.
+    /// </summary>
     [HttpGet("approvals"), Authorize(Policy = Policies.Approver)]
     public Task<List<LeaveRequestDto>> Approvals([FromQuery] LeaveStatus status = LeaveStatus.Pending)
     {
         var q = db.LeaveRequests.Where(r => r.Status == status && r.EmployeeId != me.EmployeeId);
-        if (me.Role == UserRole.Manager)
-            q = q.Where(r => r.Employee!.ManagerId == me.EmployeeId);
+        if (!me.IsHr())
+        {
+            var waiting = approvals.WaitingForMe(ApprovalRequestType.Leave);
+            var chained = approvals.WithChain(ApprovalRequestType.Leave);
+            var decided = approvals.DecidedByMe(ApprovalRequestType.Leave);
+            q = status == LeaveStatus.Pending
+                ? q.Where(r => waiting.Contains(r.Id) || (!chained.Contains(r.Id) && r.Employee!.ManagerId == me.EmployeeId))
+                : q.Where(r => decided.Contains(r.Id) || r.Employee!.ManagerId == me.EmployeeId);
+        }
         return Project(q).ToListAsync();
     }
 

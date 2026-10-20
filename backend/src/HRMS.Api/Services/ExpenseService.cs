@@ -12,7 +12,7 @@ public record NewExpenseItem(DateOnly Date, ExpenseCategory Category, string Des
 
 public record NewReceipt(string FileName, string ContentType, string Base64);
 
-public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalPolicy approvals)
+public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals)
 {
     public const int MaxItems = 20;
     public const int MaxReceiptBytes = 3 * 1024 * 1024;
@@ -57,6 +57,14 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
         }
         claim.Total = claim.Items.Sum(i => i.Amount);
         db.ExpenseClaims.Add(claim);
+
+        var approval = await approvals.StartAsync(ApprovalRequestType.Expense, claim.Id, employeeId, $"{claim.Title} · Rs {claim.Total:N0}");
+        if (approval.Status == ApprovalStatus.Approved)
+        {
+            claim.Status = ExpenseStatus.Approved;
+            claim.DecidedAtUtc = clock.UtcNow;
+            claim.DecisionNote = "Approved automatically";
+        }
         await db.SaveChangesAsync();
         return claim;
     }
@@ -82,17 +90,24 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
 
     /// <summary>The claimant, anyone who may approve it, and HR may view a claim.</summary>
     public async Task<bool> CanViewAsync(ExpenseClaim claim) =>
-        claim.EmployeeId == me.EmployeeId || me.IsHr() || await approvals.CanApproveForAsync(claim.EmployeeId);
+        claim.EmployeeId == me.EmployeeId || await approvals.IsApproverAsync(ApprovalRequestType.Expense, claim.Id, claim.EmployeeId);
+
+    public Task<bool> CanDecideAsync(ExpenseClaim claim) =>
+        approvals.CanDecideAsync(ApprovalRequestType.Expense, claim.Id, claim.EmployeeId);
 
     public async Task DecideAsync(Guid claimId, bool approve, string? note)
     {
         var claim = await db.ExpenseClaims.FirstOrDefaultAsync(c => c.Id == claimId) ?? throw new NotFoundException("Expense claim");
         if (claim.Status != ExpenseStatus.Pending)
             throw new DomainException($"This claim is already {claim.Status.ToString().ToLowerInvariant()}.");
-        if (!await approvals.CanApproveForAsync(claim.EmployeeId))
-            throw new ForbiddenException("You cannot approve or reject this claim.");
+        var outcome = await approvals.DecideAsync(ApprovalRequestType.Expense, claim.Id, claim.EmployeeId, approve, note);
+        if (outcome == ApprovalStatus.Pending)
+        {
+            await db.SaveChangesAsync();
+            return;
+        }
 
-        claim.Status = approve ? ExpenseStatus.Approved : ExpenseStatus.Rejected;
+        claim.Status = outcome == ApprovalStatus.Approved ? ExpenseStatus.Approved : ExpenseStatus.Rejected;
         claim.DecidedByUserId = me.UserId;
         claim.DecidedAtUtc = clock.UtcNow;
         claim.DecisionNote = note;
@@ -107,6 +122,7 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
         if (claim.Status != ExpenseStatus.Pending)
             throw new DomainException("Only a pending claim can be cancelled.");
         claim.Status = ExpenseStatus.Cancelled;
+        await approvals.CancelAsync(ApprovalRequestType.Expense, claim.Id);
         await db.SaveChangesAsync();
     }
 

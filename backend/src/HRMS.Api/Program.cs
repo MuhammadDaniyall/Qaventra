@@ -33,6 +33,7 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<AuditWriter>();
 builder.Services.AddScoped<TenantClock>();
 builder.Services.AddScoped<ApprovalPolicy>();
+builder.Services.AddScoped<ApprovalEngine>();
 builder.Services.AddScoped<LeaveService>();
 builder.Services.AddScoped<LetterService>();
 builder.Services.AddScoped<SeparationService>();

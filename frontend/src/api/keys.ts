@@ -44,4 +44,8 @@ export const qk = {
   separationList: (s: string) => ['separations', 'list', s] as const,
   separation: (id: string) => ['separations', 'detail', id] as const,
   mySeparation: ['separations', 'my'] as const,
+  approvals: ['approvals'] as const,
+  approvalFlows: ['approvals', 'flows'] as const,
+  approvalInbox: ['approvals', 'inbox'] as const,
+  approvalTimeline: (type: string, id: string) => ['approvals', 'timeline', type, id] as const,
 };

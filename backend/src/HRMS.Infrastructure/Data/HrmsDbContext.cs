@@ -36,6 +36,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ClearanceItem> ClearanceItems => Set<ClearanceItem>();
     public DbSet<ExpenseClaim> ExpenseClaims => Set<ExpenseClaim>();
     public DbSet<ExpenseReceipt> ExpenseReceipts => Set<ExpenseReceipt>();
+    public DbSet<ApprovalFlow> ApprovalFlows => Set<ApprovalFlow>();
+    public DbSet<ApprovalFlowStep> ApprovalFlowSteps => Set<ApprovalFlowStep>();
+    public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
+    public DbSet<ApprovalStep> ApprovalSteps => Set<ApprovalStep>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -232,6 +236,28 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ContentType).HasMaxLength(100);
         });
 
+        b.Entity<ApprovalFlow>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.RequestType }).IsUnique();
+            e.HasMany(x => x.Steps).WithOne().HasForeignKey(x => x.ApprovalFlowId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<ApprovalFlowStep>().HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+
+        b.Entity<ApprovalRequest>(e =>
+        {
+            e.HasIndex(x => new { x.RequestType, x.SubjectId }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.Summary).HasMaxLength(300);
+            e.HasMany(x => x.Steps).WithOne().HasForeignKey(x => x.ApprovalRequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ApprovalStep>(e =>
+        {
+            e.HasIndex(x => new { x.ApproverEmployeeId, x.Status });
+            e.Property(x => x.DecidedByName).HasMaxLength(200);
+            e.Property(x => x.Note).HasMaxLength(1000);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -262,7 +288,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
     private static bool IsOwnedChild(Type t) =>
         t == typeof(TaxSlab) || t == typeof(SalaryComponent) || t == typeof(Payslip) || t == typeof(PayslipLine)
-        || t == typeof(ClearanceItem) || t == typeof(ExpenseItem);
+        || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

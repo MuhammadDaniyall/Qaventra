@@ -170,6 +170,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
     onSuccess: (c) => {
       toast.success('Claim submitted', `${formatCurrency(c.total)} sent for approval.`);
       qc.invalidateQueries({ queryKey: qk.expenses });
+      qc.invalidateQueries({ queryKey: qk.approvals });
       onClose();
     },
     onError: (err) => setError(errorMessage(err)),

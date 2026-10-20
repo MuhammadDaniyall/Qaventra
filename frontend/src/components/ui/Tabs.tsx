@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
 export interface TabItem<T extends string> {
@@ -20,6 +20,11 @@ export function Tabs<T extends string>({
   className?: string;
 }) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
+  const activeIndex = items.findIndex((item) => item.value === value);
+  // Keep the selected tab visible when the bar scrolls sideways (narrow screens, many tabs).
+  useEffect(() => {
+    refs.current[activeIndex]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activeIndex]);
   return (
     <div
       role="tablist"

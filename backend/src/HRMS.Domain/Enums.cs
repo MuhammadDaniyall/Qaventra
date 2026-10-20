@@ -132,6 +132,43 @@ public enum ExpenseCategory
     Other = 9,
 }
 
+/// <summary>Requests that go through an approval chain. Add new modules here.</summary>
+public enum ApprovalRequestType
+{
+    Leave = 1,
+    Expense = 2,
+}
+
+public enum ApproverKind
+{
+    LineManager = 1,
+    /// <summary>The line manager's own manager.</summary>
+    SecondLevelManager = 2,
+    /// <summary>Anyone with HR rights (HR manager or company admin).</summary>
+    Hr = 3,
+    SpecificEmployee = 4,
+}
+
+public enum ApprovalStatus
+{
+    Pending = 1,
+    Approved = 2,
+    Rejected = 3,
+    Cancelled = 4,
+}
+
+public enum ApprovalStepStatus
+{
+    /// <summary>Later in the chain; not this approver's turn yet.</summary>
+    Waiting = 1,
+    /// <summary>The step that needs a decision now.</summary>
+    Current = 2,
+    Approved = 3,
+    Rejected = 4,
+    /// <summary>Never reached because an earlier step rejected or the request was cancelled.</summary>
+    Skipped = 5,
+}
+
 public enum ExpenseStatus
 {
     Pending = 1,

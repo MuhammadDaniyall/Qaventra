@@ -37,7 +37,7 @@ public record ExpenseClaimDetailDto(ExpenseClaimDto Claim, List<ExpenseItemDto> 
 [ApiController]
 [Route("api/expenses")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class ExpensesController(HrmsDbContext db, ExpenseService expenses, ApprovalPolicy approvals, ICurrentUser me) : ControllerBase
+public class ExpensesController(HrmsDbContext db, ExpenseService expenses, ApprovalEngine approvals, ICurrentUser me) : ControllerBase
 {
     [HttpGet("my")]
     public Task<List<ExpenseClaimDto>> My() => Project(db.ExpenseClaims.Where(c => c.EmployeeId == me.EmployeeId)).ToListAsync();
@@ -53,13 +53,20 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
         return await Project(db.ExpenseClaims.Where(c => c.Id == claim.Id)).FirstAsync();
     }
 
-    /// <summary>Claims for the signed-in approver: all for HR, direct reports for a manager.</summary>
+    /// <summary>Claims for the signed-in approver: all for HR; for others, those whose approval step is theirs.</summary>
     [HttpGet("approvals"), Authorize(Policy = Policies.Approver)]
     public Task<List<ExpenseClaimDto>> Approvals([FromQuery] ExpenseStatus status = ExpenseStatus.Pending)
     {
         var q = db.ExpenseClaims.Where(c => c.Status == status && c.EmployeeId != me.EmployeeId);
-        if (me.Role == UserRole.Manager)
-            q = q.Where(c => c.Employee!.ManagerId == me.EmployeeId);
+        if (!me.IsHr())
+        {
+            var waiting = approvals.WaitingForMe(ApprovalRequestType.Expense);
+            var chained = approvals.WithChain(ApprovalRequestType.Expense);
+            var decided = approvals.DecidedByMe(ApprovalRequestType.Expense);
+            q = status == ExpenseStatus.Pending
+                ? q.Where(c => waiting.Contains(c.Id) || (!chained.Contains(c.Id) && c.Employee!.ManagerId == me.EmployeeId))
+                : q.Where(c => decided.Contains(c.Id) || c.Employee!.ManagerId == me.EmployeeId);
+        }
         return Project(q).Take(500).ToListAsync();
     }
 
@@ -74,7 +81,7 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
         var dto = await Project(db.ExpenseClaims.Where(c => c.Id == id)).FirstAsync();
         var items = claim.Items.OrderBy(i => i.Date)
             .Select(i => new ExpenseItemDto(i.Id, i.Date, i.Category, i.Description, i.Amount, i.ReceiptId, i.ReceiptFileName)).ToList();
-        var canDecide = claim.Status == ExpenseStatus.Pending && await approvals.CanApproveForAsync(claim.EmployeeId);
+        var canDecide = claim.Status == ExpenseStatus.Pending && await expenses.CanDecideAsync(claim);
         return new ExpenseClaimDetailDto(dto, items, canDecide);
     }
 

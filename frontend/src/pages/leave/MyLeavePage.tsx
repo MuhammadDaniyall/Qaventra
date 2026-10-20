@@ -48,6 +48,7 @@ export function MyLeavePage() {
     onSuccess: () => {
       toast.success('Leave request cancelled');
       qc.invalidateQueries({ queryKey: qk.leave });
+      qc.invalidateQueries({ queryKey: qk.approvals });
       setCancelling(null);
     },
     onError: (err) => toast.error(err),
@@ -223,6 +224,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
     onSuccess: (r) => {
       toast.success('Leave requested', `${formatNumber(r.days)} day(s) of ${r.leaveType} sent for approval.`);
       qc.invalidateQueries({ queryKey: qk.leave });
+      qc.invalidateQueries({ queryKey: qk.approvals });
       qc.invalidateQueries({ queryKey: qk.dashboard });
       onClose();
     },

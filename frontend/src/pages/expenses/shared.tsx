@@ -18,6 +18,7 @@ import {
 import { expensesApi } from '../../api/expenses';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
+import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
 import {
   Avatar,
   Button,
@@ -115,6 +116,7 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
   const done = (message: string) => {
     toast.success(message);
     qc.invalidateQueries({ queryKey: qk.expenses });
+    qc.invalidateQueries({ queryKey: qk.approvals });
     onClose();
   };
   const decide = useMutation({
@@ -208,6 +210,11 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
               </li>
             ))}
           </ul>
+
+          <section>
+            <p className="mb-3 text-xs font-medium tracking-wide text-zinc-500 uppercase">Approval</p>
+            <ApprovalTimeline type="Expense" subjectId={claimId} />
+          </section>
 
           {(d.claim.decisionNote || d.claim.decidedAtUtc) && (
             <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-800">

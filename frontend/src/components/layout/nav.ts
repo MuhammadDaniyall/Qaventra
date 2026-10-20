@@ -6,6 +6,7 @@ import {
   DoorOpen,
   FileSignature,
   FolderOpen,
+  Inbox,
   Receipt,
   ReceiptText,
   UserMinus,
@@ -64,6 +65,7 @@ export const NAV: NavSection[] = [
   {
     title: 'Team',
     items: [
+      { to: '/approvals', label: 'Approvals', icon: Inbox, roles: APPROVER_ROLES },
       { to: '/employees', label: 'Employees', icon: Users, roles: APPROVER_ROLES },
       { to: '/attendance/daily', label: 'Daily attendance', icon: CalendarCheck, roles: APPROVER_ROLES },
       { to: '/leave/approvals', label: 'Leave approvals', icon: ClipboardCheck, roles: APPROVER_ROLES },
