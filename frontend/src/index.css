@@ -1,0 +1,96 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-accent-50: var(--color-indigo-50);
+  --color-accent-100: var(--color-indigo-100);
+  --color-accent-200: var(--color-indigo-200);
+  --color-accent-300: var(--color-indigo-300);
+  --color-accent-400: var(--color-indigo-400);
+  --color-accent-500: var(--color-indigo-500);
+  --color-accent-600: var(--color-indigo-600);
+  --color-accent-700: var(--color-indigo-700);
+  --color-accent-900: var(--color-indigo-900);
+  --color-accent-950: var(--color-indigo-950);
+  --animate-fade-in: fade-in 150ms ease-out;
+  --animate-slide-in-right: slide-in-right 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-slide-in-left: slide-in-left 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-pop-in: pop-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Printing: show only the payslip. */
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-area {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .print-reset {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+  html.dark .print-area,
+  html.dark .print-area * {
+    color: black !important;
+    background: white !important;
+    border-color: #d4d4d8 !important;
+  }
+}

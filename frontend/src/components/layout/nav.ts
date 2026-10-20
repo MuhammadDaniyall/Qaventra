@@ -1,0 +1,80 @@
+import {
+  Building2,
+  CalendarCheck,
+  CalendarClock,
+  CalendarDays,
+  ClipboardCheck,
+  FileText,
+  LayoutDashboard,
+  ScrollText,
+  Settings2,
+  UserCircle,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
+import { APPROVER_ROLES, COMPANY_ROLES, effectiveRole, HR_ROLES } from '../../auth/roles';
+import type { Me, UserRole } from '../../types';
+
+export interface NavItem {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  roles: UserRole[];
+  /** Needs a linked employee record (self-service). */
+  needsEmployee?: boolean;
+  /** Match only the exact path for the active state. */
+  end?: boolean;
+}
+
+export interface NavSection {
+  title?: string;
+  items: NavItem[];
+}
+
+const SA: UserRole[] = ['SuperAdmin'];
+
+export const NAV: NavSection[] = [
+  {
+    items: [
+      { to: '/platform', label: 'Platform overview', icon: LayoutDashboard, roles: SA, end: true },
+      { to: '/platform/companies', label: 'Companies', icon: Building2, roles: SA },
+      { to: '/platform/audit-logs', label: 'Audit logs', icon: ScrollText, roles: SA },
+      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: COMPANY_ROLES },
+    ],
+  },
+  {
+    title: 'My workspace',
+    items: [
+      { to: '/me/attendance', label: 'My attendance', icon: CalendarClock, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/leave', label: 'My leave', icon: CalendarDays, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/payslips', label: 'My payslips', icon: FileText, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/profile', label: 'My profile', icon: UserCircle, roles: COMPANY_ROLES, needsEmployee: true },
+    ],
+  },
+  {
+    title: 'Team',
+    items: [
+      { to: '/employees', label: 'Employees', icon: Users, roles: APPROVER_ROLES },
+      { to: '/attendance/daily', label: 'Daily attendance', icon: CalendarCheck, roles: APPROVER_ROLES },
+      { to: '/leave/approvals', label: 'Leave approvals', icon: ClipboardCheck, roles: APPROVER_ROLES },
+    ],
+  },
+  {
+    title: 'Administration',
+    items: [
+      { to: '/payroll', label: 'Payroll', icon: Wallet, roles: HR_ROLES },
+      { to: '/settings', label: 'Organization', icon: Settings2, roles: HR_ROLES },
+      { to: '/audit-logs', label: 'Audit logs', icon: ScrollText, roles: ['CompanyAdmin'] },
+    ],
+  },
+];
+
+export function navFor(user: Me): NavSection[] {
+  const role = effectiveRole(user)!;
+  return NAV.map((s) => ({
+    ...s,
+    // Self-service needs an employee record (the owner inside a company has none).
+    items: s.items.filter((i) => i.roles.includes(role) && (!i.needsEmployee || !!user.employeeId)),
+  })).filter((s) => s.items.length > 0);
+}
