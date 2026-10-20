@@ -26,6 +26,14 @@ const CompanyDetailPage = lazy(() => import('./pages/platform/CompanyDetailPage'
 const CompaniesPage = lazy(() => import('./pages/platform/CompaniesPage').then((m) => ({ default: m.CompaniesPage })));
 const PlatformDashboardPage = lazy(() => import('./pages/platform/PlatformDashboardPage').then((m) => ({ default: m.PlatformDashboardPage })));
 const MyProfilePage = lazy(() => import('./pages/profile/MyProfilePage').then((m) => ({ default: m.MyProfilePage })));
+const ExpenseApprovalsPage = lazy(() => import('./pages/expenses/ExpenseApprovalsPage').then((m) => ({ default: m.ExpenseApprovalsPage })));
+const MyExpensesPage = lazy(() => import('./pages/expenses/MyExpensesPage').then((m) => ({ default: m.MyExpensesPage })));
+const LetterPage = lazy(() => import('./pages/letters/LetterPage').then((m) => ({ default: m.LetterPage })));
+const LettersPage = lazy(() => import('./pages/letters/LettersPage').then((m) => ({ default: m.LettersPage })));
+const MyDocumentsPage = lazy(() => import('./pages/letters/MyDocumentsPage').then((m) => ({ default: m.MyDocumentsPage })));
+const MyExitPage = lazy(() => import('./pages/separations/MyExitPage').then((m) => ({ default: m.MyExitPage })));
+const SeparationDetailPage = lazy(() => import('./pages/separations/SeparationDetailPage').then((m) => ({ default: m.SeparationDetailPage })));
+const SeparationsPage = lazy(() => import('./pages/separations/SeparationsPage').then((m) => ({ default: m.SeparationsPage })));
 const OrganizationPage = lazy(() => import('./pages/settings/OrganizationPage').then((m) => ({ default: m.OrganizationPage })));
 
 function Lazy() {
@@ -71,14 +79,19 @@ export default function App() {
               <Route path="/me/leave" element={<MyLeavePage />} />
               <Route path="/me/payslips" element={<MyPayslipsPage />} />
               <Route path="/me/profile" element={<MyProfilePage />} />
+              <Route path="/me/expenses" element={<MyExpensesPage />} />
+              <Route path="/me/documents" element={<MyDocumentsPage />} />
+              <Route path="/me/resignation" element={<MyExitPage />} />
             </Route>
             <Route path="/payslips/:id" element={<PayslipPage />} />
+            <Route path="/letters/:id" element={<LetterPage />} />
 
             <Route element={<RequireRole roles={APPROVER_ROLES} />}>
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/employees/:id" element={<EmployeeDetailPage />} />
               <Route path="/attendance/daily" element={<DailyAttendancePage />} />
               <Route path="/leave/approvals" element={<LeaveApprovalsPage />} />
+              <Route path="/expenses/approvals" element={<ExpenseApprovalsPage />} />
             </Route>
 
             <Route element={<RequireRole roles={HR_ROLES} />}>
@@ -87,6 +100,9 @@ export default function App() {
               <Route path="/payroll/runs/:id" element={<PayrollRunPage />} />
               <Route path="/payroll/settings" element={<PayrollSettingsPage />} />
               <Route path="/settings" element={<OrganizationPage />} />
+              <Route path="/letters" element={<LettersPage />} />
+              <Route path="/separations" element={<SeparationsPage />} />
+              <Route path="/separations/:id" element={<SeparationDetailPage />} />
             </Route>
 
             <Route element={<RequireRole roles={['CompanyAdmin']} />}>

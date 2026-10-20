@@ -69,6 +69,13 @@ const STATUS_TONES: Record<string, Tone> = {
   // payroll
   Draft: 'amber',
   Finalized: 'green',
+  // expenses
+  Paid: 'violet',
+  // separation
+  Requested: 'amber',
+  InProgress: 'blue',
+  Completed: 'green',
+  Withdrawn: 'gray',
   // audit
   Auth: 'violet',
   Request: 'blue',

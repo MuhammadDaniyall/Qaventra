@@ -47,6 +47,11 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             run.Payslips.Clear();
         }
 
+        // Approved expense claims ride on this run until it is finalized; recomputed on every reprocess.
+        var claims = await ExpenseService.Payable(db, run.Id).ToListAsync();
+        foreach (var c in claims)
+            c.PayrollRunId = null;
+
         var employees = await db.Employees
             .Where(e => e.JoiningDate <= monthEnd && (e.LeavingDate == null || e.LeavingDate >= monthStart))
             .ToListAsync();
@@ -109,8 +114,13 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
                 }
             }
 
+            var employeeClaims = claims.Where(c => c.EmployeeId == employee.Id).ToList();
+            foreach (var c in employeeClaims)
+                c.PayrollRunId = run.Id;
+
             var result = PayrollCalculator.Calculate(new PayrollInput(
-                salary, taxYear, daysInMonth, unpaid, settings.EobiEmployeeContribution, settings.EobiEmployerContribution));
+                salary, taxYear, daysInMonth, unpaid, settings.EobiEmployeeContribution, settings.EobiEmployerContribution,
+                employeeClaims.Sum(c => c.Total)));
 
             var payslip = new Payslip
             {
@@ -148,6 +158,14 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             throw new DomainException("This payroll is already finalized.");
         run.Status = PayrollRunStatus.Finalized;
         run.FinalizedAtUtc = clock.UtcNow;
+
+        var claims = await db.ExpenseClaims.Where(c => c.PayrollRunId == run.Id && c.Status == ExpenseStatus.Approved).ToListAsync();
+        foreach (var c in claims)
+        {
+            c.Status = ExpenseStatus.Paid;
+            c.PaidAtUtc = run.FinalizedAtUtc;
+            c.PaidVia = $"Payroll {new DateOnly(run.Year, run.Month, 1):MMMM yyyy}";
+        }
         await db.SaveChangesAsync();
     }
 }

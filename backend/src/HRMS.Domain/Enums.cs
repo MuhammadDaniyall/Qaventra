@@ -86,3 +86,58 @@ public enum PayrollRunStatus
     Draft = 1,
     Finalized = 2,
 }
+
+public enum LetterCategory
+{
+    Offer = 1,
+    Appointment = 2,
+    Confirmation = 3,
+    Increment = 4,
+    Experience = 5,
+    Relieving = 6,
+    SalaryCertificate = 7,
+    Warning = 8,
+    Other = 9,
+}
+
+public enum SeparationType
+{
+    Resignation = 1,
+    Termination = 2,
+    Retirement = 3,
+    ContractEnd = 4,
+}
+
+public enum SeparationStatus
+{
+    /// <summary>The employee resigned; waiting for HR.</summary>
+    Requested = 1,
+    /// <summary>Accepted: clearance, exit interview and settlement are under way.</summary>
+    InProgress = 2,
+    Completed = 3,
+    Rejected = 4,
+    Withdrawn = 5,
+}
+
+public enum ExpenseCategory
+{
+    Travel = 1,
+    Fuel = 2,
+    Meals = 3,
+    Accommodation = 4,
+    Medical = 5,
+    Mobile = 6,
+    OfficeSupplies = 7,
+    Training = 8,
+    Other = 9,
+}
+
+public enum ExpenseStatus
+{
+    Pending = 1,
+    Approved = 2,
+    Rejected = 3,
+    Cancelled = 4,
+    /// <summary>Reimbursed through a finalized payroll or a final settlement.</summary>
+    Paid = 5,
+}

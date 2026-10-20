@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock)
+public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalPolicy approvals)
 {
     /// <summary>Creates missing balances for every active paid leave type, prorated in the joining year.</summary>
     public async Task EnsureBalancesAsync(Guid employeeId, int year)
@@ -93,16 +93,7 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock)
     }
 
     /// <summary>HR and admins may decide any request; a manager only their direct reports'. Nobody decides their own.</summary>
-    public async Task<bool> CanDecideAsync(LeaveRequest request)
-    {
-        if (request.EmployeeId == me.EmployeeId)
-            return false;
-        if (me.IsHr())
-            return true;
-        if (me.Role == UserRole.Manager && me.EmployeeId is { } managerId)
-            return await db.Employees.AnyAsync(e => e.Id == request.EmployeeId && e.ManagerId == managerId);
-        return false;
-    }
+    public Task<bool> CanDecideAsync(LeaveRequest request) => approvals.CanApproveForAsync(request.EmployeeId);
 
     public async Task DecideAsync(Guid requestId, bool approve, string? note)
     {

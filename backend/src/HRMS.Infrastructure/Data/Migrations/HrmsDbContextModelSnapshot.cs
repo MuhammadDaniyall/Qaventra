@@ -154,6 +154,52 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("AuditLogs");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.ClearanceItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ClearedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ClearedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("IsCleared")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("SeparationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeparationId");
+
+                    b.ToTable("ClearanceItems");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -335,6 +381,141 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("EmployeeSalaries");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.ExpenseClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PaidAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaidVia")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("PayrollRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PayrollRunId");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("ExpenseClaims");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.ExpenseItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("ExpenseClaimId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ReceiptFileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("ReceiptId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpenseClaimId");
+
+                    b.ToTable("ExpenseItem");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.ExpenseReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<Guid>("ExpenseClaimId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpenseClaimId");
+
+                    b.ToTable("ExpenseReceipts");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.Holiday", b =>
                 {
                     b.Property<Guid>("Id")
@@ -361,6 +542,61 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Holidays");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.IssuedLetter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("IssuedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("IssuedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("IssuedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReferenceNo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<bool>("SharedWithEmployee")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "ReferenceNo")
+                        .IsUnique();
+
+                    b.ToTable("IssuedLetters");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.LeaveBalance", b =>
@@ -491,6 +727,43 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("LeaveTypes");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.LetterTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LetterTemplates");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.OfficeLocation", b =>
@@ -737,6 +1010,123 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasIndex("EmployeeSalaryId");
 
                     b.ToTable("SalaryComponent");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.Separation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("EncashedLeaveDays")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<string>("ExitFeedback")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("ExitInterviewAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ExitRating")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ExitReason")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("ExpenseReimbursement")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("InitiatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly?>("LastWorkingDay")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("LeaveEncashmentAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("NetSettlement")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateOnly>("NoticeDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("NoticePeriodDays")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("NoticeRecoveryAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OtherAdditions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OtherDeductions")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateOnly>("ProposedLastDay")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("RecoverNoticeShortfall")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("SettlementNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("SettlementSavedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<bool?>("WouldRecommend")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("Separations");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.Shift", b =>
@@ -1080,6 +1470,15 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Navigation("Employee");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.ClearanceItem", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Separation", null)
+                        .WithMany("Clearance")
+                        .HasForeignKey("SeparationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.Employee", b =>
                 {
                     b.HasOne("HRMS.Domain.Entities.Department", "Department")
@@ -1105,6 +1504,50 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Navigation("Manager");
 
                     b.Navigation("Shift");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.ExpenseClaim", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("HRMS.Domain.Entities.PayrollRun", null)
+                        .WithMany()
+                        .HasForeignKey("PayrollRunId");
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.ExpenseItem", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.ExpenseClaim", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ExpenseClaimId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.ExpenseReceipt", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.ExpenseClaim", null)
+                        .WithMany()
+                        .HasForeignKey("ExpenseClaimId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.IssuedLetter", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.LeaveBalance", b =>
@@ -1174,6 +1617,17 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.Separation", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.TaxSlab", b =>
                 {
                     b.HasOne("HRMS.Domain.Entities.TaxYear", null)
@@ -1206,6 +1660,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Navigation("Components");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.ExpenseClaim", b =>
+                {
+                    b.Navigation("Items");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.PayrollRun", b =>
                 {
                     b.Navigation("Payslips");
@@ -1214,6 +1673,11 @@ namespace HRMS.Infrastructure.Data.Migrations
             modelBuilder.Entity("HRMS.Domain.Entities.Payslip", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.Separation", b =>
+                {
+                    b.Navigation("Clearance");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.TaxYear", b =>

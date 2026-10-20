@@ -14,6 +14,8 @@ import { http } from './client';
 export const employeesApi = {
   list: (q: EmployeeQuery) => http.get<PagedResult<EmployeeListItem>>('/employees', { ...q }),
   lookup: () => http.get<Lookup[]>('/employees/lookup'),
+  /** Includes people who have left (for experience and relieving letters). */
+  lookupAll: () => http.get<Lookup[]>('/employees/lookup', { includeFormer: true }),
   me: () => http.get<Employee>('/employees/me'),
   get: (id: string) => http.get<Employee>(`/employees/${id}`),
   create: (b: SaveEmployeeRequest) => http.post<Employee>('/employees', b),

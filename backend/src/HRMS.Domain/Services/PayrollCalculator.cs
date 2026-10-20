@@ -8,7 +8,8 @@ public record PayrollInput(
     int DaysInMonth,
     decimal UnpaidDays,
     decimal EobiEmployee,
-    decimal EobiEmployer);
+    decimal EobiEmployer,
+    decimal Reimbursements = 0m);
 
 public record PayrollLine(string Name, SalaryComponentKind Kind, decimal Amount);
 
@@ -61,6 +62,13 @@ public static class PayrollCalculator
                 lines.Add(new(c.Name, SalaryComponentKind.Deduction, c.Amount));
                 otherDeductions += c.Amount;
             }
+        }
+
+        // Approved expense claims: paid in full, never prorated or taxed.
+        if (input.Reimbursements > 0)
+        {
+            lines.Add(new("Expense reimbursement", SalaryComponentKind.Earning, input.Reimbursements));
+            gross += input.Reimbursements;
         }
 
         var tax = TaxCalculator.MonthlyTax(input.TaxYear, taxable);

@@ -30,6 +30,12 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Payslip> Payslips => Set<Payslip>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<TenantPayment> TenantPayments => Set<TenantPayment>();
+    public DbSet<LetterTemplate> LetterTemplates => Set<LetterTemplate>();
+    public DbSet<IssuedLetter> IssuedLetters => Set<IssuedLetter>();
+    public DbSet<Separation> Separations => Set<Separation>();
+    public DbSet<ClearanceItem> ClearanceItems => Set<ClearanceItem>();
+    public DbSet<ExpenseClaim> ExpenseClaims => Set<ExpenseClaim>();
+    public DbSet<ExpenseReceipt> ExpenseReceipts => Set<ExpenseReceipt>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -164,6 +170,68 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         });
         b.Entity<PayslipLine>().Property(x => x.Name).HasMaxLength(100);
 
+        b.Entity<LetterTemplate>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Subject).HasMaxLength(300);
+        });
+
+        b.Entity<IssuedLetter>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.ReferenceNo }).IsUnique();
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.ReferenceNo).HasMaxLength(40);
+            e.Property(x => x.Subject).HasMaxLength(300);
+            e.Property(x => x.IssuedByName).HasMaxLength(200);
+        });
+
+        b.Entity<Separation>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.Reason).HasMaxLength(2000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.Property(x => x.ExitReason).HasMaxLength(100);
+            e.Property(x => x.ExitFeedback).HasMaxLength(4000);
+            e.Property(x => x.SettlementNote).HasMaxLength(1000);
+            e.Property(x => x.EncashedLeaveDays).HasPrecision(6, 2);
+            e.HasMany(x => x.Clearance).WithOne().HasForeignKey(x => x.SeparationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ClearanceItem>(e =>
+        {
+            e.Property(x => x.Department).HasMaxLength(100);
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.ClearedByName).HasMaxLength(200);
+            e.Property(x => x.Note).HasMaxLength(500);
+        });
+
+        b.Entity<ExpenseClaim>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.HasIndex(x => x.PayrollRunId);
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.Property(x => x.PaidVia).HasMaxLength(100);
+            e.HasOne<PayrollRun>().WithMany().HasForeignKey(x => x.PayrollRunId);
+            e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.ExpenseClaimId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ExpenseItem>(e =>
+        {
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.ReceiptFileName).HasMaxLength(200);
+        });
+
+        b.Entity<ExpenseReceipt>(e =>
+        {
+            e.HasIndex(x => x.ExpenseClaimId);
+            e.HasOne<ExpenseClaim>().WithMany().HasForeignKey(x => x.ExpenseClaimId);
+            e.Property(x => x.FileName).HasMaxLength(200);
+            e.Property(x => x.ContentType).HasMaxLength(100);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -193,7 +261,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     }
 
     private static bool IsOwnedChild(Type t) =>
-        t == typeof(TaxSlab) || t == typeof(SalaryComponent) || t == typeof(Payslip) || t == typeof(PayslipLine);
+        t == typeof(TaxSlab) || t == typeof(SalaryComponent) || t == typeof(Payslip) || t == typeof(PayslipLine)
+        || t == typeof(ClearanceItem) || t == typeof(ExpenseItem);
 
     private LambdaExpression TenantFilter(Type entityType)
     {
@@ -248,7 +317,13 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
                 if (entry.State == EntityState.Modified && Equals(p.OriginalValue, p.CurrentValue))
                     continue;
 
-                object? Mask(object? v) => MaskedProperties.Contains(name) && v is not null ? "***" : v;
+                object? Mask(object? v) => v switch
+                {
+                    null => null,
+                    byte[] bytes => $"[{bytes.Length:N0} bytes]",
+                    _ when MaskedProperties.Contains(name) => "***",
+                    _ => v,
+                };
                 changes[name] = entry.State switch
                 {
                     EntityState.Added => new { @new = Mask(p.CurrentValue) },

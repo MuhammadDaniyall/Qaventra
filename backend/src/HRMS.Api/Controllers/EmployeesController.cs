@@ -93,10 +93,11 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
 
     /// <summary>All current employees as id/name pairs, for dropdowns (manager pickers etc.).</summary>
     [HttpGet("lookup"), Authorize(Policy = Policies.Approver)]
-    public Task<List<LookupDto>> Lookup() =>
-        db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)
+    public Task<List<LookupDto>> Lookup([FromQuery] bool includeFormer = false) =>
+        db.Employees.Where(e => includeFormer || e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)
             .OrderBy(e => e.FirstName)
-            .Select(e => new LookupDto(e.Id, e.EmployeeCode + " · " + e.FirstName + " " + e.LastName))
+            .Select(e => new LookupDto(e.Id, e.EmployeeCode + " · " + e.FirstName + " " + e.LastName
+                + (e.Status == EmploymentStatus.Resigned || e.Status == EmploymentStatus.Terminated ? " (left)" : "")))
             .ToListAsync();
 
     [HttpGet("me")]
