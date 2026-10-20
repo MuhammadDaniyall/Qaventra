@@ -13,12 +13,20 @@ try {
     Set-Content $offline '<h1>Qaventra is being updated. Please try again in a minute.</h1>'
     curl.exe -s -S --ssl-reqd -K $cfg -T $offline "$base/app_offline.htm" | Out-Null
 
-    $files = Get-ChildItem $site -Recurse -File | Sort-Object { $_.Name -eq 'web.config' }
+    # The host is Windows IIS: Linux and macOS native runtimes are never loaded, and the 38 MB ones break the FTPS link.
+    $files = Get-ChildItem $site -Recurse -File |
+        Where-Object { $_.FullName -notmatch '\\runtimes\\(linux|osx|unix)' } |
+        Sort-Object { $_.Name -eq 'web.config' }
     $i = 0
     foreach ($f in $files) {
         $rel = $f.FullName.Substring($site.Length + 1).Replace('\', '/')
-        curl.exe -s -S --ssl-reqd --ftp-create-dirs --retry 3 -K $cfg -T $f.FullName "$base/$rel"
-        if ($LASTEXITCODE) { throw "Upload failed for $rel (curl exit $LASTEXITCODE)" }
+        # The link drops now and then (curl 25/56); retry each file with a growing pause.
+        $ok = $false
+        for ($attempt = 1; $attempt -le 6 -and -not $ok; $attempt++) {
+            curl.exe -s -S --ssl-reqd --ftp-create-dirs --connect-timeout 30 --max-time 300 -K $cfg -T $f.FullName "$base/$rel" 2>$null
+            if ($LASTEXITCODE -eq 0) { $ok = $true } else { Write-Host "retry $attempt for $rel (curl exit $LASTEXITCODE)"; Start-Sleep -Seconds (5 * $attempt) }
+        }
+        if (-not $ok) { throw "Upload failed for $rel after 6 attempts. The site still shows the 'updating' page; run this script again." }
         $i++
         if ($i % 20 -eq 0) { Write-Host "uploaded $i / $($files.Count)" }
     }
