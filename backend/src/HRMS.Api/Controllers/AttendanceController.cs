@@ -25,7 +25,7 @@ public record DailyRowDto(Guid EmployeeId, string EmployeeCode, string FullName,
 [ApiController]
 [Route("api/attendance")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class AttendanceController(HrmsDbContext db, AttendanceService attendance, TenantClock clock, ICurrentUser me) : ControllerBase
+public class AttendanceController(HrmsDbContext db, AttendanceService attendance, ScheduleService schedule, TenantClock clock, ICurrentUser me) : ControllerBase
 {
     [HttpGet("today")]
     public async Task<TodayDto> Today()
@@ -33,7 +33,7 @@ public class AttendanceController(HrmsDbContext db, AttendanceService attendance
         var employeeId = MyEmployeeId();
         var today = await clock.TodayAsync();
         var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == today);
-        var shift = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.Shift).FirstOrDefaultAsync();
+        var shift = (await schedule.ForEmployeeAsync(employeeId, today, today)).ShiftOn(today);
         return new TodayDto(today, record is null ? null : await ToDto(record), shift?.Name, shift?.StartTime, shift?.EndTime,
             await db.OfficeLocations.AnyAsync());
     }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, ChevronLeft, ChevronRight, ClipboardEdit } from 'lucide-react';
+import { ArrowLeftRight, CalendarClock, ChevronLeft, ChevronRight, ClipboardEdit, Repeat } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
 import { qk } from '../../api/keys';
 import { setupApi } from '../../api/organization';
@@ -26,6 +26,7 @@ import { formatDate, formatMinutes, formatTime, monthLabel, pad, todayIso } from
 import type { Attendance, AttendanceStatus } from '../../types';
 import { MyAttendanceRequests, RequestAttendanceModal } from './AttendanceRequests';
 import { CheckInCard } from './CheckInCard';
+import { MyShiftRequests, ShiftRequestModal } from './ShiftRequests';
 
 const DOT: Record<AttendanceStatus, string> = {
   Present: 'bg-emerald-500',
@@ -39,6 +40,7 @@ export function MyAttendancePage() {
   const now = new Date();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() + 1 });
   const [requesting, setRequesting] = useState(false);
+  const [shiftRequest, setShiftRequest] = useState<'Change' | 'Swap' | null>(null);
   const records = useQuery({ queryKey: qk.attendanceMy(ym.y, ym.m), queryFn: () => attendanceApi.my(ym.y, ym.m) });
   const holidays = useQuery({ queryKey: qk.holidays(ym.y), queryFn: () => setupApi.holidays(ym.y), staleTime: 300000 });
 
@@ -64,9 +66,17 @@ export function MyAttendancePage() {
         title="My attendance"
         description="Check in when you arrive and check out when you leave."
         actions={
-          <Button variant="secondary" icon={<ClipboardEdit className="size-4" />} onClick={() => setRequesting(true)}>
-            Request correction
-          </Button>
+          <>
+            <Button variant="secondary" icon={<Repeat className="size-4" />} onClick={() => setShiftRequest('Change')}>
+              Change shift
+            </Button>
+            <Button variant="secondary" icon={<ArrowLeftRight className="size-4" />} onClick={() => setShiftRequest('Swap')}>
+              Swap shift
+            </Button>
+            <Button variant="secondary" icon={<ClipboardEdit className="size-4" />} onClick={() => setRequesting(true)}>
+              Request correction
+            </Button>
+          </>
         }
       />
       <CheckInCard className="mb-6" />
@@ -139,8 +149,10 @@ export function MyAttendancePage() {
           </>
         )}
       </Card>
+      <MyShiftRequests />
       <MyAttendanceRequests />
       {requesting && <RequestAttendanceModal onClose={() => setRequesting(false)} />}
+      {shiftRequest && <ShiftRequestModal kind={shiftRequest} onClose={() => setShiftRequest(null)} />}
     </>
   );
 }

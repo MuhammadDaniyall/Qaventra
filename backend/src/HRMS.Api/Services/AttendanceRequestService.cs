@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Services;
 
 /// <summary>Missed punches, work from home, official duty and time corrections, applied to attendance once approved.</summary>
-public class AttendanceRequestService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, AttendanceService attendance)
+public class AttendanceRequestService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, AttendanceService attendance, ScheduleService schedule)
 {
     /// <summary>How far back an employee may ask to fix attendance.</summary>
     public const int MaxDaysBack = 45;
@@ -33,6 +33,7 @@ public class AttendanceRequestService(HrmsDbContext db, ICurrentUser me, TenantC
             throw new DomainException($"Requests can go back at most {MaxDaysBack} days. Ask HR to correct older attendance.");
         if (checkOut is { } co && co <= checkIn)
             throw new DomainException("Check-out must be after check-in.");
+        await schedule.EnsureOpenAsync(date);
         if (string.IsNullOrWhiteSpace(reason))
             throw new DomainException("Give a reason so your approver knows what happened.");
 

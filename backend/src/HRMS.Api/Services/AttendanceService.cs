@@ -8,16 +8,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-public class AttendanceService(HrmsDbContext db, TenantClock clock)
+public class AttendanceService(HrmsDbContext db, TenantClock clock, ScheduleService schedule)
 {
     public async Task<AttendanceRecord> CheckInAsync(Guid employeeId, double? latitude, double? longitude, AttendanceSource source)
     {
         var today = await clock.TodayAsync();
         if (await db.AttendanceRecords.AnyAsync(a => a.EmployeeId == employeeId && a.Date == today))
             throw new DomainException("You have already checked in today.");
+        await schedule.EnsureOpenAsync(today);
 
         var officeId = await MatchOfficeAsync(latitude, longitude);
-        var shift = await ShiftForAsync(employeeId);
+        var shift = await ShiftForAsync(employeeId, today);
         var localNow = await clock.LocalNowAsync();
 
         var record = new AttendanceRecord
@@ -48,7 +49,8 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock)
         record.CheckOutUtc = clock.UtcNow;
         record.CheckOutLatitude = latitude;
         record.CheckOutLongitude = longitude;
-        ApplyWorkedTime(record, await ShiftForAsync(employeeId));
+        await schedule.EnsureOpenAsync(today);
+        ApplyWorkedTime(record, await ShiftForAsync(employeeId, today));
         await db.SaveChangesAsync();
         return record;
     }
@@ -61,6 +63,7 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock)
             throw new DomainException("Check-out must be after check-in.");
         if (!await db.Employees.AnyAsync(e => e.Id == employeeId))
             throw new NotFoundException("Employee");
+        await schedule.EnsureOpenAsync(date);
 
         var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == date);
         if (record is null)
@@ -69,7 +72,7 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock)
             db.AttendanceRecords.Add(record);
         }
 
-        var shift = await ShiftForAsync(employeeId);
+        var shift = await ShiftForAsync(employeeId, date);
         record.Source = source;
         record.Note = note;
         record.CheckInUtc = await clock.ToUtcAsync(date.ToDateTime(checkIn));
@@ -101,8 +104,9 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock)
         return nearest.Office.Id;
     }
 
-    private async Task<Shift?> ShiftForAsync(Guid employeeId) =>
-        await db.Employees.Where(e => e.Id == employeeId).Select(e => e.Shift).FirstOrDefaultAsync();
+    /// <summary>The rostered shift that day; null on a day off, so nobody is late on a day off.</summary>
+    private async Task<Shift?> ShiftForAsync(Guid employeeId, DateOnly date) =>
+        (await schedule.ForEmployeeAsync(employeeId, date, date)).ShiftOn(date);
 
     private static bool IsLate(Shift? shift, TimeOnly localTime) =>
         shift is not null && localTime > shift.StartTime.AddMinutes(shift.GraceMinutes);

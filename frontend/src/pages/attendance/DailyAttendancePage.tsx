@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarCheck, ChevronLeft, ChevronRight, Pencil, Plus, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { attendanceApi } from '../../api/attendance';
 import { ApiError, errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
@@ -40,6 +41,7 @@ function shiftDate(iso: string, days: number) {
 export function DailyAttendancePage() {
   const user = useUser();
   const hr = isHr(user);
+  const navigate = useNavigate();
   const [date, setDate] = useState(todayIso());
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<DailyRow | null>(null);
@@ -72,6 +74,9 @@ export function DailyAttendancePage() {
             <>
               <ImportButton kind="attendance" invalidate={[qk.attendance, qk.dashboard]} />
               <ExportRangeButton path="/exports/attendance" name="attendance" />
+              <Button variant="secondary" onClick={() => navigate('/attendance/monthly')}>
+                Monthly & close
+              </Button>
             </>
           )
         }

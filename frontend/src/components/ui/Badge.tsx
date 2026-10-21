@@ -61,6 +61,8 @@ const STATUS_TONES: Record<string, Tone> = {
   Pending: 'amber',
   Rejected: 'red',
   Cancelled: 'gray',
+  AwaitingColleague: 'blue',
+  Declined: 'red',
   // employment
   Active: 'green',
   Probation: 'amber',

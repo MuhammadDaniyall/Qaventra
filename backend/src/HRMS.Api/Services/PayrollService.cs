@@ -10,7 +10,7 @@ namespace HRMS.Api.Services;
 
 public record PayrollProcessResult(PayrollRun Run, IReadOnlyList<string> Warnings);
 
-public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock clock, NotificationService notify)
+public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantClock clock, NotificationService notify)
 {
     /// <summary>Calculates (or recalculates) a draft run for the month. A finalized run is locked.</summary>
     public async Task<PayrollProcessResult> ProcessAsync(int year, int month)
@@ -92,6 +92,14 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
                 .Select(a => new { a.EmployeeId, a.Date }).ToListAsync())
                 .ToLookup(a => a.EmployeeId, a => a.Date)
             : null;
+        // Late arrivals and half days, for the penalties set in payroll settings.
+        var flagged = settings.LatesPerPenalty > 0 || settings.DeductHalfDays
+            ? (await db.AttendanceRecords.Where(a => employeeIds.Contains(a.EmployeeId) && a.Date >= monthStart && a.Date <= monthEnd
+                                                     && (a.Status == AttendanceStatus.Late || a.Status == AttendanceStatus.HalfDay))
+                .Select(a => new { a.EmployeeId, a.Status }).ToListAsync())
+                .ToLookup(a => a.EmployeeId, a => a.Status)
+            : null;
+        var calendars = await schedules.ForEmployeesAsync(employeeIds, monthStart, monthEnd);
         var today = await clock.TodayAsync();
 
         foreach (var employee in employees)
@@ -107,13 +115,13 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             var employedTo = employee.LeavingDate is { } left && left < monthEnd ? left : monthEnd;
             decimal unpaid = (employedFrom.DayNumber - monthStart.DayNumber) + (monthEnd.DayNumber - employedTo.DayNumber);
 
-            var (weeklyOff, holidays) = await leave.CalendarForAsync(employee.Id, monthStart, monthEnd);
+            var calendar = calendars[employee.Id];
             foreach (var r in unpaidLeaves.Where(r => r.EmployeeId == employee.Id))
             {
                 var overlap = WorkCalendar.Overlap(r.FromDate, r.ToDate, employedFrom, employedTo);
                 if (overlap is { } o)
                     // Half day and short leave are single-day requests that already know their fraction of a day.
-                    unpaid += r.Duration == LeaveDuration.FullDay ? WorkCalendar.CountWorkingDays(o.From, o.To, weeklyOff, holidays) : r.Days;
+                    unpaid += r.Duration == LeaveDuration.FullDay ? calendar.CountWorkingDays(o.From, o.To) : r.Days;
             }
 
             if (attendanceDates is not null)
@@ -122,7 +130,7 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
                 var lastDay = employedTo < today ? employedTo : today.AddDays(-1);
                 for (var d = employedFrom; d <= lastDay; d = d.AddDays(1))
                 {
-                    if (weeklyOff.Contains(d.DayOfWeek) || holidays.Contains(d) || present.Contains(d))
+                    if (!calendar.IsWorkingDay(d) || present.Contains(d))
                         continue;
                     if (approvedLeaves.Any(r => r.EmployeeId == employee.Id && r.FromDate <= d && r.ToDate >= d))
                         continue;
@@ -135,6 +143,21 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
                 c.PayrollRunId = run.Id;
 
             var extras = new List<PayItem>();
+            if (flagged is not null)
+            {
+                // A day's pay is the monthly gross over the days in the month, as unpaid days are.
+                var dayRate = (salary.BasicSalary + salary.Components.Where(c => c.Kind == SalaryComponentKind.Earning).Sum(c => c.Amount)) / daysInMonth;
+                var lates = flagged[employee.Id].Count(x => x == AttendanceStatus.Late);
+                var halves = flagged[employee.Id].Count(x => x == AttendanceStatus.HalfDay);
+                if (settings.LatesPerPenalty > 0 && lates >= settings.LatesPerPenalty)
+                {
+                    var days = lates / settings.LatesPerPenalty * settings.LatePenaltyDays;
+                    extras.Add(new PayItem($"Late arrival penalty ({lates} late, {days:0.#} day{(days == 1 ? "" : "s")})",
+                        SalaryComponentKind.Deduction, Math.Round(dayRate * days, 0), false));
+                }
+                if (settings.DeductHalfDays && halves > 0)
+                    extras.Add(new PayItem($"Half days ({halves} × ½ day)", SalaryComponentKind.Deduction, Math.Round(dayRate * halves / 2m, 0), false));
+            }
             foreach (var item in payItems.Where(r => r.EmployeeId == employee.Id).OrderBy(r => r.Kind))
             {
                 item.PayrollRunId = run.Id;
@@ -209,6 +232,11 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             c.PaidAtUtc = run.FinalizedAtUtc;
             c.PaidVia = $"Payroll {new DateOnly(run.Year, run.Month, 1):MMMM yyyy}";
         }
+
+        // Paid attendance should not change any more: close the month if it has ended.
+        var monthEnd = new DateOnly(run.Year, run.Month, 1).AddMonths(1).AddDays(-1);
+        if (monthEnd < await clock.TodayAsync() && !await db.AttendancePeriods.AnyAsync(p => p.Year == run.Year && p.Month == run.Month))
+            db.AttendancePeriods.Add(new AttendancePeriod { Year = run.Year, Month = run.Month, ClosedAtUtc = clock.UtcNow, ClosedByName = "Payroll finalized" });
 
         var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
         var paid = await db.Payslips.Where(p => p.PayrollRunId == run.Id).Select(p => p.EmployeeId).ToListAsync();

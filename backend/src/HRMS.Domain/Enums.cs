@@ -17,6 +17,33 @@ public enum Gender
     Other = 3,
 }
 
+public enum ShiftAssignmentSource
+{
+    Roster = 1,
+    /// <summary>Written by an approved shift change request.</summary>
+    Request = 2,
+    /// <summary>Written by an approved shift swap.</summary>
+    Swap = 3,
+}
+
+public enum ShiftRequestKind
+{
+    Change = 1,
+    Swap = 2,
+}
+
+public enum ShiftRequestStatus
+{
+    /// <summary>Swap only: the colleague has not agreed yet.</summary>
+    AwaitingColleague = 1,
+    Pending = 2,
+    Approved = 3,
+    Rejected = 4,
+    Cancelled = 5,
+    /// <summary>Swap only: the colleague said no.</summary>
+    Declined = 6,
+}
+
 public enum MaritalStatus
 {
     Single = 1,
@@ -188,6 +215,7 @@ public enum ApprovalRequestType
     PayRequest = 5,
     Loan = 6,
     ProfileChange = 7,
+    ShiftChange = 8,
 }
 
 public enum PayRequestKind

@@ -9,6 +9,8 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { LoginPage } from './pages/auth/LoginPage';
 
 const DailyAttendancePage = lazy(() => import('./pages/attendance/DailyAttendancePage').then((m) => ({ default: m.DailyAttendancePage })));
+const RosterPage = lazy(() => import('./pages/attendance/RosterPage').then((m) => ({ default: m.RosterPage })));
+const MonthlyAttendancePage = lazy(() => import('./pages/attendance/MonthlyAttendancePage').then((m) => ({ default: m.MonthlyAttendancePage })));
 const MyAttendancePage = lazy(() => import('./pages/attendance/MyAttendancePage').then((m) => ({ default: m.MyAttendancePage })));
 const ApprovalsInboxPage = lazy(() => import('./pages/approvals/ApprovalsInboxPage').then((m) => ({ default: m.ApprovalsInboxPage })));
 const AuditLogsPage = lazy(() => import('./pages/audit/AuditLogsPage').then((m) => ({ default: m.AuditLogsPage })));
@@ -95,6 +97,8 @@ export default function App() {
               <Route path="/employees" element={<EmployeesPage />} />
               <Route path="/employees/:id" element={<EmployeeDetailPage />} />
               <Route path="/attendance/daily" element={<DailyAttendancePage />} />
+              <Route path="/attendance/roster" element={<RosterPage />} />
+              <Route path="/attendance/monthly" element={<MonthlyAttendancePage />} />
               <Route path="/leave/approvals" element={<LeaveApprovalsPage />} />
               <Route path="/expenses/approvals" element={<ExpenseApprovalsPage />} />
             </Route>

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CalendarDays, CalendarPlus, Check, ChevronDown, Clock, HandCoins, Inbox, Receipt, UserPen, X, type LucideIcon } from 'lucide-react';
+import { Banknote, CalendarDays, CalendarPlus, Check, ChevronDown, Clock, HandCoins, Inbox, Receipt, Repeat, UserPen, X, type LucideIcon } from 'lucide-react';
 import { approvalsApi, REQUEST_LABELS, type ApprovalRequestType, type InboxItem } from '../../api/approvals';
 import { attendanceRequestsApi } from '../../api/attendance';
 import { profileChangesApi } from '../../api/employees';
 import { expensesApi } from '../../api/expenses';
+import { schedulingApi } from '../../api/scheduling';
 import { qk } from '../../api/keys';
 import { compOffApi, leaveApi } from '../../api/leave';
 import { payApi } from '../../api/pay';
@@ -40,6 +41,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   PayRequest: Banknote,
   Loan: HandCoins,
   ProfileChange: UserPen,
+  ShiftChange: Repeat,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -52,6 +54,7 @@ const decideApi: Record<ApprovalRequestType, { approve: (id: string, note: strin
   PayRequest: { approve: payApi.approve, reject: payApi.reject },
   Loan: { approve: payApi.approveLoan, reject: payApi.rejectLoan },
   ProfileChange: { approve: profileChangesApi.approve, reject: profileChangesApi.reject },
+  ShiftChange: { approve: schedulingApi.approve, reject: schedulingApi.reject },
 };
 
 export function ApprovalsInboxPage() {
@@ -82,7 +85,7 @@ export function ApprovalsInboxPage() {
         <Tabs<Filter>
           value={filter}
           onChange={setFilter}
-          items={(['all', 'Leave', 'Expense', 'Attendance', 'CompOff', 'PayRequest', 'Loan', 'ProfileChange'] as Filter[]).map((t) => ({
+          items={(['all', 'Leave', 'Expense', 'Attendance', 'CompOff', 'PayRequest', 'Loan', 'ProfileChange', 'ShiftChange'] as Filter[]).map((t) => ({
             value: t,
             label: (
               <>

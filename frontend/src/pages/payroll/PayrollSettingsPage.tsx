@@ -31,6 +31,9 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
   const [employer, setEmployer] = useState(String(initial.eobiEmployerContribution));
   const [deductAbsent, setDeductAbsent] = useState(initial.deductAbsentDays);
   const [overtime, setOvertime] = useState(String(initial.overtimeMultiplier ?? 1.5));
+  const [latesPer, setLatesPer] = useState(String(initial.latesPerPenalty ?? 0));
+  const [penaltyDays, setPenaltyDays] = useState(String(initial.latePenaltyDays ?? 1));
+  const [halfDays, setHalfDays] = useState(initial.deductHalfDays ?? false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -56,9 +59,21 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
     if (employer === '' || !Number.isFinite(b) || b < 0) fe.eobiEmployerContribution = 'Enter an amount of 0 or more.';
     const ot = Number(overtime);
     if (overtime === '' || !Number.isFinite(ot) || ot < 0 || ot > 5) fe.overtimeMultiplier = 'Between 0 and 5 (e.g. 1.5 or 2).';
+    const lp = Number(latesPer);
+    const pd = Number(penaltyDays);
+    if (!Number.isInteger(lp) || lp < 0 || lp > 31) fe.latesPerPenalty = 'A whole number from 0 to 31.';
+    if (!Number.isFinite(pd) || pd < 0 || pd > 5) fe.latePenaltyDays = 'Between 0 and 5 (e.g. 0.5 or 1).';
     setFieldErrors(fe);
     if (Object.keys(fe).length) return;
-    save.mutate({ eobiEmployeeContribution: a, eobiEmployerContribution: b, deductAbsentDays: deductAbsent, overtimeMultiplier: ot });
+    save.mutate({
+      eobiEmployeeContribution: a,
+      eobiEmployerContribution: b,
+      deductAbsentDays: deductAbsent,
+      overtimeMultiplier: ot,
+      latesPerPenalty: lp,
+      latePenaltyDays: pd,
+      deductHalfDays: halfDays,
+    });
   };
 
   return (
@@ -87,6 +102,26 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
             onChange={setDeductAbsent}
             label="Deduct absent days"
             description="Working days without attendance or approved paid leave are unpaid."
+          />
+          <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Late arrival penalty</p>
+            <p className="mb-3 text-xs text-zinc-500">Shown as its own deduction on the payslip. Set late arrivals to 0 to switch it off.</p>
+            <div className="flex flex-wrap items-end gap-3 text-sm text-zinc-700 dark:text-zinc-300">
+              <span className="pb-2">Every</span>
+              <Field label="Late arrivals" error={fieldErrors.latesPerPenalty}>
+                <Input type="number" min={0} max={31} value={latesPer} onChange={(e) => setLatesPer(e.target.value)} className="w-24" />
+              </Field>
+              <span className="pb-2">deduct</span>
+              <Field label="Days of pay" error={fieldErrors.latePenaltyDays}>
+                <Input type="number" min={0} max={5} step="0.5" value={penaltyDays} onChange={(e) => setPenaltyDays(e.target.value)} className="w-24" />
+              </Field>
+            </div>
+          </div>
+          <Switch
+            checked={halfDays}
+            onChange={setHalfDays}
+            label="Deduct half days"
+            description="A day where someone worked under half their shift costs half a day's pay."
           />
           <div className="flex justify-end">
             <Button type="submit" loading={save.isPending}>

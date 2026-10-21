@@ -628,6 +628,10 @@ export interface PayrollSettings {
   deductAbsentDays: boolean;
   /** Overtime pay per hour = basic / 30 / 8 x this. */
   overtimeMultiplier: number;
+  /** Late arrivals per penalty; 0 = off. */
+  latesPerPenalty: number;
+  latePenaltyDays: number;
+  deductHalfDays: boolean;
 }
 
 // ---- Dashboard ----

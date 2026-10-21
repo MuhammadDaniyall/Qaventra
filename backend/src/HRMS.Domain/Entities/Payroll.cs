@@ -13,6 +13,12 @@ public class PayrollSettings : TenantEntity
     public bool DeductAbsentDays { get; set; }
     /// <summary>Overtime pay per hour = basic salary / 30 / 8 x this multiplier.</summary>
     public decimal OvertimeMultiplier { get; set; } = 1.5m;
+    /// <summary>Late arrivals that make one penalty (e.g. 3); 0 switches late penalties off.</summary>
+    public int LatesPerPenalty { get; set; }
+    /// <summary>Days of pay deducted per penalty (e.g. 1 or 0.5).</summary>
+    public decimal LatePenaltyDays { get; set; } = 1m;
+    /// <summary>A day marked half day (worked under half the shift) costs half a day's pay.</summary>
+    public bool DeductHalfDays { get; set; }
 }
 
 /// <summary>A Pakistani tax year (July–June) with its salaried-income slabs. Shared by all companies.</summary>

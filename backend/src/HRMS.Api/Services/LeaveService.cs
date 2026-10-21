@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals)
+public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, ScheduleService schedule)
 {
     /// <summary>
     /// Creates missing balances for every active paid leave type: the year's quota (prorated for joiners; zero for
@@ -64,19 +64,9 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         }).ToList();
     }
 
-    public async Task<decimal> CountDaysAsync(Guid employeeId, DateOnly from, DateOnly to)
-    {
-        var (weeklyOff, holidays) = await CalendarForAsync(employeeId, from, to);
-        return WorkCalendar.CountWorkingDays(from, to, weeklyOff, holidays);
-    }
-
-    public async Task<(IReadOnlyCollection<DayOfWeek> WeeklyOff, IReadOnlySet<DateOnly> Holidays)> CalendarForAsync(Guid employeeId, DateOnly from, DateOnly to)
-    {
-        var weeklyOff = await db.Employees.Where(e => e.Id == employeeId)
-            .Select(e => e.Shift != null ? e.Shift.WeeklyOffDays : null).FirstOrDefaultAsync() ?? [];
-        var holidays = await db.Holidays.Where(h => h.Date >= from && h.Date <= to).Select(h => h.Date).ToListAsync();
-        return (weeklyOff, holidays.ToHashSet());
-    }
+    /// <summary>Working days in the range by the employee's roster: off days and holidays do not count.</summary>
+    public async Task<decimal> CountDaysAsync(Guid employeeId, DateOnly from, DateOnly to) =>
+        to < from ? 0 : (await schedule.ForEmployeeAsync(employeeId, from, to)).CountWorkingDays(from, to);
 
     public record LeaveApplication(
         Guid LeaveTypeId, DateOnly FromDate, DateOnly ToDate, string? Reason,

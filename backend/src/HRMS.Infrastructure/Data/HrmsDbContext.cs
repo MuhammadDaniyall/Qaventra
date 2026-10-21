@@ -51,6 +51,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
     public DbSet<ProfileChangeRequest> ProfileChangeRequests => Set<ProfileChangeRequest>();
     public DbSet<JobChange> JobChanges => Set<JobChange>();
+    public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
+    public DbSet<ShiftRequest> ShiftRequests => Set<ShiftRequest>();
+    public DbSet<AttendancePeriod> AttendancePeriods => Set<AttendancePeriod>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -378,6 +381,31 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Note).HasMaxLength(1000);
             e.Property(x => x.RecordedByName).HasMaxLength(200);
             e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<ShiftAssignment>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.Date }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Date });
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasOne<Shift>().WithMany().HasForeignKey(x => x.ShiftId);
+        });
+
+        b.Entity<ShiftRequest>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.HasIndex(x => x.SwapWithEmployeeId);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne<Shift>().WithMany().HasForeignKey(x => x.ShiftId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.SwapWithEmployeeId);
+        });
+
+        b.Entity<AttendancePeriod>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Year, x.Month }).IsUnique();
+            e.Property(x => x.ClosedByName).HasMaxLength(200);
         });
 
         b.Entity<AuditLog>(e =>
