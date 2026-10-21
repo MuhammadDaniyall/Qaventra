@@ -479,6 +479,50 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("ClearanceItems");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.CompOffRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Days")
+                        .HasPrecision(4, 2)
+                        .HasColumnType("decimal(4,2)");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("WorkedOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "WorkedOn");
+
+                    b.ToTable("CompOffRequests");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -884,8 +928,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal>("Adjustment")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<string>("AdjustmentNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<decimal>("CarriedForward")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Credited")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
 
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
@@ -940,11 +1000,20 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<int>("Duration")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time");
+
                     b.Property<DateOnly>("FromDate")
                         .HasColumnType("date");
+
+                    b.Property<int?>("HalfDayPart")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("LeaveTypeId")
                         .HasColumnType("uniqueidentifier");
@@ -952,6 +1021,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("Reason")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -977,7 +1049,26 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Accrual")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("AllowHalfDay")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AllowShortLeave")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AllowedOnProbation")
+                        .HasColumnType("bit");
+
                     b.Property<decimal>("AnnualQuota")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("decimal(6,2)");
+
+                    b.Property<int?>("ApplicableGender")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("CarryForwardMax")
                         .HasPrecision(6, 2)
                         .HasColumnType("decimal(6,2)");
 
@@ -992,8 +1083,17 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsCompensatory")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsPaid")
                         .HasColumnType("bit");
+
+                    b.Property<int?>("MaxConsecutiveDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MinNoticeDays")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1853,6 +1953,17 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasForeignKey("SeparationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.CompOffRequest", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.Employee", b =>

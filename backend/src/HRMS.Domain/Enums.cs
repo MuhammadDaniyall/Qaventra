@@ -52,6 +52,29 @@ public enum LeaveStatus
     Cancelled = 4,
 }
 
+public enum LeaveDuration
+{
+    FullDay = 1,
+    /// <summary>Half of one working day.</summary>
+    HalfDay = 2,
+    /// <summary>A few hours of one working day.</summary>
+    ShortLeave = 3,
+}
+
+public enum HalfDayPart
+{
+    FirstHalf = 1,
+    SecondHalf = 2,
+}
+
+public enum LeaveAccrual
+{
+    /// <summary>The whole year's quota is available from January (prorated for joiners).</summary>
+    Upfront = 1,
+    /// <summary>One twelfth of the quota is earned each month.</summary>
+    Monthly = 2,
+}
+
 public enum SalaryComponentKind
 {
     Earning = 1,
@@ -140,6 +163,7 @@ public enum ApprovalRequestType
     Leave = 1,
     Expense = 2,
     Attendance = 3,
+    CompOff = 4,
 }
 
 /// <summary>Status of a simple request that goes through an approval chain.</summary>

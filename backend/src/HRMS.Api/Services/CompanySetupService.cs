@@ -65,7 +65,8 @@ public class CompanySetupService(HrmsDbContext db, IPasswordHasher<User> hasher,
             new LeaveType { Name = "Annual Leave", Code = "AL", AnnualQuota = 14 },
             new LeaveType { Name = "Casual Leave", Code = "CL", AnnualQuota = 10 },
             new LeaveType { Name = "Sick Leave", Code = "SL", AnnualQuota = 8 },
-            new LeaveType { Name = "Unpaid Leave", Code = "UL", AnnualQuota = 0, IsPaid = false });
+            new LeaveType { Name = "Unpaid Leave", Code = "UL", AnnualQuota = 0, IsPaid = false, AllowShortLeave = true },
+            new LeaveType { Name = "Compensatory Leave", Code = "CPL", AnnualQuota = 0, IsCompensatory = true });
         db.PayrollSettings.Add(new PayrollSettings());
         await db.SaveChangesAsync();
 

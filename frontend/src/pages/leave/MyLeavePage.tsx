@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarDays, Paperclip, Plus, X } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Paperclip, Plus, X } from 'lucide-react';
 import { ATTACHMENT_ACCEPT, attachmentProblem, attachmentsApi } from '../../api/attachments';
 import { leaveApi } from '../../api/leave';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { ClaimCompOffModal, MyCompOffClaims } from './CompOff';
 import { errorMessage } from '../../api/client';
 import { useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -34,9 +35,9 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
-import { formatDate, formatNumber, todayIso } from '../../lib/format';
+import { formatDate, formatNumber, formatTime, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
-import type { LeaveBalance, LeaveRequest } from '../../types';
+import type { HalfDayPart, LeaveBalance, LeaveDuration, LeaveRequest } from '../../types';
 
 export function MyLeavePage() {
   const toast = useToast();
@@ -44,6 +45,7 @@ export function MyLeavePage() {
   const [applyOpen, setApplyOpen] = useState(false);
   const [cancelling, setCancelling] = useState<LeaveRequest | null>(null);
   const [filesFor, setFilesFor] = useState<LeaveRequest | null>(null);
+  const [claiming, setClaiming] = useState(false);
   const balances = useQuery({ queryKey: qk.leaveBalances, queryFn: () => leaveApi.balances() });
   const requests = useQuery({ queryKey: qk.leaveMy, queryFn: leaveApi.my });
 
@@ -64,9 +66,14 @@ export function MyLeavePage() {
         title="My leave"
         description={`Balances for ${new Date().getFullYear()}.`}
         actions={
-          <Button icon={<Plus className="size-4" />} onClick={() => setApplyOpen(true)}>
-            Apply for leave
-          </Button>
+          <>
+            <Button variant="secondary" icon={<CalendarPlus className="size-4" />} onClick={() => setClaiming(true)}>
+              Claim comp-off
+            </Button>
+            <Button icon={<Plus className="size-4" />} onClick={() => setApplyOpen(true)}>
+              Apply for leave
+            </Button>
+          </>
         }
       />
 
@@ -133,6 +140,7 @@ export function MyLeavePage() {
                   <Td>
                     {formatDate(r.fromDate)}
                     {r.toDate !== r.fromDate && <> – {formatDate(r.toDate)}</>}
+                    {r.duration !== 'FullDay' && <span className="block text-xs text-zinc-500">{durationLabel(r)}</span>}
                   </Td>
                   <Td className="text-right tabular-nums">{formatNumber(r.days)}</Td>
                   <Td>
@@ -161,7 +169,9 @@ export function MyLeavePage() {
         )}
       </Card>
 
+      <MyCompOffClaims />
       {applyOpen && <ApplyLeaveModal balances={balances.data ?? []} onClose={() => setApplyOpen(false)} />}
+      {claiming && <ClaimCompOffModal onClose={() => setClaiming(false)} />}
       {filesFor && (
         <Modal open onClose={() => setFilesFor(null)} title="Files" description={`${filesFor.leaveType} · ${formatDate(filesFor.fromDate)}`}>
           <AttachmentList owner="Leave" ownerId={filesFor.id} emptyText="No files attached to this request." />
@@ -190,8 +200,15 @@ export function MyLeavePage() {
 }
 
 function BalanceCard({ b }: { b: LeaveBalance }) {
-  const usedPct = b.entitled > 0 ? Math.min(100, (b.used / b.entitled) * 100) : 0;
-  const pendingPct = b.entitled > 0 ? Math.min(100 - usedPct, (b.pending / b.entitled) * 100) : 0;
+  const total = b.isCompensatory ? b.credited + b.adjustment : b.entitled + b.carriedForward + b.adjustment + b.credited;
+  const usedPct = total > 0 ? Math.min(100, (b.used / total) * 100) : 0;
+  const pendingPct = total > 0 ? Math.min(100 - usedPct, (b.pending / total) * 100) : 0;
+  const extras = [
+    b.accrual === 'Monthly' && !b.isCompensatory && b.earned < b.entitled ? `${formatNumber(b.earned)} of ${formatNumber(b.entitled)} earned so far` : null,
+    b.carriedForward > 0 ? `${formatNumber(b.carriedForward)} carried forward` : null,
+    b.credited > 0 ? `${formatNumber(b.credited)} from comp-off` : null,
+    b.adjustment !== 0 ? `${b.adjustment > 0 ? '+' : ''}${formatNumber(b.adjustment)} adjusted by HR` : null,
+  ].filter(Boolean);
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between gap-2">
@@ -200,7 +217,7 @@ function BalanceCard({ b }: { b: LeaveBalance }) {
       </div>
       <p className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
         {formatNumber(b.available)}
-        <span className="ml-1 text-sm font-normal text-zinc-500">/ {formatNumber(b.entitled)} days</span>
+        <span className="ml-1 text-sm font-normal text-zinc-500">/ {formatNumber(total)} days</span>
       </p>
       <div className="mt-3 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden="true">
         <div className="h-full rounded-full bg-accent-500" style={{ width: `${usedPct}%` }} />
@@ -209,8 +226,15 @@ function BalanceCard({ b }: { b: LeaveBalance }) {
       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
         {formatNumber(b.used)} used · {formatNumber(b.pending)} pending
       </p>
+      {extras.length > 0 && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400" title={b.adjustmentNote ?? undefined}>{extras.join(' · ')}</p>}
     </Card>
   );
+}
+
+export function durationLabel(r: { duration: LeaveDuration; halfDayPart: HalfDayPart | null; startTime: string | null; endTime: string | null }) {
+  if (r.duration === 'HalfDay') return r.halfDayPart === 'SecondHalf' ? 'Half day · second half' : 'Half day · first half';
+  if (r.duration === 'ShortLeave') return `Short leave · ${formatTime(r.startTime)} – ${formatTime(r.endTime)}`;
+  return 'Full day';
 }
 
 function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onClose: () => void }) {
@@ -224,8 +248,20 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   const [reason, setReason] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [duration, setDuration] = useState<LeaveDuration>('FullDay');
+  const [part, setPart] = useState<HalfDayPart>('FirstHalf');
+  const [startTime, setStartTime] = useState('10:00');
+  const [endTime, setEndTime] = useState('12:00');
 
   const typeId = leaveTypeId || active[0]?.id || '';
+  const type = active.find((t) => t.id === typeId);
+  const durations: Array<{ value: LeaveDuration; label: string }> = [
+    { value: 'FullDay', label: 'Full day(s)' },
+    ...(type?.allowHalfDay ? [{ value: 'HalfDay' as const, label: 'Half day' }] : []),
+    ...(type?.allowShortLeave ? [{ value: 'ShortLeave' as const, label: 'Short leave' }] : []),
+  ];
+  const mode: LeaveDuration = durations.some((d) => d.value === duration) ? duration : 'FullDay';
+  const single = mode !== 'FullDay';
   const range = useDebounced({ from, to }, 250);
   const validRange = !!range.from && !!range.to && range.to >= range.from;
   const days = useQuery({
@@ -239,14 +275,23 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
 
   const apply = useMutation({
     mutationFn: async () => {
-      const r = await leaveApi.apply({ leaveTypeId: typeId, fromDate: from, toDate: to, reason: reason.trim() || null });
+      const r = await leaveApi.apply({
+        leaveTypeId: typeId,
+        fromDate: from,
+        toDate: single ? from : to,
+        reason: reason.trim() || null,
+        duration: mode,
+        halfDayPart: mode === 'HalfDay' ? part : null,
+        startTime: mode === 'ShortLeave' ? `${startTime}:00` : null,
+        endTime: mode === 'ShortLeave' ? `${endTime}:00` : null,
+      });
       // The request exists now; a failed upload must not hide that, so it is reported separately.
       const failed: string[] = [];
       for (const f of files) await attachmentsApi.upload('Leave', r.id, f).catch(() => failed.push(f.name));
       return { r, failed };
     },
     onSuccess: ({ r, failed }) => {
-      toast.success('Leave requested', `${formatNumber(r.days)} day(s) of ${r.leaveType} sent for approval.`);
+      toast.success('Leave requested', `${r.duration === 'FullDay' ? `${formatNumber(r.days)} day(s)` : durationLabel(r)} of ${r.leaveType} sent for approval.`);
       if (failed.length) toast.error('Some files did not upload', `${failed.join(', ')}. Add them from the Files button.`);
       qc.invalidateQueries({ queryKey: qk.leave });
       qc.invalidateQueries({ queryKey: qk.approvals });
@@ -261,7 +306,8 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
     setError(null);
     if (!typeId) return setError('Choose a leave type.');
     if (!from || !to) return setError('Choose the dates.');
-    if (to < from) return setError('The end date cannot be before the start date.');
+    if (!single && to < from) return setError('The end date cannot be before the start date.');
+    if (mode === 'ShortLeave' && endTime <= startTime) return setError('Short leave must end after it starts.');
     apply.mutate();
   };
 
@@ -294,32 +340,87 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
             ))}
           </Select>
         </Field>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="From" required>
-            <Input
-              type="date"
-              value={from}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                if (to < e.target.value) setTo(e.target.value);
-              }}
-            />
-          </Field>
-          <Field label="To" required>
-            <Input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-          </Field>
-        </div>
-        <div
-          className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm dark:bg-zinc-800/50"
-          aria-live="polite"
-        >
-          <span className="text-zinc-600 dark:text-zinc-300">Working days</span>
-          <span className="font-semibold text-zinc-900 tabular-nums dark:text-white">
-            {!validRange ? '—' : days.isFetching ? <Spinner className="size-4" /> : days.isError ? '—' : formatNumber(days.data?.days)}
-          </span>
-        </div>
+        {durations.length > 1 && (
+          <div className="inline-flex rounded-lg bg-zinc-100 p-1 dark:bg-zinc-800" role="radiogroup" aria-label="Length">
+            {durations.map((d) => (
+              <button
+                key={d.value}
+                type="button"
+                role="radio"
+                aria-checked={mode === d.value}
+                onClick={() => setDuration(d.value)}
+                className={
+                  mode === d.value
+                    ? 'rounded-md bg-white px-3 py-1.5 text-sm font-medium text-zinc-900 shadow-sm dark:bg-zinc-900 dark:text-white'
+                    : 'rounded-md px-3 py-1.5 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-300'
+                }
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {single ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Date" required>
+              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTo(e.target.value); }} />
+            </Field>
+            {mode === 'HalfDay' ? (
+              <Field label="Which half">
+                <Select value={part} onChange={(e) => setPart(e.target.value as HalfDayPart)}>
+                  <option value="FirstHalf">First half (morning)</option>
+                  <option value="SecondHalf">Second half (afternoon)</option>
+                </Select>
+              </Field>
+            ) : (
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="From">
+                  <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+                </Field>
+                <Field label="To" hint="Up to 4 hours">
+                  <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                </Field>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="From" required>
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    if (to < e.target.value) setTo(e.target.value);
+                  }}
+                />
+              </Field>
+              <Field label="To" required>
+                <Input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+              </Field>
+            </div>
+            <div
+              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm dark:bg-zinc-800/50"
+              aria-live="polite"
+            >
+              <span className="text-zinc-600 dark:text-zinc-300">Working days</span>
+              <span className="font-semibold text-zinc-900 tabular-nums dark:text-white">
+                {!validRange ? '—' : days.isFetching ? <Spinner className="size-4" /> : days.isError ? '—' : formatNumber(days.data?.days)}
+              </span>
+            </div>
+          </>
+        )}
+        {type && (type.minNoticeDays > 0 || type.maxConsecutiveDays) && (
+          <p className="text-xs text-zinc-500">
+            {[type.minNoticeDays > 0 ? `Apply at least ${type.minNoticeDays} day(s) ahead` : null, type.maxConsecutiveDays ? `at most ${type.maxConsecutiveDays} day(s) at a time` : null]
+              .filter(Boolean)
+              .join(' · ')}
+            .
+          </p>
+        )}
         {days.isError && <p className="text-xs text-red-600 dark:text-red-400">{errorMessage(days.error)}</p>}
-        {over && (
+        {over && !single && (
           <p className="text-xs text-amber-700 dark:text-amber-300">This is more than your available balance.</p>
         )}
         <Field label="Reason">

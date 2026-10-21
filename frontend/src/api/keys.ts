@@ -25,6 +25,8 @@ export const qk = {
   leaveBalances: ['leave', 'balances'] as const,
   leaveMy: ['leave', 'my'] as const,
   leaveApprovals: (s: string) => ['leave', 'approvals', s] as const,
+  compOffMy: ['leave', 'comp-off', 'my'] as const,
+  employeeLeave: (id: string, y: number) => ['leave', 'employee', id, y] as const,
   payroll: ['payroll'] as const,
   payrollRuns: ['payroll', 'runs'] as const,
   payrollRun: (id: string) => ['payroll', 'runs', id] as const,

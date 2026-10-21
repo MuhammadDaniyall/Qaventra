@@ -44,6 +44,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<AttachmentContent> AttachmentContents => Set<AttachmentContent>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
+    public DbSet<CompOffRequest> CompOffRequests => Set<CompOffRequest>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -140,6 +141,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Name).HasMaxLength(100);
             e.Property(x => x.Code).HasMaxLength(10);
             e.Property(x => x.AnnualQuota).HasPrecision(6, 2);
+            e.Property(x => x.CarryForwardMax).HasPrecision(6, 2);
         });
 
         b.Entity<LeaveBalance>(e =>
@@ -147,6 +149,18 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.HasIndex(x => new { x.EmployeeId, x.LeaveTypeId, x.Year }).IsUnique();
             e.Property(x => x.Entitled).HasPrecision(6, 2);
             e.Property(x => x.Used).HasPrecision(6, 2);
+            e.Property(x => x.CarriedForward).HasPrecision(6, 2);
+            e.Property(x => x.Adjustment).HasPrecision(6, 2);
+            e.Property(x => x.Credited).HasPrecision(6, 2);
+            e.Property(x => x.AdjustmentNote).HasMaxLength(300);
+        });
+
+        b.Entity<CompOffRequest>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.WorkedOn });
+            e.Property(x => x.Days).HasPrecision(4, 2);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
         });
 
         b.Entity<LeaveRequest>(e =>

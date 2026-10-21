@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ClipboardCheck, Paperclip, X } from 'lucide-react';
 import { leaveApi } from '../../api/leave';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { durationLabel } from './MyLeavePage';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
@@ -109,6 +110,7 @@ export function LeaveApprovalsPage() {
                   <Td>
                     {formatDate(r.fromDate)}
                     {r.toDate !== r.fromDate && <> – {formatDate(r.toDate)}</>}
+                    {r.duration !== 'FullDay' && <span className="block text-xs text-zinc-500">{durationLabel(r)}</span>}
                   </Td>
                   <Td className="text-right tabular-nums">{formatNumber(r.days)}</Td>
                   <Td className="max-w-xs truncate" title={r.reason ?? undefined}>

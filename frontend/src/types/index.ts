@@ -255,6 +255,10 @@ export interface Holiday {
 }
 export type SaveHolidayRequest = Omit<Holiday, 'id'>;
 
+export type LeaveAccrual = 'Upfront' | 'Monthly';
+export type LeaveDuration = 'FullDay' | 'HalfDay' | 'ShortLeave';
+export type HalfDayPart = 'FirstHalf' | 'SecondHalf';
+
 export interface LeaveType {
   id: string;
   name: string;
@@ -262,6 +266,17 @@ export interface LeaveType {
   annualQuota: number;
   isPaid: boolean;
   isActive: boolean;
+  accrual: LeaveAccrual;
+  /** Most unused days moved into next year; 0 = none. */
+  carryForwardMax: number;
+  maxConsecutiveDays: number | null;
+  minNoticeDays: number;
+  applicableGender: Gender | null;
+  allowedOnProbation: boolean;
+  allowHalfDay: boolean;
+  allowShortLeave: boolean;
+  /** Credited by approved comp-off requests instead of a yearly quota. */
+  isCompensatory: boolean;
 }
 export type SaveLeaveTypeRequest = Omit<LeaveType, 'id'>;
 
@@ -427,16 +442,31 @@ export interface LeaveRequest {
   decidedAtUtc: string | null;
   decisionNote: string | null;
   attachmentCount: number;
+  duration: LeaveDuration;
+  halfDayPart: HalfDayPart | null;
+  /** Short leave only, "HH:mm:ss". */
+  startTime: string | null;
+  endTime: string | null;
 }
 
 export interface LeaveBalance {
   leaveTypeId: string;
   leaveType: string;
   code: string;
+  /** The year's quota. */
   entitled: number;
+  /** How much of the quota is earned so far (equals entitled unless accrual is monthly). */
+  earned: number;
+  carriedForward: number;
+  adjustment: number;
+  adjustmentNote: string | null;
+  /** From approved comp-off requests. */
+  credited: number;
   used: number;
   pending: number;
   available: number;
+  accrual: LeaveAccrual;
+  isCompensatory: boolean;
 }
 
 export interface ApplyLeaveRequest {
@@ -444,6 +474,10 @@ export interface ApplyLeaveRequest {
   fromDate: string;
   toDate: string;
   reason: string | null;
+  duration?: LeaveDuration;
+  halfDayPart?: HalfDayPart | null;
+  startTime?: string | null;
+  endTime?: string | null;
 }
 
 // ---- Payroll ----

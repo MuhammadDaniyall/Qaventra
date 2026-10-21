@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using HRMS.Api.Auth;
 using HRMS.Api.Infrastructure;
+using HRMS.Domain;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
 using HRMS.Infrastructure.Data;
@@ -19,8 +20,15 @@ public record SaveShiftRequest([Required, StringLength(100)] string Name, TimeOn
 public record HolidayDto(Guid Id, DateOnly Date, string Name);
 public record SaveHolidayRequest(DateOnly Date, [Required, StringLength(150)] string Name);
 
-public record LeaveTypeDto(Guid Id, string Name, string Code, decimal AnnualQuota, bool IsPaid, bool IsActive);
-public record SaveLeaveTypeRequest([Required, StringLength(100)] string Name, [Required, StringLength(10)] string Code, [Range(0, 365)] decimal AnnualQuota, bool IsPaid, bool IsActive);
+public record LeaveTypeDto(
+    Guid Id, string Name, string Code, decimal AnnualQuota, bool IsPaid, bool IsActive,
+    LeaveAccrual Accrual, decimal CarryForwardMax, int? MaxConsecutiveDays, int MinNoticeDays, Gender? ApplicableGender,
+    bool AllowedOnProbation, bool AllowHalfDay, bool AllowShortLeave, bool IsCompensatory);
+public record SaveLeaveTypeRequest(
+    [Required, StringLength(100)] string Name, [Required, StringLength(10)] string Code, [Range(0, 365)] decimal AnnualQuota, bool IsPaid, bool IsActive,
+    LeaveAccrual Accrual = LeaveAccrual.Upfront, [Range(0, 365)] decimal CarryForwardMax = 0, [Range(1, 365)] int? MaxConsecutiveDays = null,
+    [Range(0, 90)] int MinNoticeDays = 0, Gender? ApplicableGender = null, bool AllowedOnProbation = true, bool AllowHalfDay = true,
+    bool AllowShortLeave = false, bool IsCompensatory = false);
 
 /// <summary>Company configuration. Everyone can read (pickers and calendars need it); only HR can change it.</summary>
 [ApiController]
@@ -146,15 +154,19 @@ public class SetupController(HrmsDbContext db) : ControllerBase
 
     [HttpGet("leave-types")]
     public Task<List<LeaveTypeDto>> LeaveTypes() =>
-        db.LeaveTypes.OrderBy(t => t.Name).Select(t => new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive)).ToListAsync();
+        db.LeaveTypes.OrderBy(t => t.Name).Select(t => new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive,
+            t.Accrual, t.CarryForwardMax, t.MaxConsecutiveDays, t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay,
+            t.AllowShortLeave, t.IsCompensatory)).ToListAsync();
 
     [HttpPost("leave-types"), Authorize(Policy = Policies.Hr)]
     public async Task<LeaveTypeDto> CreateLeaveType(SaveLeaveTypeRequest req)
     {
-        var t = new LeaveType { Name = req.Name.Trim(), Code = req.Code.Trim().ToUpperInvariant(), AnnualQuota = req.AnnualQuota, IsPaid = req.IsPaid, IsActive = req.IsActive };
+        var t = new LeaveType();
+        Apply(t, req);
         db.LeaveTypes.Add(t);
         await db.SaveChangesAsync();
-        return new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive);
+        return new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive, t.Accrual, t.CarryForwardMax, t.MaxConsecutiveDays,
+            t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay, t.AllowShortLeave, t.IsCompensatory);
     }
 
     /// <summary>Quota changes apply to balances created from now on; existing balances keep their entitlement.</summary>
@@ -162,13 +174,29 @@ public class SetupController(HrmsDbContext db) : ControllerBase
     public async Task<IActionResult> UpdateLeaveType(Guid id, SaveLeaveTypeRequest req)
     {
         var t = await db.LeaveTypes.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Leave type");
-        t.Name = req.Name.Trim();
-        t.Code = req.Code.Trim().ToUpperInvariant();
-        t.AnnualQuota = req.AnnualQuota;
-        t.IsPaid = req.IsPaid;
-        t.IsActive = req.IsActive;
+        Apply(t, req);
         await db.SaveChangesAsync();
         return NoContent();
+    }
+
+    private static void Apply(LeaveType t, SaveLeaveTypeRequest req)
+    {
+        if (req.IsCompensatory && !req.IsPaid)
+            throw new DomainException("Compensatory leave must be paid leave.");
+        t.Name = req.Name.Trim();
+        t.Code = req.Code.Trim().ToUpperInvariant();
+        t.AnnualQuota = req.IsCompensatory ? 0 : req.AnnualQuota;
+        t.IsPaid = req.IsPaid;
+        t.IsActive = req.IsActive;
+        t.Accrual = req.Accrual;
+        t.CarryForwardMax = req.CarryForwardMax;
+        t.MaxConsecutiveDays = req.MaxConsecutiveDays;
+        t.MinNoticeDays = req.MinNoticeDays;
+        t.ApplicableGender = req.ApplicableGender;
+        t.AllowedOnProbation = req.AllowedOnProbation;
+        t.AllowHalfDay = req.AllowHalfDay;
+        t.AllowShortLeave = req.AllowShortLeave;
+        t.IsCompensatory = req.IsCompensatory;
     }
 
     /// <summary>Only a leave type that was never used can be deleted; otherwise mark it inactive.</summary>

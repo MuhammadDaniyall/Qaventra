@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { FolderOpen, KeyRound, UserRound, Wallet } from 'lucide-react';
+import { FolderOpen, KeyRound, Palmtree, UserRound, Wallet } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { ApiError, errorMessage } from '../../api/client';
@@ -12,10 +12,11 @@ import { Avatar, Badge, Card, CardBody, CardHeader, ErrorState, PageHeader, Page
 import { formatDate, roleLabel } from '../../lib/format';
 import type { Employee, SaveEmployeeRequest } from '../../types';
 import { EmployeeForm, toSaveRequest } from './EmployeeForm';
+import { LeaveTab } from './LeaveTab';
 import { LoginTab } from './LoginTab';
 import { SalaryTab } from './SalaryTab';
 
-type Tab = 'profile' | 'documents' | 'salary' | 'login';
+type Tab = 'profile' | 'documents' | 'leave' | 'salary' | 'login';
 
 export function EmployeeDetailPage() {
   const { id = '' } = useParams();
@@ -70,6 +71,7 @@ export function EmployeeDetailPage() {
           items={[
             { value: 'profile', label: 'Profile', icon: <UserRound className="size-4" /> },
             { value: 'documents', label: 'Documents', icon: <FolderOpen className="size-4" /> },
+            { value: 'leave', label: 'Leave', icon: <Palmtree className="size-4" /> },
             { value: 'salary', label: 'Salary', icon: <Wallet className="size-4" /> },
             { value: 'login', label: 'Login', icon: <KeyRound className="size-4" /> },
           ]}
@@ -85,6 +87,7 @@ export function EmployeeDetailPage() {
           </CardBody>
         </Card>
       )}
+      {tab === 'leave' && <LeaveTab employeeId={e.id} />}
       {tab === 'salary' && <SalaryTab employeeId={e.id} />}
       {tab === 'login' && <LoginTab employee={e} />}
     </>

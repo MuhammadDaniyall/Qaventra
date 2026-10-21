@@ -97,7 +97,8 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             {
                 var overlap = WorkCalendar.Overlap(r.FromDate, r.ToDate, employedFrom, employedTo);
                 if (overlap is { } o)
-                    unpaid += WorkCalendar.CountWorkingDays(o.From, o.To, weeklyOff, holidays);
+                    // Half day and short leave are single-day requests that already know their fraction of a day.
+                    unpaid += r.Duration == LeaveDuration.FullDay ? WorkCalendar.CountWorkingDays(o.From, o.To, weeklyOff, holidays) : r.Days;
             }
 
             if (attendanceDates is not null)
