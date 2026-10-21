@@ -61,6 +61,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<PollVote> PollVotes => Set<PollVote>();
     public DbSet<CustomField> CustomFields => Set<CustomField>();
     public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
+    public DbSet<TicketCategory> TicketCategories => Set<TicketCategory>();
+    public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<TicketComment> TicketComments => Set<TicketComment>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -465,6 +468,37 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
         });
 
+        b.Entity<TicketCategory>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.AgentIds).HasMaxLength(2000);
+        });
+
+        b.Entity<Ticket>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Number }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.HasIndex(x => x.AssigneeEmployeeId);
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(8000);
+            e.Property(x => x.InvolvedIds).HasMaxLength(2000);
+            e.Property(x => x.Feedback).HasMaxLength(1000);
+            e.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.AssigneeEmployeeId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.RaisedByEmployeeId);
+        });
+
+        b.Entity<TicketComment>(e =>
+        {
+            e.HasIndex(x => x.TicketId);
+            e.Property(x => x.AuthorName).HasMaxLength(200);
+            e.Property(x => x.Body).HasMaxLength(8000);
+            e.HasOne<Ticket>().WithMany().HasForeignKey(x => x.TicketId).OnDelete(DeleteBehavior.Cascade);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -497,7 +531,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         t == typeof(TaxSlab) || t == typeof(SalaryComponent) || t == typeof(Payslip) || t == typeof(PayslipLine)
         || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
-        || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue);
+        || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
+        || t == typeof(TicketComment);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

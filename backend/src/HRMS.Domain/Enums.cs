@@ -44,6 +44,25 @@ public enum ShiftRequestStatus
     Declined = 6,
 }
 
+public enum TicketPriority
+{
+    Low = 1,
+    Medium = 2,
+    High = 3,
+    Urgent = 4,
+}
+
+public enum TicketStatus
+{
+    Open = 1,
+    InProgress = 2,
+    /// <summary>The agent asked the employee something.</summary>
+    WaitingOnEmployee = 3,
+    Resolved = 4,
+    Closed = 5,
+    Cancelled = 6,
+}
+
 public enum AnnouncementKind
 {
     News = 1,
@@ -284,6 +303,7 @@ public enum NotificationKind
     Payslip = 5,
     Announcement = 6,
     Poll = 7,
+    Ticket = 8,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
@@ -294,6 +314,7 @@ public enum AttachmentOwner
     /// <summary>The employee's own document folder (owner id = employee id).</summary>
     EmployeeDocument = 3,
     Announcement = 4,
+    Ticket = 5,
 }
 
 public enum DocumentCategory

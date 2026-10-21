@@ -73,6 +73,14 @@ public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine
                 var dept = me.EmployeeId is { } mine ? await db.Employees.Where(e => e.Id == mine).Select(e => e.DepartmentId).FirstOrDefaultAsync() : null;
                 return new(hr || AnnouncementService.InAudience(a.DepartmentIds, dept), hr, hr);
             }
+            case AttachmentOwner.Ticket:
+            {
+                var t = await db.Tickets.Include(x => x.Category).FirstOrDefaultAsync(x => x.Id == ownerId) ?? throw new NotFoundException("Ticket");
+                var involved = t.EmployeeId == me.EmployeeId || t.RaisedByEmployeeId == me.EmployeeId || HelpdeskService.Has(t.InvolvedIds, me.EmployeeId);
+                var agent = hr || HelpdeskService.Has(t.Category!.AgentIds, me.EmployeeId) || (me.EmployeeId is { } m && t.AssigneeEmployeeId == m);
+                var open = t.Status is not (TicketStatus.Closed or TicketStatus.Cancelled);
+                return new(involved || agent, (involved || agent) && open, hr);
+            }
             default:
                 throw new NotFoundException("Attachment owner");
         }
