@@ -1,7 +1,8 @@
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, MapPin, Palmtree } from 'lucide-react';
+import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, ListPlus, MapPin, Palmtree } from 'lucide-react';
 import { PageHeader, Tabs } from '../../components/ui';
 import { ApprovalFlowsTab } from './ApprovalFlowsTab';
+import { CustomFieldsTab } from './CustomFieldsTab';
 import { DepartmentsTab } from './DepartmentsTab';
 import { DesignationsTab } from './DesignationsTab';
 import { HolidaysTab } from './HolidaysTab';
@@ -9,8 +10,8 @@ import { LeaveTypesTab } from './LeaveTypesTab';
 import { OfficesTab } from './OfficesTab';
 import { ShiftsTab } from './ShiftsTab';
 
-type Tab = 'departments' | 'designations' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals';
-const TABS: Tab[] = ['departments', 'designations', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals'];
+type Tab = 'departments' | 'designations' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields';
+const TABS: Tab[] = ['departments', 'designations', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields'];
 
 export function OrganizationPage() {
   const [params, setParams] = useSearchParams();
@@ -32,6 +33,7 @@ export function OrganizationPage() {
           { value: 'holidays', label: 'Holidays', icon: <CalendarHeart className="size-4" /> },
           { value: 'leave-types', label: 'Leave types', icon: <Palmtree className="size-4" /> },
           { value: 'approvals', label: 'Approval chains', icon: <GitBranch className="size-4" /> },
+          { value: 'custom-fields', label: 'Custom fields', icon: <ListPlus className="size-4" /> },
         ]}
       />
       {tab === 'departments' && <DepartmentsTab />}
@@ -41,6 +43,7 @@ export function OrganizationPage() {
       {tab === 'holidays' && <HolidaysTab />}
       {tab === 'leave-types' && <LeaveTypesTab />}
       {tab === 'approvals' && <ApprovalFlowsTab />}
+      {tab === 'custom-fields' && <CustomFieldsTab />}
     </>
   );
 }

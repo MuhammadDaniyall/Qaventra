@@ -11,6 +11,7 @@ import { Avatar, Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHead
 import { formatDate, humanize, roleLabel } from '../../lib/format';
 import { EmergencyContactsCard, JobHistory } from '../employees/records';
 import { MyProfileChanges, ProfileChangeModal } from './ProfileChanges';
+import { CustomValuesCard } from '../settings/CustomFieldsTab';
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -108,6 +109,9 @@ export function MyProfilePage() {
             </dl>
           </Card>
         </div>
+      </div>
+      <div className="mt-6">
+        <CustomValuesCard editable={false} />
       </div>
       <MyProfileChanges />
       <div className="mt-6 grid gap-6 lg:grid-cols-2">

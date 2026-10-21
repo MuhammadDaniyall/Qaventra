@@ -16,6 +16,7 @@ import { LeaveTab } from './LeaveTab';
 import { LoginTab } from './LoginTab';
 import { SalaryTab } from './SalaryTab';
 import { EmergencyContactsCard, JobChangeModal, JobHistory, RehireModal } from './records';
+import { CustomValuesCard } from '../settings/CustomFieldsTab';
 
 type Tab = 'profile' | 'job' | 'emergency' | 'documents' | 'leave' | 'salary' | 'login';
 
@@ -97,7 +98,12 @@ export function EmployeeDetailPage() {
         ]}
       />
 
-      {tab === 'profile' && <ProfileTab key={e.id} employee={e} readOnly={!hr} />}
+      {tab === 'profile' && (
+        <div className="space-y-5">
+          <ProfileTab key={e.id} employee={e} readOnly={!hr} />
+          <CustomValuesCard employeeId={e.id} editable={hr} />
+        </div>
+      )}
       {tab === 'documents' && (
         <Card>
           <CardHeader title="Documents" description="CNIC, degrees, contracts and other records. Add an expiry date to get reminded before it lapses." />

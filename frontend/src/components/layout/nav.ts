@@ -9,6 +9,7 @@ import {
   FileSignature,
   FolderOpen,
   Inbox,
+  Megaphone,
   Receipt,
   ReceiptText,
   UserMinus,
@@ -55,6 +56,7 @@ export const NAV: NavSection[] = [
   {
     title: 'My workspace',
     items: [
+      { to: '/announcements', label: 'Announcements', icon: Megaphone, roles: COMPANY_ROLES },
       { to: '/me/attendance', label: 'My attendance', icon: CalendarClock, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/leave', label: 'My leave', icon: CalendarDays, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/payslips', label: 'My payslips', icon: FileText, roles: COMPANY_ROLES, needsEmployee: true },

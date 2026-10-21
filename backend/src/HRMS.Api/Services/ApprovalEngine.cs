@@ -30,9 +30,14 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
     public async Task<ApprovalRequest> StartAsync(ApprovalRequestType type, Guid subjectId, Guid employeeId, string summary)
     {
         var chain = await db.Employees.Where(e => e.Id == employeeId)
-            .Select(e => new { e.ManagerId, SecondId = e.Manager != null ? e.Manager.ManagerId : null })
+            .Select(e => new
+            {
+                e.ManagerId,
+                SecondId = e.Manager != null ? e.Manager.ManagerId : null,
+                HeadId = db.Departments.Where(d => d.Id == e.DepartmentId).Select(d => d.HeadEmployeeId).FirstOrDefault(),
+            })
             .FirstAsync();
-        var planned = ApprovalPlanner.Plan(await FlowAsync(type), employeeId, chain.ManagerId, chain.SecondId);
+        var planned = ApprovalPlanner.Plan(await FlowAsync(type), employeeId, chain.ManagerId, chain.SecondId, chain.HeadId);
 
         var request = new ApprovalRequest
         {

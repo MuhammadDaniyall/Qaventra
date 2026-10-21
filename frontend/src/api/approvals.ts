@@ -1,7 +1,7 @@
 import { http } from './client';
 
 export type ApprovalRequestType = 'Leave' | 'Expense' | 'Attendance' | 'CompOff' | 'PayRequest' | 'Loan' | 'ProfileChange' | 'ShiftChange';
-export type ApproverKind = 'LineManager' | 'SecondLevelManager' | 'Hr' | 'SpecificEmployee';
+export type ApproverKind = 'LineManager' | 'SecondLevelManager' | 'Hr' | 'SpecificEmployee' | 'DepartmentHead';
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type ApprovalStepStatus = 'Waiting' | 'Current' | 'Approved' | 'Rejected' | 'Skipped';
 
@@ -60,6 +60,7 @@ export const APPROVER_LABELS: Record<ApproverKind, string> = {
   SecondLevelManager: "Manager's manager",
   Hr: 'HR',
   SpecificEmployee: 'Specific person',
+  DepartmentHead: 'Department head',
 };
 
 export const REQUEST_LABELS: Record<ApprovalRequestType, string> = {

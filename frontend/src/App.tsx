@@ -9,6 +9,7 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { LoginPage } from './pages/auth/LoginPage';
 
 const DailyAttendancePage = lazy(() => import('./pages/attendance/DailyAttendancePage').then((m) => ({ default: m.DailyAttendancePage })));
+const AnnouncementsPage = lazy(() => import('./pages/announcements/AnnouncementsPage').then((m) => ({ default: m.AnnouncementsPage })));
 const RosterPage = lazy(() => import('./pages/attendance/RosterPage').then((m) => ({ default: m.RosterPage })));
 const MonthlyAttendancePage = lazy(() => import('./pages/attendance/MonthlyAttendancePage').then((m) => ({ default: m.MonthlyAttendancePage })));
 const MyAttendancePage = lazy(() => import('./pages/attendance/MyAttendancePage').then((m) => ({ default: m.MyAttendancePage })));
@@ -81,6 +82,7 @@ export default function App() {
             {/* Self-service needs an employee record (hidden for the owner inside a company). */}
             <Route element={<RequireEmployee />}>
               <Route path="/me/attendance" element={<MyAttendancePage />} />
+              <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/me/leave" element={<MyLeavePage />} />
               <Route path="/me/payslips" element={<MyPayslipsPage />} />
               <Route path="/me/profile" element={<MyProfilePage />} />

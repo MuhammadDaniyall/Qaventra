@@ -43,6 +43,7 @@ builder.Services.AddScoped<PayRequestService>();
 builder.Services.AddScoped<ProfileChangeService>();
 builder.Services.AddScoped<ScheduleService>();
 builder.Services.AddScoped<ShiftRequestService>();
+builder.Services.AddScoped<AnnouncementService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();

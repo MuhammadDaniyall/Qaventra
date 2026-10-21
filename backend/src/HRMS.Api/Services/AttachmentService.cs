@@ -66,6 +66,13 @@ public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine
                 var self = ownerId == me.EmployeeId;
                 return new(self || hr, self || hr, hr);
             }
+            case AttachmentOwner.Announcement:
+            {
+                var a = await db.Announcements.Where(x => x.Id == ownerId).Select(x => new { x.DepartmentIds }).FirstOrDefaultAsync()
+                    ?? throw new NotFoundException("Announcement");
+                var dept = me.EmployeeId is { } mine ? await db.Employees.Where(e => e.Id == mine).Select(e => e.DepartmentId).FirstOrDefaultAsync() : null;
+                return new(hr || AnnouncementService.InAudience(a.DepartmentIds, dept), hr, hr);
+            }
             default:
                 throw new NotFoundException("Attachment owner");
         }

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Layers, Plus } from 'lucide-react';
 import { orgApi } from '../../api/organization';
-import { useDepartments } from '../../api/hooks';
+import { useDepartments, useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
-import { Button, Card, CardHeader, EmptyState, ErrorState, Field, Input, SkeletonRows, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
+import { Button, Card, CardHeader, EmptyState, ErrorState, Field, Input, Select, SkeletonRows, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
 import type { Department } from '../../types';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from './shared';
 
@@ -39,6 +39,7 @@ export function DepartmentsTab() {
             <tr>
               <Th>Name</Th>
               <Th>Code</Th>
+              <Th>Head</Th>
               <Th className="text-right">Employees</Th>
               <Th className="text-right">
                 <span className="sr-only">Actions</span>
@@ -50,6 +51,7 @@ export function DepartmentsTab() {
               <Tr key={d.id}>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{d.name}</Td>
                 <Td className="font-mono text-xs">{d.code ?? '—'}</Td>
+                <Td>{d.head ?? <span className="text-zinc-400">—</span>}</Td>
                 <Td className="text-right tabular-nums">{d.employees}</Td>
                 <Td>
                   <RowActions label={d.name} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
@@ -74,8 +76,10 @@ export function DepartmentsTab() {
 function DepartmentModal({ item, onClose }: { item: Department | null; onClose: () => void }) {
   const [name, setName] = useState(item?.name ?? '');
   const [code, setCode] = useState(item?.code ?? '');
+  const [head, setHead] = useState(item?.headEmployeeId ?? '');
+  const people = useEmployeeLookup();
   const { mutation, error, fieldErrors, setFieldErrors } = useSaveMutation({
-    save: (b: { name: string; code: string | null }) => (item ? orgApi.updateDepartment(item.id, b) : orgApi.createDepartment(b)),
+    save: (b: { name: string; code: string | null; headEmployeeId: string | null }) => (item ? orgApi.updateDepartment(item.id, b) : orgApi.createDepartment(b)),
     invalidate: [qk.departments, qk.dashboard],
     successMessage: item ? 'Department updated' : 'Department added',
     onSuccess: onClose,
@@ -89,7 +93,7 @@ function DepartmentModal({ item, onClose }: { item: Department | null; onClose: 
       error={error}
       onSubmit={() => {
         if (!name.trim()) return setFieldErrors({ name: 'Name is required.' });
-        mutation.mutate({ name: name.trim(), code: code.trim() || null });
+        mutation.mutate({ name: name.trim(), code: code.trim() || null, headEmployeeId: head || null });
       }}
     >
       <Field label="Name" required error={fieldErrors.name}>
@@ -97,6 +101,16 @@ function DepartmentModal({ item, onClose }: { item: Department | null; onClose: 
       </Field>
       <Field label="Code" hint="Optional short code." error={fieldErrors.code}>
         <Input value={code} maxLength={30} onChange={(e) => setCode(e.target.value)} placeholder="ENG" />
+      </Field>
+      <Field label="Head" hint="Can approve requests when an approval chain has a Department head step.">
+        <Select value={head} onChange={(e) => setHead(e.target.value)}>
+          <option value="">No head</option>
+          {people.data?.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
       </Field>
     </EditModal>
   );

@@ -44,6 +44,31 @@ public enum ShiftRequestStatus
     Declined = 6,
 }
 
+public enum AnnouncementKind
+{
+    News = 1,
+    Policy = 2,
+    Event = 3,
+}
+
+public enum PollResultsVisibility
+{
+    /// <summary>Employees see the results once they have voted.</summary>
+    AfterVoting = 1,
+    /// <summary>Employees see the results when the poll closes.</summary>
+    AfterClose = 2,
+    HrOnly = 3,
+}
+
+public enum CustomFieldType
+{
+    Text = 1,
+    Number = 2,
+    Date = 3,
+    Dropdown = 4,
+    YesNo = 5,
+}
+
 public enum MaritalStatus
 {
     Single = 1,
@@ -257,6 +282,8 @@ public enum NotificationKind
     Separation = 3,
     Letter = 4,
     Payslip = 5,
+    Announcement = 6,
+    Poll = 7,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
@@ -266,6 +293,7 @@ public enum AttachmentOwner
     Separation = 2,
     /// <summary>The employee's own document folder (owner id = employee id).</summary>
     EmployeeDocument = 3,
+    Announcement = 4,
 }
 
 public enum DocumentCategory
@@ -288,6 +316,8 @@ public enum ApproverKind
     /// <summary>Anyone with HR rights (HR manager or company admin).</summary>
     Hr = 3,
     SpecificEmployee = 4,
+    /// <summary>The head of the requester's department (skipped when none is set).</summary>
+    DepartmentHead = 5,
 }
 
 public enum ApprovalStatus

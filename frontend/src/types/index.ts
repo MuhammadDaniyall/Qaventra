@@ -217,10 +217,13 @@ export interface Department {
   name: string;
   code: string | null;
   employees: number;
+  headEmployeeId: string | null;
+  head: string | null;
 }
 export interface SaveDepartmentRequest {
   name: string;
   code: string | null;
+  headEmployeeId?: string | null;
 }
 
 export interface Designation {

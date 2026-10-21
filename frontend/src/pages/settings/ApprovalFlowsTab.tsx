@@ -13,12 +13,13 @@ import { useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { Badge, Button, Card, CardBody, CardHeader, ErrorState, IconButton, Select, Skeleton, useToast } from '../../components/ui';
 
-const KINDS: ApproverKind[] = ['LineManager', 'SecondLevelManager', 'Hr', 'SpecificEmployee'];
+const KINDS: ApproverKind[] = ['LineManager', 'SecondLevelManager', 'DepartmentHead', 'Hr', 'SpecificEmployee'];
 const HINTS: Record<ApproverKind, string> = {
   LineManager: 'The employee’s reporting manager. HR when there is none.',
   SecondLevelManager: 'The line manager’s own manager. Skipped when there is none.',
   Hr: 'Any HR manager or company admin.',
   SpecificEmployee: 'One named person, e.g. the CFO for expenses.',
+  DepartmentHead: 'The head of the employee’s department (set under Departments). Skipped when there is none.',
 };
 
 export function ApprovalFlowsTab() {

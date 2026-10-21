@@ -75,6 +75,8 @@ public class Department : TenantEntity
 {
     public string Name { get; set; } = "";
     public string? Code { get; set; }
+    /// <summary>Can be a step in approval chains.</summary>
+    public Guid? HeadEmployeeId { get; set; }
 }
 
 public class Designation : TenantEntity

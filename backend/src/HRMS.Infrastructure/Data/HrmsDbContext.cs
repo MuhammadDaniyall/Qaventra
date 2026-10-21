@@ -54,6 +54,13 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public DbSet<ShiftRequest> ShiftRequests => Set<ShiftRequest>();
     public DbSet<AttendancePeriod> AttendancePeriods => Set<AttendancePeriod>();
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<AnnouncementRead> AnnouncementReads => Set<AnnouncementRead>();
+    public DbSet<Poll> Polls => Set<Poll>();
+    public DbSet<PollOption> PollOptions => Set<PollOption>();
+    public DbSet<PollVote> PollVotes => Set<PollVote>();
+    public DbSet<CustomField> CustomFields => Set<CustomField>();
+    public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -99,6 +106,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Name).HasMaxLength(150);
             e.Property(x => x.Code).HasMaxLength(30);
             e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.HeadEmployeeId);
         });
 
         b.Entity<Designation>(e =>
@@ -408,6 +416,55 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ClosedByName).HasMaxLength(200);
         });
 
+        b.Entity<Announcement>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.PublishFrom });
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Body).HasMaxLength(8000);
+            e.Property(x => x.DepartmentIds).HasMaxLength(2000);
+            e.Property(x => x.LinkUrl).HasMaxLength(500);
+            e.Property(x => x.CreatedByName).HasMaxLength(200);
+        });
+
+        b.Entity<AnnouncementRead>(e =>
+        {
+            e.HasIndex(x => new { x.AnnouncementId, x.EmployeeId }).IsUnique();
+            e.HasOne<Announcement>().WithMany().HasForeignKey(x => x.AnnouncementId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Poll>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.ClosesOn });
+            e.Property(x => x.Question).HasMaxLength(300);
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.DepartmentIds).HasMaxLength(2000);
+            e.Property(x => x.CreatedByName).HasMaxLength(200);
+            e.HasMany(x => x.Options).WithOne().HasForeignKey(x => x.PollId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<PollOption>().Property(x => x.Text).HasMaxLength(200);
+
+        b.Entity<PollVote>(e =>
+        {
+            e.HasIndex(x => new { x.PollId, x.EmployeeId }).IsUnique();
+            e.HasOne<Poll>().WithMany().HasForeignKey(x => x.PollId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<PollOption>().WithMany().HasForeignKey(x => x.OptionId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        b.Entity<CustomField>(e =>
+        {
+            e.Property(x => x.Label).HasMaxLength(100);
+            e.Property(x => x.Options).HasMaxLength(2000);
+        });
+
+        b.Entity<CustomFieldValue>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.FieldId }).IsUnique();
+            e.Property(x => x.Value).HasMaxLength(500);
+            e.HasOne<CustomField>().WithMany().HasForeignKey(x => x.FieldId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -439,7 +496,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     private static bool IsOwnedChild(Type t) =>
         t == typeof(TaxSlab) || t == typeof(SalaryComponent) || t == typeof(Payslip) || t == typeof(PayslipLine)
         || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
-        || t == typeof(AttachmentContent) || t == typeof(LoanRepayment);
+        || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
+        || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue);
 
     private LambdaExpression TenantFilter(Type entityType)
     {
