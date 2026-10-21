@@ -54,7 +54,8 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock)
     }
 
     /// <summary>HR correction or entry for a missed punch. Times are local to the company.</summary>
-    public async Task<AttendanceRecord> SaveManualAsync(Guid employeeId, DateOnly date, TimeOnly checkIn, TimeOnly? checkOut)
+    public async Task<AttendanceRecord> SaveManualAsync(Guid employeeId, DateOnly date, TimeOnly checkIn, TimeOnly? checkOut,
+        AttendanceSource source = AttendanceSource.Manual, string? note = null)
     {
         if (checkOut is { } co && co <= checkIn)
             throw new DomainException("Check-out must be after check-in.");
@@ -69,7 +70,8 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock)
         }
 
         var shift = await ShiftForAsync(employeeId);
-        record.Source = AttendanceSource.Manual;
+        record.Source = source;
+        record.Note = note;
         record.CheckInUtc = await clock.ToUtcAsync(date.ToDateTime(checkIn));
         record.CheckOutUtc = checkOut is { } o ? await clock.ToUtcAsync(date.ToDateTime(o)) : null;
         record.Status = IsLate(shift, checkIn) ? AttendanceStatus.Late : AttendanceStatus.Present;

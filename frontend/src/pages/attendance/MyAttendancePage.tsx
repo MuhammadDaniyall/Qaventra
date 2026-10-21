@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarClock, ChevronLeft, ChevronRight, ClipboardEdit } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
 import { qk } from '../../api/keys';
 import { setupApi } from '../../api/organization';
 import {
+  Button,
   Card,
   CardHeader,
   EmptyState,
@@ -23,6 +24,7 @@ import {
 import { cn } from '../../lib/cn';
 import { formatDate, formatMinutes, formatTime, monthLabel, pad, todayIso } from '../../lib/format';
 import type { Attendance, AttendanceStatus } from '../../types';
+import { MyAttendanceRequests, RequestAttendanceModal } from './AttendanceRequests';
 import { CheckInCard } from './CheckInCard';
 
 const DOT: Record<AttendanceStatus, string> = {
@@ -36,6 +38,7 @@ const DOT: Record<AttendanceStatus, string> = {
 export function MyAttendancePage() {
   const now = new Date();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() + 1 });
+  const [requesting, setRequesting] = useState(false);
   const records = useQuery({ queryKey: qk.attendanceMy(ym.y, ym.m), queryFn: () => attendanceApi.my(ym.y, ym.m) });
   const holidays = useQuery({ queryKey: qk.holidays(ym.y), queryFn: () => setupApi.holidays(ym.y), staleTime: 300000 });
 
@@ -57,7 +60,15 @@ export function MyAttendancePage() {
 
   return (
     <>
-      <PageHeader title="My attendance" description="Check in when you arrive and check out when you leave." />
+      <PageHeader
+        title="My attendance"
+        description="Check in when you arrive and check out when you leave."
+        actions={
+          <Button variant="secondary" icon={<ClipboardEdit className="size-4" />} onClick={() => setRequesting(true)}>
+            Request correction
+          </Button>
+        }
+      />
       <CheckInCard className="mb-6" />
 
       <Card>
@@ -118,7 +129,7 @@ export function MyAttendancePage() {
                         <Td className="tabular-nums">{formatTime(r.checkOut)}</Td>
                         <Td className="tabular-nums">{formatMinutes(r.workedMinutes)}</Td>
                         <Td>{r.office ?? '—'}</Td>
-                        <Td>{r.source}</Td>
+                        <Td title={r.note ?? undefined}>{r.source === 'Request' ? 'Approved request' : r.source}</Td>
                       </Tr>
                     ))}
                   </TBody>
@@ -128,6 +139,8 @@ export function MyAttendancePage() {
           </>
         )}
       </Card>
+      <MyAttendanceRequests />
+      {requesting && <RequestAttendanceModal onClose={() => setRequesting(false)} />}
     </>
   );
 }

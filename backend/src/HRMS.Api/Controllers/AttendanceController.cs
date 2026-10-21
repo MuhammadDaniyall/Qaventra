@@ -16,7 +16,7 @@ public record PunchRequest([Range(-90, 90)] double? Latitude, [Range(-180, 180)]
 public record ManualAttendanceRequest(Guid EmployeeId, DateOnly Date, TimeOnly CheckIn, TimeOnly? CheckOut);
 
 /// <summary>Times are company-local.</summary>
-public record AttendanceDto(Guid Id, Guid EmployeeId, DateOnly Date, DateTime CheckIn, DateTime? CheckOut, AttendanceStatus Status, AttendanceSource Source, int WorkedMinutes, string? Office);
+public record AttendanceDto(Guid Id, Guid EmployeeId, DateOnly Date, DateTime CheckIn, DateTime? CheckOut, AttendanceStatus Status, AttendanceSource Source, int WorkedMinutes, string? Office, string? Note);
 
 public record TodayDto(DateOnly Date, AttendanceDto? Record, string? ShiftName, TimeOnly? ShiftStart, TimeOnly? ShiftEnd, bool LocationRequired);
 
@@ -95,6 +95,6 @@ public class AttendanceController(HrmsDbContext db, AttendanceService attendance
     {
         var office = r.OfficeLocationId is { } id ? await db.OfficeLocations.Where(o => o.Id == id).Select(o => o.Name).FirstOrDefaultAsync() : null;
         return new AttendanceDto(r.Id, r.EmployeeId, r.Date, await clock.ToLocalAsync(r.CheckInUtc),
-            r.CheckOutUtc is { } o ? await clock.ToLocalAsync(o) : null, r.Status, r.Source, r.WorkedMinutes, office);
+            r.CheckOutUtc is { } o ? await clock.ToLocalAsync(o) : null, r.Status, r.Source, r.WorkedMinutes, office, r.Note);
     }
 }

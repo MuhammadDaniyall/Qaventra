@@ -41,6 +41,23 @@ public class AttendanceRecord : TenantEntity
     public AttendanceStatus Status { get; set; }
     public AttendanceSource Source { get; set; } = AttendanceSource.Web;
     public int WorkedMinutes { get; set; }
+    /// <summary>Why the record was entered or changed, e.g. "Work from home (approved request)".</summary>
+    public string? Note { get; set; }
+}
+
+/// <summary>An employee asks to add or fix a day's attendance; applied when the approval chain approves it.</summary>
+public class AttendanceRequest : TenantEntity
+{
+    public Guid EmployeeId { get; set; }
+    public Employee? Employee { get; set; }
+    public DateOnly Date { get; set; }
+    public AttendanceRequestKind Kind { get; set; }
+    public TimeOnly CheckIn { get; set; }
+    public TimeOnly? CheckOut { get; set; }
+    public string Reason { get; set; } = "";
+    public RequestStatus Status { get; set; } = RequestStatus.Pending;
+    public DateTime? DecidedAtUtc { get; set; }
+    public string? DecisionNote { get; set; }
 }
 
 public class LeaveType : TenantEntity

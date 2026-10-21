@@ -43,6 +43,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<AttachmentContent> AttachmentContents => Set<AttachmentContent>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -120,7 +121,19 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.HasIndex(x => new { x.TenantId, x.Date }).IsUnique();
         });
 
-        b.Entity<AttendanceRecord>().HasIndex(x => new { x.EmployeeId, x.Date }).IsUnique();
+        b.Entity<AttendanceRecord>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.Date }).IsUnique();
+            e.Property(x => x.Note).HasMaxLength(300);
+        });
+
+        b.Entity<AttendanceRequest>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.Date });
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+        });
 
         b.Entity<LeaveType>(e =>
         {

@@ -183,6 +183,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
     {
         ApprovalRequestType.Leave => "leave request",
         ApprovalRequestType.Expense => "expense claim",
+        ApprovalRequestType.Attendance => "attendance request",
         _ => "request",
     };
 
@@ -190,6 +191,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
     {
         ApprovalRequestType.Leave => "/me/leave",
         ApprovalRequestType.Expense => "/me/expenses",
+        ApprovalRequestType.Attendance => "/me/attendance",
         _ => "/dashboard",
     };
 

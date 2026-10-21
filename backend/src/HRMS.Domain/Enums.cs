@@ -40,6 +40,8 @@ public enum AttendanceSource
     Mobile = 2,
     Biometric = 3,
     Manual = 4,
+    /// <summary>From an approved attendance request (missed punch, work from home, ...).</summary>
+    Request = 5,
 }
 
 public enum LeaveStatus
@@ -137,6 +139,27 @@ public enum ApprovalRequestType
 {
     Leave = 1,
     Expense = 2,
+    Attendance = 3,
+}
+
+/// <summary>Status of a simple request that goes through an approval chain.</summary>
+public enum RequestStatus
+{
+    Pending = 1,
+    Approved = 2,
+    Rejected = 3,
+    Cancelled = 4,
+}
+
+public enum AttendanceRequestKind
+{
+    /// <summary>Forgot to check in or out.</summary>
+    MissedPunch = 1,
+    WorkFromHome = 2,
+    /// <summary>Client visit, field work, training outside the office.</summary>
+    OfficialDuty = 3,
+    /// <summary>The recorded times are wrong.</summary>
+    TimeCorrection = 4,
 }
 
 public enum NotificationKind

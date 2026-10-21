@@ -20,6 +20,7 @@ export const qk = {
   attendanceToday: ['attendance', 'today'] as const,
   attendanceMy: (y: number, m: number) => ['attendance', 'my', y, m] as const,
   attendanceDaily: (d: string) => ['attendance', 'daily', d] as const,
+  attendanceRequestsMy: ['attendance', 'requests', 'my'] as const,
   leave: ['leave'] as const,
   leaveBalances: ['leave', 'balances'] as const,
   leaveMy: ['leave', 'my'] as const,

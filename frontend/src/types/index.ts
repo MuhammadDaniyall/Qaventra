@@ -4,7 +4,7 @@ export type UserRole = 'SuperAdmin' | 'CompanyAdmin' | 'HrManager' | 'Manager' |
 export type Gender = 'Male' | 'Female' | 'Other';
 export type EmploymentStatus = 'Probation' | 'Active' | 'Resigned' | 'Terminated';
 export type AttendanceStatus = 'Present' | 'Late' | 'HalfDay' | 'Absent' | 'OnLeave';
-export type AttendanceSource = 'Web' | 'Mobile' | 'Biometric' | 'Manual';
+export type AttendanceSource = 'Web' | 'Mobile' | 'Biometric' | 'Manual' | 'Request';
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type SalaryComponentKind = 'Earning' | 'Deduction';
 export type AuditCategory = 'Auth' | 'Request' | 'Data';
@@ -375,6 +375,8 @@ export interface Attendance {
   source: AttendanceSource;
   workedMinutes: number;
   office: string | null;
+  /** Why it was entered or changed, e.g. from an approved request. */
+  note: string | null;
 }
 
 export interface Today {
