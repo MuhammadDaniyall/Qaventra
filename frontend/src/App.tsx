@@ -13,6 +13,8 @@ const AnnouncementsPage = lazy(() => import('./pages/announcements/Announcements
 const MyTicketsPage = lazy(() => import('./pages/helpdesk/HelpdeskPages').then((m) => ({ default: m.MyTicketsPage })));
 const HelpdeskQueuePage = lazy(() => import('./pages/helpdesk/HelpdeskPages').then((m) => ({ default: m.HelpdeskQueuePage })));
 const TicketPage = lazy(() => import('./pages/helpdesk/TicketPage').then((m) => ({ default: m.TicketPage })));
+const MyAssetsPage = lazy(() => import('./pages/assets/MyAssetsPage').then((m) => ({ default: m.MyAssetsPage })));
+const AssetsPage = lazy(() => import('./pages/assets/AssetsPage').then((m) => ({ default: m.AssetsPage })));
 const RosterPage = lazy(() => import('./pages/attendance/RosterPage').then((m) => ({ default: m.RosterPage })));
 const MonthlyAttendancePage = lazy(() => import('./pages/attendance/MonthlyAttendancePage').then((m) => ({ default: m.MonthlyAttendancePage })));
 const MyAttendancePage = lazy(() => import('./pages/attendance/MyAttendancePage').then((m) => ({ default: m.MyAttendancePage })));
@@ -86,6 +88,8 @@ export default function App() {
             <Route element={<RequireEmployee />}>
               <Route path="/me/attendance" element={<MyAttendancePage />} />
               <Route path="/announcements" element={<AnnouncementsPage />} />
+              <Route path="/me/assets" element={<MyAssetsPage />} />
+              <Route path="/assets" element={<AssetsPage />} />
               <Route path="/helpdesk" element={<MyTicketsPage />} />
               <Route path="/helpdesk/queue" element={<HelpdeskQueuePage />} />
               <Route path="/helpdesk/:id" element={<TicketPage />} />

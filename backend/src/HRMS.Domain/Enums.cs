@@ -52,6 +52,39 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum AssetCondition
+{
+    New = 1,
+    Good = 2,
+    Fair = 3,
+    Damaged = 4,
+}
+
+public enum AssetStatus
+{
+    Available = 1,
+    Assigned = 2,
+    InRepair = 3,
+    Retired = 4,
+    Lost = 5,
+}
+
+public enum AssetRequestKind
+{
+    New = 1,
+    Return = 2,
+}
+
+public enum AssetRequestStatus
+{
+    Pending = 1,
+    /// <summary>Approved; waiting for a handler to hand it over or take it back.</summary>
+    Approved = 2,
+    Fulfilled = 3,
+    Rejected = 4,
+    Cancelled = 5,
+}
+
 public enum TicketAssignment
 {
     /// <summary>Agents take tickets or HR assigns them.</summary>
@@ -270,6 +303,7 @@ public enum ApprovalRequestType
     Loan = 6,
     ProfileChange = 7,
     ShiftChange = 8,
+    Asset = 9,
 }
 
 public enum PayRequestKind
@@ -314,6 +348,7 @@ public enum NotificationKind
     Announcement = 6,
     Poll = 7,
     Ticket = 8,
+    Asset = 9,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>

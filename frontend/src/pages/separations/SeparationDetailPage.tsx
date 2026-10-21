@@ -29,6 +29,7 @@ import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatDateTimeUtc, formatNumber, todayIso } from '../../lib/format';
 import type { Separation, Settlement } from '../../types/workflows';
 import { SeparationSteps, Stars, typeLabel } from './shared';
+import { SeparationAssetsCard } from '../assets/EmployeeAssets';
 
 const back = { to: '/separations', label: 'Separations' };
 
@@ -97,6 +98,7 @@ export function SeparationDetailPage() {
         <div className="grid gap-6 xl:grid-cols-5">
           <div className="space-y-6 xl:col-span-2">
             <ClearanceCard s={s} />
+            <SeparationAssetsCard employeeId={s.summary.employeeId} />
             <ExitInterviewCard s={s} />
             <Card>
               <CardHeader title="Documents" description="Resignation letter, clearance forms, settlement receipts" />

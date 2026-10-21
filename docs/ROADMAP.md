@@ -41,7 +41,7 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 | Module | Main features |
 |---|---|
 | Helpdesk | **Done:** categories with agents, lead, target hours and rules (agent may close, auto-close days, reopen window); ticket types with their own target and agents; automatic assignment (in turn or least busy); tickets with priority, files, replies, internal notes, editing replies; take/assign, involve colleagues; waiting/resolved/closed with rating, reopen; due-soon reminders and overdue escalation to the lead; company names for statuses and priorities; reports (first answer, time to fix, within target, ratings by category and agent) and Excel export. Not yet: replying by email |
-| Asset | Categories/types/templates, asset requests and returns, hand-over/take-over with serial numbers, temporary assets |
+| Asset | **Done:** types (one or many per person, return on exit, handlers), inventory with tag, serial, cost, warranty, condition and status (available, assigned, repair, retired, lost) and full history; hand-over and take-over with condition and notes; temporary loans with late-return flag; requests for new assets through approval and return requests straight to the handler; starter kits; employee Assets tab; assets to return on the separation page; Excel export |
 | Onboarding | Onboarding templates with tasks/assignees/due dates, first-day instructions, new-joiner questionnaire, task clearance |
 | Travel | Multi-step travel request (route, mode, pick & drop, accommodation), travel advance, reason types |
 | Performance | KPIs/objectives, review cycles, self and manager evaluation, 9-box matrix, bell curve, sign-off |

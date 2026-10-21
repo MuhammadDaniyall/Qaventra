@@ -1,5 +1,6 @@
 import {
   Banknote,
+  Boxes,
   Building2,
   CalendarCheck,
   CalendarRange,
@@ -10,6 +11,7 @@ import {
   FolderOpen,
   Headset,
   Inbox,
+  Laptop,
   LifeBuoy,
   Megaphone,
   Receipt,
@@ -66,6 +68,7 @@ export const NAV: NavSection[] = [
       { to: '/me/pay', label: 'Pay requests', icon: Banknote, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/documents', label: 'My documents', icon: FolderOpen, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/profile', label: 'My profile', icon: UserCircle, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/assets', label: 'My assets', icon: Laptop, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/helpdesk', label: 'Help desk', icon: LifeBuoy, roles: COMPANY_ROLES, needsEmployee: true, end: true },
       { to: '/me/resignation', label: 'Resignation', icon: DoorOpen, roles: COMPANY_ROLES, needsEmployee: true },
     ],
@@ -87,6 +90,7 @@ export const NAV: NavSection[] = [
     items: [
       { to: '/payroll', label: 'Payroll', icon: Wallet, roles: HR_ROLES },
       { to: '/helpdesk/queue', label: 'Help desk queue', icon: Headset, roles: HR_ROLES },
+      { to: '/assets', label: 'Assets', icon: Boxes, roles: HR_ROLES },
       { to: '/letters', label: 'HR letters', icon: FileSignature, roles: HR_ROLES },
       { to: '/separations', label: 'Separations', icon: UserMinus, roles: HR_ROLES },
       { to: '/settings', label: 'Organization', icon: Settings2, roles: HR_ROLES },

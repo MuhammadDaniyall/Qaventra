@@ -66,6 +66,11 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<TicketComment> TicketComments => Set<TicketComment>();
     public DbSet<TicketType> TicketTypes => Set<TicketType>();
     public DbSet<HelpdeskSettings> HelpdeskSettings => Set<HelpdeskSettings>();
+    public DbSet<AssetType> AssetTypes => Set<AssetType>();
+    public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<AssetAssignment> AssetAssignments => Set<AssetAssignment>();
+    public DbSet<AssetRequest> AssetRequests => Set<AssetRequest>();
+    public DbSet<AssetKit> AssetKits => Set<AssetKit>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -516,6 +521,51 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.AuthorName).HasMaxLength(200);
             e.Property(x => x.Body).HasMaxLength(8000);
             e.HasOne<Ticket>().WithMany().HasForeignKey(x => x.TicketId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<AssetType>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.HandlerIds).HasMaxLength(2000);
+        });
+
+        b.Entity<Asset>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Tag }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.Tag).HasMaxLength(50);
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.SerialNumber).HasMaxLength(100);
+            e.Property(x => x.Notes).HasMaxLength(1000);
+            e.HasOne(x => x.Type).WithMany().HasForeignKey(x => x.TypeId);
+        });
+
+        b.Entity<AssetAssignment>(e =>
+        {
+            e.HasIndex(x => x.AssetId);
+            e.HasIndex(x => new { x.EmployeeId, x.ReturnedOn });
+            e.Property(x => x.HandedOverByName).HasMaxLength(200);
+            e.Property(x => x.ReceivedByName).HasMaxLength(200);
+            e.Property(x => x.Notes).HasMaxLength(1000);
+            e.HasOne(x => x.Asset).WithMany().HasForeignKey(x => x.AssetId);
+        });
+
+        b.Entity<AssetRequest>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne<AssetType>().WithMany().HasForeignKey(x => x.TypeId);
+            e.HasOne<AssetAssignment>().WithMany().HasForeignKey(x => x.AssignmentId);
+        });
+
+        b.Entity<AssetKit>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.TypeIds).HasMaxLength(2000);
         });
 
         b.Entity<AuditLog>(e =>
