@@ -48,6 +48,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<PayRequest> PayRequests => Set<PayRequest>();
     public DbSet<Loan> Loans => Set<Loan>();
     public DbSet<LoanRepayment> LoanRepayments => Set<LoanRepayment>();
+    public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
+    public DbSet<ProfileChangeRequest> ProfileChangeRequests => Set<ProfileChangeRequest>();
+    public DbSet<JobChange> JobChanges => Set<JobChange>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -112,6 +115,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.BankName).HasMaxLength(100);
             e.Property(x => x.BankAccount).HasMaxLength(50);
             e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.PersonalEmail).HasMaxLength(256);
+            e.Property(x => x.BloodGroup).HasMaxLength(5);
             e.HasIndex(x => new { x.TenantId, x.EmployeeCode }).IsUnique();
             e.HasOne(x => x.Manager).WithMany().HasForeignKey(x => x.ManagerId);
         });
@@ -341,6 +346,38 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             e.HasIndex(x => new { x.LoanId, x.PayrollRunId }).IsUnique();
             e.HasOne<PayrollRun>().WithMany().HasForeignKey(x => x.PayrollRunId);
+        });
+
+        b.Entity<EmergencyContact>(e =>
+        {
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Relation).HasMaxLength(50);
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.AltPhone).HasMaxLength(30);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<ProfileChangeRequest>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+        });
+
+        b.Entity<JobChange>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.EffectiveDate });
+            e.Property(x => x.FromDepartment).HasMaxLength(150);
+            e.Property(x => x.ToDepartment).HasMaxLength(150);
+            e.Property(x => x.FromDesignation).HasMaxLength(150);
+            e.Property(x => x.ToDesignation).HasMaxLength(150);
+            e.Property(x => x.FromManager).HasMaxLength(200);
+            e.Property(x => x.ToManager).HasMaxLength(200);
+            e.Property(x => x.Note).HasMaxLength(1000);
+            e.Property(x => x.RecordedByName).HasMaxLength(200);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
         });
 
         b.Entity<AuditLog>(e =>

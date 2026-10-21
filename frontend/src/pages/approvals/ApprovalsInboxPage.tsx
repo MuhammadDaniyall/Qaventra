@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CalendarDays, CalendarPlus, Check, ChevronDown, Clock, HandCoins, Inbox, Receipt, X, type LucideIcon } from 'lucide-react';
+import { Banknote, CalendarDays, CalendarPlus, Check, ChevronDown, Clock, HandCoins, Inbox, Receipt, UserPen, X, type LucideIcon } from 'lucide-react';
 import { approvalsApi, REQUEST_LABELS, type ApprovalRequestType, type InboxItem } from '../../api/approvals';
 import { attendanceRequestsApi } from '../../api/attendance';
+import { profileChangesApi } from '../../api/employees';
 import { expensesApi } from '../../api/expenses';
 import { qk } from '../../api/keys';
 import { compOffApi, leaveApi } from '../../api/leave';
@@ -29,6 +30,7 @@ import {
 import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
 import { ClaimDrawer } from '../expenses/shared';
+import { ProfileChangeDetails } from '../profile/ProfileChanges';
 
 const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   Leave: CalendarDays,
@@ -37,6 +39,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   CompOff: CalendarPlus,
   PayRequest: Banknote,
   Loan: HandCoins,
+  ProfileChange: UserPen,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -48,6 +51,7 @@ const decideApi: Record<ApprovalRequestType, { approve: (id: string, note: strin
   CompOff: { approve: compOffApi.approve, reject: compOffApi.reject },
   PayRequest: { approve: payApi.approve, reject: payApi.reject },
   Loan: { approve: payApi.approveLoan, reject: payApi.rejectLoan },
+  ProfileChange: { approve: profileChangesApi.approve, reject: profileChangesApi.reject },
 };
 
 export function ApprovalsInboxPage() {
@@ -78,7 +82,7 @@ export function ApprovalsInboxPage() {
         <Tabs<Filter>
           value={filter}
           onChange={setFilter}
-          items={(['all', 'Leave', 'Expense', 'Attendance', 'CompOff', 'PayRequest', 'Loan'] as Filter[]).map((t) => ({
+          items={(['all', 'Leave', 'Expense', 'Attendance', 'CompOff', 'PayRequest', 'Loan', 'ProfileChange'] as Filter[]).map((t) => ({
             value: t,
             label: (
               <>
@@ -148,7 +152,8 @@ export function ApprovalsInboxPage() {
                     </div>
                   </div>
                   {expanded && (
-                    <div className="border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                    <div className="space-y-4 border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                      {item.requestType === 'ProfileChange' && <ProfileChangeDetails id={item.subjectId} />}
                       <ApprovalTimeline type={item.requestType} subjectId={item.subjectId} />
                     </div>
                   )}
@@ -176,6 +181,7 @@ function DecisionModal({ item, approve, onClose }: { item: InboxItem; approve: b
       qc.invalidateQueries({ queryKey: qk.approvals });
       qc.invalidateQueries({ queryKey: item.requestType === 'Leave' || item.requestType === 'CompOff' ? qk.leave : item.requestType === 'Expense' ? qk.expenses : qk.attendance });
       qc.invalidateQueries({ queryKey: qk.pay });
+      qc.invalidateQueries({ queryKey: qk.employees });
       qc.invalidateQueries({ queryKey: qk.dashboard });
       onClose();
     },

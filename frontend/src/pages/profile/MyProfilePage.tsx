@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, UserPen } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { notificationsApi } from '../../api/notifications';
 import { qk } from '../../api/keys';
@@ -9,6 +9,8 @@ import { ChangePasswordDialog } from '../../components/layout/ChangePasswordDial
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge, Switch, useToast } from '../../components/ui';
 import { formatDate, humanize, roleLabel } from '../../lib/format';
+import { EmergencyContactsCard, JobHistory } from '../employees/records';
+import { MyProfileChanges, ProfileChangeModal } from './ProfileChanges';
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -22,6 +24,7 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
 export function MyProfilePage() {
   const user = useUser();
   const [pwOpen, setPwOpen] = useState(false);
+  const [changeOpen, setChangeOpen] = useState(false);
   const profile = useQuery({ queryKey: qk.myProfile, queryFn: employeesApi.me });
 
   if (profile.isLoading) return <PageSpinner />;
@@ -41,11 +44,16 @@ export function MyProfilePage() {
     <>
       <PageHeader
         title="My profile"
-        description="Contact HR to correct any of these details."
+        description="Something wrong or out of date? Request a change and your approver will check it."
         actions={
-          <Button variant="secondary" icon={<KeyRound className="size-4" />} onClick={() => setPwOpen(true)}>
-            Change password
-          </Button>
+          <>
+            <Button variant="secondary" icon={<KeyRound className="size-4" />} onClick={() => setPwOpen(true)}>
+              Change password
+            </Button>
+            <Button icon={<UserPen className="size-4" />} onClick={() => setChangeOpen(true)}>
+              Request a change
+            </Button>
+          </>
         }
       />
       <Card className="mb-6 p-5">
@@ -69,11 +77,14 @@ export function MyProfilePage() {
         <Card>
           <CardHeader title="Personal" />
           <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            <Row label="Email" value={e.email} />
+            <Row label="Work email" value={e.email} />
+            <Row label="Personal email" value={e.personalEmail} />
             <Row label="Phone" value={e.phone} />
             <Row label="CNIC" value={e.cnic} />
             <Row label="Date of birth" value={e.dateOfBirth ? formatDate(e.dateOfBirth) : null} />
             <Row label="Gender" value={e.gender ? humanize(e.gender) : null} />
+            <Row label="Marital status" value={e.maritalStatus} />
+            <Row label="Blood group" value={e.bloodGroup} />
             <Row label="Address" value={e.address} />
           </dl>
         </Card>
@@ -98,6 +109,11 @@ export function MyProfilePage() {
           </Card>
         </div>
       </div>
+      <MyProfileChanges />
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        <EmergencyContactsCard editable />
+        <JobHistory joiningDate={e.joiningDate} />
+      </div>
       <EmailPreference />
       <Card className="mt-6">
         <CardHeader title="My documents" description="Upload your CNIC, degrees and certificates so HR has them on file." />
@@ -106,6 +122,7 @@ export function MyProfilePage() {
         </CardBody>
       </Card>
       <ChangePasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
+      {changeOpen && <ProfileChangeModal employee={e} onClose={() => setChangeOpen(false)} />}
     </>
   );
 }

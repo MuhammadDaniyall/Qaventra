@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { OwnerBanner } from './OwnerBanner';
 import { SubscriptionBanner } from './SubscriptionBanner';
+import { ChangePasswordDialog } from './ChangePasswordDialog';
 import { isPlatformOwner } from '../../auth/roles';
 import { Building2, Menu, Moon, ShieldCheck, Sun } from 'lucide-react';
 import { useUser } from '../../auth/AuthContext';
@@ -104,6 +105,7 @@ export function AppLayout() {
         <main className="print-reset mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Outlet />
         </main>
+        {user.mustChangePassword && <ChangePasswordDialog open forced onClose={() => undefined} />}
       </div>
     </div>
   );

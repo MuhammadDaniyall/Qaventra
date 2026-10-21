@@ -17,6 +17,27 @@ public enum Gender
     Other = 3,
 }
 
+public enum MaritalStatus
+{
+    Single = 1,
+    Married = 2,
+    Divorced = 3,
+    Widowed = 4,
+}
+
+public enum JobChangeKind
+{
+    Transfer = 1,
+    Promotion = 2,
+    Demotion = 3,
+    /// <summary>New title at the same level.</summary>
+    Redesignation = 4,
+    ManagerChange = 5,
+    Rehire = 6,
+    /// <summary>Recorded automatically when HR edits the department, designation or manager on the profile.</summary>
+    ProfileEdit = 7,
+}
+
 public enum EmploymentStatus
 {
     Probation = 1,
@@ -166,6 +187,7 @@ public enum ApprovalRequestType
     CompOff = 4,
     PayRequest = 5,
     Loan = 6,
+    ProfileChange = 7,
 }
 
 public enum PayRequestKind

@@ -3,6 +3,9 @@
 export type UserRole = 'SuperAdmin' | 'CompanyAdmin' | 'HrManager' | 'Manager' | 'Employee';
 export type Gender = 'Male' | 'Female' | 'Other';
 export type EmploymentStatus = 'Probation' | 'Active' | 'Resigned' | 'Terminated';
+export type MaritalStatus = 'Single' | 'Married' | 'Divorced' | 'Widowed';
+export const MARITAL_STATUSES: MaritalStatus[] = ['Single', 'Married', 'Divorced', 'Widowed'];
+export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 export type AttendanceStatus = 'Present' | 'Late' | 'HalfDay' | 'Absent' | 'OnLeave';
 export type AttendanceSource = 'Web' | 'Mobile' | 'Biometric' | 'Manual' | 'Request';
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
@@ -34,6 +37,8 @@ export interface Me {
   isActingAsOwner: boolean;
   /** Company users: last day of the subscription (inclusive); null = no expiry. */
   subscriptionEndsOn: string | null;
+  /** HR issued a temporary password; the user must choose their own before going on. */
+  mustChangePassword: boolean;
 }
 
 export interface Session {
@@ -310,6 +315,9 @@ export interface Employee {
   address: string | null;
   bankName: string | null;
   bankAccount: string | null;
+  personalEmail: string | null;
+  maritalStatus: MaritalStatus | null;
+  bloodGroup: string | null;
   departmentId: string | null;
   department: string | null;
   designationId: string | null;
@@ -338,6 +346,9 @@ export interface SaveEmployeeRequest {
   address: string | null;
   bankName: string | null;
   bankAccount: string | null;
+  personalEmail: string | null;
+  maritalStatus: MaritalStatus | null;
+  bloodGroup: string | null;
   departmentId: string | null;
   designationId: string | null;
   managerId: string | null;
@@ -348,8 +359,69 @@ export interface EmployeeQuery {
   search?: string;
   departmentId?: string;
   status?: EmploymentStatus | '';
+  /** Only people who have left (resigned or terminated). */
+  former?: boolean;
+  withoutLogin?: boolean;
   page?: number;
   pageSize?: number;
+}
+
+export interface EmergencyContact {
+  name: string;
+  relation: string;
+  phone: string;
+  altPhone: string | null;
+}
+
+export type JobChangeKind = 'Transfer' | 'Promotion' | 'Demotion' | 'Redesignation' | 'ManagerChange' | 'Rehire' | 'ProfileEdit';
+
+export interface JobChange {
+  id: string;
+  kind: JobChangeKind;
+  effectiveDate: string;
+  fromDepartment: string | null;
+  toDepartment: string | null;
+  fromDesignation: string | null;
+  toDesignation: string | null;
+  fromManager: string | null;
+  toManager: string | null;
+  note: string | null;
+  recordedByName: string | null;
+  createdAtUtc: string;
+}
+
+export interface IssuedLogin {
+  employeeId: string;
+  name: string;
+  email: string;
+  /** Only when it could not be emailed; shown once. */
+  password: string | null;
+}
+
+export interface IssueLoginsResult {
+  emailed: boolean;
+  created: IssuedLogin[];
+  skipped: { employeeId: string; name: string; reason: string }[];
+}
+
+export interface FieldChange {
+  field: string;
+  label: string;
+  from: string | null;
+  to: string | null;
+}
+
+export interface ProfileChange {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  changes: FieldChange[];
+  reason: string | null;
+  status: LeaveStatus;
+  createdAtUtc: string;
+  decidedAtUtc: string | null;
+  decisionNote: string | null;
 }
 
 export interface CreateLoginRequest {

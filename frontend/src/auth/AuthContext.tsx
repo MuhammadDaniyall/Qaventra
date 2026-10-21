@@ -20,6 +20,8 @@ interface AuthState {
   enterCompany: (companyId: string) => Promise<Me>;
   /** Owner only: leave the company and restore the platform session. */
   exitCompany: () => Promise<Me | null>;
+  /** Clears the "must change password" flag after the user picked their own. */
+  passwordChanged: () => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -166,9 +168,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   const clearNotice = useCallback(() => setNotice(null), []);
+  const passwordChanged = useCallback(() => setUser((u) => (u ? { ...u, mustChangePassword: false } : u)), []);
   const value = useMemo(
-    () => ({ user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany }),
-    [user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany],
+    () => ({ user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged }),
+    [user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

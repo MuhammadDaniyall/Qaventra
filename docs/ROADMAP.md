@@ -22,7 +22,7 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 | Module | Have | Still to build |
 |---|---|---|
-| Employee | Profile, department, designation, manager, salary, login | Documents, additional/custom fields, profile change requests with approval, transfers, re-hire, send credentials, role templates, suggestions box, bulk upload/export |
+| Employee | Profile, department, designation, manager, salary, login, documents, Excel import/export, personal email/marital status/blood group, emergency contacts, profile change requests with approval, job history (promotions, transfers, new manager), re-hire, bulk logins with forced password change, password reset | Custom fields, role templates, suggestions box |
 | Attendance | Geo check-in/out, shifts, holidays, daily view, manual entry, Excel import/export, attendance requests (missed punch, work from home, official duty, time correction) through approval chains | Breaks, exemptions, shift requests/swaps, roster schedules, penalties, attendance close, biometric devices |
 | Leave | Types, balances, apply, approval chains, attachments, half day and short leave, policies (monthly accrual, carry forward, max days, notice, gender, probation), HR balance adjustments, comp-off for weekend/holiday work | Reason types, leave quota bulk upload, encashment requests |
 | Payroll | Runs, payslips, tax slabs, EOBI, Excel export, expense reimbursements, HR allowances/bonuses/deductions per month, overtime claims (rate x hourly basic), advance salary, loans with automatic installments | Pay schedule, commission, PF/gratuity loans, provident fund & VPS, gratuity, hold salary, salary change requests, bank transfer files, payslip email, opening tax, payroll approvals |

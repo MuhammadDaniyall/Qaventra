@@ -60,11 +60,13 @@ interface ModalProps {
   children?: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Hide the close button, for dialogs that must be completed. */
+  hideClose?: boolean;
 }
 
 const modalSizes = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
-export function Modal({ open, onClose, title, description, children, footer, size = 'md' }: ModalProps) {
+export function Modal({ open, onClose, title, description, children, footer, size = 'md', hideClose = false }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useOverlay(open, onClose, panel);
@@ -92,9 +94,11 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             </h2>
             {description && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{description}</p>}
           </div>
-          <IconButton label="Close" data-close onClick={onClose} className="-mt-1 -mr-2">
-            <X className="size-4" />
-          </IconButton>
+          {!hideClose && (
+            <IconButton label="Close" data-close onClick={onClose} className="-mt-1 -mr-2">
+              <X className="size-4" />
+            </IconButton>
+          )}
         </div>
         {children && <div className="overflow-y-auto px-6 pb-5">{children}</div>}
         {footer && (

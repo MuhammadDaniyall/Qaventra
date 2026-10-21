@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, Plus, Search, Users } from 'lucide-react';
+import { KeyRound, Plus, Search, UserRoundCheck, Users } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { useDepartments } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -31,6 +31,7 @@ import {
 import { formatDate } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import { EMPLOYMENT_STATUSES, type EmploymentStatus } from '../../types';
+import { FindFormerModal, IssueLoginsModal } from './records';
 
 const PAGE_SIZE = 25;
 
@@ -44,6 +45,7 @@ export function EmployeesPage() {
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounced(search.trim(), 300);
   const departments = useDepartments();
+  const [dialog, setDialog] = useState<'logins' | 'rehire' | null>(null);
 
   const query = { search: debouncedSearch, departmentId: departmentId || undefined, status, page, pageSize: PAGE_SIZE };
   const list = useQuery({
@@ -63,6 +65,12 @@ export function EmployeesPage() {
             <>
               <ImportButton kind="employees" invalidate={[qk.employees, qk.departments, qk.designations, qk.dashboard]} />
               <ExportButton path="/exports/employees" fileName={`employees-${todayIso()}.xlsx`} />
+              <Button variant="secondary" icon={<KeyRound className="size-4" />} onClick={() => setDialog('logins')}>
+                Send logins
+              </Button>
+              <Button variant="secondary" icon={<UserRoundCheck className="size-4" />} onClick={() => setDialog('rehire')}>
+                Re-hire
+              </Button>
               <Button icon={<Plus className="size-4" />} onClick={() => navigate('/employees/new')}>
                 Add employee
               </Button>
@@ -192,6 +200,8 @@ export function EmployeesPage() {
           </>
         )}
       </Card>
+      {dialog === 'logins' && <IssueLoginsModal onClose={() => setDialog(null)} />}
+      {dialog === 'rehire' && <FindFormerModal onClose={() => setDialog(null)} />}
     </>
   );
 }

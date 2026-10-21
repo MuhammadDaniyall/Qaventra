@@ -56,6 +56,11 @@ public class NotificationService
         }
     }
 
+    /// <summary>A one-off email that is not a notification, such as sign-in details. Sent after the next save.</summary>
+    public void EmailOnly(string to, string title, string body, string? link) =>
+        _pending.Add(new EmailMessage(to, title, Html(title, body, link,
+            "Sent by your company's HR team through Qaventra. If you did not expect it, tell HR.")));
+
     private void Flush()
     {
         foreach (var m in _pending)
@@ -63,7 +68,8 @@ public class NotificationService
         _pending.Clear();
     }
 
-    private string Html(string title, string? body, string? link)
+    private string Html(string title, string? body, string? link,
+        string footer = "You get this because notifications are on for your Qaventra account. Turn emails off under My profile.")
     {
         static string e(string? s) => WebUtility.HtmlEncode(s ?? "");
         var button = link is not null && _baseUrl is not null
@@ -74,7 +80,7 @@ public class NotificationService
               <h2 style="font-size:18px;margin:0 0 8px">{e(title)}</h2>
               {(body is null ? "" : $"<p style=\"font-size:14px;line-height:1.6;color:#3f3f46;white-space:pre-line\">{e(body)}</p>")}
               {button}
-              <p style="font-size:12px;color:#a1a1aa">You get this because notifications are on for your Qaventra account. Turn emails off under My profile.</p>
+              <p style="font-size:12px;color:#a1a1aa">{e(footer)}</p>
             </div>
             """;
     }

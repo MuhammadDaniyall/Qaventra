@@ -67,6 +67,8 @@ public class User : BaseEntity, ITenantEntity
     public bool IsActive { get; set; } = true;
     /// <summary>Also send notifications by email (in-app ones always appear).</summary>
     public bool EmailNotifications { get; set; } = true;
+    /// <summary>Set when HR issues a temporary password; the user must pick their own after signing in.</summary>
+    public bool MustChangePassword { get; set; }
 }
 
 public class Department : TenantEntity
@@ -96,6 +98,9 @@ public class Employee : TenantEntity
     public string? Address { get; set; }
     public string? BankName { get; set; }
     public string? BankAccount { get; set; }
+    public string? PersonalEmail { get; set; }
+    public MaritalStatus? MaritalStatus { get; set; }
+    public string? BloodGroup { get; set; }
 
     public Guid? DepartmentId { get; set; }
     public Department? Department { get; set; }

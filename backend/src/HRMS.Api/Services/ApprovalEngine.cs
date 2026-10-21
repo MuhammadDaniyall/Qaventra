@@ -187,6 +187,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.CompOff => "comp-off request",
         ApprovalRequestType.PayRequest => "pay request",
         ApprovalRequestType.Loan => "loan request",
+        ApprovalRequestType.ProfileChange => "profile change",
         _ => "request",
     };
 
@@ -198,6 +199,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.CompOff => "/me/leave",
         ApprovalRequestType.PayRequest => "/me/pay",
         ApprovalRequestType.Loan => "/me/pay",
+        ApprovalRequestType.ProfileChange => "/me/profile",
         _ => "/dashboard",
     };
 

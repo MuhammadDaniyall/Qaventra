@@ -21,6 +21,6 @@ public class SessionService(HrmsDbContext db, JwtTokenService tokens)
         var tenantId = user.TenantId != Guid.Empty ? user.TenantId : acting;
         var company = tenantId is null ? null
             : await db.Tenants.Where(t => t.Id == tenantId).Select(t => new { t.Name, t.SubscriptionEndsOn }).FirstOrDefaultAsync();
-        return new MeDto(user.Id, user.Email, user.FullName, user.Role, tenantId, company?.Name, user.EmployeeId, acting is not null, company?.SubscriptionEndsOn);
+        return new MeDto(user.Id, user.Email, user.FullName, user.Role, tenantId, company?.Name, user.EmployeeId, acting is not null, company?.SubscriptionEndsOn, user.MustChangePassword && acting is null);
     }
 }

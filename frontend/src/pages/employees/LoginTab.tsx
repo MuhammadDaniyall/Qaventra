@@ -1,14 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { KeyRound, ShieldCheck } from 'lucide-react';
+import { IssuedLoginsView } from './records';
+import { KeyRound, RotateCcw, ShieldCheck } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { ApiError, errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isCompanyAdmin } from '../../auth/roles';
-import { Badge, Button, Card, CardBody, CardHeader, Field, FormError, Input, Select, Switch, useToast } from '../../components/ui';
+import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, Field, FormError, Input, Modal, Select, Switch, useToast } from '../../components/ui';
 import { roleLabel } from '../../lib/format';
-import type { Employee, Me, UserRole } from '../../types';
+import type { Employee, IssuedLogin, Me, UserRole } from '../../types';
 
 function assignableRoles(me: Me): UserRole[] {
   return isCompanyAdmin(me)
@@ -111,6 +112,19 @@ function ManageLogin({ employee }: { employee: Employee }) {
     },
     onError: (err) => setError(errorMessage(err)),
   });
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [issued, setIssued] = useState<IssuedLogin | null>(null);
+  const reset = useMutation({
+    mutationFn: () => employeesApi.resetPassword(employee.id),
+    onSuccess: (r) => {
+      setConfirmReset(false);
+      setIssued(r);
+    },
+    onError: (err) => {
+      setConfirmReset(false);
+      toast.error(err);
+    },
+  });
 
   return (
     <Card className="max-w-2xl">
@@ -145,12 +159,29 @@ function ManageLogin({ employee }: { employee: Employee }) {
           label="Login enabled"
           description="Disabled users cannot sign in. Their records are kept."
         />
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-between gap-2">
+          <Button variant="secondary" icon={<RotateCcw className="size-4" />} disabled={locked} onClick={() => setConfirmReset(true)}>
+            Reset password
+          </Button>
           <Button loading={update.isPending} disabled={locked} onClick={() => update.mutate()}>
             Save access
           </Button>
         </div>
       </CardBody>
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset this password?"
+        message={`${employee.firstName} gets a new temporary password and must choose their own at the next sign-in. The old password stops working.`}
+        confirmLabel="Reset password"
+        loading={reset.isPending}
+        onConfirm={() => reset.mutate()}
+        onClose={() => setConfirmReset(false)}
+      />
+      {issued && (
+        <Modal open onClose={() => setIssued(null)} title="Password reset" footer={<Button onClick={() => setIssued(null)}>Done</Button>}>
+          <IssuedLoginsView result={{ emailed: !issued.password, created: [issued], skipped: [] }} />
+        </Modal>
+      )}
     </Card>
   );
 }

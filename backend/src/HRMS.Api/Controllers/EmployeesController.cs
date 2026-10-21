@@ -19,7 +19,7 @@ public record EmployeeListItemDto(
 public record EmployeeDto(
     Guid Id, string EmployeeCode, string FirstName, string LastName, string? Email, string? Phone, string? Cnic,
     DateOnly? DateOfBirth, Gender? Gender, DateOnly JoiningDate, DateOnly? LeavingDate, EmploymentStatus Status,
-    string? Address, string? BankName, string? BankAccount,
+    string? Address, string? BankName, string? BankAccount, string? PersonalEmail, MaritalStatus? MaritalStatus, string? BloodGroup,
     Guid? DepartmentId, string? Department, Guid? DesignationId, string? Designation,
     Guid? ManagerId, string? Manager, Guid? ShiftId, string? Shift,
     Guid? UserId, UserRole? LoginRole, bool? LoginActive);
@@ -42,7 +42,10 @@ public record SaveEmployeeRequest(
     Guid? DepartmentId,
     Guid? DesignationId,
     Guid? ManagerId,
-    Guid? ShiftId);
+    Guid? ShiftId,
+    [EmailAddress, StringLength(256)] string? PersonalEmail = null,
+    MaritalStatus? MaritalStatus = null,
+    [RegularExpression(@"^(A|B|AB|O)[+-]$", ErrorMessage = "Choose a blood group such as B+ or O-.")] string? BloodGroup = null);
 
 public record CreateLoginRequest([Required, EmailAddress] string Email, [Required, StringLength(100, MinimumLength = 8)] string Password, UserRole Role);
 
@@ -60,7 +63,7 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
     [HttpGet, Authorize(Policy = Policies.Approver)]
     public async Task<PagedResult<EmployeeListItemDto>> List(
         [FromQuery] string? search, [FromQuery] Guid? departmentId, [FromQuery] EmploymentStatus? status,
-        [FromQuery] int page = 1, [FromQuery] int pageSize = 25)
+        [FromQuery] bool former = false, [FromQuery] bool withoutLogin = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 25)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
@@ -77,6 +80,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         }
         if (departmentId is not null) q = q.Where(e => e.DepartmentId == departmentId);
         if (status is not null) q = q.Where(e => e.Status == status);
+        if (former) q = q.Where(e => e.Status == EmploymentStatus.Resigned || e.Status == EmploymentStatus.Terminated);
+        if (withoutLogin) q = q.Where(e => !db.Users.Any(u => u.EmployeeId == e.Id));
 
         var total = await q.CountAsync();
         var items = await q.OrderBy(e => e.EmployeeCode)
@@ -150,10 +155,15 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         e.Address = req.Address;
         e.BankName = req.BankName;
         e.BankAccount = req.BankAccount;
+        e.PersonalEmail = req.PersonalEmail?.Trim().ToLowerInvariant();
+        e.MaritalStatus = req.MaritalStatus;
+        e.BloodGroup = req.BloodGroup;
+        var (oldDepartment, oldDesignation, oldManager) = (e.DepartmentId, e.DesignationId, e.ManagerId);
         e.DepartmentId = req.DepartmentId;
         e.DesignationId = req.DesignationId;
         e.ManagerId = req.ManagerId;
         e.ShiftId = req.ShiftId ?? e.ShiftId;
+        await employees.TrackProfileEditAsync(e, oldDepartment, oldDesignation, oldManager);
 
         // A person who has left can no longer sign in.
         if (!e.IsCurrent)
@@ -237,6 +247,98 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         return NoContent();
     }
 
+    /// <summary>Logins for many employees at once, each with a temporary password (emailed when email is set up).</summary>
+    [HttpPost("logins"), Authorize(Policy = Policies.Hr)]
+    public Task<IssueLoginsResult> IssueLogins(IssueLoginsRequest req)
+    {
+        GuardRoleAssignment(req.Role);
+        return employees.IssueLoginsAsync(req.EmployeeIds ?? [], req.Role);
+    }
+
+    [HttpPost("{id:guid}/login/reset-password"), Authorize(Policy = Policies.Hr)]
+    public Task<IssuedLogin> ResetPassword(Guid id) => employees.ResetPasswordAsync(id);
+
+    // ---------- Emergency contacts ----------
+
+    [HttpGet("me/emergency-contacts")]
+    public Task<List<EmergencyContactDto>> MyEmergencyContacts() => Contacts(MyId());
+
+    [HttpPut("me/emergency-contacts")]
+    public Task<List<EmergencyContactDto>> SaveMyEmergencyContacts(SaveEmergencyContactsRequest req) => SaveContacts(MyId(), req);
+
+    [HttpGet("{id:guid}/emergency-contacts"), Authorize(Policy = Policies.Approver)]
+    public async Task<List<EmergencyContactDto>> EmergencyContacts(Guid id)
+    {
+        await EnsureCanView(id);
+        return await Contacts(id);
+    }
+
+    [HttpPut("{id:guid}/emergency-contacts"), Authorize(Policy = Policies.Hr)]
+    public async Task<List<EmergencyContactDto>> SaveEmergencyContacts(Guid id, SaveEmergencyContactsRequest req)
+    {
+        if (!await db.Employees.AnyAsync(e => e.Id == id))
+            throw new NotFoundException("Employee");
+        return await SaveContacts(id, req);
+    }
+
+    private Task<List<EmergencyContactDto>> Contacts(Guid employeeId) =>
+        db.EmergencyContacts.Where(c => c.EmployeeId == employeeId).OrderBy(c => c.Order)
+            .Select(c => new EmergencyContactDto(c.Name, c.Relation, c.Phone, c.AltPhone)).ToListAsync();
+
+    /// <summary>Replaces the whole list; the first contact is the one to call first.</summary>
+    private async Task<List<EmergencyContactDto>> SaveContacts(Guid employeeId, SaveEmergencyContactsRequest req)
+    {
+        var list = req.Contacts ?? [];
+        if (list.Count > 5)
+            throw new DomainException("Keep up to 5 emergency contacts.");
+        if (list.Any(c => c is null || string.IsNullOrWhiteSpace(c.Name) || string.IsNullOrWhiteSpace(c.Relation) || string.IsNullOrWhiteSpace(c.Phone)))
+            throw new DomainException("Every contact needs a name, relation and phone number.");
+        db.EmergencyContacts.RemoveRange(await db.EmergencyContacts.Where(c => c.EmployeeId == employeeId).ToListAsync());
+        var order = 0;
+        foreach (var c in list)
+            db.EmergencyContacts.Add(new EmergencyContact
+            {
+                EmployeeId = employeeId, Order = ++order, Name = c.Name.Trim(), Relation = c.Relation.Trim(), Phone = c.Phone.Trim(),
+                AltPhone = string.IsNullOrWhiteSpace(c.AltPhone) ? null : c.AltPhone.Trim(),
+            });
+        await db.SaveChangesAsync();
+        return await Contacts(employeeId);
+    }
+
+    // ---------- Job history ----------
+
+    [HttpGet("me/job-history")]
+    public Task<List<JobChangeDto>> MyJobHistory() => JobHistory(MyId(), includeRecorder: false);
+
+    [HttpGet("{id:guid}/job-history"), Authorize(Policy = Policies.Approver)]
+    public async Task<List<JobChangeDto>> JobHistory(Guid id)
+    {
+        await EnsureCanView(id);
+        return await JobHistory(id, includeRecorder: true);
+    }
+
+    [HttpPost("{id:guid}/job-changes"), Authorize(Policy = Policies.Hr)]
+    public async Task<EmployeeDto> RecordJobChange(Guid id, RecordJobChangeRequest req)
+    {
+        await employees.RecordJobChangeAsync(id, new JobChangeInput(req.Kind, req.EffectiveDate, req.DepartmentId, req.DesignationId, req.ManagerId, req.Note));
+        return await Load(id);
+    }
+
+    [HttpPost("{id:guid}/rehire"), Authorize(Policy = Policies.Hr)]
+    public async Task<EmployeeDto> Rehire(Guid id, RehireRequest req)
+    {
+        await employees.RehireAsync(id, new RehireInput(req.JoiningDate, req.Status, req.DepartmentId, req.DesignationId, req.ManagerId, req.ShiftId, req.Note));
+        return await Load(id);
+    }
+
+    private Task<List<JobChangeDto>> JobHistory(Guid employeeId, bool includeRecorder) =>
+        db.JobChanges.Where(c => c.EmployeeId == employeeId).OrderByDescending(c => c.EffectiveDate).ThenByDescending(c => c.CreatedAtUtc)
+            .Select(c => new JobChangeDto(c.Id, c.Kind, c.EffectiveDate, c.FromDepartment, c.ToDepartment, c.FromDesignation, c.ToDesignation,
+                c.FromManager, c.ToManager, c.Note, includeRecorder ? c.RecordedByName : null, c.CreatedAtUtc))
+            .ToListAsync();
+
+    private Guid MyId() => me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
+
     private void GuardRoleAssignment(UserRole role)
     {
         if (role == UserRole.SuperAdmin)
@@ -271,7 +373,7 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         return await db.Employees.AsNoTracking().Where(e => e.Id == id)
             .Select(e => new EmployeeDto(
                 e.Id, e.EmployeeCode, e.FirstName, e.LastName, e.Email, e.Phone, e.Cnic, e.DateOfBirth, e.Gender,
-                e.JoiningDate, e.LeavingDate, e.Status, e.Address, e.BankName, e.BankAccount,
+                e.JoiningDate, e.LeavingDate, e.Status, e.Address, e.BankName, e.BankAccount, e.PersonalEmail, e.MaritalStatus, e.BloodGroup,
                 e.DepartmentId, e.Department != null ? e.Department.Name : null,
                 e.DesignationId, e.Designation != null ? e.Designation.Title : null,
                 e.ManagerId, e.Manager != null ? e.Manager.FirstName + " " + e.Manager.LastName : null,
@@ -284,3 +386,22 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
 }
 
 public record LookupDto(Guid Id, string Name);
+
+public record IssueLoginsRequest([Required, MaxLength(500)] List<Guid> EmployeeIds, UserRole Role = UserRole.Employee);
+
+public record EmergencyContactDto(
+    [Required, StringLength(150)] string Name, [Required, StringLength(50)] string Relation,
+    [Required, StringLength(30)] string Phone, [StringLength(30)] string? AltPhone);
+
+public record SaveEmergencyContactsRequest(List<EmergencyContactDto> Contacts);
+
+public record JobChangeDto(
+    Guid Id, JobChangeKind Kind, DateOnly EffectiveDate, string? FromDepartment, string? ToDepartment, string? FromDesignation,
+    string? ToDesignation, string? FromManager, string? ToManager, string? Note, string? RecordedByName, DateTime CreatedAtUtc);
+
+public record RecordJobChangeRequest(
+    JobChangeKind Kind, DateOnly EffectiveDate, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, [StringLength(1000)] string? Note);
+
+public record RehireRequest(
+    DateOnly JoiningDate, EmploymentStatus Status, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, Guid? ShiftId,
+    [StringLength(1000)] string? Note);

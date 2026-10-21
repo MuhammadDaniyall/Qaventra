@@ -22,7 +22,7 @@ public record ChangePasswordRequest([Required] string CurrentPassword, [Required
 public record SessionDto(string Token, DateTime ExpiresAtUtc, MeDto User);
 
 /// <summary>For a SuperAdmin who has opened a company, TenantId/CompanyName describe that company and IsActingAsOwner is true.</summary>
-public record MeDto(Guid Id, string Email, string FullName, UserRole Role, Guid? TenantId, string? CompanyName, Guid? EmployeeId, bool IsActingAsOwner, DateOnly? SubscriptionEndsOn);
+public record MeDto(Guid Id, string Email, string FullName, UserRole Role, Guid? TenantId, string? CompanyName, Guid? EmployeeId, bool IsActingAsOwner, DateOnly? SubscriptionEndsOn, bool MustChangePassword);
 
 [ApiController]
 [Route("api/auth")]
@@ -88,7 +88,10 @@ public class AuthController(
         var user = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Id == me.UserId);
         if (hasher.VerifyHashedPassword(user, user.PasswordHash, req.CurrentPassword) == PasswordVerificationResult.Failed)
             throw new DomainException("Current password is incorrect.");
+        if (req.NewPassword == req.CurrentPassword)
+            throw new DomainException("Choose a password different from the current one.");
         user.PasswordHash = hasher.HashPassword(user, req.NewPassword);
+        user.MustChangePassword = false;
         await db.SaveChangesAsync();
         await audit.AuthAsync("PasswordChanged", user);
         return NoContent();

@@ -2,10 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { authApi } from '../../api/auth';
 import { ApiError, errorMessage } from '../../api/client';
+import { useAuth } from '../../auth/AuthContext';
 import { Button, Field, FormError, Input, Modal, useToast } from '../ui';
 
-export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+/**
+ * `forced`: shown after signing in with a temporary password from HR. It cannot be dismissed; signing out is the only
+ * other way out.
+ */
+export function ChangePasswordDialog({ open, onClose, forced = false }: { open: boolean; onClose: () => void; forced?: boolean }) {
   const toast = useToast();
+  const { passwordChanged, logout } = useAuth();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -24,6 +30,7 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
     mutationFn: () => authApi.changePassword({ currentPassword: current, newPassword: next }),
     onSuccess: () => {
       toast.success('Password changed');
+      passwordChanged();
       reset();
       onClose();
     },
@@ -45,6 +52,7 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
   };
 
   const close = () => {
+    if (forced) return;
     reset();
     onClose();
   };
@@ -53,13 +61,18 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
     <Modal
       open={open}
       onClose={close}
-      title="Change password"
-      description="Use at least 8 characters. You'll stay signed in on this device."
+      title={forced ? 'Choose your own password' : 'Change password'}
+      description={
+        forced
+          ? 'You signed in with a temporary password from HR. Pick a new one of at least 8 characters to continue.'
+          : "Use at least 8 characters. You'll stay signed in on this device."
+      }
       size="sm"
+      hideClose={forced}
       footer={
         <>
-          <Button variant="secondary" onClick={close}>
-            Cancel
+          <Button variant="secondary" onClick={forced ? () => void logout() : close}>
+            {forced ? 'Sign out' : 'Cancel'}
           </Button>
           <Button type="submit" form="change-password-form" loading={mutation.isPending}>
             Update password
@@ -69,7 +82,7 @@ export function ChangePasswordDialog({ open, onClose }: { open: boolean; onClose
     >
       <form id="change-password-form" onSubmit={submit} className="space-y-4">
         <FormError message={error} />
-        <Field label="Current password" required error={fieldErrors.currentPassword}>
+        <Field label={forced ? 'Temporary password' : 'Current password'} required error={fieldErrors.currentPassword}>
           <Input type="password" autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} required />
         </Field>
         <Field label="New password" required error={fieldErrors.newPassword}>

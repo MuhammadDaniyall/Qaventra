@@ -5,7 +5,7 @@ import { orgApi } from '../../api/organization';
 import { QuickCreateSelect } from './QuickCreateSelect';
 import { Button, Card, Field, FormError, Input, Select, Textarea } from '../../components/ui';
 import { todayIso } from '../../lib/format';
-import { EMPLOYMENT_STATUSES, type Employee, type EmploymentStatus, type Gender, type SaveEmployeeRequest } from '../../types';
+import { BLOOD_GROUPS, EMPLOYMENT_STATUSES, MARITAL_STATUSES, type Employee, type EmploymentStatus, type Gender, type MaritalStatus, type SaveEmployeeRequest } from '../../types';
 
 export function emptyEmployee(): SaveEmployeeRequest {
   return {
@@ -23,6 +23,9 @@ export function emptyEmployee(): SaveEmployeeRequest {
     address: null,
     bankName: null,
     bankAccount: null,
+    personalEmail: null,
+    maritalStatus: null,
+    bloodGroup: null,
     departmentId: null,
     designationId: null,
     managerId: null,
@@ -46,6 +49,9 @@ export function toSaveRequest(e: Employee): SaveEmployeeRequest {
     address: e.address,
     bankName: e.bankName,
     bankAccount: e.bankAccount,
+    personalEmail: e.personalEmail,
+    maritalStatus: e.maritalStatus,
+    bloodGroup: e.bloodGroup,
     departmentId: e.departmentId,
     designationId: e.designationId,
     managerId: e.managerId,
@@ -126,7 +132,7 @@ export function EmployeeForm({
     if (v.leavingDate && v.joiningDate && v.leavingDate < v.joiningDate) fe.leavingDate = 'Cannot be before the joining date.';
     setErrors(fe);
     if (Object.keys(fe).length) return;
-    onSubmit({ ...v, firstName: v.firstName.trim(), lastName: v.lastName.trim(), email: v.email?.trim() || null });
+    onSubmit({ ...v, firstName: v.firstName.trim(), lastName: v.lastName.trim(), email: v.email?.trim() || null, personalEmail: v.personalEmail?.trim() || null });
   };
 
   const leaving = v.status === 'Resigned' || v.status === 'Terminated';
@@ -141,8 +147,11 @@ export function EmployeeForm({
         <Field label="Last name" required error={allErrors.lastName}>
           <Input {...text('lastName')} value={v.lastName} autoComplete="off" />
         </Field>
-        <Field label="Email" error={allErrors.email}>
+        <Field label="Work email" hint="Also their sign-in email." error={allErrors.email}>
           <Input type="email" {...text('email')} />
+        </Field>
+        <Field label="Personal email" error={allErrors.personalEmail}>
+          <Input type="email" {...text('personalEmail')} />
         </Field>
         <Field label="Phone" error={allErrors.phone}>
           <Input type="tel" placeholder="0300-1234567" {...text('phone')} />
@@ -169,6 +178,30 @@ export function EmployeeForm({
             <option value="Male">Male</option>
             <option value="Female">Female</option>
             <option value="Other">Other</option>
+          </Select>
+        </Field>
+        <Field label="Marital status" error={allErrors.maritalStatus}>
+          <Select
+            value={v.maritalStatus ?? ''}
+            disabled={readOnly}
+            onChange={(e) => setV((s) => ({ ...s, maritalStatus: (e.target.value || null) as MaritalStatus | null }))}
+          >
+            <option value="">Not specified</option>
+            {MARITAL_STATUSES.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Blood group" error={allErrors.bloodGroup}>
+          <Select {...text('bloodGroup')}>
+            <option value="">Not specified</option>
+            {BLOOD_GROUPS.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
           </Select>
         </Field>
         <Field label="Address" className="sm:col-span-2" error={allErrors.address}>
