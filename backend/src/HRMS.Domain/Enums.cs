@@ -164,6 +164,18 @@ public enum ApprovalRequestType
     Expense = 2,
     Attendance = 3,
     CompOff = 4,
+    PayRequest = 5,
+    Loan = 6,
+}
+
+public enum PayRequestKind
+{
+    Allowance = 1,
+    Bonus = 2,
+    Overtime = 3,
+    Deduction = 4,
+    /// <summary>Paid out now, recovered in full from the chosen month's salary.</summary>
+    AdvanceSalary = 5,
 }
 
 /// <summary>Status of a simple request that goes through an approval chain.</summary>

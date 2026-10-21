@@ -1,4 +1,5 @@
 import {
+  Banknote,
   Building2,
   CalendarCheck,
   CalendarClock,
@@ -57,6 +58,7 @@ export const NAV: NavSection[] = [
       { to: '/me/leave', label: 'My leave', icon: CalendarDays, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/payslips', label: 'My payslips', icon: FileText, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/expenses', label: 'My expenses', icon: Receipt, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/pay', label: 'Pay requests', icon: Banknote, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/documents', label: 'My documents', icon: FolderOpen, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/profile', label: 'My profile', icon: UserCircle, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/resignation', label: 'Resignation', icon: DoorOpen, roles: COMPANY_ROLES, needsEmployee: true },

@@ -45,6 +45,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
     public DbSet<CompOffRequest> CompOffRequests => Set<CompOffRequest>();
+    public DbSet<PayRequest> PayRequests => Set<PayRequest>();
+    public DbSet<Loan> Loans => Set<Loan>();
+    public DbSet<LoanRepayment> LoanRepayments => Set<LoanRepayment>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -170,7 +173,11 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.DecisionNote).HasMaxLength(1000);
         });
 
-        b.Entity<PayrollSettings>().HasIndex(x => x.TenantId).IsUnique();
+        b.Entity<PayrollSettings>(e =>
+        {
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.Property(x => x.OvertimeMultiplier).HasPrecision(5, 2);
+        });
 
         b.Entity<TaxYear>(e =>
         {
@@ -308,6 +315,34 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
         });
 
+        b.Entity<PayRequest>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status, x.Year, x.Month });
+            e.HasIndex(x => x.EmployeeId);
+            e.HasIndex(x => x.PayrollRunId);
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.Property(x => x.Hours).HasPrecision(6, 2);
+            e.HasOne<PayrollRun>().WithMany().HasForeignKey(x => x.PayrollRunId);
+        });
+
+        b.Entity<Loan>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasMany(x => x.Repayments).WithOne().HasForeignKey(x => x.LoanId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<LoanRepayment>(e =>
+        {
+            e.HasIndex(x => new { x.LoanId, x.PayrollRunId }).IsUnique();
+            e.HasOne<PayrollRun>().WithMany().HasForeignKey(x => x.PayrollRunId);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -339,7 +374,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     private static bool IsOwnedChild(Type t) =>
         t == typeof(TaxSlab) || t == typeof(SalaryComponent) || t == typeof(Payslip) || t == typeof(PayslipLine)
         || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
-        || t == typeof(AttachmentContent);
+        || t == typeof(AttachmentContent) || t == typeof(LoanRepayment);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

@@ -11,6 +11,8 @@ public class PayrollSettings : TenantEntity
     public decimal EobiEmployerContribution { get; set; } = 2000m;
     /// <summary>When true, working days with no attendance and no approved leave are unpaid.</summary>
     public bool DeductAbsentDays { get; set; }
+    /// <summary>Overtime pay per hour = basic salary / 30 / 8 x this multiplier.</summary>
+    public decimal OvertimeMultiplier { get; set; } = 1.5m;
 }
 
 /// <summary>A Pakistani tax year (July–June) with its salaried-income slabs. Shared by all companies.</summary>

@@ -554,6 +554,8 @@ export interface PayrollSettings {
   eobiEmployeeContribution: number;
   eobiEmployerContribution: number;
   deductAbsentDays: boolean;
+  /** Overtime pay per hour = basic / 30 / 8 x this. */
+  overtimeMultiplier: number;
 }
 
 // ---- Dashboard ----

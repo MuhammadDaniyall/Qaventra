@@ -52,6 +52,21 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
         foreach (var c in claims)
             c.PayrollRunId = null;
 
+        // One-off pay items for this month or earlier that no finalized payroll has paid yet; same re-linking as claims.
+        var period = year * 12 + month;
+        var payItems = await db.PayRequests
+            .Where(r => r.Status == RequestStatus.Approved && r.PaidAtUtc == null && (r.PayrollRunId == null || r.PayrollRunId == run.Id)
+                        && r.Year * 12 + r.Month <= period)
+            .ToListAsync();
+        foreach (var r in payItems)
+            r.PayrollRunId = null;
+
+        // Loan installments: drop this run's earlier ones (reprocess), then take the next installment of every active loan.
+        db.LoanRepayments.RemoveRange(await db.LoanRepayments.Where(x => x.PayrollRunId == run.Id).ToListAsync());
+        var loans = await db.Loans.Include(l => l.Repayments)
+            .Where(l => l.Status == RequestStatus.Approved && l.StartYear * 12 + l.StartMonth <= period)
+            .ToListAsync();
+
         var employees = await db.Employees
             .Where(e => e.JoiningDate <= monthEnd && (e.LeavingDate == null || e.LeavingDate >= monthStart))
             .ToListAsync();
@@ -119,9 +134,33 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             foreach (var c in employeeClaims)
                 c.PayrollRunId = run.Id;
 
+            var extras = new List<PayItem>();
+            foreach (var item in payItems.Where(r => r.EmployeeId == employee.Id).OrderBy(r => r.Kind))
+            {
+                item.PayrollRunId = run.Id;
+                var name = item.Kind switch
+                {
+                    PayRequestKind.Overtime => $"Overtime ({item.Hours:0.#} h)",
+                    PayRequestKind.AdvanceSalary => "Advance salary recovery",
+                    _ => item.Title,
+                };
+                extras.Add(new PayItem(name, item.IsEarning ? SalaryComponentKind.Earning : SalaryComponentKind.Deduction, item.Amount, item.IsEarning && item.IsTaxable));
+            }
+            foreach (var loan in loans.Where(l => l.EmployeeId == employee.Id))
+            {
+                var repaid = loan.Repayments.Where(x => x.PayrollRunId != run.Id).Sum(x => x.Amount);
+                var remaining = loan.Amount - repaid;
+                if (remaining <= 0)
+                    continue;
+                var installment = Math.Min(loan.InstallmentAmount, remaining);
+                var number = loan.Repayments.Count(x => x.PayrollRunId != run.Id) + 1;
+                db.LoanRepayments.Add(new LoanRepayment { LoanId = loan.Id, PayrollRunId = run.Id, Amount = installment });
+                extras.Add(new PayItem($"{loan.Title} installment ({number}/{loan.Installments})", SalaryComponentKind.Deduction, installment, false));
+            }
+
             var result = PayrollCalculator.Calculate(new PayrollInput(
                 salary, taxYear, daysInMonth, unpaid, settings.EobiEmployeeContribution, settings.EobiEmployerContribution,
-                employeeClaims.Sum(c => c.Total)));
+                employeeClaims.Sum(c => c.Total), extras));
 
             var payslip = new Payslip
             {
@@ -159,6 +198,9 @@ public class PayrollService(HrmsDbContext db, LeaveService leave, TenantClock cl
             throw new DomainException("This payroll is already finalized.");
         run.Status = PayrollRunStatus.Finalized;
         run.FinalizedAtUtc = clock.UtcNow;
+
+        foreach (var item in await db.PayRequests.Where(r => r.PayrollRunId == run.Id && r.Status == RequestStatus.Approved).ToListAsync())
+            item.PaidAtUtc = run.FinalizedAtUtc;
 
         var claims = await db.ExpenseClaims.Where(c => c.PayrollRunId == run.Id && c.Status == ExpenseStatus.Approved).ToListAsync();
         foreach (var c in claims)

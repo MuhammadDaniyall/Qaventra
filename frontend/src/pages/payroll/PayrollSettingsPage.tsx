@@ -30,6 +30,7 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
   const [employee, setEmployee] = useState(String(initial.eobiEmployeeContribution));
   const [employer, setEmployer] = useState(String(initial.eobiEmployerContribution));
   const [deductAbsent, setDeductAbsent] = useState(initial.deductAbsentDays);
+  const [overtime, setOvertime] = useState(String(initial.overtimeMultiplier ?? 1.5));
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -53,9 +54,11 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
     const fe: Record<string, string> = {};
     if (employee === '' || !Number.isFinite(a) || a < 0) fe.eobiEmployeeContribution = 'Enter an amount of 0 or more.';
     if (employer === '' || !Number.isFinite(b) || b < 0) fe.eobiEmployerContribution = 'Enter an amount of 0 or more.';
+    const ot = Number(overtime);
+    if (overtime === '' || !Number.isFinite(ot) || ot < 0 || ot > 5) fe.overtimeMultiplier = 'Between 0 and 5 (e.g. 1.5 or 2).';
     setFieldErrors(fe);
     if (Object.keys(fe).length) return;
-    save.mutate({ eobiEmployeeContribution: a, eobiEmployerContribution: b, deductAbsentDays: deductAbsent });
+    save.mutate({ eobiEmployeeContribution: a, eobiEmployerContribution: b, deductAbsentDays: deductAbsent, overtimeMultiplier: ot });
   };
 
   return (
@@ -72,6 +75,13 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
               <Input type="number" min={0} inputMode="numeric" value={employer} onChange={(e) => setEmployer(e.target.value)} />
             </Field>
           </div>
+          <Field
+            label="Overtime rate (x hourly basic)"
+            hint="Hourly basic = basic salary / 30 / 8. Common values: 1.5, or 2 under the Factories Act."
+            error={fieldErrors.overtimeMultiplier}
+          >
+            <Input type="number" min={0} max={5} step="0.25" value={overtime} onChange={(e) => setOvertime(e.target.value)} className="max-w-32" />
+          </Field>
           <Switch
             checked={deductAbsent}
             onChange={setDeductAbsent}

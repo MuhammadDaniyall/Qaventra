@@ -32,7 +32,7 @@ public record PayslipDto(
     decimal GrossEarnings, decimal TaxableIncome, decimal IncomeTax, decimal EobiEmployee, decimal EobiEmployer,
     decimal OtherDeductions, decimal NetPay, List<PayslipLineDto> Lines);
 
-public record PayrollSettingsDto([Range(0, 1_000_000)] decimal EobiEmployeeContribution, [Range(0, 1_000_000)] decimal EobiEmployerContribution, bool DeductAbsentDays);
+public record PayrollSettingsDto([Range(0, 1_000_000)] decimal EobiEmployeeContribution, [Range(0, 1_000_000)] decimal EobiEmployerContribution, bool DeductAbsentDays, [Range(0, 5)] decimal OvertimeMultiplier = 1.5m);
 
 [ApiController]
 [Route("api/payroll")]
@@ -94,7 +94,7 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
     public async Task<PayrollSettingsDto> GetSettings()
     {
         var s = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
-        return new PayrollSettingsDto(s.EobiEmployeeContribution, s.EobiEmployerContribution, s.DeductAbsentDays);
+        return new PayrollSettingsDto(s.EobiEmployeeContribution, s.EobiEmployerContribution, s.DeductAbsentDays, s.OvertimeMultiplier);
     }
 
     [HttpPut("settings"), Authorize(Policy = Policies.Hr)]
@@ -109,6 +109,7 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         s.EobiEmployeeContribution = req.EobiEmployeeContribution;
         s.EobiEmployerContribution = req.EobiEmployerContribution;
         s.DeductAbsentDays = req.DeductAbsentDays;
+        s.OvertimeMultiplier = req.OvertimeMultiplier;
         await db.SaveChangesAsync();
         return NoContent();
     }

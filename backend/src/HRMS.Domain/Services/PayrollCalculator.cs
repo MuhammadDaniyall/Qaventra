@@ -9,7 +9,11 @@ public record PayrollInput(
     decimal UnpaidDays,
     decimal EobiEmployee,
     decimal EobiEmployer,
-    decimal Reimbursements = 0m);
+    decimal Reimbursements = 0m,
+    IReadOnlyList<PayItem>? Extras = null);
+
+/// <summary>A one-off line for the month (bonus, overtime, deduction, loan installment): never prorated.</summary>
+public record PayItem(string Name, SalaryComponentKind Kind, decimal Amount, bool IsTaxable);
 
 public record PayrollLine(string Name, SalaryComponentKind Kind, decimal Amount);
 
@@ -69,6 +73,21 @@ public static class PayrollCalculator
         {
             lines.Add(new("Expense reimbursement", SalaryComponentKind.Earning, input.Reimbursements));
             gross += input.Reimbursements;
+        }
+
+        foreach (var item in input.Extras ?? [])
+        {
+            lines.Add(new(item.Name, item.Kind, item.Amount));
+            if (item.Kind == SalaryComponentKind.Earning)
+            {
+                gross += item.Amount;
+                if (item.IsTaxable)
+                    taxable += item.Amount;
+            }
+            else
+            {
+                otherDeductions += item.Amount;
+            }
         }
 
         var tax = TaxCalculator.MonthlyTax(input.TaxYear, taxable);

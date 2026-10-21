@@ -26,6 +26,8 @@ const PayslipPage = lazy(() => import('./pages/payroll/PayslipPage').then((m) =>
 const CompanyDetailPage = lazy(() => import('./pages/platform/CompanyDetailPage').then((m) => ({ default: m.CompanyDetailPage })));
 const CompaniesPage = lazy(() => import('./pages/platform/CompaniesPage').then((m) => ({ default: m.CompaniesPage })));
 const PlatformDashboardPage = lazy(() => import('./pages/platform/PlatformDashboardPage').then((m) => ({ default: m.PlatformDashboardPage })));
+const MyPayPage = lazy(() => import('./pages/pay/MyPayPage').then((m) => ({ default: m.MyPayPage })));
+const PayAdjustmentsPage = lazy(() => import('./pages/pay/PayAdjustmentsPage').then((m) => ({ default: m.PayAdjustmentsPage })));
 const MyProfilePage = lazy(() => import('./pages/profile/MyProfilePage').then((m) => ({ default: m.MyProfilePage })));
 const ExpenseApprovalsPage = lazy(() => import('./pages/expenses/ExpenseApprovalsPage').then((m) => ({ default: m.ExpenseApprovalsPage })));
 const MyExpensesPage = lazy(() => import('./pages/expenses/MyExpensesPage').then((m) => ({ default: m.MyExpensesPage })));
@@ -81,6 +83,7 @@ export default function App() {
               <Route path="/me/payslips" element={<MyPayslipsPage />} />
               <Route path="/me/profile" element={<MyProfilePage />} />
               <Route path="/me/expenses" element={<MyExpensesPage />} />
+              <Route path="/me/pay" element={<MyPayPage />} />
               <Route path="/me/documents" element={<MyDocumentsPage />} />
               <Route path="/me/resignation" element={<MyExitPage />} />
             </Route>
@@ -101,6 +104,7 @@ export default function App() {
               <Route path="/payroll" element={<PayrollRunsPage />} />
               <Route path="/payroll/runs/:id" element={<PayrollRunPage />} />
               <Route path="/payroll/settings" element={<PayrollSettingsPage />} />
+              <Route path="/payroll/adjustments" element={<PayAdjustmentsPage />} />
               <Route path="/settings" element={<OrganizationPage />} />
               <Route path="/letters" element={<LettersPage />} />
               <Route path="/separations" element={<SeparationsPage />} />
