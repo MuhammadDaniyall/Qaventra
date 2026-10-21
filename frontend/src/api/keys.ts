@@ -67,6 +67,8 @@ export const qk = {
   ticketCategories: ['helpdesk', 'categories'] as const,
   ticketsMy: ['helpdesk', 'my'] as const,
   ticket: (id: string) => ['helpdesk', 'ticket', id] as const,
+  helpdeskLabels: ['helpdesk', 'labels'] as const,
+  helpdeskReport: (from: string, to: string) => ['helpdesk', 'report', from, to] as const,
   announcements: ['announcements'] as const,
   announcementsManage: ['announcements', 'manage'] as const,
   polls: ['announcements', 'polls'] as const,

@@ -52,6 +52,16 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum TicketAssignment
+{
+    /// <summary>Agents take tickets or HR assigns them.</summary>
+    Manual = 1,
+    /// <summary>Each new ticket goes to the next agent in turn.</summary>
+    RoundRobin = 2,
+    /// <summary>Each new ticket goes to the agent with the fewest open tickets.</summary>
+    LeastBusy = 3,
+}
+
 public enum TicketStatus
 {
     Open = 1,

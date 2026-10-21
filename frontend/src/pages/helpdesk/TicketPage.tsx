@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, Clock, Lock, RotateCcw, Send, Star, UserPlus, XCircle } from 'lucide-react';
+import { AlertTriangle, Archive, CheckCircle2, Clock, Lock, Pencil, RotateCcw, Send, Star, Trash2, UserPlus, XCircle } from 'lucide-react';
 import { errorMessage } from '../../api/client';
-import { helpdeskApi, PRIORITIES, type TicketDetail, type TicketPriority, type TicketStatus } from '../../api/helpdesk';
+import { helpdeskApi, PRIORITIES, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from '../../api/helpdesk';
 import { qk } from '../../api/keys';
 import { schedulingApi } from '../../api/scheduling';
 import { useUser } from '../../auth/AuthContext';
@@ -19,6 +19,7 @@ import {
   ErrorState,
   Field,
   FormError,
+  IconButton,
   Modal,
   PageHeader,
   PageSpinner,
@@ -28,7 +29,7 @@ import {
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
-import { PriorityBadge, relative, TicketStatusBadge } from './shared';
+import { PriorityBadge, relative, TicketStatusBadge, useHelpdeskLabels } from './shared';
 
 export function TicketPage() {
   const { id = '' } = useParams();
@@ -79,21 +80,22 @@ function TicketView({ detail }: { detail: TicketDetail }) {
         title={t.subject}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            <span className="font-mono">{t.code}</span> · {t.category} · <PriorityBadge priority={t.priority} /> <TicketStatusBadge status={t.status} />
+            <span className="font-mono">{t.code}</span> · {t.category}
+            {t.type ? ` · ${t.type}` : ''} · <PriorityBadge priority={t.priority} /> <TicketStatusBadge status={t.status} />
           </span>
         }
         actions={
           detail.isRequester && (
             <>
+              {detail.canReopen && (
+                <Button variant="secondary" icon={<RotateCcw className="size-4" />} onClick={() => setReopening(true)}>
+                  {t.status === 'Resolved' ? 'Still a problem' : 'Reopen'}
+                </Button>
+              )}
               {t.status === 'Resolved' && (
-                <>
-                  <Button variant="secondary" icon={<RotateCcw className="size-4" />} onClick={() => setReopening(true)}>
-                    Still a problem
-                  </Button>
-                  <Button variant="success" icon={<CheckCircle2 className="size-4" />} onClick={() => setClosing(true)}>
-                    Confirm & close
-                  </Button>
-                </>
+                <Button variant="success" icon={<CheckCircle2 className="size-4" />} onClick={() => setClosing(true)}>
+                  Confirm & close
+                </Button>
               )}
               {active && (
                 <Button variant="ghost" icon={<XCircle className="size-4" />} onClick={() => setCancelling(true)}>
@@ -107,7 +109,7 @@ function TicketView({ detail }: { detail: TicketDetail }) {
       {t.status === 'Resolved' && detail.isRequester && (
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
           <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
-          The team marked this resolved. Confirm it is fixed and rate the help, or tell them it is still a problem. It closes on its own in 3 days.
+          The team marked this resolved. Confirm it is fixed and rate the help, or tell them it is still a problem. If you do neither, it closes on its own after a few days.
         </div>
       )}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -150,6 +152,9 @@ function TicketView({ detail }: { detail: TicketDetail }) {
 }
 
 function Thread({ detail }: { detail: TicketDetail }) {
+  const [editing, setEditing] = useState<TicketComment | null>(null);
+  const [deleting, setDeleting] = useState<TicketComment | null>(null);
+  const remove = useTicketAction(detail.ticket.id, (c: TicketComment) => helpdeskApi.deleteComment(detail.ticket.id, c.id), 'Reply deleted', () => setDeleting(null));
   if (!detail.comments.length) return null;
   return (
     <ol className="space-y-3">
@@ -184,13 +189,63 @@ function Thread({ detail }: { detail: TicketDetail }) {
               )}
               <span className="text-zinc-500" title={formatDateTimeUtc(c.createdAtUtc)}>
                 {relative(c.createdAtUtc)}
+                {c.editedAtUtc && ' · edited'}
               </span>
+              {c.canEdit && (
+                <span className="ml-auto flex gap-0.5">
+                  <IconButton label="Edit reply" onClick={() => setEditing(c)}>
+                    <Pencil className="size-3.5" />
+                  </IconButton>
+                  <IconButton label="Delete reply" onClick={() => setDeleting(c)}>
+                    <Trash2 className="size-3.5" />
+                  </IconButton>
+                </span>
+              )}
             </div>
-            <p className="text-sm whitespace-pre-line text-zinc-800 dark:text-zinc-200">{c.body}</p>
+            {c.isDeleted ? (
+              <p className="text-sm text-zinc-400 italic">This reply was deleted.</p>
+            ) : (
+              <p className="text-sm whitespace-pre-line text-zinc-800 dark:text-zinc-200">{c.body}</p>
+            )}
           </li>
         ),
       )}
+      {editing && <EditCommentModal ticketId={detail.ticket.id} comment={editing} onClose={() => setEditing(null)} />}
+      <ConfirmDialog
+        open={!!deleting}
+        title="Delete this reply?"
+        message="Others will see that a reply was deleted."
+        confirmLabel="Delete"
+        tone="danger"
+        loading={remove.isPending}
+        onConfirm={() => deleting && remove.mutate(deleting)}
+        onClose={() => setDeleting(null)}
+      />
     </ol>
+  );
+}
+
+function EditCommentModal({ ticketId, comment, onClose }: { ticketId: string; comment: TicketComment; onClose: () => void }) {
+  const [body, setBody] = useState(comment.body);
+  const save = useTicketAction(ticketId, () => helpdeskApi.editComment(ticketId, comment.id, body.trim()), 'Reply updated', onClose);
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Edit reply"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button loading={save.isPending} disabled={!body.trim()} onClick={() => save.mutate(undefined)}>
+            Save
+          </Button>
+        </>
+      }
+    >
+      <Textarea rows={4} maxLength={8000} value={body} onChange={(e) => setBody(e.target.value)} aria-label="Reply" />
+    </Modal>
   );
 }
 
@@ -225,10 +280,16 @@ function SidePanel({ detail }: { detail: TicketDetail }) {
   const active = t.status === 'Open' || t.status === 'InProgress' || t.status === 'WaitingOnEmployee';
   const [involving, setInvolving] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const labels = useHelpdeskLabels();
   const categories = useQuery({ queryKey: qk.ticketCategories, queryFn: helpdeskApi.categories, enabled: detail.isAgent });
-  const update = useTicketAction(t.id, (b: { assigneeEmployeeId: string | null; priority: TicketPriority; categoryId: string }) => helpdeskApi.update(t.id, b), 'Ticket updated');
+  const update = useTicketAction(
+    t.id,
+    (b: { assigneeEmployeeId: string | null; priority: TicketPriority; categoryId: string; typeId: string | null }) => helpdeskApi.update(t.id, b),
+    'Ticket updated',
+  );
   const setStatus = useTicketAction(t.id, (s: TicketStatus) => helpdeskApi.status(t.id, s, null), 'Status updated');
-  const current = { assigneeEmployeeId: t.assigneeEmployeeId, priority: t.priority, categoryId: t.categoryId };
+  const current = { assigneeEmployeeId: t.assigneeEmployeeId, priority: t.priority, categoryId: t.categoryId, typeId: t.typeId };
+  const types = (categories.data?.find((c) => c.id === t.categoryId)?.types ?? []).filter((x) => x.isActive || x.id === t.typeId);
   const canTake = detail.isAgent && active && !t.assigneeEmployeeId;
 
   return (
@@ -239,12 +300,17 @@ function SidePanel({ detail }: { detail: TicketDetail }) {
             {canTake && <TakeButton detail={detail} />}
             {t.status !== 'WaitingOnEmployee' && (
               <Button variant="secondary" className="w-full" icon={<Clock className="size-4" />} loading={setStatus.isPending} onClick={() => setStatus.mutate('WaitingOnEmployee')}>
-                Waiting on employee
+                {labels.status('WaitingOnEmployee')}
               </Button>
             )}
             <Button variant="success" className="w-full" icon={<CheckCircle2 className="size-4" />} onClick={() => setResolving(true)}>
               Mark resolved
             </Button>
+            {detail.agentCanClose && (
+              <Button variant="ghost" className="w-full" icon={<Archive className="size-4" />} loading={setStatus.isPending} onClick={() => setStatus.mutate('Closed')}>
+                Close without confirmation
+              </Button>
+            )}
           </CardBody>
         </Card>
       )}
@@ -267,13 +333,13 @@ function SidePanel({ detail }: { detail: TicketDetail }) {
                 <Select value={t.priority} disabled={update.isPending} onChange={(e) => update.mutate({ ...current, priority: e.target.value as TicketPriority })}>
                   {PRIORITIES.map((p) => (
                     <option key={p} value={p}>
-                      {p}
+                      {labels.priority(p)}
                     </option>
                   ))}
                 </Select>
               </Field>
               <Field label="Category">
-                <Select value={t.categoryId} disabled={update.isPending} onChange={(e) => update.mutate({ ...current, categoryId: e.target.value })}>
+                <Select value={t.categoryId} disabled={update.isPending} onChange={(e) => update.mutate({ ...current, categoryId: e.target.value, typeId: null })}>
                   {categories.data?.filter((c) => c.isActive || c.id === t.categoryId).map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -281,6 +347,18 @@ function SidePanel({ detail }: { detail: TicketDetail }) {
                   ))}
                 </Select>
               </Field>
+              {types.length > 0 && (
+                <Field label="Type">
+                  <Select value={t.typeId ?? ''} disabled={update.isPending} onChange={(e) => update.mutate({ ...current, typeId: e.target.value || null })}>
+                    <option value="">None</option>
+                    {types.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.name}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
             </>
           ) : (
             <Row label="Assignee" value={t.assignee ?? 'Not picked up yet'} />
@@ -348,7 +426,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 function TakeButton({ detail }: { detail: TicketDetail }) {
   const t = detail.ticket;
   const mine = useUser().employeeId;
-  const take = useTicketAction(t.id, () => helpdeskApi.update(t.id, { assigneeEmployeeId: mine, priority: t.priority, categoryId: t.categoryId }), 'Ticket is yours');
+  const take = useTicketAction(t.id, () => helpdeskApi.update(t.id, { assigneeEmployeeId: mine, priority: t.priority, categoryId: t.categoryId, typeId: t.typeId }), 'Ticket is yours');
   if (!mine || !detail.assignees.some((a) => a.id === mine)) return null;
   return (
     <Button className="w-full" loading={take.isPending} onClick={() => take.mutate(undefined)}>

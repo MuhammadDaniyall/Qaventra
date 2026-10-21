@@ -64,6 +64,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<TicketCategory> TicketCategories => Set<TicketCategory>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<TicketComment> TicketComments => Set<TicketComment>();
+    public DbSet<TicketType> TicketTypes => Set<TicketType>();
+    public DbSet<HelpdeskSettings> HelpdeskSettings => Set<HelpdeskSettings>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -474,6 +476,22 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Name).HasMaxLength(100);
             e.Property(x => x.Description).HasMaxLength(500);
             e.Property(x => x.AgentIds).HasMaxLength(2000);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.LeadEmployeeId);
+        });
+
+        b.Entity<TicketType>(e =>
+        {
+            e.HasIndex(x => new { x.CategoryId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.AgentIds).HasMaxLength(2000);
+            e.HasOne<TicketCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<HelpdeskSettings>(e =>
+        {
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.Property(x => x.StatusLabels).HasMaxLength(2000);
+            e.Property(x => x.PriorityLabels).HasMaxLength(2000);
         });
 
         b.Entity<Ticket>(e =>
@@ -487,6 +505,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.InvolvedIds).HasMaxLength(2000);
             e.Property(x => x.Feedback).HasMaxLength(1000);
             e.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId);
+            e.HasOne(x => x.Type).WithMany().HasForeignKey(x => x.TypeId);
             e.HasOne<Employee>().WithMany().HasForeignKey(x => x.AssigneeEmployeeId);
             e.HasOne<Employee>().WithMany().HasForeignKey(x => x.RaisedByEmployeeId);
         });
@@ -532,7 +551,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
-        || t == typeof(TicketComment);
+        || t == typeof(TicketComment) || t == typeof(TicketType);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

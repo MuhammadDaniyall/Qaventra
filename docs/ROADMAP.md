@@ -40,7 +40,7 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 | Module | Main features |
 |---|---|
-| Helpdesk | **Done:** categories with agents and target hours, tickets with priority, files, replies and internal notes, take/assign, involve colleagues, waiting/resolved/closed with rating, reopen, auto-close, overdue, queue with counts and filters. Next: custom statuses, email replies |
+| Helpdesk | **Done:** categories with agents, lead, target hours and rules (agent may close, auto-close days, reopen window); ticket types with their own target and agents; automatic assignment (in turn or least busy); tickets with priority, files, replies, internal notes, editing replies; take/assign, involve colleagues; waiting/resolved/closed with rating, reopen; due-soon reminders and overdue escalation to the lead; company names for statuses and priorities; reports (first answer, time to fix, within target, ratings by category and agent) and Excel export. Not yet: replying by email |
 | Asset | Categories/types/templates, asset requests and returns, hand-over/take-over with serial numbers, temporary assets |
 | Onboarding | Onboarding templates with tasks/assignees/due dates, first-day instructions, new-joiner questionnaire, task clearance |
 | Travel | Multi-step travel request (route, mode, pick & drop, accommodation), travel advance, reason types |

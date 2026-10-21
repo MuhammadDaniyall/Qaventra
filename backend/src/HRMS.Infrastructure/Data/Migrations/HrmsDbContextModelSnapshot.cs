@@ -1092,6 +1092,36 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("ExpenseReceipts");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.HelpdeskSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PriorityLabels")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("StatusLabels")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("HelpdeskSettings");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.Holiday", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2599,8 +2629,14 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("DueAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DueSoonRemindedAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("EscalatedAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Feedback")
                         .HasMaxLength(1000)
@@ -2643,6 +2679,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("TypeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AssigneeEmployeeId");
@@ -2652,6 +2691,8 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasIndex("EmployeeId");
 
                     b.HasIndex("RaisedByEmployeeId");
+
+                    b.HasIndex("TypeId");
 
                     b.HasIndex("TenantId", "Number")
                         .IsUnique();
@@ -2667,10 +2708,19 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AgentCanClose")
+                        .HasColumnType("bit");
+
                     b.Property<string>("AgentIds")
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("AssignmentMode")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AutoCloseDays")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
@@ -2682,10 +2732,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("LeadEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ReopenDays")
+                        .HasColumnType("int");
 
                     b.Property<int>("TargetHours")
                         .HasColumnType("int");
@@ -2694,6 +2750,8 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LeadEmployeeId");
 
                     b.HasIndex("TenantId", "Name")
                         .IsUnique();
@@ -2723,6 +2781,12 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("EditedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsInternal")
                         .HasColumnType("bit");
 
@@ -2740,6 +2804,45 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasIndex("TicketId");
 
                     b.ToTable("TicketComments");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.TicketType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AgentIds")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("TargetHours")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("TicketTypes");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.User", b =>
@@ -3234,9 +3337,22 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("HRMS.Domain.Entities.TicketType", "Type")
+                        .WithMany()
+                        .HasForeignKey("TypeId");
+
                     b.Navigation("Category");
 
                     b.Navigation("Employee");
+
+                    b.Navigation("Type");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.TicketCategory", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("LeadEmployeeId");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.TicketComment", b =>
@@ -3244,6 +3360,15 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasOne("HRMS.Domain.Entities.Ticket", null)
                         .WithMany()
                         .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.TicketType", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.TicketCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

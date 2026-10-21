@@ -21,16 +21,27 @@ const STATUS_TONES: Record<TicketStatus, 'blue' | 'accent' | 'amber' | 'green' |
 
 const PRIORITY_TONES: Record<TicketPriority, 'gray' | 'blue' | 'amber' | 'red'> = { Low: 'gray', Medium: 'blue', High: 'amber', Urgent: 'red' };
 
+/** The company's names for statuses and priorities (defaults until loaded). */
+export function useHelpdeskLabels() {
+  const labels = useQuery({ queryKey: qk.helpdeskLabels, queryFn: helpdeskApi.labels, staleTime: 5 * 60 * 1000 });
+  return {
+    status: (s: TicketStatus) => labels.data?.statuses[s] ?? TICKET_STATUS_LABELS[s],
+    priority: (p: TicketPriority) => labels.data?.priorities[p] ?? p,
+  };
+}
+
 export function TicketStatusBadge({ status }: { status: TicketStatus }) {
+  const labels = useHelpdeskLabels();
   return (
     <Badge tone={STATUS_TONES[status]} dot>
-      {TICKET_STATUS_LABELS[status]}
+      {labels.status(status)}
     </Badge>
   );
 }
 
 export function PriorityBadge({ priority }: { priority: TicketPriority }) {
-  return <Badge tone={PRIORITY_TONES[priority]}>{priority}</Badge>;
+  const labels = useHelpdeskLabels();
+  return <Badge tone={PRIORITY_TONES[priority]}>{labels.priority(priority)}</Badge>;
 }
 
 /** "in 3 h", "2 d ago" from a UTC timestamp. */
@@ -62,7 +73,8 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
             <Td>
               <p className="font-medium text-zinc-900 dark:text-zinc-100">{t.subject}</p>
               <p className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
-                <span className="font-mono">{t.code}</span> · {t.category} · <PriorityBadge priority={t.priority} />
+                <span className="font-mono">{t.code}</span> · {t.category}
+                {t.type ? ` · ${t.type}` : ''} · <PriorityBadge priority={t.priority} />
                 {t.replies > 0 && (
                   <span className="flex items-center gap-0.5">
                     <MessageSquare className="size-3" /> {t.replies}
@@ -114,16 +126,20 @@ export function NewTicketModal({ hr, onClose }: { hr: boolean; onClose: () => vo
   const navigate = useNavigate();
   const categories = useQuery({ queryKey: qk.ticketCategories, queryFn: helpdeskApi.categories });
   const people = useEmployeeLookup(hr);
+  const labels = useHelpdeskLabels();
   const active = (categories.data ?? []).filter((c) => c.isActive);
   const [categoryId, setCategoryId] = useState('');
+  const [typeId, setTypeId] = useState('');
   const [forId, setForId] = useState('');
   const [subject, setSubject] = useState('');
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<TicketPriority>('Medium');
   const [error, setError] = useState<string | null>(null);
   const chosen = active.find((c) => c.id === categoryId);
+  const types = (chosen?.types ?? []).filter((t) => t.isActive);
+  const type = types.find((t) => t.id === typeId);
   const create = useMutation({
-    mutationFn: () => helpdeskApi.create({ forEmployeeId: forId || null, categoryId, subject: subject.trim(), description: description.trim(), priority }),
+    mutationFn: () => helpdeskApi.create({ forEmployeeId: forId || null, categoryId, typeId: typeId || null, subject: subject.trim(), description: description.trim(), priority }),
     onSuccess: (t) => {
       toast.success(`Ticket ${t.code} raised`, 'You can attach screenshots or files on the ticket.');
       qc.invalidateQueries({ queryKey: qk.helpdesk });
@@ -149,6 +165,7 @@ export function NewTicketModal({ hr, onClose }: { hr: boolean; onClose: () => vo
             onClick={() => {
               setError(null);
               if (!categoryId) return setError('Choose what it is about.');
+              if (types.length && !typeId) return setError('Choose the kind of problem.');
               if (!subject.trim() || !description.trim()) return setError('Add a subject and describe the problem.');
               create.mutate();
             }}
@@ -165,8 +182,14 @@ export function NewTicketModal({ hr, onClose }: { hr: boolean; onClose: () => vo
           <div className="sm:col-span-2">
             <FormError message={error} />
           </div>
-          <Field label="About" required hint={chosen ? `Usually resolved within ${chosen.targetHours} h` : undefined}>
-            <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+          <Field label="About" required hint={chosen && !types.length ? `Usually resolved within ${chosen.targetHours} h` : chosen?.description ?? undefined}>
+            <Select
+              value={categoryId}
+              onChange={(e) => {
+                setCategoryId(e.target.value);
+                setTypeId('');
+              }}
+            >
               <option value="">Choose…</option>
               {active.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -175,11 +198,23 @@ export function NewTicketModal({ hr, onClose }: { hr: boolean; onClose: () => vo
               ))}
             </Select>
           </Field>
+          {types.length > 0 && (
+            <Field label="Kind" required hint={type ? `Usually resolved within ${type.targetHours ?? chosen!.targetHours} h` : undefined}>
+              <Select value={typeId} onChange={(e) => setTypeId(e.target.value)}>
+                <option value="">Choose…</option>
+                {types.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
           <Field label="Priority">
             <Select value={priority} onChange={(e) => setPriority(e.target.value as TicketPriority)}>
               {PRIORITIES.map((p) => (
                 <option key={p} value={p}>
-                  {p}
+                  {labels.priority(p)}
                 </option>
               ))}
             </Select>

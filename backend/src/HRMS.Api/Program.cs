@@ -49,6 +49,7 @@ builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpO
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHostedService<EmailBackgroundService>();
+builder.Services.AddHostedService<HelpdeskReminderService>();
 builder.Services.AddScoped<LeaveService>();
 builder.Services.AddScoped<LetterService>();
 builder.Services.AddScoped<SeparationService>();

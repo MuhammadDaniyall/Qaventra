@@ -29,21 +29,22 @@ public class NotificationService
         _db.SavedChanges += (_, _) => Flush();
     }
 
-    public async Task ToEmployeesAsync(IEnumerable<Guid> employeeIds, NotificationKind kind, string title, string? body, string? link)
+    /// <param name="includeMe">Also notify the signed-in user, for reminders that are not about their own action.</param>
+    public async Task ToEmployeesAsync(IEnumerable<Guid> employeeIds, NotificationKind kind, string title, string? body, string? link, bool includeMe = false)
     {
         var ids = employeeIds.Distinct().ToList();
         if (ids.Count == 0)
             return;
-        await ToUsersAsync(_db.Users.Where(u => u.EmployeeId != null && ids.Contains(u.EmployeeId.Value)), kind, title, body, link);
+        await ToUsersAsync(_db.Users.Where(u => u.EmployeeId != null && ids.Contains(u.EmployeeId.Value)), kind, title, body, link, includeMe);
     }
 
     /// <summary>Everyone with HR rights in the company: HR managers and company admins.</summary>
-    public Task ToHrAsync(NotificationKind kind, string title, string? body, string? link) =>
-        ToUsersAsync(_db.Users.Where(u => u.Role == UserRole.HrManager || u.Role == UserRole.CompanyAdmin), kind, title, body, link);
+    public Task ToHrAsync(NotificationKind kind, string title, string? body, string? link, bool includeMe = false) =>
+        ToUsersAsync(_db.Users.Where(u => u.Role == UserRole.HrManager || u.Role == UserRole.CompanyAdmin), kind, title, body, link, includeMe);
 
-    private async Task ToUsersAsync(IQueryable<User> users, NotificationKind kind, string title, string? body, string? link)
+    private async Task ToUsersAsync(IQueryable<User> users, NotificationKind kind, string title, string? body, string? link, bool includeMe)
     {
-        var me = _me.UserId;
+        var me = includeMe ? null : _me.UserId;
         var recipients = await users.Where(u => u.IsActive && u.Id != me)
             .Select(u => new { u.Id, u.Email, u.EmailNotifications }).ToListAsync();
         title = Trim(title, 200)!;
