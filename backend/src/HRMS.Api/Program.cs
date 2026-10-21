@@ -36,6 +36,7 @@ builder.Services.AddScoped<ApprovalPolicy>();
 builder.Services.AddScoped<ApprovalEngine>();
 builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<ImportService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();

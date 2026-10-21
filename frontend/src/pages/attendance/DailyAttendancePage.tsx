@@ -6,6 +6,7 @@ import { ApiError, errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { ExportRangeButton, ImportButton } from '../../components/excel/ExcelButtons';
 import {
   Badge,
   Button,
@@ -66,6 +67,14 @@ export function DailyAttendancePage() {
       <PageHeader
         title="Daily attendance"
         description={hr ? "Everyone's status for the day." : "Your team's status for the day."}
+        actions={
+          hr && (
+            <>
+              <ImportButton kind="attendance" invalidate={[qk.attendance, qk.dashboard]} />
+              <ExportRangeButton path="/exports/attendance" name="attendance" />
+            </>
+          )
+        }
       />
 
       <Card>

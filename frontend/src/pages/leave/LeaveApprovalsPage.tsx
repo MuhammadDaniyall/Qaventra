@@ -4,6 +4,9 @@ import { Check, ClipboardCheck, Paperclip, X } from 'lucide-react';
 import { leaveApi } from '../../api/leave';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { qk } from '../../api/keys';
+import { useUser } from '../../auth/AuthContext';
+import { isHr } from '../../auth/roles';
+import { ExportRangeButton } from '../../components/excel/ExcelButtons';
 import {
   Avatar,
   Button,
@@ -31,6 +34,7 @@ import type { LeaveRequest, LeaveStatus } from '../../types';
 type TabValue = Extract<LeaveStatus, 'Pending' | 'Approved' | 'Rejected'>;
 
 export function LeaveApprovalsPage() {
+  const hr = isHr(useUser());
   const [status, setStatus] = useState<TabValue>('Pending');
   const [deciding, setDeciding] = useState<{ request: LeaveRequest; approve: boolean } | null>(null);
   const list = useQuery({ queryKey: qk.leaveApprovals(status), queryFn: () => leaveApi.approvals(status) });
@@ -38,7 +42,11 @@ export function LeaveApprovalsPage() {
 
   return (
     <>
-      <PageHeader title="Leave approvals" description="Review leave requests from people who report to you." />
+      <PageHeader
+        title="Leave approvals"
+        description="Review leave requests from people who report to you."
+        actions={hr && <ExportRangeButton path="/exports/leave" name="leave" />}
+      />
       <Tabs<TabValue>
         className="mb-4"
         value={status}

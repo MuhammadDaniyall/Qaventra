@@ -7,6 +7,8 @@ import { useDepartments } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { ExportButton, ImportButton } from '../../components/excel/ExcelButtons';
+import { todayIso } from '../../lib/format';
 import {
   Avatar,
   Button,
@@ -58,9 +60,13 @@ export function EmployeesPage() {
         description={hr ? 'Everyone in your company.' : 'Your direct reports.'}
         actions={
           hr && (
-            <Button icon={<Plus className="size-4" />} onClick={() => navigate('/employees/new')}>
-              Add employee
-            </Button>
+            <>
+              <ImportButton kind="employees" invalidate={[qk.employees, qk.departments, qk.designations, qk.dashboard]} />
+              <ExportButton path="/exports/employees" fileName={`employees-${todayIso()}.xlsx`} />
+              <Button icon={<Plus className="size-4" />} onClick={() => navigate('/employees/new')}>
+                Add employee
+              </Button>
+            </>
           )
         }
       />

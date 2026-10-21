@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Banknote, Lock, MinusCircle, RefreshCw, Search, Users, Wallet } from 'lucide-react';
 import { payrollApi } from '../../api/payroll';
 import { qk } from '../../api/keys';
+import { ExportButton } from '../../components/excel/ExcelButtons';
 import {
   Button,
   Card,
@@ -86,7 +87,13 @@ export function PayrollRunPage() {
           run.finalizedAtUtc ? ` · finalized ${formatDateTimeUtc(run.finalizedAtUtc)}` : ''
         }`}
         actions={
-          draft && (
+          <>
+            <ExportButton
+              path={`/exports/payroll/${run.id}`}
+              fileName={`payroll-${run.year}-${String(run.month).padStart(2, '0')}${draft ? '-draft' : ''}.xlsx`}
+              label="Export to Excel"
+            />
+            {draft && (
             <>
               <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={() => setReprocessOpen(true)}>
                 Reprocess
@@ -95,7 +102,8 @@ export function PayrollRunPage() {
                 Finalize
               </Button>
             </>
-          )
+            )}
+          </>
         }
       />
 

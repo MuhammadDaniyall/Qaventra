@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Receipt } from 'lucide-react';
 import { expensesApi } from '../../api/expenses';
 import { qk } from '../../api/keys';
+import { useUser } from '../../auth/AuthContext';
+import { isHr } from '../../auth/roles';
+import { ExportRangeButton } from '../../components/excel/ExcelButtons';
 import {
   Avatar,
   Card,
@@ -26,6 +29,7 @@ import { ClaimDrawer } from './shared';
 type TabValue = Extract<ExpenseStatus, 'Pending' | 'Approved' | 'Paid' | 'Rejected'>;
 
 export function ExpenseApprovalsPage() {
+  const hr = isHr(useUser());
   const [status, setStatus] = useState<TabValue>('Pending');
   const [openId, setOpenId] = useState<string | null>(null);
   const list = useQuery({ queryKey: qk.expenseApprovals(status), queryFn: () => expensesApi.approvals(status) });
@@ -41,6 +45,7 @@ export function ExpenseApprovalsPage() {
             ? `${pending.data.length} claim${pending.data.length === 1 ? '' : 's'} worth ${formatCurrency(pendingTotal)} waiting for you.`
             : 'Review expense claims from your team. Approved claims are paid with the next payroll.'
         }
+        actions={hr && <ExportRangeButton path="/exports/expenses" name="expenses" />}
       />
       <Tabs<TabValue>
         className="mb-4"
