@@ -11,9 +11,25 @@ try {
     # Take the running app offline while files are replaced (no-op on first deploy).
     $offline = Join-Path $env:TEMP 'app_offline.htm'
     Set-Content $offline '<h1>Qaventra is being updated. Please try again in a minute.</h1>'
-    curl.exe -s -S --ssl-reqd -K $cfg -T $offline "$base/app_offline.htm" | Out-Null
-    # IIS needs a moment to shut the app down; until then its DLLs are locked (curl exit 25).
-    Start-Sleep -Seconds 20
+    # If this upload silently fails the old app keeps running and holds every DLL, so retry and then confirm the site
+    # really serves the offline page before replacing files.
+    $siteUrl = $s.SiteUrl.TrimEnd('/')
+    $offlineOk = $false
+    for ($attempt = 1; $attempt -le 5 -and -not $offlineOk; $attempt++) {
+        curl.exe -s -S --ssl-reqd -K $cfg -T $offline "$base/app_offline.htm" 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { Write-Host "retry $attempt for app_offline.htm (curl exit $LASTEXITCODE)"; Start-Sleep -Seconds 5; continue }
+        for ($check = 1; $check -le 6 -and -not $offlineOk; $check++) {
+            Start-Sleep -Seconds 5
+            try {
+                $r = Invoke-WebRequest "$siteUrl/api/auth/me" -UseBasicParsing -SkipHttpErrorCheck -TimeoutSec 30
+                $offlineOk = $r.StatusCode -eq 503 -and $r.Content -match 'being updated'
+            } catch { }
+        }
+    }
+    if (-not $offlineOk) { throw 'Could not take the site offline (app_offline.htm). Nothing else was uploaded; run this script again.' }
+    Write-Host 'Site is showing the updating page.'
+    # IIS needs a moment to unload the app after that; until then its DLLs are locked (curl exit 25).
+    Start-Sleep -Seconds 15
 
     # The host is Windows IIS: Linux and macOS native runtimes are never loaded, and the 38 MB ones break the FTPS link.
     $files = Get-ChildItem $site -Recurse -File |
