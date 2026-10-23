@@ -281,6 +281,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.FundWithdrawal => "fund withdrawal",
         ApprovalRequestType.ExpenseAdvance => "expense advance",
         ApprovalRequestType.FinalSettlement => "final settlement",
+        ApprovalRequestType.Letter => "letter",
         _ => "request",
     };
 
@@ -304,6 +305,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.FundWithdrawal => "/me/pay",
         ApprovalRequestType.ExpenseAdvance => "/me/expenses",
         ApprovalRequestType.FinalSettlement => "/separations",
+        ApprovalRequestType.Letter => "/me/documents",
         _ => "/dashboard",
     };
 

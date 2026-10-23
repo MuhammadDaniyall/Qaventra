@@ -58,6 +58,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<FundEntry> FundEntries => Set<FundEntry>();
     public DbSet<ExpenseType> ExpenseTypes => Set<ExpenseType>();
     public DbSet<ClearanceTemplate> ClearanceTemplates => Set<ClearanceTemplate>();
+    public DbSet<CandidateLetter> CandidateLetters => Set<CandidateLetter>();
     public DbSet<ClearanceTemplateItem> ClearanceTemplateItems => Set<ClearanceTemplateItem>();
     public DbSet<ExitInterviewTemplate> ExitInterviewTemplates => Set<ExitInterviewTemplate>();
     public DbSet<ExitQuestion> ExitQuestions => Set<ExitQuestion>();
@@ -236,6 +237,16 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Reason).HasMaxLength(500);
             e.Property(x => x.DecisionNote).HasMaxLength(1000);
             e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<CandidateLetter>(e =>
+        {
+            e.Property(x => x.CandidateName).HasMaxLength(200);
+            e.Property(x => x.ReferenceNo).HasMaxLength(40);
+            e.Property(x => x.Subject).HasMaxLength(300);
+            e.Property(x => x.IssuedByName).HasMaxLength(150);
+            e.Property(x => x.Footer).HasMaxLength(500);
+            e.HasOne<JobApplication>().WithMany().HasForeignKey(x => x.ApplicationId);
         });
 
         b.Entity<ClearanceTemplate>(e =>
@@ -535,12 +546,16 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
         b.Entity<LetterTemplate>(e =>
         {
+            e.Property(x => x.Footer).HasMaxLength(500);
             e.Property(x => x.Name).HasMaxLength(150);
             e.Property(x => x.Subject).HasMaxLength(300);
         });
 
         b.Entity<IssuedLetter>(e =>
         {
+            e.Property(x => x.Footer).HasMaxLength(500);
+            e.Property(x => x.RequestReason).HasMaxLength(500);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
             e.HasIndex(x => new { x.TenantId, x.ReferenceNo }).IsUnique();
             e.HasIndex(x => x.EmployeeId);
             e.Property(x => x.ReferenceNo).HasMaxLength(40);

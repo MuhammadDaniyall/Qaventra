@@ -36,7 +36,7 @@ import {
 } from '../../components/ui';
 import { formatDate, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
-import type { LetterCategory, LetterTemplate, SaveLetterTemplateRequest } from '../../types/workflows';
+import type { LetterAutoUse, LetterCategory, LetterTemplate, SaveLetterTemplateRequest } from '../../types/workflows';
 import { BodyEditor, categoryLabel, Highlighted, LETTER_CATEGORIES } from './shared';
 
 type TabValue = 'issued' | 'templates';
@@ -83,7 +83,13 @@ function IssuedList() {
       <div className="flex flex-wrap gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
         <div className="relative min-w-56 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by employee, reference or subject" className="pl-9" aria-label="Search letters" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by employee, reference or subject"
+            className="pl-9"
+            aria-label="Search letters"
+          />
         </div>
         <Select value={category} onChange={(e) => setCategory(e.target.value as LetterCategory | '')} className="w-48" aria-label="Letter type">
           <option value="">All types</option>
@@ -99,7 +105,11 @@ function IssuedList() {
       ) : list.isError ? (
         <ErrorState error={list.error} onRetry={() => list.refetch()} />
       ) : !list.data?.length ? (
-        <EmptyState icon={FileText} title={q || category ? 'No letters match' : 'No letters issued yet'} description="Issued letters appear here with their reference numbers." />
+        <EmptyState
+          icon={FileText}
+          title={q || category ? 'No letters match' : 'No letters issued yet'}
+          description="Issued letters appear here with their reference numbers."
+        />
       ) : (
         <Table>
           <THead>
@@ -282,7 +292,60 @@ function TemplateModal({ template, onClose }: { template: LetterTemplate | null;
           <Input value={form.subject} maxLength={300} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
         </Field>
         <BodyEditor value={form.body} onChange={(body) => setForm({ ...form, body })} />
-        <Switch checked={form.isActive} onChange={(isActive) => setForm({ ...form, isActive })} label="Active" description="Inactive templates cannot be used to issue letters." />
+        <Switch
+          checked={form.isActive}
+          onChange={(isActive) => setForm({ ...form, isActive })}
+          label="Active"
+          description="Inactive templates cannot be used to issue letters."
+        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Switch
+            checked={!!form.requiresApproval}
+            onChange={(requiresApproval) => setForm({ ...form, requiresApproval })}
+            label="Needs approval"
+            description="Goes through the letter approval chain before the employee gets it."
+          />
+          <Switch
+            checked={!!form.selfService}
+            onChange={(selfService) => setForm({ ...form, selfService })}
+            label="Employees can ask for it"
+            description="Shown under My documents → Request a letter (always approved first)."
+          />
+          <Field label="Issue automatically when" hint="One template per event.">
+            <Select value={form.autoUse ?? ''} onChange={(e) => setForm({ ...form, autoUse: (e.target.value || null) as LetterAutoUse | null })}>
+              <option value="">Never</option>
+              <option value="Offer">A candidate gets an offer (candidate letter)</option>
+              <option value="Hire">A candidate is hired</option>
+              <option value="Confirmation">Someone is confirmed after probation</option>
+              <option value="JobChange">A transfer or promotion is recorded</option>
+              <option value="SalaryRevision">A salary is revised</option>
+              <option value="Exit">A separation is completed</option>
+            </Select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Top margin (mm)" hint="Room for a printed letterhead">
+              <Input
+                type="number"
+                min={5}
+                max={80}
+                value={form.marginTopMm ?? 25}
+                onChange={(e) => setForm({ ...form, marginTopMm: Number(e.target.value) || 25 })}
+              />
+            </Field>
+            <Field label="Side margins (mm)">
+              <Input
+                type="number"
+                min={5}
+                max={60}
+                value={form.marginSideMm ?? 20}
+                onChange={(e) => setForm({ ...form, marginSideMm: Number(e.target.value) || 20 })}
+              />
+            </Field>
+          </div>
+        </div>
+        <Field label="Footer" hint="Printed at the bottom, e.g. registered office or a confidentiality line.">
+          <Input value={form.footer ?? ''} maxLength={500} onChange={(e) => setForm({ ...form, footer: e.target.value || null })} />
+        </Field>
       </form>
     </Modal>
   );
@@ -430,7 +493,12 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
           </section>
         </div>
 
-        <Switch checked={share} onChange={setShare} label="Show in the employee's documents" description="Turn off for letters only HR should keep, such as warnings under review." />
+        <Switch
+          checked={share}
+          onChange={setShare}
+          label="Show in the employee's documents"
+          description="Turn off for letters only HR should keep, such as warnings under review."
+        />
       </form>
     </Drawer>
   );

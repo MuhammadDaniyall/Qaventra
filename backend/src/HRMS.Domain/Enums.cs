@@ -573,6 +573,7 @@ public enum ApprovalRequestType
     FundWithdrawal = 16,
     ExpenseAdvance = 17,
     FinalSettlement = 18,
+    Letter = 19,
 }
 
 public enum PayRequestKind
@@ -806,4 +807,29 @@ public enum ExitQuestionKind
     Rating = 1,
     YesNo = 2,
     Text = 3,
+}
+
+public enum LetterStatus
+{
+    Issued = 1,
+    /// <summary>Waiting for the letter approval chain.</summary>
+    Pending = 2,
+    Rejected = 3,
+}
+
+/// <summary>Events that issue a letter automatically from a template.</summary>
+public enum LetterAutoUse
+{
+    /// <summary>Offer to a candidate.</summary>
+    Offer = 1,
+    /// <summary>A candidate is hired (appointment letter).</summary>
+    Hire = 2,
+    /// <summary>Transfer, promotion or other job change.</summary>
+    JobChange = 3,
+    /// <summary>Salary revision.</summary>
+    SalaryRevision = 4,
+    /// <summary>Separation completed (experience / relieving letter).</summary>
+    Exit = 5,
+    /// <summary>Confirmed after probation.</summary>
+    Confirmation = 6,
 }

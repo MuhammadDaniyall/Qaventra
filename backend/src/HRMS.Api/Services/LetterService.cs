@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock, NotificationService notify)
+public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock, NotificationService notify, ApprovalEngine approvals)
 {
     private static readonly CultureInfo Pk = CultureInfo.GetCultureInfo("en-PK");
 
@@ -25,19 +25,27 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         await db.SaveChangesAsync();
     }
 
-    public async Task<(string Subject, string Body)> RenderAsync(Guid employeeId, string subject, string body)
+    public async Task<(string Subject, string Body)> RenderAsync(Guid employeeId, string subject, string body, IReadOnlyDictionary<string, string?>? extra = null)
     {
         var values = await ValuesForAsync(employeeId);
+        foreach (var (k, v) in extra ?? new Dictionary<string, string?>())
+            values[k] = v;
         return (LetterRenderer.Render(subject, values), LetterRenderer.Render(body, values));
     }
 
-    public async Task<IssuedLetter> IssueAsync(Guid employeeId, LetterCategory category, string subject, string body, DateOnly? issuedOn, bool shareWithEmployee)
+    /// <summary>
+    /// Issues a letter. From a template that needs approval it waits for the letter approval chain (hidden from the
+    /// employee until approved); <paramref name="extra"/> overrides placeholder values (e.g. the new salary).
+    /// </summary>
+    public async Task<IssuedLetter> IssueAsync(Guid employeeId, LetterCategory category, string subject, string body, DateOnly? issuedOn, bool shareWithEmployee,
+        Guid? templateId = null, IReadOnlyDictionary<string, string?>? extra = null, string? requestReason = null)
     {
+        var template = templateId is { } tid ? await db.LetterTemplates.FirstOrDefaultAsync(t => t.Id == tid) ?? throw new NotFoundException("Template") : null;
         var unknown = LetterRenderer.UnknownKeys(subject + "\n" + body);
         if (unknown.Count > 0)
             throw new DomainException($"Unknown placeholder(s): {string.Join(", ", unknown.Select(k => "{{" + k + "}}"))}.");
 
-        var (renderedSubject, renderedBody) = await RenderAsync(employeeId, subject, body);
+        var (renderedSubject, renderedBody) = await RenderAsync(employeeId, subject, body, extra);
         var date = issuedOn ?? await clock.TodayAsync();
         var prefix = $"HR/{LetterRenderer.CategoryCode(category)}/{date.Year}/";
         var taken = await db.IssuedLetters.Where(l => l.ReferenceNo.StartsWith(prefix)).Select(l => l.ReferenceNo).ToListAsync();
@@ -54,11 +62,99 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             IssuedByUserId = me.UserId,
             IssuedByName = await CurrentUserNameAsync(db, me),
             SharedWithEmployee = shareWithEmployee,
+            TemplateId = template?.Id,
+            Requested = requestReason is not null,
+            RequestReason = requestReason,
+            MarginTopMm = template?.MarginTopMm ?? 25,
+            MarginSideMm = template?.MarginSideMm ?? 20,
+            Footer = template?.Footer,
         };
         db.IssuedLetters.Add(letter);
-        if (shareWithEmployee)
+        if (template is { RequiresApproval: true } || requestReason is not null)
+        {
+            letter.Status = LetterStatus.Pending;
+            letter.SharedWithEmployee = false;
+            var approval = await approvals.StartAsync(ApprovalRequestType.Letter, letter.Id, employeeId,
+                $"{letter.Subject} ({letter.ReferenceNo}){(requestReason is null ? "" : $" · {requestReason}")}");
+            if (approval.Status == ApprovalStatus.Approved)
+                await ReleaseAsync(letter, shareWithEmployee || requestReason is not null);
+        }
+        else if (shareWithEmployee)
             await notify.ToEmployeesAsync([employeeId], NotificationKind.Letter, $"New letter: {letter.Subject}", letter.ReferenceNo, $"/letters/{letter.Id}");
         await db.SaveChangesAsync();
+        return letter;
+    }
+
+    private async Task ReleaseAsync(IssuedLetter letter, bool share)
+    {
+        letter.Status = LetterStatus.Issued;
+        letter.SharedWithEmployee = share;
+        if (share)
+            await notify.ToEmployeesAsync([letter.EmployeeId], NotificationKind.Letter, $"New letter: {letter.Subject}", letter.ReferenceNo, $"/letters/{letter.Id}");
+    }
+
+    /// <summary>An employee asks for a self-service letter; it goes through the letter approval chain.</summary>
+    public async Task<IssuedLetter> RequestAsync(Guid employeeId, Guid templateId, string reason)
+    {
+        var t = await db.LetterTemplates.FirstOrDefaultAsync(x => x.Id == templateId && x.IsActive && x.SelfService) ?? throw new NotFoundException("Letter");
+        if (await db.IssuedLetters.AnyAsync(l => l.EmployeeId == employeeId && l.TemplateId == templateId && l.Status == LetterStatus.Pending))
+            throw new DomainException("You have already asked for this letter.");
+        return await IssueAsync(employeeId, t.Category, t.Subject, t.Body, null, true, t.Id, null, string.IsNullOrWhiteSpace(reason) ? "Requested" : reason.Trim());
+    }
+
+    public async Task DecideAsync(Guid id, bool approve, string? note)
+    {
+        var letter = await db.IssuedLetters.FirstOrDefaultAsync(l => l.Id == id) ?? throw new NotFoundException("Letter");
+        if (letter.Status != LetterStatus.Pending) throw new DomainException("This letter is not waiting for approval.");
+        var outcome = await approvals.DecideAsync(ApprovalRequestType.Letter, letter.Id, letter.EmployeeId, approve, note);
+        letter.DecisionNote = note;
+        if (outcome == ApprovalStatus.Approved)
+            await ReleaseAsync(letter, true);
+        else if (outcome == ApprovalStatus.Rejected)
+            letter.Status = LetterStatus.Rejected;
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>Issues the company's letter for an event (job change, salary revision, exit…) when a template is set for it.</summary>
+    public async Task AutoIssueAsync(Guid employeeId, LetterAutoUse use, IReadOnlyDictionary<string, string?>? extra = null)
+    {
+        var t = await db.LetterTemplates.FirstOrDefaultAsync(x => x.IsActive && x.AutoUse == use);
+        if (t is null) return;
+        await IssueAsync(employeeId, t.Category, t.Subject, t.Body, null, true, t.Id, extra);
+    }
+
+    /// <summary>The offer letter for a candidate, when an Offer template is set; replaces an earlier one for the same application.</summary>
+    public async Task<CandidateLetter?> CandidateLetterAsync(JobApplication app, Candidate candidate, string jobTitle)
+    {
+        var t = await db.LetterTemplates.FirstOrDefaultAsync(x => x.IsActive && x.AutoUse == LetterAutoUse.Offer);
+        if (t is null) return null;
+        var company = await db.Tenants.Where(x => x.Id == db.CurrentTenantId).Select(x => new { x.Name, x.Address, x.City }).FirstAsync();
+        var today = await clock.TodayAsync();
+        var values = new Dictionary<string, string?>
+        {
+            ["CandidateName"] = $"{candidate.FirstName} {candidate.LastName}".Trim(),
+            ["EmployeeName"] = $"{candidate.FirstName} {candidate.LastName}".Trim(),
+            ["FirstName"] = candidate.FirstName,
+            ["JobTitle"] = jobTitle,
+            ["Designation"] = jobTitle,
+            ["OfferedSalary"] = app.OfferedSalary is { } s ? Money(s) : null,
+            ["GrossSalary"] = app.OfferedSalary is { } g ? Money(g) : null,
+            ["OfferedJoiningDate"] = app.OfferedJoiningDate is { } d ? LongDate(d) : null,
+            ["JoiningDate"] = app.OfferedJoiningDate is { } j ? LongDate(j) : null,
+            ["CompanyName"] = company.Name,
+            ["CompanyAddress"] = FullAddress(company.Address, company.City),
+            ["Today"] = LongDate(today),
+        };
+        db.CandidateLetters.RemoveRange(await db.CandidateLetters.Where(c => c.ApplicationId == app.Id).ToListAsync());
+        var prefix = $"HR/OFR/{today.Year}/C";
+        var taken = await db.CandidateLetters.Where(l => l.ReferenceNo.StartsWith(prefix)).CountAsync();
+        var letter = new CandidateLetter
+        {
+            ApplicationId = app.Id, CandidateName = values["CandidateName"]!, ReferenceNo = $"{prefix}{taken + 1:D4}",
+            Subject = LetterRenderer.Render(t.Subject, values).Trim(), Body = LetterRenderer.Render(t.Body, values).Trim(), IssuedOn = today,
+            IssuedByName = await CurrentUserNameAsync(db, me), MarginTopMm = t.MarginTopMm, MarginSideMm = t.MarginSideMm, Footer = t.Footer,
+        };
+        db.CandidateLetters.Add(letter);
         return letter;
     }
 
@@ -87,6 +183,8 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             ["CompanyName"] = company.Name,
             ["CompanyAddress"] = FullAddress(company.Address, company.City),
             ["Today"] = LongDate(today),
+            ["ConfirmationDate"] = e.ConfirmationDate is { } c ? LongDate(c) : null,
+            ["EffectiveDate"] = LongDate(today),
         };
     }
 

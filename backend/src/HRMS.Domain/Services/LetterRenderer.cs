@@ -23,6 +23,12 @@ public static partial class LetterRenderer
         new("CompanyName", "Company name", "Qaventra Pvt Ltd"),
         new("CompanyAddress", "Company address", "Gulberg III, Lahore"),
         new("Today", "Today's date", "20 October 2026"),
+        new("ConfirmationDate", "Confirmation date", "1 September 2024"),
+        new("EffectiveDate", "Date a change takes effect", "1 November 2026"),
+        new("CandidateName", "Candidate full name (candidate letters)", "Bilal Hussain"),
+        new("JobTitle", "Job applied for (candidate letters)", "Software Engineer"),
+        new("OfferedSalary", "Offered monthly salary (candidate letters)", "Rs 180,000"),
+        new("OfferedJoiningDate", "Offered joining date (candidate letters)", "1 December 2026"),
     ];
 
     [GeneratedRegex(@"\{\{\s*([A-Za-z]+)\s*\}\}")]

@@ -38,7 +38,8 @@ public record OfferInput(decimal Salary, DateOnly JoiningDate, string? Note, boo
 /// HR runs everything; a post's recruiter and hiring manager run that post's pipeline; interviewers see the
 /// candidates they interview and give feedback.
 /// </summary>
-public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, NotificationService notify, EmployeeService employees)
+public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, NotificationService notify, EmployeeService employees,
+    IServiceProvider services)
 {
     // ---------- Access ----------
 
@@ -626,6 +627,9 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         app.StageChangedAtUtc = clock.UtcNow;
         var by = await MyNameAsync();
         Log(app.Id, $"Offer made: PKR {input.Salary:N0} a month, joining {input.JoiningDate:d MMM yyyy}", by);
+        var offerLetter = await services.GetRequiredService<LetterService>().CandidateLetterAsync(app, app.Candidate, app.JobPost!.Title);
+        if (offerLetter is not null)
+            Log(app.Id, $"Offer letter {offerLetter.ReferenceNo} prepared", by);
         if (input.EmailCandidate)
             notify.EmailOnly(app.Candidate.Email, $"Job offer: {app.JobPost!.Title}",
                 $"Dear {app.Candidate.FirstName},\n\nWe are pleased to offer you the position of {app.JobPost.Title}.\n"
@@ -716,6 +720,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
             await notify.ToEmployeesAsync([hm], NotificationKind.Recruitment, $"{candidate.FullName} joins your team on {employee.JoiningDate:d MMM}",
                 post.Title, $"/employees/{employee.Id}");
         await db.SaveChangesAsync();
+        await services.GetRequiredService<LetterService>().AutoIssueAsync(employee.Id, LetterAutoUse.Hire);
         return employee;
     }
 

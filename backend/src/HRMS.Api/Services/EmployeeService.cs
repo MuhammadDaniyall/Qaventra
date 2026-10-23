@@ -127,6 +127,8 @@ public class EmployeeService(
         employee.ManagerId = input.ManagerId;
         await FinishChangeAsync(change, employee);
         await db.SaveChangesAsync();
+        await services.GetRequiredService<LetterService>().AutoIssueAsync(employeeId, LetterAutoUse.JobChange,
+            new Dictionary<string, string?> { ["EffectiveDate"] = LetterService.LongDate(input.EffectiveDate) });
         return change;
     }
 

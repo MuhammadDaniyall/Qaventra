@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { OfferLetterButton } from './OfferLetter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Ban, CalendarPlus, Check, Handshake, Lock, MessageSquare, UserCheck, X } from 'lucide-react';
@@ -181,22 +182,25 @@ function ApplicationView({ a }: { a: Application }) {
                 title="Offer"
                 description={a.offerStatus === 'Sent' ? 'Waiting for the candidate’s answer' : `Offer ${a.offerStatus.toLowerCase()}`}
                 actions={
-                  a.offerStatus === 'Sent' && (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="success"
-                        icon={<Check className="size-3.5" />}
-                        loading={respond.isPending && respond.variables}
-                        onClick={() => respond.mutate(true)}
-                      >
-                        Accepted
-                      </Button>
-                      <Button size="sm" variant="secondary" loading={respond.isPending && !respond.variables} onClick={() => respond.mutate(false)}>
-                        Declined
-                      </Button>
-                    </>
-                  )
+                  <>
+                    <OfferLetterButton applicationId={a.id} />
+                    {a.offerStatus === 'Sent' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="success"
+                          icon={<Check className="size-3.5" />}
+                          loading={respond.isPending && respond.variables}
+                          onClick={() => respond.mutate(true)}
+                        >
+                          Accepted
+                        </Button>
+                        <Button size="sm" variant="secondary" loading={respond.isPending && !respond.variables} onClick={() => respond.mutate(false)}>
+                          Declined
+                        </Button>
+                      </>
+                    )}
+                  </>
                 }
               />
               <dl className="grid grid-cols-2 gap-3 px-5 py-4 text-sm sm:grid-cols-3">

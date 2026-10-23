@@ -154,6 +154,7 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         e.Gender = req.Gender;
         e.JoiningDate = req.JoiningDate;
         e.LeavingDate = req.LeavingDate;
+        var confirmed = e.Status == EmploymentStatus.Probation && req.Status == EmploymentStatus.Active;
         e.Status = req.Status;
         e.Address = req.Address;
         e.BankName = req.BankName;
@@ -179,6 +180,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
             }
         }
         await db.SaveChangesAsync();
+        if (confirmed)
+            await HttpContext.RequestServices.GetRequiredService<LetterService>().AutoIssueAsync(id, LetterAutoUse.Confirmation);
         return await Load(id);
     }
 

@@ -75,6 +75,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 - **Separation depth:** clearance templates with up to ten levels and an owner per item (owners clear their items from "Exit clearances"; a level opens once earlier ones are cleared); exit interview templates (ratings, yes/no, text) answered by the leaver or the panel, with a panel, a time and private notes; final settlement sent through its own approval chain (completion waits, changes need a new approval) and marked paid by bank, cheque or cash. Approval chains can now be sent again after a rejection or change.
 
+- **Letters depth:** templates that need approval (through the letter approval chain, hidden until approved), self-service letters employees request with a reason, templates issued automatically on events (offer to a candidate, hire, confirmation, transfer or promotion, salary revision with the new salary and date, completed exit), candidate offer letters printable from the application, page margins for printed letterheads and a footer, new placeholders (confirmation date, effective date, candidate name, job, offered salary and joining date).
+
 ## Where we aim to beat FlowHCM
 
 - Mobile-first self-service (PWA): check-in, leave, claims with camera receipts, payslips, letters.

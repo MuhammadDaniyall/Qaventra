@@ -25,7 +25,15 @@ export interface LetterTemplate {
   subject: string;
   body: string;
   isActive: boolean;
+  requiresApproval?: boolean;
+  selfService?: boolean;
+  autoUse?: LetterAutoUse | null;
+  marginTopMm?: number;
+  marginSideMm?: number;
+  footer?: string | null;
 }
+
+export type LetterAutoUse = 'Offer' | 'Hire' | 'JobChange' | 'SalaryRevision' | 'Exit' | 'Confirmation';
 
 export type SaveLetterTemplateRequest = Omit<LetterTemplate, 'id'>;
 
@@ -55,6 +63,9 @@ export interface IssuedLetter {
   employeeCode: string;
   issuedByName: string | null;
   sharedWithEmployee: boolean;
+  status?: 'Issued' | 'Pending' | 'Rejected';
+  requested?: boolean;
+  requestReason?: string | null;
 }
 
 export interface LetterDocument extends IssuedLetter {
@@ -63,6 +74,9 @@ export interface LetterDocument extends IssuedLetter {
   companyName: string;
   companyAddress: string | null;
   companyPhone: string | null;
+  marginTopMm?: number;
+  marginSideMm?: number;
+  footer?: string | null;
 }
 
 // ---- Expenses ----

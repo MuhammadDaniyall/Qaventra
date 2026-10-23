@@ -15,6 +15,7 @@ import {
   ClipboardList,
   PiggyBank,
   UserMinus,
+  FileSignature,
   Package,
   Plane,
   Receipt,
@@ -37,6 +38,7 @@ import { exemptionsApi } from '../../api/leaveRules';
 import { attendanceRulesApi } from '../../api/attendanceRules';
 import { projectsApi } from '../../api/projects';
 import { fundsApi } from '../../api/funds';
+import { lettersApi } from '../../api/letters';
 import { expenseSetupApi } from '../../api/expenseSetup';
 import { travelApi } from '../../api/travel';
 import { compOffApi, leaveApi } from '../../api/leave';
@@ -86,6 +88,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   FundWithdrawal: PiggyBank,
   ExpenseAdvance: HandCoins,
   FinalSettlement: UserMinus,
+  Letter: FileSignature,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -111,6 +114,7 @@ const decideApi: Record<
   Timesheet: { approve: projectsApi.approve, reject: projectsApi.reject },
   FundWithdrawal: { approve: fundsApi.approve, reject: fundsApi.reject },
   ExpenseAdvance: { approve: expenseSetupApi.approveAdvance, reject: expenseSetupApi.rejectAdvance },
+  Letter: { approve: lettersApi.approve, reject: lettersApi.reject },
   FinalSettlement: {
     approve: (id, note) => approvalsApi.decide('FinalSettlement', id, { approve: true, note }),
     reject: (id, note) => approvalsApi.decide('FinalSettlement', id, { approve: false, note }),
@@ -166,6 +170,7 @@ export function ApprovalsInboxPage() {
               'FundWithdrawal',
               'ExpenseAdvance',
               'FinalSettlement',
+              'Letter',
             ] as Filter[]
           ).map((t) => ({
             value: t,

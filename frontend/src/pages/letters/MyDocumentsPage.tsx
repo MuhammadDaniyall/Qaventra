@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { MyLetterRequests, RequestLetterButton } from './Requests';
 import { Link } from 'react-router-dom';
 import { ChevronRight, FileText } from 'lucide-react';
 import { lettersApi } from '../../api/letters';
@@ -12,7 +13,12 @@ export function MyDocumentsPage() {
 
   return (
     <>
-      <PageHeader title="My documents" description="Letters and certificates HR has issued to you. Open one to print or save as PDF." />
+      <PageHeader
+        title="My documents"
+        description="Letters and certificates HR has issued to you. Open one to print or save as PDF."
+        actions={<RequestLetterButton />}
+      />
+      <MyLetterRequests />
       <Card>
         {letters.isLoading ? (
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">

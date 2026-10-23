@@ -83,6 +83,14 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
                 $"Monthly gross PKR {preview.OldGross:N0} → PKR {preview.NewGross:N0}" + (Clean(req.Reason) is { } r ? $" · {r}" : ""), "/me/payslips");
         }
         await db.SaveChangesAsync();
+        var letters = HttpContext.RequestServices.GetRequiredService<LetterService>();
+        foreach (var (preview, _, _) in plan)
+            await letters.AutoIssueAsync(preview.EmployeeId, LetterAutoUse.SalaryRevision, new Dictionary<string, string?>
+            {
+                ["BasicSalary"] = LetterService.Money(preview.NewBasic),
+                ["GrossSalary"] = LetterService.Money(preview.NewGross),
+                ["EffectiveDate"] = LetterService.LongDate(req.EffectiveFrom),
+            });
         return new { revised = plan.Count };
     }
 

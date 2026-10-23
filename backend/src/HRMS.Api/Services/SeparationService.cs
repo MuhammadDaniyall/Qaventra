@@ -296,6 +296,7 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             user.IsActive = false;
 
         await db.SaveChangesAsync();
+        await services.GetRequiredService<LetterService>().AutoIssueAsync(s.EmployeeId, LetterAutoUse.Exit);
     }
 
     public async Task<Separation> LoadAsync(Guid id) =>
