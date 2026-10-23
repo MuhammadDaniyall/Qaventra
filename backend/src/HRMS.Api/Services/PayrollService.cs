@@ -61,6 +61,13 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         foreach (var r in payItems)
             r.PayrollRunId = null;
 
+        // Approved piece work for this month or earlier that no finalized payroll has paid; same re-linking as pay items.
+        var pieces = await db.PieceEntries.Include(x => x.Item)
+            .Where(x => x.Status == RequestStatus.Approved && x.PaidAtUtc == null && (x.PayrollRunId == null || x.PayrollRunId == run.Id) && x.Date <= monthEnd)
+            .ToListAsync();
+        foreach (var x in pieces)
+            x.PayrollRunId = null;
+
         // Loan installments: drop this run's earlier ones (reprocess), then take the next installment of every active loan.
         db.LoanRepayments.RemoveRange(await db.LoanRepayments.Where(x => x.PayrollRunId == run.Id).ToListAsync());
         var loans = await db.Loans.Include(l => l.Repayments)
@@ -169,6 +176,13 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 };
                 extras.Add(new PayItem(name, item.IsEarning ? SalaryComponentKind.Earning : SalaryComponentKind.Deduction, item.Amount, item.IsEarning && item.IsTaxable));
             }
+            foreach (var group in pieces.Where(x => x.EmployeeId == employee.Id).GroupBy(x => x.Item!))
+            {
+                foreach (var x in group)
+                    x.PayrollRunId = run.Id;
+                extras.Add(new PayItem($"Piece work: {group.Key.Name} ({group.Sum(x => x.Quantity):0.##} {group.Key.Unit})", SalaryComponentKind.Earning,
+                    Math.Round(group.Sum(x => x.Amount), 0), true));
+            }
             foreach (var loan in loans.Where(l => l.EmployeeId == employee.Id))
             {
                 var repaid = loan.Repayments.Where(x => x.PayrollRunId != run.Id).Sum(x => x.Amount);
@@ -224,6 +238,9 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
 
         foreach (var item in await db.PayRequests.Where(r => r.PayrollRunId == run.Id && r.Status == RequestStatus.Approved).ToListAsync())
             item.PaidAtUtc = run.FinalizedAtUtc;
+
+        foreach (var x in await db.PieceEntries.Where(x => x.PayrollRunId == run.Id && x.Status == RequestStatus.Approved).ToListAsync())
+            x.PaidAtUtc = run.FinalizedAtUtc;
 
         var claims = await db.ExpenseClaims.Where(c => c.PayrollRunId == run.Id && c.Status == ExpenseStatus.Approved).ToListAsync();
         foreach (var c in claims)

@@ -85,6 +85,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<TrainingCategory> TrainingCategories => Set<TrainingCategory>();
     public DbSet<ScheduledAlert> ScheduledAlerts => Set<ScheduledAlert>();
     public DbSet<DeskSettings> DeskSettings => Set<DeskSettings>();
+    public DbSet<PieceCategory> PieceCategories => Set<PieceCategory>();
+    public DbSet<PieceItem> PieceItems => Set<PieceItem>();
+    public DbSet<PieceRate> PieceRates => Set<PieceRate>();
+    public DbSet<PieceEntry> PieceEntries => Set<PieceEntry>();
     public DbSet<Floor> Floors => Set<Floor>();
     public DbSet<Space> Spaces => Set<Space>();
     public DbSet<SpaceBooking> SpaceBookings => Set<SpaceBooking>();
@@ -689,6 +693,46 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
         });
 
+        b.Entity<PieceCategory>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+        });
+
+        b.Entity<PieceItem>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Unit).HasMaxLength(30);
+            e.Property(x => x.Rate).HasPrecision(18, 4);
+            e.Property(x => x.DailyTarget).HasPrecision(18, 2);
+            e.HasOne<PieceCategory>().WithMany().HasForeignKey(x => x.CategoryId);
+        });
+
+        b.Entity<PieceRate>(e =>
+        {
+            e.HasIndex(x => new { x.ItemId, x.EmployeeId }).IsUnique();
+            e.Property(x => x.Rate).HasPrecision(18, 4);
+            e.HasOne<PieceItem>().WithMany().HasForeignKey(x => x.ItemId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<PieceEntry>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => new { x.EmployeeId, x.Date });
+            e.HasIndex(x => x.PayrollRunId);
+            e.Property(x => x.Quantity).HasPrecision(18, 2);
+            e.Property(x => x.Rate).HasPrecision(18, 4);
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.Property(x => x.EnteredByName).HasMaxLength(200);
+            e.Property(x => x.DecidedByName).HasMaxLength(200);
+            e.Property(x => x.DecisionNote).HasMaxLength(500);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasOne(x => x.Item).WithMany().HasForeignKey(x => x.ItemId);
+            e.HasOne<PayrollRun>().WithMany().HasForeignKey(x => x.PayrollRunId);
+        });
+
         b.Entity<DeskSettings>(e =>
         {
             e.HasIndex(x => x.TenantId).IsUnique();
@@ -971,7 +1015,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
-        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment);
+        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate);
 
     private LambdaExpression TenantFilter(Type entityType)
     {
