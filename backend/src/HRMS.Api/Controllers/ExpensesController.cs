@@ -18,18 +18,22 @@ public record ExpenseItemRequest(
     DateOnly Date,
     ExpenseCategory Category,
     [Required, StringLength(500)] string Description,
-    [Range(0.01, 10_000_000)] decimal Amount,
-    ReceiptUpload? Receipt);
+    [Range(0, 10_000_000)] decimal Amount,
+    ReceiptUpload? Receipt,
+    Guid? ExpenseTypeId = null,
+    [Range(0, 100_000)] decimal? Quantity = null,
+    [StringLength(100)] string? FromCity = null,
+    [StringLength(100)] string? ToCity = null);
 
 public record SubmitExpenseRequest([Required, StringLength(150)] string Title, [Required, MinLength(1), MaxLength(ExpenseService.MaxItems)] List<ExpenseItemRequest> Items,
-    Guid? EmployeeId = null);
+    Guid? EmployeeId = null, Guid? AdvanceId = null);
 
 public record DecideExpenseRequest([StringLength(1000)] string? Note);
 
 public record ExpenseClaimDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string Title, ExpenseStatus Status,
     decimal Total, int ItemCount, int ReceiptCount, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote,
-    DateTime? PaidAtUtc, string? PaidVia);
+    DateTime? PaidAtUtc, string? PaidVia, decimal AdvanceAdjusted = 0);
 
 public record ExpenseItemDto(Guid Id, DateOnly Date, ExpenseCategory Category, string Description, decimal Amount, Guid? ReceiptId, string? ReceiptFileName);
 
@@ -50,7 +54,7 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
         var employeeId = await onBehalf.ResolveAsync(req.EmployeeId);
         var claim = await expenses.SubmitAsync(employeeId, req.Title, req.Items.Select(i => new NewExpenseItem(
             i.Date, i.Category, i.Description, i.Amount,
-            i.Receipt is { } r ? new NewReceipt(r.FileName, r.ContentType, r.Base64) : null)).ToList());
+            i.Receipt is { } r ? new NewReceipt(r.FileName, r.ContentType, r.Base64) : null, i.ExpenseTypeId, i.Quantity, i.FromCity, i.ToCity)).ToList(), req.AdvanceId);
         return await Project(db.ExpenseClaims.Where(c => c.Id == claim.Id)).FirstAsync();
     }
 
@@ -122,5 +126,5 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
         q.OrderByDescending(c => c.CreatedAtUtc).Select(c => new ExpenseClaimDto(
             c.Id, c.EmployeeId, c.Employee!.FirstName + " " + c.Employee.LastName, c.Employee.EmployeeCode, c.Title, c.Status,
             c.Total, c.Items.Count, c.Items.Count(i => i.ReceiptId != null), c.CreatedAtUtc, c.DecidedAtUtc, c.DecisionNote,
-            c.PaidAtUtc, c.PaidVia));
+            c.PaidAtUtc, c.PaidVia, c.AdvanceAdjusted));
 }

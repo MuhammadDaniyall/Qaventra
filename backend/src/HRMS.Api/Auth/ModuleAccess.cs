@@ -18,7 +18,7 @@ public static class AccessModules
         new("attendance", "Attendance, roster and penalties", ["/api/attendance", "/api/attendance-rules", "/api/exemptions"]),
         new("leave", "Leave", ["/api/leave", "/api/leave-rules"]),
         new("payroll", "Payroll and pay changes", ["/api/payroll", "/api/pay-changes", "/api/pay"]),
-        new("expenses", "Expenses", ["/api/expenses"]),
+        new("expenses", "Expenses", ["/api/expenses", "/api/expense-setup"]),
         new("approvals", "Approvals (force approve, delegations)", ["/api/approvals"]),
         new("recruitment", "Recruitment", ["/api/recruitment"]),
         new("onboarding", "Onboarding", ["/api/onboarding"]),

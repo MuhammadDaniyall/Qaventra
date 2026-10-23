@@ -190,6 +190,7 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             ApprovalRequestType.OffDay => services.GetRequiredService<OffDayService>().DecideAsync,
             ApprovalRequestType.Timesheet => services.GetRequiredService<TimesheetService>().DecideAsync,
             ApprovalRequestType.FundWithdrawal => services.GetRequiredService<FundService>().DecideAsync,
+            ApprovalRequestType.ExpenseAdvance => services.GetRequiredService<ExpenseAdvanceService>().DecideAsync,
             _ => throw new NotFoundException("Request type"),
         };
         await decide(subjectId, req.Approve, req.Note);

@@ -1,35 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  BedDouble,
-  BookOpen,
-  Car,
-  Check,
-  FileText,
-  Fuel,
-  HeartPulse,
-  Paperclip,
-  Receipt,
-  Smartphone,
-  Utensils,
-  X,
-  type LucideIcon,
-} from 'lucide-react';
+import { BedDouble, BookOpen, Car, Check, FileText, Fuel, HeartPulse, Paperclip, Receipt, Smartphone, Utensils, X, type LucideIcon } from 'lucide-react';
 import { expensesApi } from '../../api/expenses';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
-import {
-  Avatar,
-  Button,
-  Drawer,
-  ErrorState,
-  Field,
-  SkeletonRows,
-  StatusBadge,
-  Textarea,
-  useToast,
-} from '../../components/ui';
+import { Avatar, Button, Drawer, ErrorState, Field, SkeletonRows, StatusBadge, Textarea, useToast } from '../../components/ui';
 import { formatCurrency, formatDate, formatDateTimeUtc, humanize } from '../../lib/format';
 import type { ExpenseCategory, ExpenseItem } from '../../types/workflows';
 
@@ -98,11 +74,7 @@ function ReceiptThumb({ claimId, item }: { claimId: string; item: ExpenseItem })
   }, [claimId, item.receiptId, isImage]);
 
   if (!isImage) return <FileText className="size-5 text-zinc-400" aria-hidden="true" />;
-  return url ? (
-    <img src={url} alt="" className="size-full object-cover" />
-  ) : (
-    <div className="size-full animate-pulse bg-zinc-100 dark:bg-zinc-800" />
-  );
+  return url ? <img src={url} alt="" className="size-full object-cover" /> : <div className="size-full animate-pulse bg-zinc-100 dark:bg-zinc-800" />;
 }
 
 export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: () => void }) {
@@ -143,10 +115,20 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
       footer={
         d?.canDecide ? (
           <>
-            <Button variant="secondary" icon={<X className="size-4" />} loading={decide.isPending && decide.variables === false} onClick={() => decide.mutate(false)}>
+            <Button
+              variant="secondary"
+              icon={<X className="size-4" />}
+              loading={decide.isPending && decide.variables === false}
+              onClick={() => decide.mutate(false)}
+            >
               Reject
             </Button>
-            <Button variant="success" icon={<Check className="size-4" />} loading={decide.isPending && decide.variables === true} onClick={() => decide.mutate(true)}>
+            <Button
+              variant="success"
+              icon={<Check className="size-4" />}
+              loading={decide.isPending && decide.variables === true}
+              onClick={() => decide.mutate(true)}
+            >
               Approve {formatCurrency(d.claim.total)}
             </Button>
           </>
@@ -172,9 +154,7 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
-                {formatCurrency(d.claim.total)}
-              </p>
+              <p className="text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{formatCurrency(d.claim.total)}</p>
               <StatusBadge status={d.claim.status} />
             </div>
           </div>

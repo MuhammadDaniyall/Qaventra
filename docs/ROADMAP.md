@@ -71,6 +71,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 - **Payroll funds and tax:** provident fund (member and company percent of basic or gross, vesting years, contributions posted when payroll is finalized, opening balances, profit sharing, vested balance), gratuity (days per year of service, minimum years, on basic or gross, opening and payments), withdrawals from either through their own approval chain and paid with salary; tax adjustments per tax year (previous employer's salary and tax, credits, other income) that switch the person to a projected-year tax; commission as a pay item; salary paid by bank, cash or cheque (bank advice only for bank, a cash/cheque sheet with signatures); cost center splits; employer social security (percent and wage ceiling); overtime rates for holidays and days off with minimum and rounding; un-marking a month as paid; reports for social security, cash and cheque, cost by cost center, tax certificate, provident fund, gratuity and commission.
 
+- **Expense depth:** expense types worked out by amount, rate × units or rate × distance between cities (distance list, either way round), with per-item and yearly limits, receipt rule, grade restrictions and grade-specific rates and limits; the claim form shows each type's rate and what is left this year; expense advances through their own approval chain, paid with salary, claims set against them (not paid twice), closing recovers what was not spent.
+
 ## Where we aim to beat FlowHCM
 
 - Mobile-first self-service (PWA): check-in, leave, claims with camera receipts, payslips, letters.

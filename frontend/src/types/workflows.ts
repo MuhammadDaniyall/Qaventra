@@ -119,8 +119,19 @@ export interface ReceiptUpload {
 
 export interface SubmitExpenseRequest {
   title: string;
-  items: Array<{ date: string; category: ExpenseCategory; description: string; amount: number; receipt: ReceiptUpload | null }>;
+  items: Array<{
+    date: string;
+    category: ExpenseCategory;
+    description: string;
+    amount: number;
+    receipt: ReceiptUpload | null;
+    expenseTypeId?: string | null;
+    quantity?: number | null;
+    fromCity?: string | null;
+    toCity?: string | null;
+  }>;
   employeeId?: string | null;
+  advanceId?: string | null;
 }
 
 // ---- Separation ----

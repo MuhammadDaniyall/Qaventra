@@ -571,6 +571,7 @@ public enum ApprovalRequestType
     OffDay = 14,
     Timesheet = 15,
     FundWithdrawal = 16,
+    ExpenseAdvance = 17,
 }
 
 public enum PayRequestKind
@@ -786,4 +787,14 @@ public enum PaymentMethod
     BankTransfer = 1,
     Cash = 2,
     Cheque = 3,
+}
+
+public enum ExpenseCalculation
+{
+    /// <summary>The person enters the amount.</summary>
+    Amount = 1,
+    /// <summary>Rate × units entered (e.g. nights, meals, km driven).</summary>
+    PerUnit = 2,
+    /// <summary>Rate × distance between two cities from the distance list.</summary>
+    Distance = 3,
 }

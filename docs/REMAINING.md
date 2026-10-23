@@ -34,8 +34,8 @@ tested and committed locally; one production deploy at the end. Tick items as th
 - [x] Overtime rules by day type (working day / holiday) with rounding and minimum minutes
 
 ## E. Expense depth
-- [ ] Configurable categories/types with yearly quotas and rates (per km, per unit), distance mapping
-- [ ] Advance expense and adjustment against claims
+- [x] Configurable categories/types with yearly quotas and rates (per km, per unit), distance mapping
+- [x] Advance expense and adjustment against claims
 
 ## F. Module depth
 - [ ] Separation: clearance templates (multi-level by department/person), exit interview templates, FnF approval

@@ -56,6 +56,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<AccessTemplate> AccessTemplates => Set<AccessTemplate>();
     public DbSet<FundEntry> FundEntries => Set<FundEntry>();
+    public DbSet<ExpenseType> ExpenseTypes => Set<ExpenseType>();
+    public DbSet<ExpenseTypeRate> ExpenseTypeRates => Set<ExpenseTypeRate>();
+    public DbSet<DistanceRoute> DistanceRoutes => Set<DistanceRoute>();
+    public DbSet<ExpenseAdvance> ExpenseAdvances => Set<ExpenseAdvance>();
     public DbSet<FundWithdrawal> FundWithdrawals => Set<FundWithdrawal>();
     public DbSet<TaxAdjustment> TaxAdjustments => Set<TaxAdjustment>();
     public DbSet<SalarySplit> SalarySplits => Set<SalarySplit>();
@@ -226,6 +230,30 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         b.Entity<OffDayRequest>(e =>
         {
             e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<ExpenseType>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Unit).HasMaxLength(30);
+            e.Property(x => x.GradeIds).HasMaxLength(2000);
+            e.HasMany(x => x.GradeRates).WithOne().HasForeignKey(x => x.ExpenseTypeId);
+        });
+
+        b.Entity<ExpenseTypeRate>(e => e.HasOne<OrgLookup>().WithMany().HasForeignKey(x => x.GradeId).OnDelete(DeleteBehavior.NoAction));
+
+        b.Entity<DistanceRoute>(e =>
+        {
+            e.Property(x => x.FromCity).HasMaxLength(100);
+            e.Property(x => x.ToCity).HasMaxLength(100);
+            e.HasIndex(x => new { x.TenantId, x.FromCity, x.ToCity }).IsUnique();
+        });
+
+        b.Entity<ExpenseAdvance>(e =>
+        {
+            e.Property(x => x.Purpose).HasMaxLength(300);
             e.Property(x => x.DecisionNote).HasMaxLength(1000);
             e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
         });
@@ -527,6 +555,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
         b.Entity<ExpenseItem>(e =>
         {
+            e.Property(x => x.FromCity).HasMaxLength(100);
+            e.Property(x => x.ToCity).HasMaxLength(100);
+            e.Property(x => x.Quantity).HasPrecision(10, 2);
             e.Property(x => x.Description).HasMaxLength(500);
             e.Property(x => x.ReceiptFileName).HasMaxLength(200);
         });
@@ -1303,7 +1334,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
         || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason)
         || t == typeof(Dependant) || t == typeof(Qualification) || t == typeof(WorkExperience)
-        || t == typeof(ProjectMember) || t == typeof(ProjectTask) || t == typeof(TimesheetLine);
+        || t == typeof(ProjectMember) || t == typeof(ProjectTask) || t == typeof(TimesheetLine) || t == typeof(ExpenseTypeRate);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

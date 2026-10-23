@@ -19,6 +19,12 @@ public class ExpenseClaim : TenantEntity
     public Guid? PayrollRunId { get; set; }
     public DateTime? PaidAtUtc { get; set; }
     public string? PaidVia { get; set; }
+    /// <summary>Advance this claim is set against, and how much of the claim it covered (not paid again).</summary>
+    public Guid? AdvanceId { get; set; }
+    public decimal AdvanceAdjusted { get; set; }
+
+    /// <summary>What payroll or the settlement still pays.</summary>
+    public decimal Payable => Total - AdvanceAdjusted;
 
     public List<ExpenseItem> Items { get; set; } = [];
 }
@@ -30,6 +36,11 @@ public class ExpenseItem : BaseEntity
     public ExpenseCategory Category { get; set; }
     public string Description { get; set; } = "";
     public decimal Amount { get; set; }
+    public Guid? ExpenseTypeId { get; set; }
+    /// <summary>Units for rate-based types (km, nights…).</summary>
+    public decimal? Quantity { get; set; }
+    public string? FromCity { get; set; }
+    public string? ToCity { get; set; }
     public Guid? ReceiptId { get; set; }
     public string? ReceiptFileName { get; set; }
 }

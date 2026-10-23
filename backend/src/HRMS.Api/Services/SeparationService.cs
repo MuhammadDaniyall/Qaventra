@@ -237,7 +237,7 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
                 frozen with { LeaveEncashment = s.LeaveEncashmentAmount, NoticeRecovery = s.NoticeRecoveryAmount, Net = s.NetSettlement });
         }
 
-        var claims = await PayableClaims(s.EmployeeId).Select(c => new PayableClaim(c.Id, c.Title, c.Total)).ToListAsync();
+        var claims = await PayableClaims(s.EmployeeId).Select(c => new PayableClaim(c.Id, c.Title, c.Total - c.AdvanceAdjusted)).ToListAsync();
         var result = SettlementCalculator.Calculate(Inputs(s, gross, lastDay, claims.Sum(c => c.Total)));
         return new SettlementSnapshot(gross, salary is not null, balances, claims, result);
     }

@@ -3,6 +3,8 @@ import { OnBehalfField } from '../../components/engine';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock, Paperclip, Plus, Receipt, Trash2, Upload, Wallet } from 'lucide-react';
 import { expensesApi } from '../../api/expenses';
+import { expenseSetupApi, routeKm } from '../../api/expenseSetup';
+import { AdvanceButton, MyAdvances } from './Advances';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import {
@@ -17,6 +19,7 @@ import {
   IconButton,
   Input,
   PageHeader,
+  Select,
   SkeletonRows,
   StatCard,
   StatusBadge,
@@ -42,9 +45,7 @@ export function MyExpensesPage() {
     const list = claims.data ?? [];
     const sum = (s: string) => list.filter((c) => c.status === s).reduce((t, c) => t + c.total, 0);
     const year = new Date().getFullYear();
-    const paidThisYear = list
-      .filter((c) => c.status === 'Paid' && c.paidAtUtc?.startsWith(String(year)))
-      .reduce((t, c) => t + c.total, 0);
+    const paidThisYear = list.filter((c) => c.status === 'Paid' && c.paidAtUtc?.startsWith(String(year))).reduce((t, c) => t + c.total, 0);
     return { pending: sum('Pending'), approved: sum('Approved'), paidThisYear };
   }, [claims.data]);
 
@@ -54,16 +55,32 @@ export function MyExpensesPage() {
         title="My expenses"
         description="Claim back what you spent for work. Approved claims are paid with your salary."
         actions={
-          <Button icon={<Plus className="size-4" />} onClick={() => setCreating(true)}>
-            New claim
-          </Button>
+          <>
+            <AdvanceButton />
+            <Button icon={<Plus className="size-4" />} onClick={() => setCreating(true)}>
+              New claim
+            </Button>
+          </>
         }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Waiting for approval" value={formatCurrency(stats.pending)} icon={Clock} tone="amber" loading={claims.isLoading} />
-        <StatCard label="Approved, to be paid" value={formatCurrency(stats.approved)} icon={CheckCircle2} tone="green" loading={claims.isLoading} hint="Added to your next payslip" />
-        <StatCard label={`Reimbursed in ${new Date().getFullYear()}`} value={formatCurrency(stats.paidThisYear)} icon={Wallet} tone="violet" loading={claims.isLoading} />
+        <StatCard
+          label="Approved, to be paid"
+          value={formatCurrency(stats.approved)}
+          icon={CheckCircle2}
+          tone="green"
+          loading={claims.isLoading}
+          hint="Added to your next payslip"
+        />
+        <StatCard
+          label={`Reimbursed in ${new Date().getFullYear()}`}
+          value={formatCurrency(stats.paidThisYear)}
+          icon={Wallet}
+          tone="violet"
+          loading={claims.isLoading}
+        />
       </div>
 
       <Card className="mt-6">
@@ -117,6 +134,7 @@ export function MyExpensesPage() {
       </Card>
 
       {creating && <NewClaimDrawer onClose={() => setCreating(false)} />}
+      <MyAdvances />
       {openId && <ClaimDrawer claimId={openId} onClose={() => setOpenId(null)} />}
     </>
   );
@@ -129,6 +147,10 @@ interface DraftItem {
   description: string;
   amount: string;
   receipt: ReceiptUpload | null;
+  typeId: string;
+  quantity: string;
+  fromCity: string;
+  toCity: string;
 }
 
 const MAX_RECEIPT = 3 * 1024 * 1024;
@@ -144,7 +166,18 @@ function readFile(file: File): Promise<ReceiptUpload> {
 }
 
 let nextKey = 1;
-const blankItem = (): DraftItem => ({ key: nextKey++, date: todayIso(), category: 'Travel', description: '', amount: '', receipt: null });
+const blankItem = (): DraftItem => ({
+  key: nextKey++,
+  date: todayIso(),
+  category: 'Travel',
+  description: '',
+  amount: '',
+  receipt: null,
+  typeId: '',
+  quantity: '',
+  fromCity: '',
+  toCity: '',
+});
 
 function NewClaimDrawer({ onClose }: { onClose: () => void }) {
   const toast = useToast();
@@ -153,7 +186,19 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
   const [items, setItems] = useState<DraftItem[]>([blankItem()]);
   const [error, setError] = useState<string | null>(null);
   const [forWhom, setForWhom] = useState('');
-  const total = items.reduce((t, i) => t + (Number(i.amount) || 0), 0);
+  const [advanceId, setAdvanceId] = useState('');
+  const types = useQuery({ queryKey: ['expense-setup', 'types-for', forWhom], queryFn: () => expenseSetupApi.typesFor(forWhom || undefined) });
+  const routes = useQuery({ queryKey: ['expense-setup', 'routes'], queryFn: expenseSetupApi.routes, staleTime: 300000 });
+  const advances = useQuery({ queryKey: ['expense-setup', 'open', forWhom], queryFn: () => expenseSetupApi.openAdvances(forWhom || undefined) });
+  const typeOf = (i: DraftItem) => types.data?.find((t) => t.id === i.typeId);
+  /** Typed items are worked out from the rate; others use the amount typed in. */
+  const amountOf = (i: DraftItem) => {
+    const t = typeOf(i);
+    if (!t || t.calculation === 'Amount') return Number(i.amount) || 0;
+    if (t.calculation === 'PerUnit') return Math.round((t.rate ?? 0) * (Number(i.quantity) || 0));
+    return Math.round((t.rate ?? 0) * (routeKm(routes.data, i.fromCity, i.toCity) ?? 0));
+  };
+  const total = items.reduce((t, i) => t + amountOf(i), 0);
 
   const update = (key: number, patch: Partial<DraftItem>) => setItems((list) => list.map((i) => (i.key === key ? { ...i, ...patch } : i)));
 
@@ -165,9 +210,14 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
           date: i.date,
           category: i.category,
           description: i.description.trim(),
-          amount: Number(i.amount),
+          amount: amountOf(i),
           receipt: i.receipt,
+          expenseTypeId: i.typeId || null,
+          quantity: i.quantity ? Number(i.quantity) : null,
+          fromCity: i.fromCity || null,
+          toCity: i.toCity || null,
         })),
+        advanceId: advanceId || null,
         employeeId: forWhom || null,
       }),
     onSuccess: (c) => {
@@ -183,7 +233,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
     e.preventDefault();
     setError(null);
     if (!title.trim()) return setError('Give the claim a short title, e.g. "Karachi client visit".');
-    const bad = items.findIndex((i) => !i.description.trim() || !(Number(i.amount) > 0) || !i.date);
+    const bad = items.findIndex((i) => !i.description.trim() || !(amountOf(i) > 0) || !i.date);
     if (bad >= 0) return setError(`Item ${bad + 1} needs a date, a description and an amount.`);
     if (items.some((i) => i.date > todayIso())) return setError('Expense dates cannot be in the future.');
     submit.mutate();
@@ -219,6 +269,23 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
           <Input value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Lahore client visit, October" autoFocus />
         </Field>
 
+        {!!advances.data?.length && (
+          <Field label="Set against advance" hint="The claim is covered by the advance first; only the rest is paid.">
+            <Select value={advanceId} onChange={(e) => setAdvanceId(e.target.value)}>
+              <option value="">No advance</option>
+              {advances.data.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.purpose} · Rs {a.outstanding.toLocaleString()} open
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        <datalist id="expense-cities">
+          {[...new Set((routes.data ?? []).flatMap((r) => [r.fromCity, r.toCity]))].map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
         <ol className="space-y-4">
           {items.map((item, index) => (
             <li key={item.key} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
@@ -231,44 +298,96 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
                 )}
               </div>
 
-              <div className="mb-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Category">
-                {EXPENSE_CATEGORIES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={item.category === c.value}
-                    onClick={() => update(item.key, { category: c.value })}
-                    className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
-                      item.category === c.value
-                        ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-200'
-                        : 'border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300',
-                    )}
+              {!!types.data?.length && (
+                <div className="mb-3">
+                  <Field label="Type">
+                    <Select value={item.typeId} onChange={(e) => update(item.key, { typeId: e.target.value })}>
+                      <option value="">Other (choose a category)</option>
+                      {types.data.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                          {t.rate != null ? ` · Rs ${t.rate}/${t.unit ?? 'unit'}` : ''}
+                          {t.yearlyLimit != null ? ` · ${Math.max(0, t.yearlyLimit - t.usedThisYear).toLocaleString()} left this year` : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+              )}
+              {typeOf(item)?.calculation === 'PerUnit' && (
+                <div className="mb-3 w-40">
+                  <Field label={`How many ${typeOf(item)?.unit ?? 'units'}`} required>
+                    <Input type="number" min={0} value={item.quantity} onChange={(e) => update(item.key, { quantity: e.target.value })} />
+                  </Field>
+                </div>
+              )}
+              {typeOf(item)?.calculation === 'Distance' && (
+                <div className="mb-3 grid grid-cols-2 gap-3">
+                  <Field label="From" required>
+                    <Input list="expense-cities" value={item.fromCity} onChange={(e) => update(item.key, { fromCity: e.target.value })} />
+                  </Field>
+                  <Field
+                    label="To"
+                    required
+                    hint={routeKm(routes.data, item.fromCity, item.toCity) != null ? `${routeKm(routes.data, item.fromCity, item.toCity)} km` : undefined}
                   >
-                    <CategoryIcon category={c.value} className="size-3.5" />
-                    {humanize(c.value)}
-                  </button>
-                ))}
-              </div>
+                    <Input list="expense-cities" value={item.toCity} onChange={(e) => update(item.key, { toCity: e.target.value })} />
+                  </Field>
+                </div>
+              )}
+              {!typeOf(item) && (
+                <div className="mb-3 flex flex-wrap gap-1.5" role="radiogroup" aria-label="Category">
+                  {EXPENSE_CATEGORIES.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={item.category === c.value}
+                      onClick={() => update(item.key, { category: c.value })}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                        item.category === c.value
+                          ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/15 dark:text-accent-200'
+                          : 'border-zinc-200 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:text-zinc-300',
+                      )}
+                    >
+                      <CategoryIcon category={c.value} className="size-3.5" />
+                      {humanize(c.value)}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="grid gap-3 sm:grid-cols-[1fr_9rem_9rem]">
                 <Field label="What was it for?" required>
-                  <Input value={item.description} maxLength={500} onChange={(e) => update(item.key, { description: e.target.value })} placeholder="e.g. Careem to client office" />
+                  <Input
+                    value={item.description}
+                    maxLength={500}
+                    onChange={(e) => update(item.key, { description: e.target.value })}
+                    placeholder="e.g. Careem to client office"
+                  />
                 </Field>
                 <Field label="Date" required>
                   <Input type="date" value={item.date} max={todayIso()} onChange={(e) => update(item.key, { date: e.target.value })} />
                 </Field>
                 <Field label="Amount (Rs)" required>
-                  <Input type="number" inputMode="decimal" min="0" step="1" value={item.amount} onChange={(e) => update(item.key, { amount: e.target.value })} className="text-right tabular-nums" />
+                  {typeOf(item) && typeOf(item)!.calculation !== 'Amount' ? (
+                    <Input readOnly value={amountOf(item)} className="text-right tabular-nums" aria-label="Worked out amount" />
+                  ) : (
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="1"
+                      value={item.amount}
+                      onChange={(e) => update(item.key, { amount: e.target.value })}
+                      className="text-right tabular-nums"
+                    />
+                  )}
                 </Field>
               </div>
 
-              <ReceiptPicker
-                receipt={item.receipt}
-                onChange={(receipt) => update(item.key, { receipt })}
-                onError={(m) => toast.error(m)}
-              />
+              <ReceiptPicker receipt={item.receipt} onChange={(receipt) => update(item.key, { receipt })} onError={(m) => toast.error(m)} />
             </li>
           ))}
         </ol>

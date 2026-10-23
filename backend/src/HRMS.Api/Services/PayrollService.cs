@@ -256,8 +256,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
 
             var result = PayrollCalculator.Calculate(new PayrollInput(
                 salary, taxYear, daysInMonth, unpaid, settings.EobiEmployeeContribution, settings.EobiEmployerContribution,
-                employeeClaims.Sum(c => c.Total), extras, taxFor));
-            var wages = result.GrossEarnings - employeeClaims.Sum(c => c.Total);
+                employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted), extras, taxFor));
+            var wages = result.GrossEarnings - employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted);
             var socialSecurity = settings.SocialSecurityPercent > 0 && !string.IsNullOrEmpty(employee.SocialSecurityNo)
                 ? Math.Round(Math.Min(wages, settings.SocialSecurityWageCeiling ?? wages) * settings.SocialSecurityPercent / 100m, 0, MidpointRounding.AwayFromZero)
                 : 0m;

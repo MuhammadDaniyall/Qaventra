@@ -8,7 +8,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-public record NewExpenseItem(DateOnly Date, ExpenseCategory Category, string Description, decimal Amount, NewReceipt? Receipt);
+public record NewExpenseItem(DateOnly Date, ExpenseCategory Category, string Description, decimal Amount, NewReceipt? Receipt,
+    Guid? ExpenseTypeId = null, decimal? Quantity = null, string? FromCity = null, string? ToCity = null);
 
 public record NewReceipt(string FileName, string ContentType, string Base64);
 
@@ -18,7 +19,7 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
     public const int MaxReceiptBytes = 3 * 1024 * 1024;
     public static readonly string[] ReceiptTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 
-    public async Task<ExpenseClaim> SubmitAsync(Guid employeeId, string title, IReadOnlyList<NewExpenseItem> items)
+    public async Task<ExpenseClaim> SubmitAsync(Guid employeeId, string title, IReadOnlyList<NewExpenseItem> items, Guid? advanceId = null)
     {
         if (items.Count is 0 or > MaxItems)
             throw new DomainException($"A claim needs between 1 and {MaxItems} items.");
@@ -27,18 +28,31 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             throw new DomainException("Expense dates cannot be in the future.");
         if (items.Any(i => i.Date < today.AddDays(-365)))
             throw new DomainException("Expenses older than one year cannot be claimed.");
-        if (items.Any(i => i.Amount <= 0))
-            throw new DomainException("Every item needs an amount greater than zero.");
+        if (advanceId is { } aid && !await db.ExpenseAdvances.AnyAsync(a => a.Id == aid && a.EmployeeId == employeeId && a.Status == RequestStatus.Approved && a.ClosedAtUtc == null))
+            throw new DomainException("That advance is not open for this person.");
 
-        var claim = new ExpenseClaim { EmployeeId = employeeId, Title = title.Trim() };
+        var claim = new ExpenseClaim { EmployeeId = employeeId, Title = title.Trim(), AdvanceId = advanceId };
+        var typed = new Dictionary<Guid, decimal>();
         foreach (var i in items)
         {
+            var (category, amount) = (i.Category, i.Amount);
+            if (i.ExpenseTypeId is { } typeId)
+            {
+                (category, amount) = await TypedAmountAsync(employeeId, typeId, i);
+                typed[typeId] = typed.GetValueOrDefault(typeId) + amount;
+            }
+            if (amount <= 0)
+                throw new DomainException("Every item needs an amount greater than zero.");
             var item = new ExpenseItem
             {
                 Date = i.Date,
-                Category = i.Category,
+                Category = category,
                 Description = i.Description.Trim(),
-                Amount = Math.Round(i.Amount, 2),
+                Amount = Math.Round(amount, 2),
+                ExpenseTypeId = i.ExpenseTypeId,
+                Quantity = i.Quantity,
+                FromCity = string.IsNullOrWhiteSpace(i.FromCity) ? null : i.FromCity.Trim(),
+                ToCity = string.IsNullOrWhiteSpace(i.ToCity) ? null : i.ToCity.Trim(),
             };
             if (i.Receipt is { } r)
             {
@@ -56,6 +70,7 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             claim.Items.Add(item);
         }
         claim.Total = claim.Items.Sum(i => i.Amount);
+        await CheckYearlyLimitsAsync(employeeId, typed, items.Min(i => i.Date).Year);
         db.ExpenseClaims.Add(claim);
 
         var approval = await approvals.StartAsync(ApprovalRequestType.Expense, claim.Id, employeeId, $"{claim.Title} · Rs {claim.Total:N0}");
@@ -64,9 +79,79 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             claim.Status = ExpenseStatus.Approved;
             claim.DecidedAtUtc = clock.UtcNow;
             claim.DecisionNote = "Approved automatically";
+            await SetAgainstAdvanceAsync(claim);
         }
         await db.SaveChangesAsync();
         return claim;
+    }
+
+    /// <summary>Works out a typed item's amount (rate × units or distance) and checks the type's rules.</summary>
+    private async Task<(ExpenseCategory, decimal)> TypedAmountAsync(Guid employeeId, Guid typeId, NewExpenseItem i)
+    {
+        var type = await db.ExpenseTypes.Include(t => t.GradeRates).FirstOrDefaultAsync(t => t.Id == typeId && t.IsActive) ?? throw new NotFoundException("Expense type");
+        var grade = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.GradeId).FirstAsync();
+        if (type.GradeIds is { Length: > 0 } g && (grade is not { } gr || !HelpdeskService.Has(g, gr)))
+            throw new DomainException($"{type.Name} is not open to your grade.");
+        var rate = type.GradeRates.FirstOrDefault(r => r.GradeId == grade)?.Rate ?? type.Rate;
+        decimal amount;
+        switch (type.Calculation)
+        {
+            case ExpenseCalculation.PerUnit:
+                if (i.Quantity is not { } q || q <= 0) throw new DomainException($"Enter how many {type.Unit ?? "units"} for {type.Name}.");
+                amount = (rate ?? 0) * q;
+                break;
+            case ExpenseCalculation.Distance:
+                if (string.IsNullOrWhiteSpace(i.FromCity) || string.IsNullOrWhiteSpace(i.ToCity)) throw new DomainException($"Choose where {type.Name} was from and to.");
+                var km = await DistanceAsync(db, i.FromCity, i.ToCity) ?? throw new DomainException($"There is no distance from {i.FromCity} to {i.ToCity} on the list. Ask HR to add it.");
+                amount = (rate ?? 0) * km;
+                break;
+            default:
+                amount = i.Amount;
+                break;
+        }
+        amount = Math.Round(amount, 0, MidpointRounding.AwayFromZero);
+        if (type.PerClaimLimit is { } cap && amount > cap)
+            throw new DomainException($"{type.Name} is limited to Rs {cap:N0} an item.");
+        if (type.ReceiptRequired && i.Receipt is null)
+            throw new DomainException($"{type.Name} needs a receipt.");
+        return (type.Category, amount);
+    }
+
+    /// <summary>Km between two cities, in either direction.</summary>
+    public static async Task<decimal?> DistanceAsync(HrmsDbContext db, string from, string to)
+    {
+        var a = from.Trim();
+        var b = to.Trim();
+        return await db.DistanceRoutes.Where(r => (r.FromCity == a && r.ToCity == b) || (r.FromCity == b && r.ToCity == a)).Select(r => (decimal?)r.Km).FirstOrDefaultAsync();
+    }
+
+    private async Task CheckYearlyLimitsAsync(Guid employeeId, Dictionary<Guid, decimal> typed, int year)
+    {
+        if (typed.Count == 0) return;
+        var grade = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.GradeId).FirstAsync();
+        var start = new DateOnly(year, 1, 1);
+        var end = new DateOnly(year, 12, 31);
+        foreach (var (typeId, amount) in typed)
+        {
+            var type = await db.ExpenseTypes.Include(t => t.GradeRates).FirstAsync(t => t.Id == typeId);
+            var limit = type.GradeRates.FirstOrDefault(r => r.GradeId == grade)?.YearlyLimit ?? type.YearlyLimit;
+            if (limit is not { } cap) continue;
+            var used = await db.ExpenseClaims.Where(c => c.EmployeeId == employeeId && (c.Status == ExpenseStatus.Pending || c.Status == ExpenseStatus.Approved || c.Status == ExpenseStatus.Paid))
+                .SelectMany(c => c.Items).Where(i => i.ExpenseTypeId == typeId && i.Date >= start && i.Date <= end).SumAsync(i => (decimal?)i.Amount) ?? 0;
+            if (used + amount > cap)
+                throw new DomainException($"{type.Name} is limited to Rs {cap:N0} a year; Rs {Math.Max(0, cap - used):N0} is left.");
+        }
+    }
+
+    /// <summary>An approved claim linked to an advance is covered by it first; only the rest is paid.</summary>
+    public async Task SetAgainstAdvanceAsync(ExpenseClaim claim)
+    {
+        if (claim.AdvanceId is not { } id) return;
+        var advance = await db.ExpenseAdvances.FirstOrDefaultAsync(a => a.Id == id);
+        if (advance is null || advance.ClosedAtUtc is not null) return;
+        var covered = Math.Min(claim.Total, Math.Max(0, advance.Amount - advance.Adjusted));
+        advance.Adjusted += covered;
+        claim.AdvanceAdjusted = covered;
     }
 
     private static byte[] DecodeReceipt(NewReceipt r)
@@ -108,6 +193,8 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
         }
 
         claim.Status = outcome == ApprovalStatus.Approved ? ExpenseStatus.Approved : ExpenseStatus.Rejected;
+        if (claim.Status == ExpenseStatus.Approved)
+            await SetAgainstAdvanceAsync(claim);
         claim.DecidedByUserId = me.UserId;
         claim.DecidedAtUtc = clock.UtcNow;
         claim.DecisionNote = note;

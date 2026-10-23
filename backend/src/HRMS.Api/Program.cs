@@ -60,6 +60,7 @@ builder.Services.AddScoped<HRMS.Api.Controllers.OffDayService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.TimesheetService>();
 builder.Services.AddScoped<OnBehalfService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.FundService>();
+builder.Services.AddScoped<HRMS.Api.Controllers.ExpenseAdvanceService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
