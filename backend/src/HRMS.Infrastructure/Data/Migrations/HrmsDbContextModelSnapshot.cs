@@ -3551,6 +3551,31 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("ProfileChangeRequests");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.ReportSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Signatures")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("ReportSettings");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.ReviewCycle", b =>
                 {
                     b.Property<Guid>("Id")

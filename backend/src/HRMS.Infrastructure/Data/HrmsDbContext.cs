@@ -97,6 +97,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<SpaceBooking> SpaceBookings => Set<SpaceBooking>();
     public DbSet<ScheduledReport> ScheduledReports => Set<ScheduledReport>();
     public DbSet<ScheduledRun> ScheduledRuns => Set<ScheduledRun>();
+    public DbSet<ReportSettings> ReportSettings => Set<ReportSettings>();
     public DbSet<TrainingProgram> TrainingPrograms => Set<TrainingProgram>();
     public DbSet<TrainingSession> TrainingSessions => Set<TrainingSession>();
     public DbSet<TrainingEnrollment> TrainingEnrollments => Set<TrainingEnrollment>();
@@ -817,6 +818,12 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ExtraEmails).HasMaxLength(2000);
             e.Property(x => x.DepartmentIds).HasMaxLength(2000);
             e.Property(x => x.SendHour).HasDefaultValue(9);
+        });
+
+        b.Entity<ReportSettings>(e =>
+        {
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.Property(x => x.Signatures).HasMaxLength(400);
         });
 
         b.Entity<ScheduledRun>(e =>

@@ -61,6 +61,8 @@ export const qk = {
   separation: (id: string) => ['separations', 'detail', id] as const,
   mySeparation: ['separations', 'my'] as const,
   notifications: ['notifications'] as const,
+  reports: ['reports'] as const,
+  reportSettings: ['reports', 'settings'] as const,
   budget: ['budget'] as const,
   budgetPlans: ['budget', 'plans'] as const,
   budgetPlan: (id: string) => ['budget', 'plan', id] as const,

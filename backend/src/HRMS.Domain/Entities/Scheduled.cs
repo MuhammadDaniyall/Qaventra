@@ -59,3 +59,10 @@ public class ScheduledRun : TenantEntity
     public string? Note { get; set; }
     public bool Manual { get; set; }
 }
+
+/// <summary>How the company's printed reports look.</summary>
+public class ReportSettings : TenantEntity
+{
+    /// <summary>Signature line titles, one per line, up to five.</summary>
+    public string Signatures { get; set; } = "";
+}

@@ -18,6 +18,7 @@ import {
   Armchair,
   Factory,
   Calculator,
+  FileBarChart,
   Target,
   Rocket,
   Laptop,
@@ -92,6 +93,7 @@ export const NAV: NavSection[] = [
     title: 'Team',
     items: [
       { to: '/approvals', label: 'Approvals', icon: Inbox, roles: APPROVER_ROLES },
+      { to: '/reports', label: 'Reports', icon: FileBarChart, roles: APPROVER_ROLES },
       { to: '/employees', label: 'Employees', icon: Users, roles: APPROVER_ROLES },
       { to: '/attendance/daily', label: 'Daily attendance', icon: CalendarCheck, roles: APPROVER_ROLES },
       { to: '/attendance/roster', label: 'Roster', icon: CalendarRange, roles: APPROVER_ROLES },
