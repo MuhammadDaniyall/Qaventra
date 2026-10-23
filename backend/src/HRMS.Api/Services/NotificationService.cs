@@ -58,9 +58,9 @@ public class NotificationService
     }
 
     /// <summary>A one-off email that is not a notification, such as sign-in details. Sent after the next save.</summary>
-    public void EmailOnly(string to, string title, string body, string? link) =>
+    public void EmailOnly(string to, string title, string body, string? link, string? footer = null) =>
         _pending.Add(new EmailMessage(to, title, Html(title, body, link,
-            "Sent by your company's HR team through Qaventra. If you did not expect it, tell HR.")));
+            footer ?? "Sent by your company's HR team through Qaventra. If you did not expect it, tell HR.")));
 
     private void Flush()
     {

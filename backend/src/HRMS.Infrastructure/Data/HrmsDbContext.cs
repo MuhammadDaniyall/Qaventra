@@ -80,6 +80,13 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ReviewCycle> ReviewCycles => Set<ReviewCycle>();
     public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
     public DbSet<ReviewItem> ReviewItems => Set<ReviewItem>();
+    public DbSet<JobRequest> JobRequests => Set<JobRequest>();
+    public DbSet<JobPost> JobPosts => Set<JobPost>();
+    public DbSet<Candidate> Candidates => Set<Candidate>();
+    public DbSet<JobApplication> JobApplications => Set<JobApplication>();
+    public DbSet<ApplicationEvent> ApplicationEvents => Set<ApplicationEvent>();
+    public DbSet<Interview> Interviews => Set<Interview>();
+    public DbSet<InterviewFeedback> InterviewFeedback => Set<InterviewFeedback>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -101,6 +108,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Phone).HasMaxLength(30);
             e.Property(x => x.City).HasMaxLength(100);
             e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.CareersSlug).HasMaxLength(60);
+            e.HasIndex(x => x.CareersSlug).IsUnique().HasFilter("[CareersSlug] IS NOT NULL");
         });
 
         b.Entity<TenantPayment>(e =>
@@ -663,6 +672,94 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
         });
 
+        b.Entity<JobRequest>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Qualification).HasMaxLength(300);
+            e.Property(x => x.Skills).HasMaxLength(1000);
+            e.Property(x => x.Reason).HasMaxLength(2000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.RequestedByEmployeeId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.ReplacesEmployeeId);
+            e.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId);
+            e.HasOne<Designation>().WithMany().HasForeignKey(x => x.DesignationId);
+        });
+
+        b.Entity<JobPost>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Slug).HasMaxLength(80);
+            e.Property(x => x.Location).HasMaxLength(150);
+            e.Property(x => x.Description).HasMaxLength(8000);
+            e.Property(x => x.Requirements).HasMaxLength(8000);
+            e.HasOne<JobRequest>().WithMany().HasForeignKey(x => x.JobRequestId);
+            e.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId);
+            e.HasOne<Designation>().WithMany().HasForeignKey(x => x.DesignationId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.RecruiterEmployeeId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.HiringManagerEmployeeId);
+        });
+
+        b.Entity<Candidate>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Email }).IsUnique();
+            e.Property(x => x.FirstName).HasMaxLength(100);
+            e.Property(x => x.LastName).HasMaxLength(100);
+            e.Property(x => x.Email).HasMaxLength(256);
+            e.Property(x => x.Phone).HasMaxLength(30);
+            e.Property(x => x.Cnic).HasMaxLength(15);
+            e.Property(x => x.City).HasMaxLength(100);
+            e.Property(x => x.CurrentTitle).HasMaxLength(150);
+            e.Property(x => x.CurrentCompany).HasMaxLength(150);
+            e.Property(x => x.ExperienceYears).HasPrecision(4, 1);
+            e.Property(x => x.LinkedInUrl).HasMaxLength(300);
+            e.Property(x => x.Skills).HasMaxLength(1000);
+            e.Property(x => x.ReferredBy).HasMaxLength(150);
+            e.Property(x => x.BlacklistReason).HasMaxLength(500);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<JobApplication>(e =>
+        {
+            e.HasIndex(x => new { x.JobPostId, x.CandidateId }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Stage });
+            e.Property(x => x.CoverLetter).HasMaxLength(4000);
+            e.Property(x => x.RejectionReason).HasMaxLength(500);
+            e.Property(x => x.OfferNote).HasMaxLength(2000);
+            e.HasOne(x => x.JobPost).WithMany().HasForeignKey(x => x.JobPostId);
+            e.HasOne(x => x.Candidate).WithMany().HasForeignKey(x => x.CandidateId);
+        });
+
+        b.Entity<ApplicationEvent>(e =>
+        {
+            e.HasIndex(x => x.ApplicationId);
+            e.Property(x => x.Text).HasMaxLength(2000);
+            e.Property(x => x.ByName).HasMaxLength(200);
+            e.HasOne<JobApplication>().WithMany().HasForeignKey(x => x.ApplicationId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<Interview>(e =>
+        {
+            e.HasIndex(x => x.ApplicationId);
+            e.HasIndex(x => new { x.TenantId, x.StartsAtUtc });
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Where).HasMaxLength(500);
+            e.Property(x => x.InterviewerIds).HasMaxLength(2000);
+            e.Property(x => x.Notes).HasMaxLength(2000);
+            e.HasOne(x => x.Application).WithMany().HasForeignKey(x => x.ApplicationId);
+        });
+
+        b.Entity<InterviewFeedback>(e =>
+        {
+            e.HasIndex(x => new { x.InterviewId, x.InterviewerEmployeeId }).IsUnique();
+            e.Property(x => x.Strengths).HasMaxLength(2000);
+            e.Property(x => x.Concerns).HasMaxLength(2000);
+            e.HasOne<Interview>().WithMany().HasForeignKey(x => x.InterviewId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.InterviewerEmployeeId);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -696,7 +793,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
-        || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem);
+        || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

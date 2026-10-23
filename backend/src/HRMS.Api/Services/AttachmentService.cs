@@ -81,6 +81,20 @@ public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine
                 var open = t.Status is not (TicketStatus.Closed or TicketStatus.Cancelled);
                 return new(involved || agent, (involved || agent) && open, hr);
             }
+            case AttachmentOwner.Candidate:
+            {
+                if (!await db.Candidates.AnyAsync(c => c.Id == ownerId))
+                    throw new NotFoundException("Candidate");
+                if (hr)
+                    return new(true, true, true);
+                // Hiring teams of any job the person applied to, and their interviewers, see the CV.
+                var mine = me.EmployeeId ?? Guid.Empty;
+                var text = mine.ToString();
+                var apps = db.JobApplications.Where(a => a.CandidateId == ownerId);
+                var team = await apps.AnyAsync(a => a.JobPost!.RecruiterEmployeeId == mine || a.JobPost.HiringManagerEmployeeId == mine);
+                var interviewer = !team && await db.Interviews.AnyAsync(i => apps.Any(a => a.Id == i.ApplicationId) && i.InterviewerIds.Contains(text));
+                return new(team || interviewer, team, false);
+            }
             default:
                 throw new NotFoundException("Attachment owner");
         }

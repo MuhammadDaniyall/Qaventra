@@ -1,6 +1,6 @@
 import { http, openProtectedFile } from './client';
 
-export type AttachmentOwner = 'Leave' | 'Separation' | 'EmployeeDocument' | 'Announcement' | 'Ticket';
+export type AttachmentOwner = 'Leave' | 'Separation' | 'EmployeeDocument' | 'Announcement' | 'Ticket' | 'Candidate';
 export type DocumentCategory = 'Cnic' | 'Passport' | 'Degree' | 'ExperienceLetter' | 'Contract' | 'Medical' | 'Photo' | 'Other';
 
 export interface Attachment {

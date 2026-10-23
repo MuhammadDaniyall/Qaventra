@@ -21,6 +21,10 @@ const WelcomePage = lazy(() => import('./pages/onboarding/WelcomePage').then((m)
 const PerformancePage = lazy(() => import('./pages/performance/PerformancePage').then((m) => ({ default: m.PerformancePage })));
 const ReviewPage = lazy(() => import('./pages/performance/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CalibrationPage = lazy(() => import('./pages/performance/CalibrationPage').then((m) => ({ default: m.CalibrationPage })));
+const RecruitmentPage = lazy(() => import('./pages/recruitment/RecruitmentPage').then((m) => ({ default: m.RecruitmentPage })));
+const JobPage = lazy(() => import('./pages/recruitment/JobPage').then((m) => ({ default: m.JobPage })));
+const ApplicationPage = lazy(() => import('./pages/recruitment/ApplicationPage').then((m) => ({ default: m.ApplicationPage })));
+const CareersPage = lazy(() => import('./pages/careers/CareersPage').then((m) => ({ default: m.CareersPage })));
 const RosterPage = lazy(() => import('./pages/attendance/RosterPage').then((m) => ({ default: m.RosterPage })));
 const MonthlyAttendancePage = lazy(() => import('./pages/attendance/MonthlyAttendancePage').then((m) => ({ default: m.MonthlyAttendancePage })));
 const MyAttendancePage = lazy(() => import('./pages/attendance/MyAttendancePage').then((m) => ({ default: m.MyAttendancePage })));
@@ -75,6 +79,10 @@ export default function App() {
       </Route>
 
       <Route path="/" element={<Home />} />
+      <Route element={<Lazy />}>
+        <Route path="/careers/:company" element={<CareersPage />} />
+        <Route path="/careers/:company/:job" element={<CareersPage />} />
+      </Route>
 
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
@@ -114,6 +122,9 @@ export default function App() {
               <Route path="/me/resignation" element={<MyExitPage />} />
             </Route>
             <Route path="/payslips/:id" element={<PayslipPage />} />
+            <Route path="/recruitment" element={<RecruitmentPage />} />
+            <Route path="/recruitment/jobs/:id" element={<JobPage />} />
+            <Route path="/recruitment/applications/:id" element={<ApplicationPage />} />
             <Route path="/letters/:id" element={<LetterPage />} />
 
             <Route element={<RequireRole roles={APPROVER_ROLES} />}>

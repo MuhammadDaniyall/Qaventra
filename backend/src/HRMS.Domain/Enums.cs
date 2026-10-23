@@ -52,6 +52,78 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum EmploymentType
+{
+    FullTime = 1,
+    PartTime = 2,
+    Contract = 3,
+    Internship = 4,
+}
+
+public enum JobPostStatus
+{
+    Draft = 1,
+    Open = 2,
+    /// <summary>Not taking applications; the pipeline goes on.</summary>
+    Closed = 3,
+    Filled = 4,
+}
+
+public enum CandidateSource
+{
+    CareersPage = 1,
+    Referral = 2,
+    WalkIn = 3,
+    Advertisement = 4,
+    Agency = 5,
+    Manual = 6,
+}
+
+/// <summary>A candidate's place in a job's pipeline.</summary>
+public enum ApplicationStage
+{
+    Applied = 1,
+    Shortlisted = 2,
+    Test = 3,
+    Interview = 4,
+    Offer = 5,
+    Hired = 6,
+    Rejected = 7,
+    Withdrawn = 8,
+    OnHold = 9,
+}
+
+public enum OfferStatus
+{
+    Draft = 1,
+    Sent = 2,
+    Accepted = 3,
+    Declined = 4,
+}
+
+public enum InterviewMode
+{
+    Onsite = 1,
+    Online = 2,
+    Phone = 3,
+}
+
+public enum InterviewStatus
+{
+    Scheduled = 1,
+    Completed = 2,
+    Cancelled = 3,
+    NoShow = 4,
+}
+
+public enum HireRecommendation
+{
+    StrongNo = 1,
+    No = 2,
+    Yes = 3,
+    StrongYes = 4,
+}
+
 public enum ReviewCycleStatus
 {
     Draft = 1,
@@ -361,6 +433,7 @@ public enum ApprovalRequestType
     ProfileChange = 7,
     ShiftChange = 8,
     Asset = 9,
+    JobRequest = 10,
 }
 
 public enum PayRequestKind
@@ -408,6 +481,7 @@ public enum NotificationKind
     Asset = 9,
     Onboarding = 10,
     Performance = 11,
+    Recruitment = 12,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
@@ -419,6 +493,7 @@ public enum AttachmentOwner
     EmployeeDocument = 3,
     Announcement = 4,
     Ticket = 5,
+    Candidate = 6,
 }
 
 public enum DocumentCategory

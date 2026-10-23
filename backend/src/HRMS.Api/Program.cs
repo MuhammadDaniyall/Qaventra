@@ -48,6 +48,7 @@ builder.Services.AddScoped<HelpdeskService>();
 builder.Services.AddScoped<AssetService>();
 builder.Services.AddScoped<OnboardingService>();
 builder.Services.AddScoped<PerformanceService>();
+builder.Services.AddScoped<RecruitmentService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
@@ -98,6 +99,10 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("auth", http => RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1) }));
+    // Public job applications: a few per visitor every 10 minutes.
+    o.AddPolicy("careers", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(10) }));
 });
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p

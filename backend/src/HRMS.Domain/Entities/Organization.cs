@@ -11,6 +11,8 @@ public class Tenant : BaseEntity
     public string? Phone { get; set; }
     public string? City { get; set; }
     public string? Address { get; set; }
+    /// <summary>Public careers page address part, e.g. "systems-limited"; set when first needed.</summary>
+    public string? CareersSlug { get; set; }
     /// <summary>Licensed employee limit set by the platform owner; null means unlimited.</summary>
     public int? MaxEmployees { get; set; }
 
