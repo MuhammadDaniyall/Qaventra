@@ -15,11 +15,16 @@ public record ProcessPayrollRequest([Range(2000, 2100)] int Year, [Range(1, 12)]
 
 public record PayrollRunDto(
     Guid Id, int Year, int Month, PayrollRunStatus Status, string TaxYearCode, DateTime ProcessedAtUtc, DateTime? FinalizedAtUtc,
-    int Employees, decimal TotalGross, decimal TotalDeductions, decimal TotalNet);
+    int Employees, decimal TotalGross, decimal TotalDeductions, decimal TotalNet, DateTime? SubmittedAtUtc, string? ApprovedByName, DateTime? ApprovedAtUtc,
+    string? ApprovalNote, DateTime? DisbursedAtUtc, string? DisbursedVia, int Held);
+
+public record PayrollDecisionRequest(bool Approve, [StringLength(1000)] string? Note);
+
+public record DisburseRequest([StringLength(100)] string? Via);
 
 public record PayslipSummaryDto(
     Guid Id, int Year, int Month, PayrollRunStatus RunStatus, Guid EmployeeId, string EmployeeCode, string EmployeeName, string? Department,
-    decimal PaidDays, decimal GrossEarnings, decimal IncomeTax, decimal EobiEmployee, decimal OtherDeductions, decimal NetPay);
+    decimal PaidDays, decimal GrossEarnings, decimal IncomeTax, decimal EobiEmployee, decimal OtherDeductions, decimal NetPay, string? HeldReason = null);
 
 public record PayrollRunDetailDto(PayrollRunDto Run, List<PayslipSummaryDto> Payslips, IReadOnlyList<string> Warnings);
 
@@ -35,7 +40,7 @@ public record PayslipDto(
 public record PayrollSettingsDto(
     [Range(0, 1_000_000)] decimal EobiEmployeeContribution, [Range(0, 1_000_000)] decimal EobiEmployerContribution, bool DeductAbsentDays,
     [Range(0, 5)] decimal OvertimeMultiplier = 1.5m, [Range(0, 31)] int LatesPerPenalty = 0, [Range(0, 5)] decimal LatePenaltyDays = 1m,
-    bool DeductHalfDays = false);
+    bool DeductHalfDays = false, bool RequireApproval = false, bool EncashOnGross = false);
 
 [ApiController]
 [Route("api/payroll")]
@@ -55,6 +60,27 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
 
     [HttpGet("runs/{id:guid}"), Authorize(Policy = Policies.Hr)]
     public Task<PayrollRunDetailDto> GetRun(Guid id) => Detail(id, []);
+
+    [HttpPost("runs/{id:guid}/submit"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> Submit(Guid id)
+    {
+        await payroll.SubmitAsync(id);
+        return NoContent();
+    }
+
+    [HttpPost("runs/{id:guid}/decide"), Authorize(Policy = Policies.Admin)]
+    public async Task<IActionResult> Decide(Guid id, PayrollDecisionRequest req)
+    {
+        await payroll.DecideAsync(id, req.Approve, req.Note);
+        return NoContent();
+    }
+
+    [HttpPost("runs/{id:guid}/disburse"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> Disburse(Guid id, DisburseRequest req)
+    {
+        await payroll.DisburseAsync(id, req.Via);
+        return NoContent();
+    }
 
     [HttpPost("runs/{id:guid}/finalize"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> Finalize(Guid id)
@@ -98,7 +124,7 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
     {
         var s = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
         return new PayrollSettingsDto(s.EobiEmployeeContribution, s.EobiEmployerContribution, s.DeductAbsentDays, s.OvertimeMultiplier,
-            s.LatesPerPenalty, s.LatePenaltyDays, s.DeductHalfDays);
+            s.LatesPerPenalty, s.LatePenaltyDays, s.DeductHalfDays, s.RequireApproval, s.EncashOnGross);
     }
 
     [HttpPut("settings"), Authorize(Policy = Policies.Hr)]
@@ -117,6 +143,8 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         s.LatesPerPenalty = req.LatesPerPenalty;
         s.LatePenaltyDays = req.LatePenaltyDays;
         s.DeductHalfDays = req.DeductHalfDays;
+        s.RequireApproval = req.RequireApproval;
+        s.EncashOnGross = req.EncashOnGross;
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -125,15 +153,19 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
     {
         var run = await db.PayrollRuns.Where(r => r.Id == id).Select(ToDto()).FirstOrDefaultAsync() ?? throw new NotFoundException("Payroll run");
         var slips = await db.Payslips.Where(p => p.PayrollRunId == id).OrderBy(p => p.Employee!.EmployeeCode).Select(SummaryDto()).ToListAsync();
+        var holds = await db.SalaryHolds.Where(h => h.Year == run.Year && h.Month == run.Month && h.ReleasedAtUtc == null)
+            .ToDictionaryAsync(h => h.EmployeeId, h => h.Reason);
+        slips = slips.Select(x => holds.TryGetValue(x.EmployeeId, out var why) ? x with { HeldReason = why } : x).ToList();
         return new PayrollRunDetailDto(run, slips, warnings);
     }
 
-    private static System.Linq.Expressions.Expression<Func<PayrollRun, PayrollRunDto>> ToDto() => r => new PayrollRunDto(
+    private System.Linq.Expressions.Expression<Func<PayrollRun, PayrollRunDto>> ToDto() => r => new PayrollRunDto(
         r.Id, r.Year, r.Month, r.Status, r.TaxYearCode, r.ProcessedAtUtc, r.FinalizedAtUtc,
-        r.Payslips.Count, r.TotalGross, r.TotalDeductions, r.TotalNet);
+        r.Payslips.Count, r.TotalGross, r.TotalDeductions, r.TotalNet, r.SubmittedAtUtc, r.ApprovedByName, r.ApprovedAtUtc, r.ApprovalNote,
+        r.DisbursedAtUtc, r.DisbursedVia, db.SalaryHolds.Count(h => h.Year == r.Year && h.Month == r.Month && h.ReleasedAtUtc == null));
 
     private static System.Linq.Expressions.Expression<Func<Payslip, PayslipSummaryDto>> SummaryDto() => p => new PayslipSummaryDto(
         p.Id, p.PayrollRun!.Year, p.PayrollRun.Month, p.PayrollRun.Status, p.EmployeeId, p.Employee!.EmployeeCode, p.Employee.FirstName + " " + p.Employee.LastName,
         p.Employee.Department != null ? p.Employee.Department.Name : null,
-        p.PaidDays, p.GrossEarnings, p.IncomeTax, p.EobiEmployee, p.OtherDeductions, p.NetPay);
+        p.PaidDays, p.GrossEarnings, p.IncomeTax, p.EobiEmployee, p.OtherDeductions, p.NetPay, null);
 }

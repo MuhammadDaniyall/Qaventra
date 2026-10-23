@@ -1,3 +1,4 @@
+using HRMS.Api.Auth;
 using HRMS.Api.Infrastructure;
 using HRMS.Domain;
 using HRMS.Domain.Common;
@@ -10,7 +11,7 @@ namespace HRMS.Api.Services;
 
 public record PayrollProcessResult(PayrollRun Run, IReadOnlyList<string> Warnings);
 
-public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantClock clock, NotificationService notify)
+public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantClock clock, NotificationService notify, ICurrentUser me)
 {
     /// <summary>Calculates (or recalculates) a draft run for the month. A finalized run is locked.</summary>
     public async Task<PayrollProcessResult> ProcessAsync(int year, int month)
@@ -36,6 +37,15 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         var run = await db.PayrollRuns.Include(r => r.Payslips).FirstOrDefaultAsync(r => r.Year == year && r.Month == month);
         if (run is { Status: PayrollRunStatus.Finalized })
             throw new DomainException("This month's payroll is finalized and cannot be reprocessed.");
+        if (run is { Status: PayrollRunStatus.Submitted or PayrollRunStatus.Approved })
+        {
+            // Numbers may change, so an earlier approval no longer holds.
+            run.Status = PayrollRunStatus.Draft;
+            run.ApprovedByName = null;
+            run.ApprovedAtUtc = null;
+            run.SubmittedAtUtc = null;
+            warnings.Add("Reprocessing put the payroll back to draft. Send it for approval again.");
+        }
         if (run is null)
         {
             run = new PayrollRun { Year = year, Month = month };
@@ -67,6 +77,10 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             .ToListAsync();
         foreach (var x in pieces)
             x.PayrollRunId = null;
+
+        var recurring = await db.RecurringPayItems
+            .Where(r => r.StartYear * 12 + r.StartMonth <= period && (r.EndYear == null || r.EndYear * 12 + r.EndMonth >= period))
+            .ToListAsync();
 
         // Loan installments: drop this run's earlier ones (reprocess), then take the next installment of every active loan.
         db.LoanRepayments.RemoveRange(await db.LoanRepayments.Where(x => x.PayrollRunId == run.Id).ToListAsync());
@@ -176,6 +190,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 };
                 extras.Add(new PayItem(name, item.IsEarning ? SalaryComponentKind.Earning : SalaryComponentKind.Deduction, item.Amount, item.IsEarning && item.IsTaxable));
             }
+            foreach (var r in recurring.Where(r => r.EmployeeId == employee.Id))
+                extras.Add(new PayItem(r.Title, r.IsEarning ? SalaryComponentKind.Earning : SalaryComponentKind.Deduction, r.Amount, r.IsEarning && r.IsTaxable));
             foreach (var group in pieces.Where(x => x.EmployeeId == employee.Id).GroupBy(x => x.Item!))
             {
                 foreach (var x in group)
@@ -228,11 +244,60 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         return new PayrollProcessResult(run, warnings);
     }
 
+    /// <summary>HR sends a processed month to the company admins to approve.</summary>
+    public async Task SubmitAsync(Guid runId)
+    {
+        var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Id == runId) ?? throw new NotFoundException("Payroll run");
+        if (run.Status != PayrollRunStatus.Draft)
+            throw new DomainException("Only a draft payroll can be sent for approval.");
+        run.Status = PayrollRunStatus.Submitted;
+        run.SubmittedAtUtc = clock.UtcNow;
+        run.ApprovalNote = null;
+        var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var admins = await db.Users.Where(u => u.Role == UserRole.CompanyAdmin && u.IsActive && u.EmployeeId != null).Select(u => u.EmployeeId!.Value).ToListAsync();
+        await notify.ToEmployeesAsync(admins, NotificationKind.ApprovalNeeded, $"Payroll for {month} to approve", $"Net pay PKR {run.TotalNet:N0}", $"/payroll/runs/{run.Id}");
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>Company admin approves the month (HR can then finalize) or sends it back to draft with a note.</summary>
+    public async Task DecideAsync(Guid runId, bool approve, string? note)
+    {
+        if (!me.IsCompanyAdmin())
+            throw new ForbiddenException("Only the company admin approves payroll.");
+        var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Id == runId) ?? throw new NotFoundException("Payroll run");
+        if (run.Status != PayrollRunStatus.Submitted)
+            throw new DomainException("This payroll is not waiting for approval.");
+        if (!approve && string.IsNullOrWhiteSpace(note))
+            throw new DomainException("Say what needs checking.");
+        run.Status = approve ? PayrollRunStatus.Approved : PayrollRunStatus.Draft;
+        run.ApprovedByName = approve ? await LetterService.CurrentUserNameAsync(db, me) : null;
+        run.ApprovedAtUtc = approve ? clock.UtcNow : null;
+        run.ApprovalNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
+        var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        await notify.ToHrAsync(NotificationKind.ApprovalNeeded, approve ? $"Payroll for {month} approved" : $"Payroll for {month} sent back",
+            run.ApprovalNote, $"/payroll/runs/{run.Id}");
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>Records that the finalized month's salaries were transferred.</summary>
+    public async Task DisburseAsync(Guid runId, string? via)
+    {
+        var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Id == runId) ?? throw new NotFoundException("Payroll run");
+        if (run.Status != PayrollRunStatus.Finalized)
+            throw new DomainException("Finalize the payroll before marking it paid.");
+        run.DisbursedAtUtc = clock.UtcNow;
+        run.DisbursedVia = string.IsNullOrWhiteSpace(via) ? "Bank transfer" : via.Trim();
+        await db.SaveChangesAsync();
+    }
+
     public async Task FinalizeAsync(Guid runId)
     {
         var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Id == runId) ?? throw new NotFoundException("Payroll run");
         if (run.Status == PayrollRunStatus.Finalized)
             throw new DomainException("This payroll is already finalized.");
+        var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
+        if (settings.RequireApproval && run.Status != PayrollRunStatus.Approved)
+            throw new DomainException(run.Status == PayrollRunStatus.Submitted ? "This payroll is waiting for approval." : "Send this payroll for approval first.");
         run.Status = PayrollRunStatus.Finalized;
         run.FinalizedAtUtc = clock.UtcNow;
 

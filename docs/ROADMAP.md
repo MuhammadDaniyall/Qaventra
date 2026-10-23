@@ -58,6 +58,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 - **Approvals:** HR approves over the chain with a reason (shown as "forcefully approved"); approvers delegate their approvals (all or chosen request types) to a colleague for a period, HR can set one up for anyone, the delegate sees them in their inbox and decides "for" the approver; one decide endpoint for every request type.
 - **Reports catalog:** 18 reports in one place (employees, headcount, joiners and leavers, birthdays, documents, daily attendance, attendance register, late arrivals, leave balances, leave taken, salary sheet, bank advice, income tax, EOBI, expense claims, pending approvals, training, trips) with period/month/year/date, department, employee and include-left filters; totals; Excel with real numbers; print/PDF with company header and up to five signature lines; managers get team reports without pay.
 
+- **Payroll depth:** salary revisions for one or many people (percent or amount, with or without allowances, from a date, preview with cost impact, raises loaded from a performance cycle, history, employee told); monthly allowances and deductions with start and end months; salary holds (left out of the bank advice until released); leave encashment (basic or gross ÷ 30, off the balance, paid with the month); optional payroll approval by the company admin (submit, approve or send back, reprocessing resets it), and marking a finalized month as paid.
+
 ## Where we aim to beat FlowHCM
 
 - Mobile-first self-service (PWA): check-in, leave, claims with camera receipts, payslips, letters.

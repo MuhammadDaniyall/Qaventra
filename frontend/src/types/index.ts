@@ -11,7 +11,7 @@ export type AttendanceSource = 'Web' | 'Mobile' | 'Biometric' | 'Manual' | 'Requ
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type SalaryComponentKind = 'Earning' | 'Deduction';
 export type AuditCategory = 'Auth' | 'Request' | 'Data';
-export type PayrollRunStatus = 'Draft' | 'Finalized';
+export type PayrollRunStatus = 'Draft' | 'Finalized' | 'Submitted' | 'Approved';
 export type BillingCycle = 'Monthly' | 'Quarterly' | 'HalfYearly' | 'Yearly';
 export type TenantAccess = 'Allowed' | 'Inactive' | 'Expired';
 export const BILLING_CYCLES: BillingCycle[] = ['Monthly', 'Quarterly', 'HalfYearly', 'Yearly'];
@@ -568,6 +568,14 @@ export interface PayrollRun {
   totalGross: number;
   totalDeductions: number;
   totalNet: number;
+  submittedAtUtc: string | null;
+  approvedByName: string | null;
+  approvedAtUtc: string | null;
+  approvalNote: string | null;
+  disbursedAtUtc: string | null;
+  disbursedVia: string | null;
+  /** Salaries on hold this month (left out of the bank advice). */
+  held: number;
 }
 
 export interface PayslipSummary {
@@ -585,6 +593,7 @@ export interface PayslipSummary {
   eobiEmployee: number;
   otherDeductions: number;
   netPay: number;
+  heldReason?: string | null;
 }
 
 export interface PayrollRunDetail {
@@ -635,6 +644,8 @@ export interface PayrollSettings {
   latesPerPenalty: number;
   latePenaltyDays: number;
   deductHalfDays: boolean;
+  requireApproval?: boolean;
+  encashOnGross?: boolean;
 }
 
 // ---- Dashboard ----

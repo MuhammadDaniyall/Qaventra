@@ -492,6 +492,18 @@ public enum PayrollRunStatus
 {
     Draft = 1,
     Finalized = 2,
+    /// <summary>Sent to the company admin for approval (when the company requires it).</summary>
+    Submitted = 3,
+    /// <summary>Approved by the company admin; HR can now finalize.</summary>
+    Approved = 4,
+}
+
+public enum SalaryRevisionKind
+{
+    Increment = 1,
+    Promotion = 2,
+    Decrement = 3,
+    Correction = 4,
 }
 
 public enum LetterCategory

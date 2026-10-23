@@ -227,16 +227,18 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 var slips = await db.Payslips.Where(p => p.PayrollRunId == run.Id && ids.Contains(p.EmployeeId)).OrderBy(p => p.Employee!.FirstName)
                     .Select(p => new
                     {
-                        p.Employee!.EmployeeCode, Name = p.Employee.FirstName + " " + p.Employee.LastName, Department = p.Employee.Department != null ? p.Employee.Department.Name : "",
+                        p.EmployeeId, p.Employee!.EmployeeCode, Name = p.Employee.FirstName + " " + p.Employee.LastName, Department = p.Employee.Department != null ? p.Employee.Department.Name : "",
                         p.Employee.Cnic, p.Employee.BankName, p.Employee.BankAccount, p.PaidDays, p.GrossEarnings, p.TaxableIncome, p.IncomeTax, p.EobiEmployee, p.EobiEmployer, p.OtherDeductions, p.NetPay,
                     }).ToListAsync();
                 var sub = $"{month:MMMM yyyy} · {(run.Status == PayrollRunStatus.Finalized ? "finalized" : "draft")}";
+                // Held salaries are not transferred until released.
+                var held = await db.SalaryHolds.Where(h => h.Year == month.Year && h.Month == month.Month && h.ReleasedAtUtc == null).Select(h => h.EmployeeId).ToListAsync();
                 return key switch
                 {
                     "payroll.sheet" => T(def, sub, ["Code", "Name", "Department", "Paid days", "Gross", "Income tax", "EOBI", "Other deductions", "Net pay"], [3, 4, 5, 6, 7, 8],
                         slips.Select(s => L(s.EmployeeCode, s.Name, s.Department, Num(s.PaidDays), M(s.GrossEarnings), M(s.IncomeTax), M(s.EobiEmployee), M(s.OtherDeductions), M(s.NetPay))), totals: true),
-                    "payroll.bank" => T(def, sub, ["Code", "Name", "Bank", "Account", "Amount"], [4],
-                        slips.Select(s => L(s.EmployeeCode, s.Name, s.BankName ?? "", s.BankAccount ?? "Cash / cheque", M(s.NetPay))), totals: true),
+                    "payroll.bank" => T(def, held.Count > 0 ? $"{sub} · {held.Count} on hold, not included" : sub, ["Code", "Name", "Bank", "Account", "Amount"], [4],
+                        slips.Where(s => !held.Contains(s.EmployeeId)).Select(s => L(s.EmployeeCode, s.Name, s.BankName ?? "", s.BankAccount ?? "Cash / cheque", M(s.NetPay))), totals: true),
                     "payroll.tax" => T(def, sub, ["Code", "Name", "CNIC", "Taxable income", "Tax deducted"], [3, 4],
                         slips.Where(s => s.IncomeTax > 0 || s.TaxableIncome > 0).Select(s => L(s.EmployeeCode, s.Name, s.Cnic ?? "", M(s.TaxableIncome), M(s.IncomeTax))), totals: true),
                     _ => T(def, sub, ["Code", "Name", "CNIC", "Employee share", "Employer share", "Total"], [3, 4, 5],

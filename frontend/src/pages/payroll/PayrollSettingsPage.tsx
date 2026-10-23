@@ -34,6 +34,8 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
   const [latesPer, setLatesPer] = useState(String(initial.latesPerPenalty ?? 0));
   const [penaltyDays, setPenaltyDays] = useState(String(initial.latePenaltyDays ?? 1));
   const [halfDays, setHalfDays] = useState(initial.deductHalfDays ?? false);
+  const [requireApproval, setRequireApproval] = useState(initial.requireApproval ?? false);
+  const [encashOnGross, setEncashOnGross] = useState(initial.encashOnGross ?? false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -73,6 +75,8 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
       latesPerPenalty: lp,
       latePenaltyDays: pd,
       deductHalfDays: halfDays,
+      requireApproval,
+      encashOnGross,
     });
   };
 
@@ -122,6 +126,18 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
             onChange={setHalfDays}
             label="Deduct half days"
             description="A day where someone worked under half their shift costs half a day's pay."
+          />
+          <Switch
+            checked={requireApproval}
+            onChange={setRequireApproval}
+            label="Company admin approves payroll"
+            description="HR sends each month for approval; it can be finalized only once approved."
+          />
+          <Switch
+            checked={encashOnGross}
+            onChange={setEncashOnGross}
+            label="Encash leave on gross salary"
+            description="Off: a day of leave is paid at basic ÷ 30. On: at gross ÷ 30."
           />
           <div className="flex justify-end">
             <Button type="submit" loading={save.isPending}>

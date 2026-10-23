@@ -98,6 +98,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ScheduledReport> ScheduledReports => Set<ScheduledReport>();
     public DbSet<ScheduledRun> ScheduledRuns => Set<ScheduledRun>();
     public DbSet<ReportSettings> ReportSettings => Set<ReportSettings>();
+    public DbSet<SalaryRevision> SalaryRevisions => Set<SalaryRevision>();
+    public DbSet<RecurringPayItem> RecurringPayItems => Set<RecurringPayItem>();
+    public DbSet<SalaryHold> SalaryHolds => Set<SalaryHold>();
     public DbSet<TrainingProgram> TrainingPrograms => Set<TrainingProgram>();
     public DbSet<TrainingSession> TrainingSessions => Set<TrainingSession>();
     public DbSet<TrainingEnrollment> TrainingEnrollments => Set<TrainingEnrollment>();
@@ -268,6 +271,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             e.HasIndex(x => new { x.TenantId, x.Year, x.Month }).IsUnique();
             e.Property(x => x.TaxYearCode).HasMaxLength(10);
+            e.Property(x => x.ApprovedByName).HasMaxLength(200);
+            e.Property(x => x.ApprovalNote).HasMaxLength(1000);
+            e.Property(x => x.DisbursedVia).HasMaxLength(100);
             e.HasMany(x => x.Payslips).WithOne(x => x.PayrollRun).HasForeignKey(x => x.PayrollRunId).OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -818,6 +824,31 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ExtraEmails).HasMaxLength(2000);
             e.Property(x => x.DepartmentIds).HasMaxLength(2000);
             e.Property(x => x.SendHour).HasDefaultValue(9);
+        });
+
+        b.Entity<SalaryRevision>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.EffectiveFrom });
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.ByName).HasMaxLength(200);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<RecurringPayItem>(e =>
+        {
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<SalaryHold>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.Year, x.Month }).IsUnique();
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.HeldByName).HasMaxLength(200);
+            e.Property(x => x.ReleasedByName).HasMaxLength(200);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
         });
 
         b.Entity<ReportSettings>(e =>

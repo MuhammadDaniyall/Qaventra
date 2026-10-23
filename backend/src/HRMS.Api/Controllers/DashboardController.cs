@@ -47,7 +47,8 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
         var lastPayroll = isHr
             ? await db.PayrollRuns.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month)
                 .Select(r => new PayrollRunDto(r.Id, r.Year, r.Month, r.Status, r.TaxYearCode, r.ProcessedAtUtc, r.FinalizedAtUtc,
-                    r.Payslips.Count, r.TotalGross, r.TotalDeductions, r.TotalNet))
+                    r.Payslips.Count, r.TotalGross, r.TotalDeductions, r.TotalNet, r.SubmittedAtUtc, r.ApprovedByName, r.ApprovedAtUtc, r.ApprovalNote,
+                    r.DisbursedAtUtc, r.DisbursedVia, 0))
                 .FirstOrDefaultAsync()
             : null;
 

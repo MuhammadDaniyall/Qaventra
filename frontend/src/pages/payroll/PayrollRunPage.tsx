@@ -1,17 +1,22 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Banknote, Lock, MinusCircle, RefreshCw, Search, Users, Wallet } from 'lucide-react';
+import { Banknote, Check, Lock, MinusCircle, RefreshCw, Search, Send, Undo2, Users, Wallet } from 'lucide-react';
 import { payrollApi } from '../../api/payroll';
 import { qk } from '../../api/keys';
+import { useUser } from '../../auth/AuthContext';
+import { isCompanyAdmin } from '../../auth/roles';
 import { ExportButton } from '../../components/excel/ExcelButtons';
 import {
+  Badge,
   Button,
   Card,
   ConfirmDialog,
   EmptyState,
   ErrorState,
+  Field,
   Input,
+  Modal,
   PageHeader,
   PageSpinner,
   StatCard,
@@ -21,6 +26,7 @@ import {
   Td,
   Th,
   THead,
+  Textarea,
   Tr,
   useToast,
 } from '../../components/ui';
@@ -37,7 +43,41 @@ export function PayrollRunPage() {
   const [reprocessOpen, setReprocessOpen] = useState(false);
   const [finalizeOpen, setFinalizeOpen] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [sendingBack, setSendingBack] = useState(false);
+  const [note, setNote] = useState('');
   const detail = useQuery({ queryKey: qk.payrollRun(id), queryFn: () => payrollApi.run(id) });
+  const settings = useQuery({ queryKey: qk.payrollSettings, queryFn: payrollApi.settings });
+  const admin = isCompanyAdmin(useUser());
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: qk.payroll });
+    qc.invalidateQueries({ queryKey: qk.dashboard });
+  };
+  const submit = useMutation({
+    mutationFn: () => payrollApi.submit(id),
+    onSuccess: () => {
+      toast.success('Sent for approval');
+      refresh();
+    },
+    onError: (err) => toast.error(err),
+  });
+  const decide = useMutation({
+    mutationFn: (approve: boolean) => payrollApi.decide(id, approve, note.trim() || null),
+    onSuccess: (_, approve) => {
+      toast.success(approve ? 'Payroll approved' : 'Sent back to HR');
+      setSendingBack(false);
+      setNote('');
+      refresh();
+    },
+    onError: (err) => toast.error(err),
+  });
+  const disburse = useMutation({
+    mutationFn: () => payrollApi.disburse(id, 'Bank transfer'),
+    onSuccess: () => {
+      toast.success('Marked as paid');
+      refresh();
+    },
+    onError: (err) => toast.error(err),
+  });
 
   const finalize = useMutation({
     mutationFn: () => payrollApi.finalize(id),
@@ -54,7 +94,9 @@ export function PayrollRunPage() {
     const s = search.trim().toLowerCase();
     const list = detail.data?.payslips ?? [];
     return s
-      ? list.filter((p) => p.employeeName.toLowerCase().includes(s) || p.employeeCode.toLowerCase().includes(s) || (p.department ?? '').toLowerCase().includes(s))
+      ? list.filter(
+          (p) => p.employeeName.toLowerCase().includes(s) || p.employeeCode.toLowerCase().includes(s) || (p.department ?? '').toLowerCase().includes(s),
+        )
       : list;
   }, [detail.data, search]);
 
@@ -72,6 +114,8 @@ export function PayrollRunPage() {
 
   const { run } = detail.data;
   const draft = run.status === 'Draft';
+  const needsApproval = settings.data?.requireApproval ?? false;
+  const canFinalize = needsApproval ? run.status === 'Approved' : draft || run.status === 'Approved';
   const allWarnings = warnings.length ? warnings : detail.data.warnings;
 
   return (
@@ -84,7 +128,9 @@ export function PayrollRunPage() {
           </span>
         }
         description={`Tax year ${run.taxYearCode} · processed ${formatDateTimeUtc(run.processedAtUtc)}${
-          run.finalizedAtUtc ? ` · finalized ${formatDateTimeUtc(run.finalizedAtUtc)}` : ''
+          run.approvedByName ? ` · approved by ${run.approvedByName}` : ''
+        }${run.finalizedAtUtc ? ` · finalized ${formatDateTimeUtc(run.finalizedAtUtc)}` : ''}${
+          run.disbursedAtUtc ? ` · paid ${formatDateTimeUtc(run.disbursedAtUtc)} (${run.disbursedVia})` : ''
         }`}
         actions={
           <>
@@ -93,20 +139,53 @@ export function PayrollRunPage() {
               fileName={`payroll-${run.year}-${String(run.month).padStart(2, '0')}${draft ? '-draft' : ''}.xlsx`}
               label="Export to Excel"
             />
-            {draft && (
-            <>
+            {run.status !== 'Finalized' && (
               <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={() => setReprocessOpen(true)}>
                 Reprocess
               </Button>
+            )}
+            {draft && needsApproval && (
+              <Button icon={<Send className="size-4" />} loading={submit.isPending} onClick={() => submit.mutate()}>
+                Send for approval
+              </Button>
+            )}
+            {run.status === 'Submitted' && admin && (
+              <>
+                <Button variant="secondary" icon={<Undo2 className="size-4" />} onClick={() => setSendingBack(true)}>
+                  Send back
+                </Button>
+                <Button variant="success" icon={<Check className="size-4" />} loading={decide.isPending} onClick={() => decide.mutate(true)}>
+                  Approve
+                </Button>
+              </>
+            )}
+            {canFinalize && (
               <Button icon={<Lock className="size-4" />} onClick={() => setFinalizeOpen(true)}>
                 Finalize
               </Button>
-            </>
+            )}
+            {run.status === 'Finalized' && !run.disbursedAtUtc && (
+              <Button variant="secondary" icon={<Banknote className="size-4" />} loading={disburse.isPending} onClick={() => disburse.mutate()}>
+                Mark as paid
+              </Button>
             )}
           </>
         }
       />
 
+      {run.status === 'Submitted' && (
+        <div className="mb-4 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          Waiting for the company admin to approve.
+        </div>
+      )}
+      {run.status === 'Draft' && run.approvalNote && (
+        <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-200">Sent back: {run.approvalNote}</div>
+      )}
+      {run.held > 0 && (
+        <div className="mb-4 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          {run.held} salar{run.held === 1 ? 'y is' : 'ies are'} on hold and left out of the bank advice until released (Pay changes → Holds).
+        </div>
+      )}
       {allWarnings.length > 0 && (
         <div className="mb-6">
           <WarningsPanel warnings={allWarnings} />
@@ -129,7 +208,11 @@ export function PayrollRunPage() {
           </div>
         </div>
         {slips.length === 0 ? (
-          <EmptyState icon={Wallet} title={search ? 'No matching payslips' : 'No payslips in this run'} description={search ? undefined : 'Employees need a salary to be included.'} />
+          <EmptyState
+            icon={Wallet}
+            title={search ? 'No matching payslips' : 'No payslips in this run'}
+            description={search ? undefined : 'Employees need a salary to be included.'}
+          />
         ) : (
           <Table>
             <THead>
@@ -150,6 +233,7 @@ export function PayrollRunPage() {
                   <Td>
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">{p.employeeName}</p>
                     <p className="font-mono text-xs text-zinc-500">{p.employeeCode}</p>
+                    {p.heldReason && <Badge tone="amber">On hold: {p.heldReason}</Badge>}
                   </Td>
                   <Td>{p.department ?? '—'}</Td>
                   <Td className="text-right tabular-nums">{formatNumber(p.paidDays)}</Td>
@@ -166,11 +250,24 @@ export function PayrollRunPage() {
       </Card>
 
       {reprocessOpen && (
-        <RunPayrollModal
-          initial={{ year: run.year, month: run.month }}
-          onClose={() => setReprocessOpen(false)}
-          onDone={(d) => setWarnings(d.warnings)}
-        />
+        <RunPayrollModal initial={{ year: run.year, month: run.month }} onClose={() => setReprocessOpen(false)} onDone={(d) => setWarnings(d.warnings)} />
+      )}
+      {sendingBack && (
+        <Modal
+          open
+          onClose={() => setSendingBack(false)}
+          size="sm"
+          title="Send the payroll back"
+          footer={
+            <Button disabled={!note.trim()} loading={decide.isPending} onClick={() => decide.mutate(false)}>
+              Send back
+            </Button>
+          }
+        >
+          <Field label="What should HR check?" required>
+            <Textarea rows={3} value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} />
+          </Field>
+        </Modal>
       )}
       <ConfirmDialog
         open={finalizeOpen}

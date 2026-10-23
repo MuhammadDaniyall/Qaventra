@@ -19,6 +19,10 @@ public class PayrollSettings : TenantEntity
     public decimal LatePenaltyDays { get; set; } = 1m;
     /// <summary>A day marked half day (worked under half the shift) costs half a day's pay.</summary>
     public bool DeductHalfDays { get; set; }
+    /// <summary>When true, the company admin approves each month's payroll before HR can finalize it.</summary>
+    public bool RequireApproval { get; set; }
+    /// <summary>Leave encashment pays basic (false) or gross (true) salary per day, over 30 days.</summary>
+    public bool EncashOnGross { get; set; }
 }
 
 /// <summary>A Pakistani tax year (July–June) with its salaried-income slabs. Shared by all companies.</summary>
@@ -71,6 +75,13 @@ public class PayrollRun : TenantEntity
     public string TaxYearCode { get; set; } = "";
     public DateTime ProcessedAtUtc { get; set; }
     public DateTime? FinalizedAtUtc { get; set; }
+    public DateTime? SubmittedAtUtc { get; set; }
+    public string? ApprovedByName { get; set; }
+    public DateTime? ApprovedAtUtc { get; set; }
+    /// <summary>The approver's note, or why it was sent back.</summary>
+    public string? ApprovalNote { get; set; }
+    public DateTime? DisbursedAtUtc { get; set; }
+    public string? DisbursedVia { get; set; }
     public decimal TotalGross { get; set; }
     public decimal TotalDeductions { get; set; }
     public decimal TotalNet { get; set; }
