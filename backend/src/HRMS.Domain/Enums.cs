@@ -52,6 +52,32 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum TrainingMode
+{
+    Classroom = 1,
+    Online = 2,
+    OnTheJob = 3,
+    External = 4,
+}
+
+public enum TrainingSessionStatus
+{
+    Scheduled = 1,
+    Completed = 2,
+    Cancelled = 3,
+}
+
+public enum EnrollmentStatus
+{
+    Enrolled = 1,
+    Attended = 2,
+    /// <summary>Attended and passed (or no assessment).</summary>
+    Completed = 3,
+    NoShow = 4,
+    Failed = 5,
+    Withdrawn = 6,
+}
+
 public enum TripType
 {
     OneWay = 1,
@@ -472,6 +498,7 @@ public enum ApprovalRequestType
     Asset = 9,
     JobRequest = 10,
     Travel = 11,
+    Training = 12,
 }
 
 public enum PayRequestKind
@@ -521,6 +548,7 @@ public enum NotificationKind
     Performance = 11,
     Recruitment = 12,
     Travel = 13,
+    Training = 14,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
@@ -534,6 +562,7 @@ public enum AttachmentOwner
     Ticket = 5,
     Candidate = 6,
     Travel = 7,
+    TrainingRequest = 8,
 }
 
 public enum DocumentCategory

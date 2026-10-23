@@ -1,6 +1,6 @@
 import { http } from './client';
 
-export type ApprovalRequestType = 'Leave' | 'Expense' | 'Attendance' | 'CompOff' | 'PayRequest' | 'Loan' | 'ProfileChange' | 'ShiftChange' | 'Asset' | 'JobRequest' | 'Travel';
+export type ApprovalRequestType = 'Leave' | 'Expense' | 'Attendance' | 'CompOff' | 'PayRequest' | 'Loan' | 'ProfileChange' | 'ShiftChange' | 'Asset' | 'JobRequest' | 'Travel' | 'Training';
 export type ApproverKind = 'LineManager' | 'SecondLevelManager' | 'Hr' | 'SpecificEmployee' | 'DepartmentHead';
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type ApprovalStepStatus = 'Waiting' | 'Current' | 'Approved' | 'Rejected' | 'Skipped';
@@ -75,4 +75,5 @@ export const REQUEST_LABELS: Record<ApprovalRequestType, string> = {
   Asset: 'Asset requests',
   JobRequest: 'Hiring requests',
   Travel: 'Travel requests',
+  Training: 'Training requests',
 };

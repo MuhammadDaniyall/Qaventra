@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CalendarDays, CalendarPlus, Check, ChevronDown, Clock, HandCoins, Inbox, Package, Plane, Receipt, Repeat, UserPen, UserPlus, X, type LucideIcon } from 'lucide-react';
+import { Banknote, CalendarDays, CalendarPlus, Check, ChevronDown, Clock, HandCoins, Inbox, GraduationCap, Package, Plane, Receipt, Repeat, UserPen, UserPlus, X, type LucideIcon } from 'lucide-react';
 import { approvalsApi, REQUEST_LABELS, type ApprovalRequestType, type InboxItem } from '../../api/approvals';
 import { attendanceRequestsApi } from '../../api/attendance';
 import { profileChangesApi } from '../../api/employees';
@@ -9,6 +9,7 @@ import { expensesApi } from '../../api/expenses';
 import { schedulingApi } from '../../api/scheduling';
 import { qk } from '../../api/keys';
 import { recruitmentApi } from '../../api/recruitment';
+import { trainingApi } from '../../api/training';
 import { travelApi } from '../../api/travel';
 import { compOffApi, leaveApi } from '../../api/leave';
 import { payApi } from '../../api/pay';
@@ -48,6 +49,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   Asset: Package,
   JobRequest: UserPlus,
   Travel: Plane,
+  Training: GraduationCap,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -64,6 +66,7 @@ const decideApi: Record<ApprovalRequestType, { approve: (id: string, note: strin
   Asset: { approve: assetsApi.approve, reject: assetsApi.reject },
   JobRequest: { approve: recruitmentApi.approveRequest, reject: recruitmentApi.rejectRequest },
   Travel: { approve: travelApi.approve, reject: travelApi.reject },
+  Training: { approve: trainingApi.approve, reject: trainingApi.reject },
 };
 
 export function ApprovalsInboxPage() {
@@ -94,7 +97,7 @@ export function ApprovalsInboxPage() {
         <Tabs<Filter>
           value={filter}
           onChange={setFilter}
-          items={(['all', 'Leave', 'Expense', 'Attendance', 'CompOff', 'PayRequest', 'Loan', 'ProfileChange', 'ShiftChange', 'Asset', 'JobRequest', 'Travel'] as Filter[]).map((t) => ({
+          items={(['all', 'Leave', 'Expense', 'Attendance', 'CompOff', 'PayRequest', 'Loan', 'ProfileChange', 'ShiftChange', 'Asset', 'JobRequest', 'Travel', 'Training'] as Filter[]).map((t) => ({
             value: t,
             label: (
               <>
@@ -197,6 +200,7 @@ function DecisionModal({ item, approve, onClose }: { item: InboxItem; approve: b
       qc.invalidateQueries({ queryKey: qk.assets });
       qc.invalidateQueries({ queryKey: qk.recruitment });
       qc.invalidateQueries({ queryKey: qk.travel });
+      qc.invalidateQueries({ queryKey: qk.training });
       qc.invalidateQueries({ queryKey: qk.dashboard });
       onClose();
     },

@@ -82,6 +82,11 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ReviewItem> ReviewItems => Set<ReviewItem>();
     public DbSet<JobRequest> JobRequests => Set<JobRequest>();
     public DbSet<TravelSettings> TravelSettings => Set<TravelSettings>();
+    public DbSet<TrainingCategory> TrainingCategories => Set<TrainingCategory>();
+    public DbSet<TrainingProgram> TrainingPrograms => Set<TrainingProgram>();
+    public DbSet<TrainingSession> TrainingSessions => Set<TrainingSession>();
+    public DbSet<TrainingEnrollment> TrainingEnrollments => Set<TrainingEnrollment>();
+    public DbSet<TrainingRequest> TrainingRequests => Set<TrainingRequest>();
     public DbSet<TravelReason> TravelReasons => Set<TravelReason>();
     public DbSet<TravelRequest> TravelRequests => Set<TravelRequest>();
     public DbSet<TravelLeg> TravelLegs => Set<TravelLeg>();
@@ -677,6 +682,54 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
         });
 
+        b.Entity<TrainingCategory>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+        });
+
+        b.Entity<TrainingProgram>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Title }).IsUnique();
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Description).HasMaxLength(4000);
+            e.Property(x => x.Link).HasMaxLength(500);
+            e.Property(x => x.DepartmentIds).HasMaxLength(2000);
+            e.Property(x => x.DurationHours).HasPrecision(6, 1);
+            e.HasOne<TrainingCategory>().WithMany().HasForeignKey(x => x.CategoryId);
+        });
+
+        b.Entity<TrainingSession>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.StartsAtUtc });
+            e.Property(x => x.Venue).HasMaxLength(500);
+            e.Property(x => x.ExternalTrainer).HasMaxLength(200);
+            e.Property(x => x.Notes).HasMaxLength(2000);
+            e.HasOne(x => x.Program).WithMany().HasForeignKey(x => x.ProgramId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.TrainerEmployeeId);
+        });
+
+        b.Entity<TrainingEnrollment>(e =>
+        {
+            e.HasIndex(x => new { x.SessionId, x.EmployeeId }).IsUnique();
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.NominatedByName).HasMaxLength(200);
+            e.Property(x => x.FeedbackComment).HasMaxLength(2000);
+            e.HasOne(x => x.Session).WithMany().HasForeignKey(x => x.SessionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<TrainingRequest>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.CourseName).HasMaxLength(200);
+            e.Property(x => x.Provider).HasMaxLength(200);
+            e.Property(x => x.Reason).HasMaxLength(2000);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasOne<TrainingProgram>().WithMany().HasForeignKey(x => x.ProgramId);
+        });
+
         b.Entity<TravelSettings>(e =>
         {
             e.HasIndex(x => x.TenantId).IsUnique();
@@ -850,7 +903,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
-        || t == typeof(TravelLeg) || t == typeof(TravelExpense);
+        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

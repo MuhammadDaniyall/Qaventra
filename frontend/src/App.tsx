@@ -21,6 +21,8 @@ const WelcomePage = lazy(() => import('./pages/onboarding/WelcomePage').then((m)
 const PerformancePage = lazy(() => import('./pages/performance/PerformancePage').then((m) => ({ default: m.PerformancePage })));
 const ReviewPage = lazy(() => import('./pages/performance/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CalibrationPage = lazy(() => import('./pages/performance/CalibrationPage').then((m) => ({ default: m.CalibrationPage })));
+const TrainingPage = lazy(() => import('./pages/training/TrainingPage').then((m) => ({ default: m.TrainingPage })));
+const SessionPage = lazy(() => import('./pages/training/SessionPage').then((m) => ({ default: m.SessionPage })));
 const TravelPage = lazy(() => import('./pages/travel/TravelPage').then((m) => ({ default: m.TravelPage })));
 const TripPage = lazy(() => import('./pages/travel/TripPage').then((m) => ({ default: m.TripPage })));
 const RecruitmentPage = lazy(() => import('./pages/recruitment/RecruitmentPage').then((m) => ({ default: m.RecruitmentPage })));
@@ -124,6 +126,8 @@ export default function App() {
               <Route path="/me/resignation" element={<MyExitPage />} />
             </Route>
             <Route path="/payslips/:id" element={<PayslipPage />} />
+            <Route path="/training" element={<TrainingPage />} />
+            <Route path="/training/sessions/:id" element={<SessionPage />} />
             <Route path="/travel" element={<TravelPage />} />
             <Route path="/travel/:id" element={<TripPage />} />
             <Route path="/recruitment" element={<RecruitmentPage />} />

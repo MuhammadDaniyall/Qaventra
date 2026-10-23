@@ -197,6 +197,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.Asset => "asset request",
         ApprovalRequestType.JobRequest => "hiring request",
         ApprovalRequestType.Travel => "travel request",
+        ApprovalRequestType.Training => "training request",
         _ => "request",
     };
 
@@ -213,6 +214,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.Asset => "/me/assets",
         ApprovalRequestType.JobRequest => "/recruitment?tab=requests",
         ApprovalRequestType.Travel => "/travel",
+        ApprovalRequestType.Training => "/training?tab=requests",
         _ => "/dashboard",
     };
 

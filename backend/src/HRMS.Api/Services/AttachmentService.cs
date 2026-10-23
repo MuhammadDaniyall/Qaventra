@@ -104,6 +104,16 @@ public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine
                 var open = t.Settlement != SettlementStatus.Settled && t.Status is not (TravelStatus.Rejected or TravelStatus.Cancelled);
                 return new(true, open && (desk || t.EmployeeId == me.EmployeeId), hr);
             }
+            case AttachmentOwner.TrainingRequest:
+            {
+                // Course outline, invoice or certificate.
+                var r = await db.TrainingRequests.Where(x => x.Id == ownerId).Select(x => new { x.EmployeeId, x.Status, x.CompletedOn }).FirstOrDefaultAsync()
+                    ?? throw new NotFoundException("Training request");
+                var owner = r.EmployeeId == me.EmployeeId;
+                var view = owner || await approvals.IsApproverAsync(ApprovalRequestType.Training, ownerId, r.EmployeeId);
+                var open = r.Status is RequestStatus.Pending or RequestStatus.Approved;
+                return new(view, open && (owner || hr), hr);
+            }
             default:
                 throw new NotFoundException("Attachment owner");
         }
