@@ -52,6 +52,15 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum BudgetStatus
+{
+    Draft = 1,
+    Submitted = 2,
+    Approved = 3,
+    Rejected = 4,
+    Closed = 5,
+}
+
 public enum SpaceKind
 {
     Desk = 1,

@@ -86,6 +86,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ScheduledAlert> ScheduledAlerts => Set<ScheduledAlert>();
     public DbSet<DeskSettings> DeskSettings => Set<DeskSettings>();
     public DbSet<PieceCategory> PieceCategories => Set<PieceCategory>();
+    public DbSet<BudgetPlan> BudgetPlans => Set<BudgetPlan>();
+    public DbSet<BudgetPosition> BudgetPositions => Set<BudgetPosition>();
     public DbSet<PieceItem> PieceItems => Set<PieceItem>();
     public DbSet<PieceRate> PieceRates => Set<PieceRate>();
     public DbSet<PieceEntry> PieceEntries => Set<PieceEntry>();
@@ -693,6 +695,24 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
         });
 
+        b.Entity<BudgetPlan>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Notes).HasMaxLength(2000);
+            e.Property(x => x.DecidedByName).HasMaxLength(200);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasMany(x => x.Positions).WithOne().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<BudgetPosition>(e =>
+        {
+            e.HasIndex(x => new { x.PlanId, x.DepartmentId, x.DesignationId }).IsUnique();
+            e.Property(x => x.Notes).HasMaxLength(500);
+            e.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId);
+            e.HasOne<Designation>().WithMany().HasForeignKey(x => x.DesignationId);
+        });
+
         b.Entity<PieceCategory>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
@@ -1015,7 +1035,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
-        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate);
+        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

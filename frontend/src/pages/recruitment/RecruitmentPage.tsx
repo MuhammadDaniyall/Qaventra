@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Ban, BarChart3, Briefcase, CalendarClock, Copy, Gift, Link2, MapPin, Pencil, Plus, Search, UserPlus, Users } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments, useDesignations, useEmployeeLookup } from '../../api/hooks';
+import { budgetApi } from '../../api/budget';
 import { qk } from '../../api/keys';
 import {
   EMPLOYMENT_LABELS,
@@ -443,6 +444,7 @@ function JobRequestModal({ onClose }: { onClose: () => void }) {
             ))}
           </Select>
         </Field>
+        <BudgetHint departmentId={f.departmentId} designationId={f.designationId} positions={Number(f.positions) || 1} />
         <Field label="How many">
           <Input type="number" min={1} max={500} value={f.positions} onChange={(e) => set('positions', e.target.value)} />
         </Field>
@@ -1045,5 +1047,30 @@ function ReportTab() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/** What the approved manpower budget says about this department and designation. */
+function BudgetHint({ departmentId, designationId, positions }: { departmentId: string; designationId: string; positions: number }) {
+  const check = useQuery({
+    queryKey: qk.budgetCheck(departmentId, designationId),
+    queryFn: () => budgetApi.check(departmentId || null, designationId || null),
+    enabled: !!departmentId,
+  });
+  const c = check.data;
+  if (!departmentId || !c || !c.hasPlan) return null;
+  const ok = c.inBudget && c.open >= positions;
+  return (
+    <p
+      className={
+        ok
+          ? 'rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 sm:col-span-2 dark:bg-emerald-500/10 dark:text-emerald-200'
+          : 'rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 sm:col-span-2 dark:bg-amber-500/10 dark:text-amber-200'
+      }
+    >
+      {c.approved === 0
+        ? `Not in the ${c.plan} budget. The approvers will see this is unplanned.`
+        : `${c.plan}: ${c.approved} approved, ${c.onRoll} on the roll, ${c.hiring} being hired, ${c.open} open.${ok ? '' : ' This request goes over the budget.'}`}
+    </p>
   );
 }
