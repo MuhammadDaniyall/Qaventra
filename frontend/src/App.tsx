@@ -21,6 +21,7 @@ const WelcomePage = lazy(() => import('./pages/onboarding/WelcomePage').then((m)
 const PerformancePage = lazy(() => import('./pages/performance/PerformancePage').then((m) => ({ default: m.PerformancePage })));
 const ReviewPage = lazy(() => import('./pages/performance/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CalibrationPage = lazy(() => import('./pages/performance/CalibrationPage').then((m) => ({ default: m.CalibrationPage })));
+const ScheduledPage = lazy(() => import('./pages/scheduled/ScheduledPage').then((m) => ({ default: m.ScheduledPage })));
 const TrainingPage = lazy(() => import('./pages/training/TrainingPage').then((m) => ({ default: m.TrainingPage })));
 const SessionPage = lazy(() => import('./pages/training/SessionPage').then((m) => ({ default: m.SessionPage })));
 const TravelPage = lazy(() => import('./pages/travel/TravelPage').then((m) => ({ default: m.TravelPage })));
@@ -153,6 +154,7 @@ export default function App() {
               <Route path="/payroll/settings" element={<PayrollSettingsPage />} />
               <Route path="/payroll/adjustments" element={<PayAdjustmentsPage />} />
               <Route path="/settings" element={<OrganizationPage />} />
+              <Route path="/alerts" element={<ScheduledPage />} />
               <Route path="/letters" element={<LettersPage />} />
               <Route path="/separations" element={<SeparationsPage />} />
               <Route path="/separations/:id" element={<SeparationDetailPage />} />

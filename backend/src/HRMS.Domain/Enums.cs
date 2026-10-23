@@ -52,6 +52,36 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum AlertKind
+{
+    Birthday = 1,
+    WorkAnniversary = 2,
+    ProbationEnd = 3,
+    DocumentExpiry = 4,
+    NewJoiner = 5,
+    LeaveStarting = 6,
+    /// <summary>Working today, not on leave, and no check-in by the send hour.</summary>
+    NotCheckedIn = 7,
+}
+
+public enum ReportKind
+{
+    Headcount = 1,
+    DailyAttendance = 2,
+    OnLeave = 3,
+    PendingApprovals = 4,
+    ExpiringDocuments = 5,
+    JoinersAndLeavers = 6,
+    ProbationDue = 7,
+}
+
+public enum ReportFrequency
+{
+    Daily = 1,
+    Weekly = 2,
+    Monthly = 3,
+}
+
 public enum TrainingMode
 {
     Classroom = 1,
@@ -549,6 +579,8 @@ public enum NotificationKind
     Recruitment = 12,
     Travel = 13,
     Training = 14,
+    Alert = 15,
+    Report = 16,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>

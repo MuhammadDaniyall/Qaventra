@@ -49,8 +49,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 | Training | **Done:** course catalog with categories, mode, hours and material link; required courses for everyone or departments, with a deadline for new joiners and a repeat period; sessions with an employee or outside trainer, venue, seats and cost; HR and managers nominate (managers only their team), withdraw; trainer or HR marks completed, attended, not passed or no-show with scores; participant feedback (session, trainer, would recommend); compliance matrix (up to date, due soon, overdue, not done, booked) for HR and managers, and "required for me"; course requests through the training approval chain, outside courses with certificate and completion; reports (hours, people, cost, ratings by course and department) |
 | Manpower budgeting | Yearly position planning, employee budgeting, open/changed/transferred positions, approvals |
 | Desk management | Offices/floors/rooms, desk booking with availability |
-| Scheduled alerts | Birthdays, anniversaries, absences, probation end, document expiry: who, when (before/after), email template |
-| Scheduled reports | Pick a report, filter employees, recipients, daily/weekly/monthly delivery |
+| Scheduled alerts | **Done:** birthdays, work anniversaries, probation ending, documents expiring, new joiners, leave starting and "not checked in"; days before and hour of sending; to the person, manager, HR, everyone or named people; department filter; title and message with placeholders; in-app and email; preview who it is about today; send now; run every 15 minutes in the background, once a day per alert |
+| Scheduled reports | **Done:** headcount, attendance, who is on leave, pending approvals, expiring documents, joiners and leavers, probation reviews due; daily, weekly or monthly at an hour; employees and outside email addresses; department filter; email with a table and the full Excel file; preview (also before saving), Excel download, test to me, send now; history of everything sent |
 
 ## Where we aim to beat FlowHCM
 

@@ -4,7 +4,9 @@ using System.Threading.Channels;
 
 namespace HRMS.Api.Services;
 
-public record EmailMessage(string To, string Subject, string HtmlBody);
+public record EmailAttachment(string FileName, string ContentType, byte[] Data);
+
+public record EmailMessage(string To, string Subject, string HtmlBody, IReadOnlyList<EmailAttachment>? Attachments = null);
 
 /// <summary>SMTP settings ("Smtp" section). Leave Host empty to switch email off; in-app notifications still work.</summary>
 public class SmtpOptions
@@ -42,6 +44,8 @@ public class SmtpEmailSender(SmtpOptions options) : IEmailSender
             IsBodyHtml = true,
         };
         mail.To.Add(message.To);
+        foreach (var a in message.Attachments ?? [])
+            mail.Attachments.Add(new Attachment(new MemoryStream(a.Data), a.FileName, a.ContentType));
         await client.SendMailAsync(mail, ct);
     }
 }

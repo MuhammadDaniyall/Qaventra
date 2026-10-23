@@ -83,6 +83,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<JobRequest> JobRequests => Set<JobRequest>();
     public DbSet<TravelSettings> TravelSettings => Set<TravelSettings>();
     public DbSet<TrainingCategory> TrainingCategories => Set<TrainingCategory>();
+    public DbSet<ScheduledAlert> ScheduledAlerts => Set<ScheduledAlert>();
+    public DbSet<ScheduledReport> ScheduledReports => Set<ScheduledReport>();
+    public DbSet<ScheduledRun> ScheduledRuns => Set<ScheduledRun>();
     public DbSet<TrainingProgram> TrainingPrograms => Set<TrainingProgram>();
     public DbSet<TrainingSession> TrainingSessions => Set<TrainingSession>();
     public DbSet<TrainingEnrollment> TrainingEnrollments => Set<TrainingEnrollment>();
@@ -680,6 +683,34 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Weight).HasPrecision(6, 2);
             e.Property(x => x.SelfComment).HasMaxLength(2000);
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
+        });
+
+        b.Entity<ScheduledAlert>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.ExtraRecipientIds).HasMaxLength(2000);
+            e.Property(x => x.DepartmentIds).HasMaxLength(2000);
+            e.Property(x => x.TitleTemplate).HasMaxLength(200);
+            e.Property(x => x.BodyTemplate).HasMaxLength(2000);
+            e.Property(x => x.SendHour).HasDefaultValue(9);
+            e.Property(x => x.ProbationMonths).HasDefaultValue(3);
+        });
+
+        b.Entity<ScheduledReport>(e =>
+        {
+            e.HasIndex(x => x.NextRunAtUtc);
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.RecipientIds).HasMaxLength(2000);
+            e.Property(x => x.ExtraEmails).HasMaxLength(2000);
+            e.Property(x => x.DepartmentIds).HasMaxLength(2000);
+            e.Property(x => x.SendHour).HasDefaultValue(9);
+        });
+
+        b.Entity<ScheduledRun>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.CreatedAtUtc });
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Note).HasMaxLength(500);
         });
 
         b.Entity<TrainingCategory>(e =>
