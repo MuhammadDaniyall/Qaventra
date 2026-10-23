@@ -81,6 +81,11 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
     public DbSet<ReviewItem> ReviewItems => Set<ReviewItem>();
     public DbSet<JobRequest> JobRequests => Set<JobRequest>();
+    public DbSet<TravelSettings> TravelSettings => Set<TravelSettings>();
+    public DbSet<TravelReason> TravelReasons => Set<TravelReason>();
+    public DbSet<TravelRequest> TravelRequests => Set<TravelRequest>();
+    public DbSet<TravelLeg> TravelLegs => Set<TravelLeg>();
+    public DbSet<TravelExpense> TravelExpenses => Set<TravelExpense>();
     public DbSet<JobPost> JobPosts => Set<JobPost>();
     public DbSet<Candidate> Candidates => Set<Candidate>();
     public DbSet<JobApplication> JobApplications => Set<JobApplication>();
@@ -672,6 +677,57 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
         });
 
+        b.Entity<TravelSettings>(e =>
+        {
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.Property(x => x.DeskIds).HasMaxLength(2000);
+            e.Property(x => x.MinNoticeDays).HasDefaultValue(3);
+            e.Property(x => x.SettleWithinDays).HasDefaultValue(15);
+        });
+
+        b.Entity<TravelReason>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+        });
+
+        b.Entity<TravelRequest>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => x.EmployeeId);
+            e.Property(x => x.Purpose).HasMaxLength(2000);
+            e.Property(x => x.UrgentReason).HasMaxLength(500);
+            e.Property(x => x.HotelCity).HasMaxLength(100);
+            e.Property(x => x.PickDropNotes).HasMaxLength(500);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.Property(x => x.HotelName).HasMaxLength(150);
+            e.Property(x => x.HotelRef).HasMaxLength(100);
+            e.Property(x => x.BookingNotes).HasMaxLength(2000);
+            e.Property(x => x.BookedByName).HasMaxLength(200);
+            e.Property(x => x.AdvancePaidVia).HasMaxLength(100);
+            e.Property(x => x.SettlementNote).HasMaxLength(2000);
+            e.Property(x => x.SettlementDecisionNote).HasMaxLength(1000);
+            e.Property(x => x.Settlement).HasDefaultValue(SettlementStatus.None);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasOne<TravelReason>().WithMany().HasForeignKey(x => x.ReasonId);
+            e.HasOne<PayRequest>().WithMany().HasForeignKey(x => x.PayRequestId);
+            e.HasMany(x => x.Legs).WithOne().HasForeignKey(x => x.TravelRequestId).OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(x => x.Expenses).WithOne().HasForeignKey(x => x.TravelRequestId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<TravelLeg>(e =>
+        {
+            e.Property(x => x.From).HasMaxLength(100);
+            e.Property(x => x.To).HasMaxLength(100);
+            e.Property(x => x.Preference).HasMaxLength(150);
+            e.Property(x => x.BookingRef).HasMaxLength(100);
+        });
+
+        b.Entity<TravelExpense>(e =>
+        {
+            e.Property(x => x.Description).HasMaxLength(500);
+        });
+
         b.Entity<JobRequest>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.Status });
@@ -793,7 +849,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
-        || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback);
+        || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
+        || t == typeof(TravelLeg) || t == typeof(TravelExpense);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

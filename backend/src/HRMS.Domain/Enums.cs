@@ -52,6 +52,43 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum TripType
+{
+    OneWay = 1,
+    Return = 2,
+    MultiCity = 3,
+}
+
+public enum TravelMode
+{
+    Air = 1,
+    Train = 2,
+    Bus = 3,
+    Car = 4,
+    CompanyVehicle = 5,
+    Other = 6,
+}
+
+public enum TravelStatus
+{
+    Pending = 1,
+    Approved = 2,
+    /// <summary>Tickets and hotel booked by the travel desk.</summary>
+    Booked = 3,
+    Rejected = 4,
+    Cancelled = 5,
+}
+
+/// <summary>Where the after-trip expense settlement is.</summary>
+public enum SettlementStatus
+{
+    None = 1,
+    Submitted = 2,
+    /// <summary>Sent back to the traveller to fix.</summary>
+    Returned = 3,
+    Settled = 4,
+}
+
 public enum EmploymentType
 {
     FullTime = 1,
@@ -434,6 +471,7 @@ public enum ApprovalRequestType
     ShiftChange = 8,
     Asset = 9,
     JobRequest = 10,
+    Travel = 11,
 }
 
 public enum PayRequestKind
@@ -482,6 +520,7 @@ public enum NotificationKind
     Onboarding = 10,
     Performance = 11,
     Recruitment = 12,
+    Travel = 13,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
@@ -494,6 +533,7 @@ public enum AttachmentOwner
     Announcement = 4,
     Ticket = 5,
     Candidate = 6,
+    Travel = 7,
 }
 
 public enum DocumentCategory

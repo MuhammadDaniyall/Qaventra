@@ -13,7 +13,7 @@ public record AttachmentAccess(bool CanView, bool CanAdd, bool CanDeleteOthers);
 public record NewAttachment(string FileName, byte[] Data, DocumentCategory? Category, DateOnly? ExpiresOn, string? Note);
 
 /// <summary>Stores files on requests and employee records, and decides who may see, add or remove them.</summary>
-public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine approvals)
+public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine approvals, IServiceProvider services)
 {
     public const int MaxBytes = 5 * 1024 * 1024;
     public const int MaxPerOwner = 30;
@@ -94,6 +94,15 @@ public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine
                 var team = await apps.AnyAsync(a => a.JobPost!.RecruiterEmployeeId == mine || a.JobPost.HiringManagerEmployeeId == mine);
                 var interviewer = !team && await db.Interviews.AnyAsync(i => apps.Any(a => a.Id == i.ApplicationId) && i.InterviewerIds.Contains(text));
                 return new(team || interviewer, team, false);
+            }
+            case AttachmentOwner.Travel:
+            {
+                // Tickets from the desk and receipts from the traveller; the trip's approvers can look.
+                var travel = services.GetRequiredService<TravelService>();
+                var t = await travel.LoadAsync(ownerId);
+                var desk = await travel.IsDeskAsync();
+                var open = t.Settlement != SettlementStatus.Settled && t.Status is not (TravelStatus.Rejected or TravelStatus.Cancelled);
+                return new(true, open && (desk || t.EmployeeId == me.EmployeeId), hr);
             }
             default:
                 throw new NotFoundException("Attachment owner");
