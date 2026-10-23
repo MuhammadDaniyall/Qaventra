@@ -92,19 +92,19 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
     /// took part in or that belong to their direct reports. Requests from before approval chains use the direct-report rule.
     /// </summary>
     [HttpGet("approvals"), Authorize(Policy = Policies.Approver)]
-    public Task<List<LeaveRequestDto>> Approvals([FromQuery] LeaveStatus status = LeaveStatus.Pending)
+    public async Task<List<LeaveRequestDto>> Approvals([FromQuery] LeaveStatus status = LeaveStatus.Pending)
     {
         var q = db.LeaveRequests.Where(r => r.Status == status && r.EmployeeId != me.EmployeeId);
         if (!me.IsHr())
         {
-            var waiting = approvals.WaitingForMe(ApprovalRequestType.Leave);
+            var waiting = await approvals.WaitingForMeAsync(ApprovalRequestType.Leave);
             var chained = approvals.WithChain(ApprovalRequestType.Leave);
             var decided = approvals.DecidedByMe(ApprovalRequestType.Leave);
             q = status == LeaveStatus.Pending
                 ? q.Where(r => waiting.Contains(r.Id) || (!chained.Contains(r.Id) && r.Employee!.ManagerId == me.EmployeeId))
                 : q.Where(r => decided.Contains(r.Id) || r.Employee!.ManagerId == me.EmployeeId);
         }
-        return Project(q).ToListAsync();
+        return await Project(q).ToListAsync();
     }
 
     [HttpPost("{id:guid}/approve"), Authorize(Policy = Policies.Approver)]

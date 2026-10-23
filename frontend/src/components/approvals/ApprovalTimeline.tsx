@@ -30,35 +30,47 @@ export function ApprovalTimeline({ type, subjectId, className }: { type: Approva
   }
 
   return (
-    <ol className={cn('space-y-0', className)} aria-label="Approval steps">
-      {timeline.data.steps.map((step, i) => {
-        const I = icon[step.status];
-        const last = i === timeline.data!.steps.length - 1;
-        return (
-          <li key={step.order} className="relative flex gap-3 pb-4 last:pb-0">
-            {!last && <span className="absolute top-7 left-3 h-[calc(100%-1.75rem)] w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden="true" />}
-            <span className={cn('relative flex size-6 shrink-0 items-center justify-center rounded-full', I.cls)} aria-hidden="true">
-              <I.el className="size-3.5" />
-            </span>
-            <div className="min-w-0 pt-0.5 text-sm">
-              <p className="text-zinc-900 dark:text-zinc-100">
-                <span className="font-medium">{who(step)}</span>
-                <span className="text-zinc-500">
-                  {' · '}
-                  {step.status === 'Current' ? 'waiting' : step.status === 'Waiting' ? 'next' : step.status.toLowerCase()}
-                </span>
-              </p>
-              {step.decidedAtUtc && (
-                <p className="text-xs text-zinc-500">
-                  {step.decidedByName && step.decidedByName !== step.approverName ? `${step.decidedByName}, ` : ''}
-                  {formatDateTimeUtc(step.decidedAtUtc)}
+    <>
+      {timeline.data.forced && (
+        <p
+          className={cn(
+            'mb-2 inline-flex rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-500/10 dark:text-amber-200',
+            className,
+          )}
+        >
+          Forcefully approved by HR
+        </p>
+      )}
+      <ol className={cn('space-y-0', className)} aria-label="Approval steps">
+        {timeline.data.steps.map((step, i) => {
+          const I = icon[step.status];
+          const last = i === timeline.data!.steps.length - 1;
+          return (
+            <li key={step.order} className="relative flex gap-3 pb-4 last:pb-0">
+              {!last && <span className="absolute top-7 left-3 h-[calc(100%-1.75rem)] w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden="true" />}
+              <span className={cn('relative flex size-6 shrink-0 items-center justify-center rounded-full', I.cls)} aria-hidden="true">
+                <I.el className="size-3.5" />
+              </span>
+              <div className="min-w-0 pt-0.5 text-sm">
+                <p className="text-zinc-900 dark:text-zinc-100">
+                  <span className="font-medium">{who(step)}</span>
+                  <span className="text-zinc-500">
+                    {' · '}
+                    {step.status === 'Current' ? 'waiting' : step.status === 'Waiting' ? 'next' : step.status.toLowerCase()}
+                  </span>
                 </p>
-              )}
-              {step.note && <p className="mt-1 text-zinc-600 dark:text-zinc-300">“{step.note}”</p>}
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+                {step.decidedAtUtc && (
+                  <p className="text-xs text-zinc-500">
+                    {step.decidedByName && step.decidedByName !== step.approverName ? `${step.decidedByName}, ` : ''}
+                    {formatDateTimeUtc(step.decidedAtUtc)}
+                  </p>
+                )}
+                {step.note && <p className="mt-1 text-zinc-600 dark:text-zinc-300">“{step.note}”</p>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </>
   );
 }

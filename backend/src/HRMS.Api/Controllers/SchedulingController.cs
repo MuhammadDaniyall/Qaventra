@@ -112,17 +112,17 @@ public class SchedulingController(
         ProjectAsync(db.ShiftRequests.Where(r => r.EmployeeId == me.EmployeeId || (r.SwapWithEmployeeId == me.EmployeeId && r.Status != ShiftRequestStatus.Cancelled)));
 
     [HttpGet("shift-requests"), Authorize(Policy = Policies.Approver)]
-    public Task<List<ShiftRequestDto>> ShiftRequests([FromQuery] ShiftRequestStatus status = ShiftRequestStatus.Pending)
+    public async Task<List<ShiftRequestDto>> ShiftRequests([FromQuery] ShiftRequestStatus status = ShiftRequestStatus.Pending)
     {
         var q = db.ShiftRequests.Where(r => r.Status == status && r.EmployeeId != me.EmployeeId);
         if (!me.IsHr())
         {
             var mine = status == ShiftRequestStatus.Pending
-                ? approvals.WaitingForMe(ApprovalRequestType.ShiftChange)
+                ? await approvals.WaitingForMeAsync(ApprovalRequestType.ShiftChange)
                 : approvals.DecidedByMe(ApprovalRequestType.ShiftChange);
             q = q.Where(r => mine.Contains(r.Id));
         }
-        return ProjectAsync(q);
+        return await ProjectAsync(q);
     }
 
     [HttpPost("shift-requests/change")]

@@ -18,6 +18,12 @@ namespace HRMS.Api.Services;
 /// </summary>
 public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalPolicy legacy, NotificationService notify)
 {
+    /// <summary>
+    /// Set by HR's "approve over the chain": the next approval decides every remaining step at once.
+    /// Scoped to the request, so it never leaks into another decision.
+    /// </summary>
+    public bool Force { get; set; }
+
     public async Task<IReadOnlyList<FlowStep>> FlowAsync(ApprovalRequestType type)
     {
         var flow = await db.ApprovalFlows.Include(f => f.Steps).FirstOrDefaultAsync(f => f.RequestType == type);
@@ -89,12 +95,35 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         if (request.Status != ApprovalStatus.Pending)
             throw new DomainException($"This request is already {request.Status.ToString().ToLowerInvariant()}.");
         var step = request.Steps.First(s => s.Status == ApprovalStepStatus.Current);
-        if (!CanAct(request, step))
+        if (Force && approve)
+        {
+            if (!me.IsHr() || request.EmployeeId == me.EmployeeId)
+                throw new ForbiddenException("Only HR can approve over the chain, and not their own requests.");
+            var by = await LetterService.CurrentUserNameAsync(db, me);
+            foreach (var s in request.Steps.Where(s => s.Status is ApprovalStepStatus.Current or ApprovalStepStatus.Waiting))
+            {
+                s.Status = ApprovalStepStatus.Approved;
+                s.DecidedByUserId = me.UserId;
+                s.DecidedByName = $"{by} (forced by HR)";
+                s.DecidedAtUtc = clock.UtcNow;
+                s.Note = note;
+            }
+            request.Forced = true;
+            Close(request, ApprovalStatus.Approved);
+            await notify.ToEmployeesAsync([request.EmployeeId], NotificationKind.RequestDecided,
+                $"Your {Noun(type)} was approved", request.Summary + (string.IsNullOrWhiteSpace(note) ? "" : $"\n“{note}”"), MyPage(type));
+            return request.Status;
+        }
+        var actingFor = await ActingForAsync(request, step);
+        if (actingFor is null)
             throw new ForbiddenException("This request is waiting for someone else's approval.");
 
         step.Status = approve ? ApprovalStepStatus.Approved : ApprovalStepStatus.Rejected;
         step.DecidedByUserId = me.UserId;
-        step.DecidedByName = await LetterService.CurrentUserNameAsync(db, me);
+        var myName = await LetterService.CurrentUserNameAsync(db, me);
+        step.DecidedByName = actingFor == Guid.Empty || actingFor == me.EmployeeId
+            ? myName
+            : $"{myName} for {await db.Employees.Where(e => e.Id == actingFor).Select(e => e.FirstName + " " + e.LastName).FirstAsync()}";
         step.DecidedAtUtc = clock.UtcNow;
         step.Note = note;
 
@@ -137,7 +166,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         if (request is null)
             return await legacy.CanApproveForAsync(employeeId);
         var step = request.Steps.FirstOrDefault(s => s.Status == ApprovalStepStatus.Current);
-        return request.Status == ApprovalStatus.Pending && step is not null && CanAct(request, step);
+        return request.Status == ApprovalStatus.Pending && step is not null && await ActingForAsync(request, step) is not null;
     }
 
     /// <summary>Whether the signed-in user is (or was) an approver on the request, so they may see its details.</summary>
@@ -148,17 +177,50 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         var request = await LoadAsync(type, subjectId);
         if (request is null)
             return await legacy.CanApproveForAsync(employeeId);
-        return me.EmployeeId is { } mine && request.Steps.Any(s => s.ApproverEmployeeId == mine);
+        if (me.EmployeeId is not { } mine)
+            return false;
+        if (request.Steps.Any(s => s.ApproverEmployeeId == mine))
+            return true;
+        var delegators = await DelegatorsAsync(type);
+        return request.Steps.Any(s => s.ApproverEmployeeId is { } a && delegators.Contains(a));
     }
 
-    /// <summary>Ids of pending requests of a type whose current step waits for the signed-in user.</summary>
-    public IQueryable<Guid> WaitingForMe(ApprovalRequestType type)
+    /// <summary>Ids of pending requests of a type whose current step waits for the signed-in user (or someone they stand in for).</summary>
+    public async Task<IQueryable<Guid>> WaitingForMeAsync(ApprovalRequestType type)
     {
         var mine = me.EmployeeId;
+        var forIds = await DelegatorsAsync(type);
+        if (mine is { } m)
+            forIds.Add(m);
         return db.ApprovalRequests
-            .Where(a => a.RequestType == type && a.Status == ApprovalStatus.Pending
-                        && a.Steps.Any(s => s.Status == ApprovalStepStatus.Current && s.ApproverEmployeeId == mine))
+            .Where(a => a.RequestType == type && a.Status == ApprovalStatus.Pending && a.EmployeeId != mine
+                        && a.Steps.Any(s => s.Status == ApprovalStepStatus.Current && s.ApproverEmployeeId != null && forIds.Contains(s.ApproverEmployeeId.Value)))
             .Select(a => a.SubjectId);
+    }
+
+    /// <summary>People who have handed the signed-in user their approvals (for this kind of request, or any) today.</summary>
+    public async Task<List<Guid>> DelegatorsAsync(ApprovalRequestType? type)
+    {
+        if (me.EmployeeId is not { } mine)
+            return [];
+        var today = await clock.TodayAsync();
+        var list = await db.ApprovalDelegations
+            .Where(d => d.ToEmployeeId == mine && !d.IsCancelled && d.FromDate <= today && d.ToDate >= today)
+            .Select(d => new { d.FromEmployeeId, d.RequestTypes }).ToListAsync();
+        return list.Where(d => type is null || Covers(d.RequestTypes, type.Value)).Select(d => d.FromEmployeeId).Distinct().ToList();
+    }
+
+    public static bool Covers(string types, ApprovalRequestType type) =>
+        string.IsNullOrEmpty(types) || types.Split(',').Contains(((int)type).ToString());
+
+    /// <summary>Who stands in for the approver today, if anyone.</summary>
+    private async Task<Guid?> DelegateForAsync(Guid approver, ApprovalRequestType type)
+    {
+        var today = await clock.TodayAsync();
+        var list = await db.ApprovalDelegations
+            .Where(d => d.FromEmployeeId == approver && !d.IsCancelled && d.FromDate <= today && d.ToDate >= today)
+            .Select(d => new { d.ToEmployeeId, d.RequestTypes }).ToListAsync();
+        return list.FirstOrDefault(d => Covers(d.RequestTypes, type))?.ToEmployeeId;
     }
 
     /// <summary>Ids of all requests of a type that have a chain (the rest predate the engine).</summary>
@@ -179,7 +241,12 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         var name = await db.Employees.Where(e => e.Id == request.EmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstAsync();
         var title = $"{name} needs your approval ({Noun(request.RequestType)})";
         if (step.ApproverEmployeeId is { } approver)
-            await notify.ToEmployeesAsync([approver], NotificationKind.ApprovalNeeded, title, request.Summary, "/approvals");
+        {
+            var to = new List<Guid> { approver };
+            if (await DelegateForAsync(approver, request.RequestType) is { } stand)
+                to.Add(stand);
+            await notify.ToEmployeesAsync(to, NotificationKind.ApprovalNeeded, title, request.Summary, "/approvals");
+        }
         else
             await notify.ToHrAsync(NotificationKind.ApprovalNeeded, title, request.Summary, "/approvals");
     }
@@ -218,9 +285,20 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         _ => "/dashboard",
     };
 
-    private bool CanAct(ApprovalRequest request, ApprovalStep step) =>
-        request.EmployeeId != me.EmployeeId
-        && (me.IsHr() || (me.EmployeeId is { } mine && step.ApproverEmployeeId == mine));
+    /// <summary>
+    /// Whom the signed-in user acts for on this step: themselves (the approver, or HR stepping in; <see cref="Guid.Empty"/>
+    /// when HR has no employee record) or the approver who delegated to them. Null when they cannot act.
+    /// </summary>
+    private async Task<Guid?> ActingForAsync(ApprovalRequest request, ApprovalStep step)
+    {
+        if (request.EmployeeId == me.EmployeeId)
+            return null;
+        if (me.EmployeeId is { } mine && step.ApproverEmployeeId == mine)
+            return mine;
+        if (step.ApproverEmployeeId is { } approver && (await DelegatorsAsync(request.RequestType)).Contains(approver))
+            return approver;
+        return me.IsHr() ? me.EmployeeId ?? Guid.Empty : null;
+    }
 
     private void Close(ApprovalRequest request, ApprovalStatus status)
     {

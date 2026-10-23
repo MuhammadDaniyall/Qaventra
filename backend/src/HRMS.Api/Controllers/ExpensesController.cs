@@ -55,19 +55,19 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
 
     /// <summary>Claims for the signed-in approver: all for HR; for others, those whose approval step is theirs.</summary>
     [HttpGet("approvals"), Authorize(Policy = Policies.Approver)]
-    public Task<List<ExpenseClaimDto>> Approvals([FromQuery] ExpenseStatus status = ExpenseStatus.Pending)
+    public async Task<List<ExpenseClaimDto>> Approvals([FromQuery] ExpenseStatus status = ExpenseStatus.Pending)
     {
         var q = db.ExpenseClaims.Where(c => c.Status == status && c.EmployeeId != me.EmployeeId);
         if (!me.IsHr())
         {
-            var waiting = approvals.WaitingForMe(ApprovalRequestType.Expense);
+            var waiting = await approvals.WaitingForMeAsync(ApprovalRequestType.Expense);
             var chained = approvals.WithChain(ApprovalRequestType.Expense);
             var decided = approvals.DecidedByMe(ApprovalRequestType.Expense);
             q = status == ExpenseStatus.Pending
                 ? q.Where(c => waiting.Contains(c.Id) || (!chained.Contains(c.Id) && c.Employee!.ManagerId == me.EmployeeId))
                 : q.Where(c => decided.Contains(c.Id) || c.Employee!.ManagerId == me.EmployeeId);
         }
-        return Project(q).Take(500).ToListAsync();
+        return await Project(q).Take(500).ToListAsync();
     }
 
     [HttpGet("{id:guid}")]

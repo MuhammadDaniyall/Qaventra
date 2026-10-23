@@ -39,18 +39,18 @@ public class AttendanceRequestsController(HrmsDbContext db, AttendanceRequestSer
 
     /// <summary>All for HR; for others, pending ones waiting on them and decided ones they took part in or that are their reports'.</summary>
     [HttpGet("approvals"), Authorize(Policy = Policies.Approver)]
-    public Task<List<AttendanceRequestDto>> Approvals([FromQuery] RequestStatus status = RequestStatus.Pending)
+    public async Task<List<AttendanceRequestDto>> Approvals([FromQuery] RequestStatus status = RequestStatus.Pending)
     {
         var q = db.AttendanceRequests.Where(r => r.Status == status && r.EmployeeId != me.EmployeeId);
         if (!me.IsHr())
         {
-            var waiting = approvals.WaitingForMe(ApprovalRequestType.Attendance);
+            var waiting = await approvals.WaitingForMeAsync(ApprovalRequestType.Attendance);
             var decided = approvals.DecidedByMe(ApprovalRequestType.Attendance);
             q = status == RequestStatus.Pending
                 ? q.Where(r => waiting.Contains(r.Id))
                 : q.Where(r => decided.Contains(r.Id) || r.Employee!.ManagerId == me.EmployeeId);
         }
-        return ProjectAsync(q);
+        return await ProjectAsync(q);
     }
 
     [HttpPost("{id:guid}/approve"), Authorize(Policy = Policies.Approver)]

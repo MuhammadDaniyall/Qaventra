@@ -156,5 +156,6 @@ export const qk = {
   approvals: ['approvals'] as const,
   approvalFlows: ['approvals', 'flows'] as const,
   approvalInbox: ['approvals', 'inbox'] as const,
+  delegations: ['approvals', 'delegations'] as const,
   approvalTimeline: (type: string, id: string) => ['approvals', 'timeline', type, id] as const,
 };

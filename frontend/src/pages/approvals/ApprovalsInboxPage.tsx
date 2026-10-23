@@ -1,6 +1,24 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Banknote, CalendarDays, CalendarPlus, Check, ChevronDown, Clock, HandCoins, Inbox, GraduationCap, Package, Plane, Receipt, Repeat, UserPen, UserPlus, X, type LucideIcon } from 'lucide-react';
+import {
+  Banknote,
+  CalendarDays,
+  CalendarPlus,
+  Check,
+  ChevronDown,
+  Clock,
+  HandCoins,
+  Inbox,
+  GraduationCap,
+  Package,
+  Plane,
+  Receipt,
+  Repeat,
+  UserPen,
+  UserPlus,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
 import { approvalsApi, REQUEST_LABELS, type ApprovalRequestType, type InboxItem } from '../../api/approvals';
 import { attendanceRequestsApi } from '../../api/attendance';
 import { profileChangesApi } from '../../api/employees';
@@ -21,6 +39,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   EmptyState,
   ErrorState,
   Field,
@@ -36,6 +55,7 @@ import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
 import { ClaimDrawer } from '../expenses/shared';
 import { ProfileChangeDetails } from '../profile/ProfileChanges';
+import { Delegations } from './Delegations';
 
 const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   Leave: CalendarDays,
@@ -54,7 +74,10 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
 
 type Filter = 'all' | ApprovalRequestType;
 
-const decideApi: Record<ApprovalRequestType, { approve: (id: string, note: string | null) => Promise<void>; reject: (id: string, note: string | null) => Promise<void> }> = {
+const decideApi: Record<
+  ApprovalRequestType,
+  { approve: (id: string, note: string | null) => Promise<void>; reject: (id: string, note: string | null) => Promise<void> }
+> = {
   Leave: { approve: leaveApi.approve, reject: leaveApi.reject },
   Expense: { approve: expensesApi.approve, reject: expensesApi.reject },
   Attendance: { approve: attendanceRequestsApi.approve, reject: attendanceRequestsApi.reject },
@@ -97,7 +120,23 @@ export function ApprovalsInboxPage() {
         <Tabs<Filter>
           value={filter}
           onChange={setFilter}
-          items={(['all', 'Leave', 'Expense', 'Attendance', 'CompOff', 'PayRequest', 'Loan', 'ProfileChange', 'ShiftChange', 'Asset', 'JobRequest', 'Travel', 'Training'] as Filter[]).map((t) => ({
+          items={(
+            [
+              'all',
+              'Leave',
+              'Expense',
+              'Attendance',
+              'CompOff',
+              'PayRequest',
+              'Loan',
+              'ProfileChange',
+              'ShiftChange',
+              'Asset',
+              'JobRequest',
+              'Travel',
+              'Training',
+            ] as Filter[]
+          ).map((t) => ({
             value: t,
             label: (
               <>
@@ -143,6 +182,7 @@ export function ApprovalsInboxPage() {
                           <span className="truncate font-medium text-zinc-900 dark:text-white">{item.employeeName}</span>
                           <Icon className="size-3.5 shrink-0 text-zinc-400" aria-label={item.requestType} />
                           {!item.assignedToMe && <Badge tone="blue">Waiting for someone else</Badge>}
+                          {item.actingFor && <Badge tone="violet">For {item.actingFor}</Badge>}
                         </span>
                         <span className="block truncate text-sm text-zinc-600 dark:text-zinc-300">{item.summary}</span>
                         <span className="block text-xs text-zinc-500">
@@ -179,6 +219,8 @@ export function ApprovalsInboxPage() {
         )}
       </Card>
 
+      <Delegations />
+
       {deciding && <DecisionModal {...deciding} onClose={() => setDeciding(null)} />}
       {claimId && <ClaimDrawer claimId={claimId} onClose={() => setClaimId(null)} />}
     </>
@@ -188,13 +230,20 @@ export function ApprovalsInboxPage() {
 function DecisionModal({ item, approve, onClose }: { item: InboxItem; approve: boolean; onClose: () => void }) {
   const toast = useToast();
   const qc = useQueryClient();
+  const hr = isHr(useUser());
   const [note, setNote] = useState('');
+  const [force, setForce] = useState(false);
   const decide = useMutation({
-    mutationFn: () => decideApi[item.requestType][approve ? 'approve' : 'reject'](item.subjectId, note.trim() || null),
+    mutationFn: () =>
+      force
+        ? approvalsApi.decide(item.requestType, item.subjectId, { approve: true, note: note.trim() || null, force: true })
+        : decideApi[item.requestType][approve ? 'approve' : 'reject'](item.subjectId, note.trim() || null),
     onSuccess: () => {
       toast.success(approve ? 'Approved' : 'Rejected', `${item.employeeName} · ${item.summary}`);
       qc.invalidateQueries({ queryKey: qk.approvals });
-      qc.invalidateQueries({ queryKey: item.requestType === 'Leave' || item.requestType === 'CompOff' ? qk.leave : item.requestType === 'Expense' ? qk.expenses : qk.attendance });
+      qc.invalidateQueries({
+        queryKey: item.requestType === 'Leave' || item.requestType === 'CompOff' ? qk.leave : item.requestType === 'Expense' ? qk.expenses : qk.attendance,
+      });
       qc.invalidateQueries({ queryKey: qk.pay });
       qc.invalidateQueries({ queryKey: qk.employees });
       qc.invalidateQueries({ queryKey: qk.assets });
@@ -220,18 +269,31 @@ function DecisionModal({ item, approve, onClose }: { item: InboxItem; approve: b
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant={approve ? 'success' : 'danger'} loading={decide.isPending} onClick={() => decide.mutate()}>
-            {approve ? 'Approve' : 'Reject'}
+          <Button variant={approve ? 'success' : 'danger'} loading={decide.isPending} disabled={force && !note.trim()} onClick={() => decide.mutate()}>
+            {force ? 'Approve all steps' : approve ? 'Approve' : 'Reject'}
           </Button>
         </>
       }
     >
-      {approve && more && (
+      {approve && more && !force && (
         <p className="mb-4 rounded-lg bg-sky-50 p-3 text-sm text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
           After you approve, it goes to step {item.step + 1} of {item.totalSteps}.
         </p>
       )}
-      <Field label={approve ? 'Note' : 'Reason'} hint="Optional, shown to the employee">
+      {approve && hr && more && (
+        <Checkbox
+          className="mb-4"
+          label="Approve over the whole chain"
+          description="Skips the remaining approvers. Shown as forcefully approved; a reason is required."
+          checked={force}
+          onChange={(e) => setForce(e.target.checked)}
+        />
+      )}
+      <Field
+        label={approve ? 'Note' : 'Reason'}
+        required={force}
+        hint={force ? 'Why it cannot wait for the other approvers' : 'Optional, shown to the employee'}
+      >
         <Textarea value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} />
       </Field>
     </Modal>

@@ -87,6 +87,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<DeskSettings> DeskSettings => Set<DeskSettings>();
     public DbSet<PieceCategory> PieceCategories => Set<PieceCategory>();
     public DbSet<BudgetPlan> BudgetPlans => Set<BudgetPlan>();
+    public DbSet<ApprovalDelegation> ApprovalDelegations => Set<ApprovalDelegation>();
     public DbSet<BudgetPosition> BudgetPositions => Set<BudgetPosition>();
     public DbSet<PieceItem> PieceItems => Set<PieceItem>();
     public DbSet<PieceRate> PieceRates => Set<PieceRate>();
@@ -693,6 +694,17 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Weight).HasPrecision(6, 2);
             e.Property(x => x.SelfComment).HasMaxLength(2000);
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
+        });
+
+        b.Entity<ApprovalDelegation>(e =>
+        {
+            e.HasIndex(x => new { x.ToEmployeeId, x.FromDate, x.ToDate });
+            e.HasIndex(x => x.FromEmployeeId);
+            e.Property(x => x.RequestTypes).HasMaxLength(200);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.CreatedByName).HasMaxLength(200);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.FromEmployeeId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.ToEmployeeId);
         });
 
         b.Entity<BudgetPlan>(e =>

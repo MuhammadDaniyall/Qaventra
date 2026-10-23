@@ -39,17 +39,17 @@ public class ProfileChangesController(HrmsDbContext db, ProfileChangeService cha
 
     /// <summary>All for HR; for others, pending ones waiting on them and decided ones they took part in.</summary>
     [HttpGet, Authorize(Policy = Policies.Approver)]
-    public Task<List<ProfileChangeDto>> List([FromQuery] RequestStatus status = RequestStatus.Pending)
+    public async Task<List<ProfileChangeDto>> List([FromQuery] RequestStatus status = RequestStatus.Pending)
     {
         var q = db.ProfileChangeRequests.Where(r => r.Status == status && r.EmployeeId != me.EmployeeId);
         if (!me.IsHr())
         {
             var mine = status == RequestStatus.Pending
-                ? approvals.WaitingForMe(ApprovalRequestType.ProfileChange)
+                ? await approvals.WaitingForMeAsync(ApprovalRequestType.ProfileChange)
                 : approvals.DecidedByMe(ApprovalRequestType.ProfileChange);
             q = q.Where(r => mine.Contains(r.Id));
         }
-        return ProjectAsync(q);
+        return await ProjectAsync(q);
     }
 
     [HttpPost("{id:guid}/approve"), Authorize(Policy = Policies.Approver)]

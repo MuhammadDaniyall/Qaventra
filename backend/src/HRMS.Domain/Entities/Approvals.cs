@@ -31,6 +31,8 @@ public class ApprovalRequest : TenantEntity
     public ApprovalStatus Status { get; set; } = ApprovalStatus.Pending;
     public int CurrentStep { get; set; }
     public DateTime? CompletedAtUtc { get; set; }
+    /// <summary>HR approved it over the remaining steps.</summary>
+    public bool Forced { get; set; }
     public List<ApprovalStep> Steps { get; set; } = [];
 }
 
@@ -46,4 +48,18 @@ public class ApprovalStep : BaseEntity
     public string? DecidedByName { get; set; }
     public DateTime? DecidedAtUtc { get; set; }
     public string? Note { get; set; }
+}
+
+/// <summary>An approver hands their approvals to someone else for a while, e.g. while on leave.</summary>
+public class ApprovalDelegation : TenantEntity
+{
+    public Guid FromEmployeeId { get; set; }
+    public Guid ToEmployeeId { get; set; }
+    public DateOnly FromDate { get; set; }
+    public DateOnly ToDate { get; set; }
+    /// <summary>Comma-separated request type numbers; empty means every kind of request.</summary>
+    public string RequestTypes { get; set; } = "";
+    public string? Reason { get; set; }
+    public bool IsCancelled { get; set; }
+    public string? CreatedByName { get; set; }
 }
