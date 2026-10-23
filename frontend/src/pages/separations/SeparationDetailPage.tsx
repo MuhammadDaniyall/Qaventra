@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { ClearanceOwnersCard, ExitPanelCard, ExitQuestionsCard, SettlementApprovalCard } from './Extras';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { Check, CheckCircle2, Circle, FileText, Plus, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react';
@@ -75,7 +76,10 @@ export function SeparationDetailPage() {
           <SeparationSteps s={s} />
           <dl className="grid gap-4 border-t border-zinc-100 pt-5 text-sm sm:grid-cols-4 dark:border-zinc-800">
             <Fact label="Notice given" value={formatDate(s.summary.noticeDate)} />
-            <Fact label={s.summary.lastWorkingDay ? 'Last working day' : 'Proposed last day'} value={formatDate(s.summary.lastWorkingDay ?? s.summary.proposedLastDay)} />
+            <Fact
+              label={s.summary.lastWorkingDay ? 'Last working day' : 'Proposed last day'}
+              value={formatDate(s.summary.lastWorkingDay ?? s.summary.proposedLastDay)}
+            />
             <Fact label="Notice period" value={`${s.noticePeriodDays} days`} />
             <Fact label="Reason" value={s.reason || '—'} />
           </dl>
@@ -98,8 +102,13 @@ export function SeparationDetailPage() {
         <div className="grid gap-6 xl:grid-cols-5">
           <div className="space-y-6 xl:col-span-2">
             <ClearanceCard s={s} />
+            {status === 'InProgress' && (
+              <ClearanceOwnersCard separationId={s.summary.id} titles={Object.fromEntries(s.clearance.map((c) => [c.id, c.title]))} />
+            )}
             <SeparationAssetsCard employeeId={s.summary.employeeId} />
             <ExitInterviewCard s={s} />
+            <ExitPanelCard separationId={s.summary.id} />
+            <ExitQuestionsCard separationId={s.summary.id} canAnswer={status === 'InProgress'} />
             <Card>
               <CardHeader title="Documents" description="Resignation letter, clearance forms, settlement receipts" />
               <CardBody>
@@ -107,7 +116,10 @@ export function SeparationDetailPage() {
               </CardBody>
             </Card>
           </div>
-          <div className="xl:col-span-3">{s.settlement && <SettlementCard s={s} st={s.settlement} />}</div>
+          <div className="xl:col-span-3">
+            {s.settlement && <SettlementCard s={s} st={s.settlement} />}
+            <SettlementApprovalCard separationId={s.summary.id} completed={status === 'Completed'} />
+          </div>
         </div>
       )}
     </>
@@ -254,7 +266,10 @@ function ClearanceCard({ s }: { s: Separation }) {
     <Card>
       <CardHeader title="Clearance checklist" description={`${done} of ${s.clearance.length} cleared`} />
       <div className="mx-5 mt-4 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden="true">
-        <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${s.clearance.length ? (done / s.clearance.length) * 100 : 0}%` }} />
+        <div
+          className="h-full rounded-full bg-emerald-500 transition-all"
+          style={{ width: `${s.clearance.length ? (done / s.clearance.length) * 100 : 0}%` }}
+        />
       </div>
       <ul className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-800">
         {s.clearance.map((c) => (
@@ -273,11 +288,20 @@ function ClearanceCard({ s }: { s: Separation }) {
               <p className={cn('text-sm', c.isCleared ? 'text-zinc-500 line-through decoration-zinc-300' : 'text-zinc-900 dark:text-zinc-100')}>{c.title}</p>
               <p className="text-xs text-zinc-500">
                 {c.department}
-                {c.isCleared && c.clearedByName && <> · {c.clearedByName}, {formatDateTimeUtc(c.clearedAtUtc)}</>}
+                {c.isCleared && c.clearedByName && (
+                  <>
+                    {' '}
+                    · {c.clearedByName}, {formatDateTimeUtc(c.clearedAtUtc)}
+                  </>
+                )}
               </p>
             </div>
             {editable && (
-              <IconButton label={`Remove ${c.title}`} onClick={() => remove.mutate(c.id)} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100">
+              <IconButton
+                label={`Remove ${c.title}`}
+                onClick={() => remove.mutate(c.id)}
+                className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+              >
                 <Trash2 className="size-4" />
               </IconButton>
             )}
@@ -292,8 +316,22 @@ function ClearanceCard({ s }: { s: Separation }) {
             if (department.trim() && title.trim()) add.mutate();
           }}
         >
-          <Input value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="Department" aria-label="Department" className="w-32" maxLength={100} />
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a checklist item" aria-label="Checklist item" className="min-w-40 flex-1" maxLength={200} />
+          <Input
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+            placeholder="Department"
+            aria-label="Department"
+            className="w-32"
+            maxLength={100}
+          />
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Add a checklist item"
+            aria-label="Checklist item"
+            className="min-w-40 flex-1"
+            maxLength={200}
+          />
           <Button type="submit" variant="secondary" icon={<Plus className="size-4" />} loading={add.isPending} disabled={!department.trim() || !title.trim()}>
             Add
           </Button>
@@ -306,7 +344,10 @@ function ClearanceCard({ s }: { s: Separation }) {
 function ExitInterviewCard({ s }: { s: Separation }) {
   return (
     <Card>
-      <CardHeader title="Exit interview" description={s.exitInterviewAtUtc ? `Submitted ${formatDateTimeUtc(s.exitInterviewAtUtc)}` : 'Filled in by the employee from their Resignation page'} />
+      <CardHeader
+        title="Exit interview"
+        description={s.exitInterviewAtUtc ? `Submitted ${formatDateTimeUtc(s.exitInterviewAtUtc)}` : 'Filled in by the employee from their Resignation page'}
+      />
       <CardBody>
         {s.exitInterviewAtUtc ? (
           <dl className="space-y-3 text-sm">
@@ -439,7 +480,11 @@ function SettlementCard({ s, st }: { s: Separation; st: Settlement }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
               label="Leave days to encash"
-              hint={st.leaveBalances.length ? `Unused: ${st.leaveBalances.map((b) => `${b.leaveType} ${formatNumber(b.remaining)}`).join(', ')}` : 'No paid leave balance'}
+              hint={
+                st.leaveBalances.length
+                  ? `Unused: ${st.leaveBalances.map((b) => `${b.leaveType} ${formatNumber(b.remaining)}`).join(', ')}`
+                  : 'No paid leave balance'
+              }
             >
               <div className="flex gap-2">
                 <Input type="number" min="0" max="365" step="0.5" value={encash} onChange={(e) => setEncash(e.target.value)} />
@@ -477,7 +522,11 @@ function SettlementCard({ s, st }: { s: Separation; st: Settlement }) {
 
         <div className="rounded-xl border border-zinc-200 px-4 dark:border-zinc-800">
           <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            <Line label="Leave encashment" amount={completed ? st.leaveEncashment : encashAmount} sub={`${completed ? st.encashedLeaveDays : Number(encash) || 0} day(s) × ${formatCurrency(st.dailyRate)}`} />
+            <Line
+              label="Leave encashment"
+              amount={completed ? st.leaveEncashment : encashAmount}
+              sub={`${completed ? st.encashedLeaveDays : Number(encash) || 0} day(s) × ${formatCurrency(st.dailyRate)}`}
+            />
             <Line
               label="Approved expense claims"
               amount={st.expenseReimbursement}
@@ -527,8 +576,8 @@ function SettlementCard({ s, st }: { s: Separation; st: Settlement }) {
         title="Complete this separation?"
         message={
           <>
-            {s.summary.employeeName} will be marked as left on {formatDate(lastDay)}, their login switched off, and{' '}
-            {formatCurrency(Math.abs(net))} recorded as the final settlement. This cannot be undone.
+            {s.summary.employeeName} will be marked as left on {formatDate(lastDay)}, their login switched off, and {formatCurrency(Math.abs(net))} recorded as
+            the final settlement. This cannot be undone.
           </>
         }
         confirmLabel="Complete"

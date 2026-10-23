@@ -61,6 +61,7 @@ builder.Services.AddScoped<HRMS.Api.Controllers.TimesheetService>();
 builder.Services.AddScoped<OnBehalfService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.FundService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.ExpenseAdvanceService>();
+builder.Services.AddScoped<HRMS.Api.Controllers.SettlementApprovalService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();

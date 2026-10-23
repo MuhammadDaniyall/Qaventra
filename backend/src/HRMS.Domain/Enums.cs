@@ -572,6 +572,7 @@ public enum ApprovalRequestType
     Timesheet = 15,
     FundWithdrawal = 16,
     ExpenseAdvance = 17,
+    FinalSettlement = 18,
 }
 
 public enum PayRequestKind
@@ -797,4 +798,12 @@ public enum ExpenseCalculation
     PerUnit = 2,
     /// <summary>Rate × distance between two cities from the distance list.</summary>
     Distance = 3,
+}
+
+public enum ExitQuestionKind
+{
+    /// <summary>1 to 5.</summary>
+    Rating = 1,
+    YesNo = 2,
+    Text = 3,
 }

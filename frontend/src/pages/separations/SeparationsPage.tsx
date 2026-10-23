@@ -53,11 +53,20 @@ export function SeparationsPage() {
     <>
       <PageHeader
         title="Separations"
-        description={waiting ? `${waiting} resignation${waiting === 1 ? '' : 's'} waiting for your decision.` : 'Resignations, terminations, clearance and final settlements.'}
+        description={
+          waiting
+            ? `${waiting} resignation${waiting === 1 ? '' : 's'} waiting for your decision.`
+            : 'Resignations, terminations, clearance and final settlements.'
+        }
         actions={
-          <Button icon={<Plus className="size-4" />} onClick={() => setStarting(true)}>
-            Start separation
-          </Button>
+          <>
+            <Button variant="secondary" onClick={() => navigate('/separations/setup')}>
+              Templates
+            </Button>
+            <Button icon={<Plus className="size-4" />} onClick={() => setStarting(true)}>
+              Start separation
+            </Button>
+          </>
         }
       />
       <Tabs<TabValue>

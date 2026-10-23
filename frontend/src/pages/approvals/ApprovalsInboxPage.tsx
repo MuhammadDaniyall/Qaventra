@@ -14,6 +14,7 @@ import {
   CalendarOff,
   ClipboardList,
   PiggyBank,
+  UserMinus,
   Package,
   Plane,
   Receipt,
@@ -84,6 +85,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   Timesheet: ClipboardList,
   FundWithdrawal: PiggyBank,
   ExpenseAdvance: HandCoins,
+  FinalSettlement: UserMinus,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -109,6 +111,10 @@ const decideApi: Record<
   Timesheet: { approve: projectsApi.approve, reject: projectsApi.reject },
   FundWithdrawal: { approve: fundsApi.approve, reject: fundsApi.reject },
   ExpenseAdvance: { approve: expenseSetupApi.approveAdvance, reject: expenseSetupApi.rejectAdvance },
+  FinalSettlement: {
+    approve: (id, note) => approvalsApi.decide('FinalSettlement', id, { approve: true, note }),
+    reject: (id, note) => approvalsApi.decide('FinalSettlement', id, { approve: false, note }),
+  },
 };
 
 export function ApprovalsInboxPage() {
@@ -159,6 +165,7 @@ export function ApprovalsInboxPage() {
               'Timesheet',
               'FundWithdrawal',
               'ExpenseAdvance',
+              'FinalSettlement',
             ] as Filter[]
           ).map((t) => ({
             value: t,

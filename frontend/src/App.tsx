@@ -22,6 +22,8 @@ const PerformancePage = lazy(() => import('./pages/performance/PerformancePage')
 const ReviewPage = lazy(() => import('./pages/performance/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CalibrationPage = lazy(() => import('./pages/performance/CalibrationPage').then((m) => ({ default: m.CalibrationPage })));
 const OpeningBalancesPage = lazy(() => import('./pages/leave/OpeningBalancesPage').then((m) => ({ default: m.OpeningBalancesPage })));
+const SeparationSetupPage = lazy(() => import('./pages/separations/Extras').then((m) => ({ default: m.SeparationSetupPage })));
+const MyClearancesPage = lazy(() => import('./pages/separations/Extras').then((m) => ({ default: m.MyClearancesPage })));
 const ExpenseSetupPage = lazy(() => import('./pages/expenses/ExpenseSetupPage').then((m) => ({ default: m.ExpenseSetupPage })));
 const FundsPage = lazy(() => import('./pages/payroll/FundsPage').then((m) => ({ default: m.FundsPage })));
 const AccessPage = lazy(() => import('./pages/settings/AccessPage').then((m) => ({ default: m.AccessPage })));
@@ -152,6 +154,7 @@ export default function App() {
 
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/suggestions" element={<SuggestionsPage />} />
+            <Route path="/clearances" element={<MyClearancesPage />} />
               <Route path="/timesheets" element={<TimesheetPage />} />
 
               <Route element={<RequireRole roles={APPROVER_ROLES} />}>
@@ -175,6 +178,7 @@ export default function App() {
                 <Route path="/payroll/changes" element={<PayChangesPage />} />
               <Route path="/payroll/funds" element={<FundsPage />} />
               <Route path="/expenses/setup" element={<ExpenseSetupPage />} />
+              <Route path="/separations/setup" element={<SeparationSetupPage />} />
                 <Route path="/leave/opening-balances" element={<OpeningBalancesPage />} />
                 <Route path="/settings" element={<OrganizationPage />} />
                 <Route path="/alerts" element={<ScheduledPage />} />

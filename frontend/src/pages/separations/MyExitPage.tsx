@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { ExitQuestionsCard } from './Extras';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Circle, DoorOpen } from 'lucide-react';
 import { errorMessage } from '../../api/client';
@@ -82,8 +83,7 @@ function ResignForm({ previous }: { previous?: Separation }) {
     <div className="mx-auto max-w-2xl space-y-4">
       {previous && (
         <p className="rounded-xl bg-zinc-100 px-4 py-3 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-          Your earlier request from {formatDate(previous.summary.noticeDate)} was{' '}
-          {previous.summary.status === 'Rejected' ? 'declined' : 'withdrawn'}.
+          Your earlier request from {formatDate(previous.summary.noticeDate)} was {previous.summary.status === 'Rejected' ? 'declined' : 'withdrawn'}.
         </p>
       )}
       <Card>
@@ -188,6 +188,7 @@ function ExitStatus({ s }: { s: Separation }) {
             </ul>
           </Card>
           {status === 'Completed' ? <FinalSummary s={s} /> : <ExitInterview s={s} />}
+          {status === 'InProgress' && <ExitQuestionsCard separationId={s.summary.id} canAnswer />}
         </div>
       )}
 
@@ -232,7 +233,9 @@ function ExitInterview({ s }: { s: Separation }) {
     <Card>
       <CardHeader
         title="Exit interview"
-        description={s.exitInterviewAtUtc ? `Submitted ${formatDateTimeUtc(s.exitInterviewAtUtc)}; you can update it.` : 'Honest feedback helps the team you leave behind.'}
+        description={
+          s.exitInterviewAtUtc ? `Submitted ${formatDateTimeUtc(s.exitInterviewAtUtc)}; you can update it.` : 'Honest feedback helps the team you leave behind.'
+        }
       />
       <CardBody>
         <form onSubmit={submit} className="space-y-4">
@@ -252,7 +255,13 @@ function ExitInterview({ s }: { s: Separation }) {
           </Field>
           <Switch checked={recommend} onChange={setRecommend} label="I would recommend working here to a friend" />
           <Field label="Anything else?">
-            <Textarea value={feedback} maxLength={4000} rows={4} onChange={(e) => setFeedback(e.target.value)} placeholder="What went well, what should change?" />
+            <Textarea
+              value={feedback}
+              maxLength={4000}
+              rows={4}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="What went well, what should change?"
+            />
           </Field>
           <div className="flex justify-end">
             <Button type="submit" loading={save.isPending}>

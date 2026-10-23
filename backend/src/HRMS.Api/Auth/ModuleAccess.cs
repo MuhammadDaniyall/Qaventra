@@ -22,7 +22,7 @@ public static class AccessModules
         new("approvals", "Approvals (force approve, delegations)", ["/api/approvals"]),
         new("recruitment", "Recruitment", ["/api/recruitment"]),
         new("onboarding", "Onboarding", ["/api/onboarding"]),
-        new("separations", "Separations", ["/api/separations"]),
+        new("separations", "Separations", ["/api/separations", "/api/separation-setup"]),
         new("letters", "HR letters", ["/api/letters"]),
         new("assets", "Assets", ["/api/assets"]),
         new("helpdesk", "Help desk", ["/api/helpdesk"]),

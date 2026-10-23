@@ -39,8 +39,7 @@ export function SeparationSteps({ s }: { s: Separation }) {
   if (closed) {
     return (
       <p className="rounded-xl bg-zinc-100 px-4 py-3 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-        This {typeLabel(s.summary.type).toLowerCase()} was {status === 'Rejected' ? 'declined by HR' : 'withdrawn'}.
-        {s.decisionNote && <> “{s.decisionNote}”</>}
+        This {typeLabel(s.summary.type).toLowerCase()} was {status === 'Rejected' ? 'declined by HR' : 'withdrawn'}.{s.decisionNote && <> “{s.decisionNote}”</>}
       </p>
     );
   }

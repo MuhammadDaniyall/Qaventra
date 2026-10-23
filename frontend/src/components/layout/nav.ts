@@ -95,6 +95,7 @@ export const NAV: NavSection[] = [
       { to: '/recruitment', label: 'Recruitment', icon: BriefcaseBusiness, roles: COMPANY_ROLES },
       { to: '/me/assets', label: 'My assets', icon: Laptop, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/helpdesk', label: 'Help desk', icon: LifeBuoy, roles: COMPANY_ROLES, needsEmployee: true, end: true },
+      { to: '/clearances', label: 'Exit clearances', icon: ClipboardCheck, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/resignation', label: 'Resignation', icon: DoorOpen, roles: COMPANY_ROLES, needsEmployee: true },
     ],
   },

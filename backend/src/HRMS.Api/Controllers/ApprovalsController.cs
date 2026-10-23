@@ -191,6 +191,7 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             ApprovalRequestType.Timesheet => services.GetRequiredService<TimesheetService>().DecideAsync,
             ApprovalRequestType.FundWithdrawal => services.GetRequiredService<FundService>().DecideAsync,
             ApprovalRequestType.ExpenseAdvance => services.GetRequiredService<ExpenseAdvanceService>().DecideAsync,
+            ApprovalRequestType.FinalSettlement => services.GetRequiredService<SettlementApprovalService>().DecideAsync,
             _ => throw new NotFoundException("Request type"),
         };
         await decide(subjectId, req.Approve, req.Note);

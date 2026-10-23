@@ -19,7 +19,7 @@ public record LeaveBalanceLeft(string LeaveType, decimal Remaining);
 
 public record PayableClaim(Guid Id, string Title, decimal Total);
 
-public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock clock, LeaveService leave, NotificationService notify)
+public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock clock, LeaveService leave, NotificationService notify, IServiceProvider services)
 {
     public static readonly IReadOnlyList<(string Department, string Title)> DefaultChecklist =
     [
@@ -182,13 +182,7 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         RequireHrNotSelf(s);
         RequireInProgress(s);
         var item = s.Clearance.FirstOrDefault(c => c.Id == itemId) ?? throw new NotFoundException("Checklist item");
-        if (item.IsCleared != isCleared)
-        {
-            item.IsCleared = isCleared;
-            item.ClearedAtUtc = isCleared ? clock.UtcNow : null;
-            item.ClearedByName = isCleared ? await LetterService.CurrentUserNameAsync(db, me) : null;
-        }
-        item.Note = note;
+        await SetClearedAsync(s, item, isCleared, note);
         await db.SaveChangesAsync();
     }
 
@@ -213,6 +207,13 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         s.OtherDeductions = input.OtherDeductions;
         s.SettlementNote = input.Note;
         s.SettlementSavedAtUtc = clock.UtcNow;
+        // Changing the numbers needs a fresh approval.
+        if (s.SettlementSubmittedAtUtc is not null)
+        {
+            await services.GetRequiredService<ApprovalEngine>().CancelAsync(ApprovalRequestType.FinalSettlement, s.Id);
+            s.SettlementSubmittedAtUtc = null;
+            s.SettlementApprovedAtUtc = null;
+        }
         await db.SaveChangesAsync();
     }
 
@@ -268,6 +269,8 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             throw new DomainException("Clear every checklist item before completing.");
         if (s.SettlementSavedAtUtc is null)
             throw new DomainException("Review and save the final settlement before completing.");
+        if (s.SettlementSubmittedAtUtc is not null && s.SettlementApprovedAtUtc is null)
+            throw new DomainException("The final settlement is waiting for approval.");
 
         var snapshot = await SettlementAsync(s);
         s.LeaveEncashmentAmount = snapshot.Result.LeaveEncashment;
@@ -323,14 +326,45 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
     }
 
     // Added through the DbSet: items attached to an already-tracked separation would otherwise be treated as existing rows.
+    /// <summary>The company's default clearance template (with levels and responsible people), or the built-in list.</summary>
     private void AddDefaultChecklist(Separation s)
     {
+        var template = db.ClearanceTemplates.Include(t => t.Items).FirstOrDefault(t => t.IsDefault);
         var order = 0;
+        if (template is { Items.Count: > 0 })
+        {
+            foreach (var t in template.Items.OrderBy(i => i.Level).ThenBy(i => i.Order))
+            {
+                var item = new ClearanceItem
+                {
+                    SeparationId = s.Id, Department = t.Department, Title = t.Title, SortOrder = ++order, Level = t.Level, ResponsibleEmployeeId = t.ResponsibleEmployeeId,
+                };
+                s.Clearance.Add(item);
+                db.ClearanceItems.Add(item);
+            }
+            return;
+        }
         foreach (var (department, title) in DefaultChecklist)
         {
             var item = new ClearanceItem { SeparationId = s.Id, Department = department, Title = title, SortOrder = ++order };
             s.Clearance.Add(item);
             db.ClearanceItems.Add(item);
         }
+    }
+
+    /// <summary>Clears (or reopens) an item; a level opens only when every lower level is cleared.</summary>
+    public async Task SetClearedAsync(Separation s, ClearanceItem item, bool isCleared, string? note)
+    {
+        if (isCleared && s.Clearance.Any(c => c.Level < item.Level && !c.IsCleared))
+            throw new DomainException($"Level {item.Level} opens once every earlier clearance item is done.");
+        if (!isCleared && s.Clearance.Any(c => c.Level > item.Level && c.IsCleared))
+            throw new DomainException("Later levels are already cleared; reopen those first.");
+        if (item.IsCleared != isCleared)
+        {
+            item.IsCleared = isCleared;
+            item.ClearedAtUtc = isCleared ? clock.UtcNow : null;
+            item.ClearedByName = isCleared ? await LetterService.CurrentUserNameAsync(db, me) : null;
+        }
+        item.Note = note;
     }
 }

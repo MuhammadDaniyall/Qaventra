@@ -35,6 +35,15 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
     /// <summary>Creates the approval for a new request. Returns it already Approved when the chain is empty.</summary>
     public async Task<ApprovalRequest> StartAsync(ApprovalRequestType type, Guid subjectId, Guid employeeId, string summary)
     {
+        // Sent again after a rejection, withdrawal or change: the old, closed chain makes way for a new one.
+        var previous = await db.ApprovalRequests.Include(r => r.Steps).FirstOrDefaultAsync(r => r.RequestType == type && r.SubjectId == subjectId);
+        if (previous is not null)
+        {
+            if (previous.Status == ApprovalStatus.Pending)
+                throw new DomainException("This is already waiting for approval.");
+            db.ApprovalRequests.Remove(previous);
+            await db.SaveChangesAsync();
+        }
         var chain = await db.Employees.Where(e => e.Id == employeeId)
             .Select(e => new
             {
@@ -271,6 +280,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.Timesheet => "timesheet",
         ApprovalRequestType.FundWithdrawal => "fund withdrawal",
         ApprovalRequestType.ExpenseAdvance => "expense advance",
+        ApprovalRequestType.FinalSettlement => "final settlement",
         _ => "request",
     };
 
@@ -293,6 +303,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.Timesheet => "/timesheets",
         ApprovalRequestType.FundWithdrawal => "/me/pay",
         ApprovalRequestType.ExpenseAdvance => "/me/expenses",
+        ApprovalRequestType.FinalSettlement => "/separations",
         _ => "/dashboard",
     };
 

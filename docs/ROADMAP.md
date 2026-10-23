@@ -73,6 +73,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 - **Expense depth:** expense types worked out by amount, rate × units or rate × distance between cities (distance list, either way round), with per-item and yearly limits, receipt rule, grade restrictions and grade-specific rates and limits; the claim form shows each type's rate and what is left this year; expense advances through their own approval chain, paid with salary, claims set against them (not paid twice), closing recovers what was not spent.
 
+- **Separation depth:** clearance templates with up to ten levels and an owner per item (owners clear their items from "Exit clearances"; a level opens once earlier ones are cleared); exit interview templates (ratings, yes/no, text) answered by the leaver or the panel, with a panel, a time and private notes; final settlement sent through its own approval chain (completion waits, changes need a new approval) and marked paid by bank, cheque or cash. Approval chains can now be sent again after a rejection or change.
+
 ## Where we aim to beat FlowHCM
 
 - Mobile-first self-service (PWA): check-in, leave, claims with camera receipts, payslips, letters.

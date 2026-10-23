@@ -1,7 +1,7 @@
 import { http } from './client';
 
 export type ApprovalRequestType =
-  'Leave' | 'Expense' | 'Attendance' | 'CompOff' | 'PayRequest' | 'Loan' | 'ProfileChange' | 'ShiftChange' | 'Asset' | 'JobRequest' | 'Travel' | 'Training' | 'Exemption' | 'OffDay' | 'Timesheet' | 'FundWithdrawal' | 'ExpenseAdvance';
+  'Leave' | 'Expense' | 'Attendance' | 'CompOff' | 'PayRequest' | 'Loan' | 'ProfileChange' | 'ShiftChange' | 'Asset' | 'JobRequest' | 'Travel' | 'Training' | 'Exemption' | 'OffDay' | 'Timesheet' | 'FundWithdrawal' | 'ExpenseAdvance' | 'FinalSettlement';
 export type ApproverKind = 'LineManager' | 'SecondLevelManager' | 'Hr' | 'SpecificEmployee' | 'DepartmentHead';
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type ApprovalStepStatus = 'Waiting' | 'Current' | 'Approved' | 'Rejected' | 'Skipped';
@@ -117,4 +117,5 @@ export const REQUEST_LABELS: Record<ApprovalRequestType, string> = {
   Timesheet: 'Timesheets',
   FundWithdrawal: 'Fund withdrawals',
   ExpenseAdvance: 'Expense advances',
+  FinalSettlement: 'Final settlements',
 };
