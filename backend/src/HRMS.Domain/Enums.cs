@@ -52,6 +52,36 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum ReviewCycleStatus
+{
+    Draft = 1,
+    Active = 2,
+    Closed = 3,
+}
+
+/// <summary>Where one person's review is. Each stage is someone's turn.</summary>
+public enum ReviewStage
+{
+    /// <summary>The employee writes goals; the manager approves them.</summary>
+    Goals = 1,
+    GoalsSubmitted = 2,
+    SelfReview = 3,
+    ManagerReview = 4,
+    /// <summary>HR checks ratings across people before releasing them.</summary>
+    Calibration = 5,
+    /// <summary>Released to the employee to accept or disagree.</summary>
+    SignOff = 6,
+    Done = 7,
+}
+
+public enum ReviewSectionKind
+{
+    /// <summary>Each person's own goals, written at the start of the cycle.</summary>
+    Goals = 1,
+    /// <summary>The same items for everyone, listed in the template.</summary>
+    Competencies = 2,
+}
+
 public enum OnboardingTaskCategory
 {
     Paperwork = 1,
@@ -377,6 +407,7 @@ public enum NotificationKind
     Ticket = 8,
     Asset = 9,
     Onboarding = 10,
+    Performance = 11,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>

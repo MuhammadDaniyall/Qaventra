@@ -18,6 +18,9 @@ const AssetsPage = lazy(() => import('./pages/assets/AssetsPage').then((m) => ({
 const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
 const OnboardingDetailPage = lazy(() => import('./pages/onboarding/OnboardingDetailPage').then((m) => ({ default: m.OnboardingDetailPage })));
 const WelcomePage = lazy(() => import('./pages/onboarding/WelcomePage').then((m) => ({ default: m.WelcomePage })));
+const PerformancePage = lazy(() => import('./pages/performance/PerformancePage').then((m) => ({ default: m.PerformancePage })));
+const ReviewPage = lazy(() => import('./pages/performance/ReviewPage').then((m) => ({ default: m.ReviewPage })));
+const CalibrationPage = lazy(() => import('./pages/performance/CalibrationPage').then((m) => ({ default: m.CalibrationPage })));
 const RosterPage = lazy(() => import('./pages/attendance/RosterPage').then((m) => ({ default: m.RosterPage })));
 const MonthlyAttendancePage = lazy(() => import('./pages/attendance/MonthlyAttendancePage').then((m) => ({ default: m.MonthlyAttendancePage })));
 const MyAttendancePage = lazy(() => import('./pages/attendance/MyAttendancePage').then((m) => ({ default: m.MyAttendancePage })));
@@ -93,6 +96,9 @@ export default function App() {
               <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/me/assets" element={<MyAssetsPage />} />
               <Route path="/welcome" element={<WelcomePage />} />
+              <Route path="/performance" element={<PerformancePage />} />
+              <Route path="/performance/reviews/:id" element={<ReviewPage />} />
+              <Route path="/performance/cycles/:id" element={<CalibrationPage />} />
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/onboarding/:id" element={<OnboardingDetailPage />} />
               <Route path="/assets" element={<AssetsPage />} />

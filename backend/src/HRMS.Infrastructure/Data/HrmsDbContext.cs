@@ -75,6 +75,11 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<OnboardingTemplateTask> OnboardingTemplateTasks => Set<OnboardingTemplateTask>();
     public DbSet<Onboarding> Onboardings => Set<Onboarding>();
     public DbSet<OnboardingTask> OnboardingTasks => Set<OnboardingTask>();
+    public DbSet<PerformanceSettings> PerformanceSettings => Set<PerformanceSettings>();
+    public DbSet<PerformanceTemplate> PerformanceTemplates => Set<PerformanceTemplate>();
+    public DbSet<ReviewCycle> ReviewCycles => Set<ReviewCycle>();
+    public DbSet<PerformanceReview> PerformanceReviews => Set<PerformanceReview>();
+    public DbSet<ReviewItem> ReviewItems => Set<ReviewItem>();
 
     /// <summary>Tenant used by query filters and new rows. Empty when nobody is signed in, so tenant data stays hidden.</summary>
     public Guid CurrentTenantId => _tenantOverride ?? currentUser.TenantId ?? Guid.Empty;
@@ -610,6 +615,54 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Note).HasMaxLength(1000);
         });
 
+        b.Entity<PerformanceSettings>(e =>
+        {
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.Property(x => x.RatingLabelsJson).HasMaxLength(1000);
+            e.Property(x => x.BellCurveJson).HasMaxLength(200);
+            e.Property(x => x.RaiseSlabsJson).HasMaxLength(1000);
+        });
+
+        b.Entity<PerformanceTemplate>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.Description).HasMaxLength(500);
+        });
+
+        b.Entity<ReviewCycle>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.DepartmentIds).HasMaxLength(2000);
+            e.HasOne<PerformanceTemplate>().WithMany().HasForeignKey(x => x.TemplateId);
+        });
+
+        b.Entity<PerformanceReview>(e =>
+        {
+            e.HasIndex(x => new { x.CycleId, x.EmployeeId }).IsUnique();
+            e.HasIndex(x => x.ReviewerEmployeeId);
+            e.Property(x => x.SelfScore).HasPrecision(5, 2);
+            e.Property(x => x.ManagerScore).HasPrecision(5, 2);
+            foreach (var name in new[] { nameof(PerformanceReview.SelfComment), nameof(PerformanceReview.ManagerComment), nameof(PerformanceReview.Strengths),
+                         nameof(PerformanceReview.Improvements), nameof(PerformanceReview.DevelopmentPlan), nameof(PerformanceReview.CalibrationNote),
+                         nameof(PerformanceReview.EmployeeSignOffComment) })
+                e.Property(name).HasMaxLength(4000);
+            e.HasOne(x => x.Cycle).WithMany().HasForeignKey(x => x.CycleId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.ReviewerEmployeeId);
+            e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.ReviewId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ReviewItem>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.Target).HasMaxLength(1000);
+            e.Property(x => x.Weight).HasPrecision(6, 2);
+            e.Property(x => x.SelfComment).HasMaxLength(2000);
+            e.Property(x => x.ManagerComment).HasMaxLength(2000);
+        });
+
         b.Entity<AuditLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.TimestampUtc });
@@ -643,7 +696,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(ClearanceItem) || t == typeof(ExpenseItem) || t == typeof(ApprovalFlowStep) || t == typeof(ApprovalStep)
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
-        || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask);
+        || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem);
 
     private LambdaExpression TenantFilter(Type entityType)
     {
