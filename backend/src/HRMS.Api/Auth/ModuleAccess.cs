@@ -20,7 +20,7 @@ public static class AccessModules
         new("payroll", "Payroll and pay changes", ["/api/payroll", "/api/pay-changes", "/api/pay"]),
         new("expenses", "Expenses", ["/api/expenses", "/api/expense-setup"]),
         new("approvals", "Approvals (force approve, delegations)", ["/api/approvals"]),
-        new("recruitment", "Recruitment", ["/api/recruitment"]),
+        new("recruitment", "Recruitment", ["/api/recruitment", "/api/recruitment-extras"]),
         new("onboarding", "Onboarding", ["/api/onboarding"]),
         new("separations", "Separations", ["/api/separations", "/api/separation-setup"]),
         new("letters", "HR letters", ["/api/letters"]),

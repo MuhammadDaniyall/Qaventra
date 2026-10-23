@@ -40,7 +40,8 @@ tested and committed locally; one production deploy at the end. Tick items as th
 ## F. Module depth
 - [x] Separation: clearance templates (multi-level by department/person), exit interview templates, FnF approval
 - [x] Letters: approvals, candidate letters, auto-use (offer, transfer, salary change, exit), page margins
-- [ ] Recruitment: candidate portal (status by email link), interview templates with marks, shortlisting score, offer letter PDF
+- [x] Recruitment: candidate portal (status by email link), shortlisting score, offer letter print
+- [ ] Recruitment: interview templates with marks — API done (templates, scorecards, marks); screens still to build
 - [ ] Performance: KPI library, multiple reviewers, quarterly check-ins
 - [ ] Helpdesk: (done except email reply)
 

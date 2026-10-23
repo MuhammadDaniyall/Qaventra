@@ -1167,6 +1167,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("PortalToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ReferredBy")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -1184,6 +1188,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PortalToken")
+                        .IsUnique()
+                        .HasFilter("[PortalToken] IS NOT NULL");
 
                     b.HasIndex("TenantId", "Email")
                         .IsUnique();
@@ -2610,6 +2618,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2650,6 +2661,12 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid>("InterviewerEmployeeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("MarksJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("MaxMarks")
+                        .HasColumnType("int");
+
                     b.Property<int>("Rating")
                         .HasColumnType("int");
 
@@ -2663,6 +2680,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int?>("TotalMarks")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("InterviewerEmployeeId");
@@ -2671,6 +2691,65 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("InterviewFeedback");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.InterviewQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MaxMarks")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("InterviewQuestions");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.InterviewTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("InterviewTemplates");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.IssuedLetter", b =>
@@ -2933,6 +3012,22 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("SalaryMin")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("ScreenCities")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ScreenKeywords")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal?>("ScreenMaxExpectedSalary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("ScreenMinExperienceYears")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -7712,6 +7807,15 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.InterviewQuestion", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.InterviewTemplate", null)
+                        .WithMany("Questions")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.IssuedLetter", b =>
                 {
                     b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
@@ -8563,6 +8667,11 @@ namespace HRMS.Infrastructure.Data.Migrations
             modelBuilder.Entity("HRMS.Domain.Entities.ExpenseType", b =>
                 {
                     b.Navigation("GradeRates");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.InterviewTemplate", b =>
+                {
+                    b.Navigation("Questions");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.Loan", b =>

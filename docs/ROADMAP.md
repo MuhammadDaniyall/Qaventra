@@ -77,6 +77,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 - **Letters depth:** templates that need approval (through the letter approval chain, hidden until approved), self-service letters employees request with a reason, templates issued automatically on events (offer to a candidate, hire, confirmation, transfer or promotion, salary revision with the new salary and date, completed exit), candidate offer letters printable from the application, page margins for printed letterheads and a footer, new placeholders (confirmation date, effective date, candidate name, job, offered salary and joining date).
 
+- **Recruitment depth:** candidate status page from the link in their emails (applications, interviews, offer with accept or decline, offer letter, withdraw); shortlisting score per job (experience, expected salary, city, keywords) with reasons; interview templates and scorecards with marks per question (API).
+
 ## Where we aim to beat FlowHCM
 
 - Mobile-first self-service (PWA): check-in, leave, claims with camera receipts, payslips, letters.

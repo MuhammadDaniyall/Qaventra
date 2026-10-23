@@ -352,8 +352,9 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
             await notify.ToHrAsync(NotificationKind.Recruitment, title, null, $"/recruitment/applications/{app.Id}");
         if (source == CandidateSource.CareersPage)
             notify.EmailOnly(email, $"We received your application for {post.Title}",
-                $"Dear {candidate.FirstName},\n\nThank you for applying. Our team will review your application and contact you about the next steps.",
-                null, CandidateFooter);
+                $"Dear {candidate.FirstName},\n\nThank you for applying. Our team will review your application and contact you about the next steps.\n"
+                + "You can follow your application, see interview times and answer an offer on your status page.",
+                PortalLink(candidate), CandidateFooter);
         await db.SaveChangesAsync();
         return app;
     }
@@ -634,8 +635,8 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
             notify.EmailOnly(app.Candidate.Email, $"Job offer: {app.JobPost!.Title}",
                 $"Dear {app.Candidate.FirstName},\n\nWe are pleased to offer you the position of {app.JobPost.Title}.\n"
                 + $"Salary: PKR {input.Salary:N0} a month\nJoining date: {input.JoiningDate:dddd, d MMMM yyyy}"
-                + (app.OfferNote is null ? "" : $"\n\n{app.OfferNote}") + "\n\nPlease reply to accept or decline this offer.",
-                null, CandidateFooter);
+                + (app.OfferNote is null ? "" : $"\n\n{app.OfferNote}") + "\n\nAccept or decline the offer on your status page, or reply to this email.",
+                PortalLink(app.Candidate), CandidateFooter);
         await db.SaveChangesAsync();
     }
 
@@ -665,6 +666,43 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
     /// manager and the offered joining date. The CV moves to their documents, onboarding starts, and the post is
     /// marked filled once all positions are.
     /// </summary>
+    /// <summary>The candidate answers the offer on their status page.</summary>
+    public async Task OfferResponseFromCandidateAsync(Guid applicationId, bool accepted, string? note)
+    {
+        var app = await db.JobApplications.Include(a => a.JobPost).Include(a => a.Candidate).FirstAsync(a => a.Id == applicationId);
+        if (app.OfferStatus != OfferStatus.Sent || app.Stage != ApplicationStage.Offer)
+            throw new DomainException("There is no open offer.");
+        app.OfferStatus = accepted ? OfferStatus.Accepted : OfferStatus.Declined;
+        if (!accepted)
+        {
+            app.Stage = ApplicationStage.Withdrawn;
+            app.StageChangedAtUtc = clock.UtcNow;
+        }
+        Log(app.Id, (accepted ? "Offer accepted by the candidate" : "Offer declined by the candidate") + (string.IsNullOrWhiteSpace(note) ? "" : $": {note.Trim()}"), app.Candidate!.FullName);
+        await TellTeamAsync(app, $"{app.Candidate.FullName} {(accepted ? "accepted" : "declined")} the offer for {app.JobPost!.Title}");
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>The candidate withdraws on their status page.</summary>
+    public async Task WithdrawByCandidateAsync(Guid applicationId)
+    {
+        var app = await db.JobApplications.Include(a => a.JobPost).Include(a => a.Candidate).FirstAsync(a => a.Id == applicationId);
+        app.Stage = ApplicationStage.Withdrawn;
+        app.StageChangedAtUtc = clock.UtcNow;
+        Log(app.Id, "Withdrawn by the candidate", app.Candidate!.FullName);
+        await TellTeamAsync(app, $"{app.Candidate.FullName} withdrew from {app.JobPost!.Title}");
+        await db.SaveChangesAsync();
+    }
+
+    private async Task TellTeamAsync(JobApplication app, string title)
+    {
+        var team = new[] { app.JobPost!.RecruiterEmployeeId, app.JobPost.HiringManagerEmployeeId }.Where(x => x is not null).Select(x => x!.Value).ToList();
+        if (team.Count > 0)
+            await notify.ToEmployeesAsync(team, NotificationKind.Recruitment, title, null, $"/recruitment/applications/{app.Id}");
+        else
+            await notify.ToHrAsync(NotificationKind.Recruitment, title, null, $"/recruitment/applications/{app.Id}");
+    }
+
     public async Task<Employee> HireAsync(Guid applicationId, string? employeeCode)
     {
         RequireHr();
@@ -825,6 +863,13 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
     private Guid MyId() => me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
 
     private static string? Clean(string? s, int max) => string.IsNullOrWhiteSpace(s) ? null : s.Trim().Length > max ? s.Trim()[..max] : s.Trim();
+
+    /// <summary>The candidate's status page link, creating its secret the first time.</summary>
+    public static string PortalLink(Candidate c)
+    {
+        c.PortalToken ??= Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+        return $"/careers/status/{c.PortalToken}";
+    }
 
     private const string CandidateFooter = "You get this email because you applied for a job. Reply to it if you have any questions.";
 

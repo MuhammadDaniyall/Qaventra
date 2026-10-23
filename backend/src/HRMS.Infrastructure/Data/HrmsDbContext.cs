@@ -59,6 +59,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ExpenseType> ExpenseTypes => Set<ExpenseType>();
     public DbSet<ClearanceTemplate> ClearanceTemplates => Set<ClearanceTemplate>();
     public DbSet<CandidateLetter> CandidateLetters => Set<CandidateLetter>();
+    public DbSet<InterviewTemplate> InterviewTemplates => Set<InterviewTemplate>();
+    public DbSet<InterviewQuestion> InterviewQuestions => Set<InterviewQuestion>();
     public DbSet<ClearanceTemplateItem> ClearanceTemplateItems => Set<ClearanceTemplateItem>();
     public DbSet<ExitInterviewTemplate> ExitInterviewTemplates => Set<ExitInterviewTemplate>();
     public DbSet<ExitQuestion> ExitQuestions => Set<ExitQuestion>();
@@ -237,6 +239,18 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Reason).HasMaxLength(500);
             e.Property(x => x.DecisionNote).HasMaxLength(1000);
             e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<InterviewTemplate>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.HasMany(x => x.Questions).WithOne().HasForeignKey(x => x.TemplateId);
+        });
+
+        b.Entity<InterviewQuestion>(e =>
+        {
+            e.Property(x => x.Text).HasMaxLength(500);
+            e.Property(x => x.Category).HasMaxLength(100);
         });
 
         b.Entity<CandidateLetter>(e =>
@@ -1273,6 +1287,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
         b.Entity<JobPost>(e =>
         {
+            e.Property(x => x.ScreenCities).HasMaxLength(500);
+            e.Property(x => x.ScreenKeywords).HasMaxLength(1000);
             e.HasIndex(x => new { x.TenantId, x.Status });
             e.HasIndex(x => new { x.TenantId, x.Slug }).IsUnique();
             e.Property(x => x.Title).HasMaxLength(150);
@@ -1289,6 +1305,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
         b.Entity<Candidate>(e =>
         {
+            e.Property(x => x.PortalToken).HasMaxLength(64);
+            e.HasIndex(x => x.PortalToken).IsUnique().HasFilter("[PortalToken] IS NOT NULL");
             e.HasIndex(x => new { x.TenantId, x.Email }).IsUnique();
             e.Property(x => x.FirstName).HasMaxLength(100);
             e.Property(x => x.LastName).HasMaxLength(100);
@@ -1382,7 +1400,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason)
         || t == typeof(Dependant) || t == typeof(Qualification) || t == typeof(WorkExperience)
         || t == typeof(ProjectMember) || t == typeof(ProjectTask) || t == typeof(TimesheetLine) || t == typeof(ExpenseTypeRate)
-        || t == typeof(ClearanceTemplateItem) || t == typeof(ExitQuestion);
+        || t == typeof(ClearanceTemplateItem) || t == typeof(ExitQuestion) || t == typeof(InterviewQuestion);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

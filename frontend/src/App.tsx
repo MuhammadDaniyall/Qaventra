@@ -43,6 +43,7 @@ const TripPage = lazy(() => import('./pages/travel/TripPage').then((m) => ({ def
 const RecruitmentPage = lazy(() => import('./pages/recruitment/RecruitmentPage').then((m) => ({ default: m.RecruitmentPage })));
 const JobPage = lazy(() => import('./pages/recruitment/JobPage').then((m) => ({ default: m.JobPage })));
 const ApplicationPage = lazy(() => import('./pages/recruitment/ApplicationPage').then((m) => ({ default: m.ApplicationPage })));
+const CandidateStatusPage = lazy(() => import('./pages/careers/CandidateStatusPage').then((m) => ({ default: m.CandidateStatusPage })));
 const CareersPage = lazy(() => import('./pages/careers/CareersPage').then((m) => ({ default: m.CareersPage })));
 const RosterPage = lazy(() => import('./pages/attendance/RosterPage').then((m) => ({ default: m.RosterPage })));
 const MonthlyAttendancePage = lazy(() => import('./pages/attendance/MonthlyAttendancePage').then((m) => ({ default: m.MonthlyAttendancePage })));
@@ -99,6 +100,7 @@ export default function App() {
 
       <Route path="/" element={<Home />} />
       <Route element={<Lazy />}>
+        <Route path="/careers/status/:token" element={<CandidateStatusPage />} />
         <Route path="/careers/:company" element={<CareersPage />} />
         <Route path="/careers/:company/:job" element={<CareersPage />} />
       </Route>

@@ -48,6 +48,14 @@ public class JobPost : TenantEntity
     /// <summary>The future manager: shortlists, interviews and is the new hire's manager.</summary>
     public Guid? HiringManagerEmployeeId { get; set; }
     public DateTime? PublishedAtUtc { get; set; }
+
+    // ---------- Shortlisting score ----------
+    public decimal? ScreenMinExperienceYears { get; set; }
+    public decimal? ScreenMaxExpectedSalary { get; set; }
+    /// <summary>Comma-separated cities that score.</summary>
+    public string? ScreenCities { get; set; }
+    /// <summary>Comma-separated keywords looked for in skills, title, company and cover letter.</summary>
+    public string? ScreenKeywords { get; set; }
 }
 
 /// <summary>A person who applied or was added; one record per person across jobs.</summary>
@@ -72,6 +80,8 @@ public class Candidate : TenantEntity
     public string? BlacklistReason { get; set; }
     /// <summary>Set once hired.</summary>
     public Guid? EmployeeId { get; set; }
+    /// <summary>Secret for the candidate's status page (no sign-in).</summary>
+    public string? PortalToken { get; set; }
 
     public string FullName => $"{FirstName} {LastName}".Trim();
 }
@@ -120,6 +130,24 @@ public class Interview : TenantEntity
     public string InterviewerIds { get; set; } = "";
     public InterviewStatus Status { get; set; } = InterviewStatus.Scheduled;
     public string? Notes { get; set; }
+    /// <summary>Questions with marks the interviewers score.</summary>
+    public Guid? TemplateId { get; set; }
+}
+
+/// <summary>Interview questions grouped by category, each scored out of its marks.</summary>
+public class InterviewTemplate : TenantEntity
+{
+    public string Name { get; set; } = "";
+    public List<InterviewQuestion> Questions { get; set; } = [];
+}
+
+public class InterviewQuestion : TenantEntity
+{
+    public Guid TemplateId { get; set; }
+    public string Text { get; set; } = "";
+    public string? Category { get; set; }
+    public int MaxMarks { get; set; } = 10;
+    public int Order { get; set; }
 }
 
 /// <summary>One interviewer's verdict.</summary>
@@ -131,4 +159,8 @@ public class InterviewFeedback : TenantEntity
     public HireRecommendation Recommendation { get; set; }
     public string? Strengths { get; set; }
     public string? Concerns { get; set; }
+    /// <summary>JSON list of { questionId, marks } against the interview's template.</summary>
+    public string? MarksJson { get; set; }
+    public int? TotalMarks { get; set; }
+    public int? MaxMarks { get; set; }
 }

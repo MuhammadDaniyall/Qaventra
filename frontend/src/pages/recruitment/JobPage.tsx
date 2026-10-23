@@ -1,4 +1,5 @@
 import { useState, type DragEvent } from 'react';
+import { ScreeningCard } from './Screening';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Ban, CalendarClock, Copy, MapPin, Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
@@ -273,6 +274,7 @@ export function JobPage() {
         onConfirm={() => remove.mutate()}
         onClose={() => setDeleting(false)}
       />
+      {hr && <ScreeningCard jobId={id} />}
     </>
   );
 }
