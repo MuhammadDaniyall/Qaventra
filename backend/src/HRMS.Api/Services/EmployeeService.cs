@@ -44,7 +44,7 @@ public record IssueLoginsResult(bool Emailed, List<IssuedLogin> Created, List<Sk
 
 public class EmployeeService(
     HrmsDbContext db, IPasswordHasher<User> hasher, LeaveService leave, ICurrentUser me, TenantClock clock,
-    NotificationService notify, SmtpOptions smtp)
+    NotificationService notify, SmtpOptions smtp, IServiceProvider services)
 {
     public async Task<Employee> CreateAsync(NewEmployee input)
     {
@@ -80,6 +80,8 @@ public class EmployeeService(
         await db.SaveChangesAsync();
 
         await leave.EnsureBalancesAsync(employee.Id, input.JoiningDate.Year);
+        // Resolved here, not injected: onboarding needs services that themselves create employees' records.
+        await services.GetRequiredService<OnboardingService>().AutoStartAsync(employee.Id);
         return employee;
     }
 
@@ -96,6 +98,7 @@ public class EmployeeService(
         user.PasswordHash = hasher.HashPassword(user, password);
         db.Users.Add(user);
         await db.SaveChangesAsync();
+        await services.GetRequiredService<OnboardingService>().WelcomeAsync([employee.Id]);
         return user;
     }
 
@@ -277,6 +280,7 @@ public class EmployeeService(
             created.Add(new IssuedLogin(e.Id, e.FullName, user.Email, smtp.IsConfigured ? null : password));
         }
         await db.SaveChangesAsync();
+        await services.GetRequiredService<OnboardingService>().WelcomeAsync(created.Select(c => c.EmployeeId).ToList());
         return new IssueLoginsResult(smtp.IsConfigured, created, skipped);
     }
 

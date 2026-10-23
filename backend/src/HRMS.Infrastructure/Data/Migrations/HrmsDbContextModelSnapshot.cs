@@ -1897,6 +1897,211 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("OfficeLocations");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.Onboarding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BuddyEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("IntroducedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("IntroductionJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateOnly>("JoiningDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReportingPlace")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<TimeOnly?>("ReportingTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("StartedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TemplateName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuddyEmployeeId");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("Onboardings");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.OnboardingTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssigneeEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AssigneeKind")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CompletedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateOnly>("DueOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("OnboardingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssigneeEmployeeId");
+
+                    b.HasIndex("OnboardingId");
+
+                    b.ToTable("OnboardingTasks");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.OnboardingTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssetKitId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("WelcomeMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetKitId");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingTemplates");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.OnboardingTemplateTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AssigneeEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AssigneeKind")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("DueOffsetDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TemplateId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("OnboardingTemplateTasks");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.PayRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3464,6 +3669,46 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.Onboarding", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("BuddyEmployeeId");
+
+                    b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.OnboardingTask", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Onboarding", null)
+                        .WithMany("Tasks")
+                        .HasForeignKey("OnboardingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.OnboardingTemplate", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.AssetKit", null)
+                        .WithMany()
+                        .HasForeignKey("AssetKitId");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.OnboardingTemplateTask", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.OnboardingTemplate", null)
+                        .WithMany("Tasks")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.PayRequest", b =>
                 {
                     b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
@@ -3704,6 +3949,16 @@ namespace HRMS.Infrastructure.Data.Migrations
             modelBuilder.Entity("HRMS.Domain.Entities.Loan", b =>
                 {
                     b.Navigation("Repayments");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.Onboarding", b =>
+                {
+                    b.Navigation("Tasks");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.OnboardingTemplate", b =>
+                {
+                    b.Navigation("Tasks");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.PayrollRun", b =>

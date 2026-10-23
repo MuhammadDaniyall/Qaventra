@@ -15,6 +15,9 @@ const HelpdeskQueuePage = lazy(() => import('./pages/helpdesk/HelpdeskPages').th
 const TicketPage = lazy(() => import('./pages/helpdesk/TicketPage').then((m) => ({ default: m.TicketPage })));
 const MyAssetsPage = lazy(() => import('./pages/assets/MyAssetsPage').then((m) => ({ default: m.MyAssetsPage })));
 const AssetsPage = lazy(() => import('./pages/assets/AssetsPage').then((m) => ({ default: m.AssetsPage })));
+const OnboardingPage = lazy(() => import('./pages/onboarding/OnboardingPage').then((m) => ({ default: m.OnboardingPage })));
+const OnboardingDetailPage = lazy(() => import('./pages/onboarding/OnboardingDetailPage').then((m) => ({ default: m.OnboardingDetailPage })));
+const WelcomePage = lazy(() => import('./pages/onboarding/WelcomePage').then((m) => ({ default: m.WelcomePage })));
 const RosterPage = lazy(() => import('./pages/attendance/RosterPage').then((m) => ({ default: m.RosterPage })));
 const MonthlyAttendancePage = lazy(() => import('./pages/attendance/MonthlyAttendancePage').then((m) => ({ default: m.MonthlyAttendancePage })));
 const MyAttendancePage = lazy(() => import('./pages/attendance/MyAttendancePage').then((m) => ({ default: m.MyAttendancePage })));
@@ -89,6 +92,9 @@ export default function App() {
               <Route path="/me/attendance" element={<MyAttendancePage />} />
               <Route path="/announcements" element={<AnnouncementsPage />} />
               <Route path="/me/assets" element={<MyAssetsPage />} />
+              <Route path="/welcome" element={<WelcomePage />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route path="/onboarding/:id" element={<OnboardingDetailPage />} />
               <Route path="/assets" element={<AssetsPage />} />
               <Route path="/helpdesk" element={<MyTicketsPage />} />
               <Route path="/helpdesk/queue" element={<HelpdeskQueuePage />} />

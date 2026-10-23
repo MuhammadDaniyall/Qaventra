@@ -19,6 +19,7 @@ import {
 import { formatCurrency, formatDate, monthLabel } from '../../lib/format';
 import { CheckInCard } from '../attendance/CheckInCard';
 import { DashboardNews } from '../announcements/DashboardNews';
+import { WelcomeBanner } from '../onboarding/WelcomePage';
 import { AttendanceTrendChart, DepartmentChart } from './Charts';
 
 function greeting() {
@@ -43,6 +44,7 @@ export function DashboardPage() {
       />
 
       {showCheckIn && <CheckInCard className="mb-6" />}
+      {user.employeeId && <WelcomeBanner className="mb-6" />}
       <DashboardNews className="mb-6" />
 
       {dash.isError ? (

@@ -52,6 +52,33 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum OnboardingTaskCategory
+{
+    Paperwork = 1,
+    ItSetup = 2,
+    Workspace = 3,
+    Training = 4,
+    Introduction = 5,
+    Other = 6,
+}
+
+/// <summary>Who an onboarding task falls to; resolved to a person when onboarding starts.</summary>
+public enum OnboardingAssignee
+{
+    NewJoiner = 1,
+    LineManager = 2,
+    Buddy = 3,
+    Hr = 4,
+    SpecificEmployee = 5,
+}
+
+public enum OnboardingStatus
+{
+    InProgress = 1,
+    Completed = 2,
+    Cancelled = 3,
+}
+
 public enum AssetCondition
 {
     New = 1,
@@ -349,6 +376,7 @@ public enum NotificationKind
     Poll = 7,
     Ticket = 8,
     Asset = 9,
+    Onboarding = 10,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>
