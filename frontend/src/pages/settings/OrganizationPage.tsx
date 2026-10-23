@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, ListPlus, MapPin, Palmtree } from 'lucide-react';
+import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, ListPlus, MapPin, Palmtree, Tags } from 'lucide-react';
 import { PageHeader, Tabs } from '../../components/ui';
 import { ApprovalFlowsTab } from './ApprovalFlowsTab';
 import { CustomFieldsTab } from './CustomFieldsTab';
@@ -7,12 +7,13 @@ import { DepartmentsTab } from './DepartmentsTab';
 import { DesignationsTab } from './DesignationsTab';
 import { HolidaysTab } from './HolidaysTab';
 import { LeaveTypesTab } from './LeaveTypesTab';
+import { LookupsTab } from './LookupsTab';
 import { OfficesTab } from './OfficesTab';
 import { ShiftsTab } from './ShiftsTab';
 import { ExemptionSettingsCard } from '../attendance/Exemptions';
 
-type Tab = 'departments' | 'designations' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields';
-const TABS: Tab[] = ['departments', 'designations', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields'];
+type Tab = 'departments' | 'designations' | 'lists' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields';
+const TABS: Tab[] = ['departments', 'designations', 'lists', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields'];
 
 export function OrganizationPage() {
   const [params, setParams] = useSearchParams();
@@ -29,6 +30,7 @@ export function OrganizationPage() {
         items={[
           { value: 'departments', label: 'Departments', icon: <Layers className="size-4" /> },
           { value: 'designations', label: 'Designations', icon: <Briefcase className="size-4" /> },
+          { value: 'lists', label: 'Grades and groups', icon: <Tags className="size-4" /> },
           { value: 'shifts', label: 'Shifts', icon: <Clock className="size-4" /> },
           { value: 'offices', label: 'Office locations', icon: <MapPin className="size-4" /> },
           { value: 'holidays', label: 'Holidays', icon: <CalendarHeart className="size-4" /> },
@@ -39,6 +41,7 @@ export function OrganizationPage() {
       />
       {tab === 'departments' && <DepartmentsTab />}
       {tab === 'designations' && <DesignationsTab />}
+      {tab === 'lists' && <LookupsTab />}
       {tab === 'shifts' && (
         <>
           <ShiftsTab />

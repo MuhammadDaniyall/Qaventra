@@ -63,7 +63,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
     [HttpGet, Authorize(Policy = Policies.Approver)]
     public async Task<PagedResult<EmployeeListItemDto>> List(
         [FromQuery] string? search, [FromQuery] Guid? departmentId, [FromQuery] EmploymentStatus? status,
-        [FromQuery] bool former = false, [FromQuery] bool withoutLogin = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 25)
+        [FromQuery] bool former = false, [FromQuery] bool withoutLogin = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 25,
+        [FromQuery] Guid? groupId = null)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 200);
@@ -82,6 +83,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         if (status is not null) q = q.Where(e => e.Status == status);
         if (former) q = q.Where(e => e.Status == EmploymentStatus.Resigned || e.Status == EmploymentStatus.Terminated);
         if (withoutLogin) q = q.Where(e => !db.Users.Any(u => u.EmployeeId == e.Id));
+        if (groupId is { } g)
+            q = q.Where(e => e.DivisionId == g || e.SubDepartmentId == g || e.GradeId == g || e.CostCenterId == g || e.RegionId == g || e.EmployeeGroupId == g);
 
         var total = await q.CountAsync();
         var items = await q.OrderBy(e => e.EmployeeCode)

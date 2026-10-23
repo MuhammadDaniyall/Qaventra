@@ -48,9 +48,8 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             case AlertKind.DocumentExpiry:
             {
                 var ids = people.Select(p => p.Id).ToList();
-                var docs = await db.Attachments.Where(x => x.OwnerType == AttachmentOwner.EmployeeDocument && x.ExpiresOn == target && ids.Contains(x.OwnerId))
-                    .Select(x => new { x.OwnerId, x.FileName, x.Category }).ToListAsync();
-                return docs.Select(d => S(people.First(p => p.Id == d.OwnerId), target, d.Category is { } c ? Humanize(c.ToString()) : d.FileName)).ToList();
+                var docs = await ReportCatalog.ExpiriesAsync(db, ids, target, target);
+                return docs.Select(d => S(people.First(p => p.Id == d.EmployeeId), target, d.Document)).ToList();
             }
             case AlertKind.LeaveStarting:
             {
@@ -207,13 +206,12 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
                 var until = today.AddDays(r.Frequency == ReportFrequency.Monthly ? 60 : 30);
                 var people = await current.Select(e => new { e.Id, Name = e.FirstName + " " + e.LastName, e.EmployeeCode }).ToListAsync();
                 var ids = people.Select(p => p.Id).ToList();
-                var docs = await db.Attachments.Where(a => a.OwnerType == AttachmentOwner.EmployeeDocument && a.ExpiresOn != null && a.ExpiresOn <= until && ids.Contains(a.OwnerId))
-                    .OrderBy(a => a.ExpiresOn).Select(a => new { a.OwnerId, a.Category, a.FileName, a.ExpiresOn }).ToListAsync();
+                var docs = await ReportCatalog.ExpiriesAsync(db, ids, null, until);
                 return new("Documents expiring", $"Expired or expiring by {until:d MMM yyyy}", ["Code", "Name", "Document", "Expires", "State"],
                     docs.Select(d =>
                     {
-                        var p = people.First(x => x.Id == d.OwnerId);
-                        return new List<string> { p.EmployeeCode, p.Name, d.Category is { } c ? Humanize(c.ToString()) : d.FileName, d.ExpiresOn!.Value.ToString("d MMM yyyy"), d.ExpiresOn < today ? "Expired" : "Expiring" };
+                        var p = people.First(x => x.Id == d.EmployeeId);
+                        return new List<string> { p.EmployeeCode, p.Name, d.Document, d.ExpiresOn.ToString("d MMM yyyy"), d.ExpiresOn < today ? "Expired" : "Expiring" };
                     }).ToList());
             }
             case ReportKind.JoinersAndLeavers:

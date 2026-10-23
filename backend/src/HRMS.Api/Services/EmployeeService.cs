@@ -158,6 +158,8 @@ public class EmployeeService(
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == employeeId) ?? throw new NotFoundException("Employee");
         if (employee.IsCurrent)
             throw new DomainException($"{employee.FullName} still works here.");
+        if (employee.IsBlacklisted)
+            throw new DomainException($"{employee.FullName} is on the do-not-hire list{(employee.BlacklistReason is { } why ? $" ({why})" : "")}. Remove them from it first.");
         if (input.Status is not (EmploymentStatus.Probation or EmploymentStatus.Active))
             throw new DomainException("A re-hired employee starts on probation or as active.");
         if (employee.LeavingDate is { } left && input.JoiningDate <= left)

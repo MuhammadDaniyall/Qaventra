@@ -115,6 +115,47 @@ public class Employee : TenantEntity
     public Guid? ShiftId { get; set; }
     public Shift? Shift { get; set; }
 
+    // ---------- Personal file ----------
+    public string? FatherName { get; set; }
+    public string? PlaceOfBirth { get; set; }
+    public string? Nationality { get; set; }
+    public string? Religion { get; set; }
+    public DateOnly? CnicIssuedOn { get; set; }
+    public DateOnly? CnicExpiresOn { get; set; }
+    public string? PassportNo { get; set; }
+    public DateOnly? PassportIssuedOn { get; set; }
+    public DateOnly? PassportExpiresOn { get; set; }
+    public string? VisaNo { get; set; }
+    public string? VisaType { get; set; }
+    public DateOnly? VisaExpiresOn { get; set; }
+    public string? DrivingLicenseNo { get; set; }
+    public DateOnly? DrivingLicenseExpiresOn { get; set; }
+    public string? Ntn { get; set; }
+    public string? EobiNo { get; set; }
+    public string? SocialSecurityNo { get; set; }
+    public string? InsuranceProvider { get; set; }
+    public string? InsurancePolicyNo { get; set; }
+    public DateOnly? InsuranceExpiresOn { get; set; }
+    public string? BankBranchCode { get; set; }
+    public string? BankAccountTitle { get; set; }
+
+    // ---------- Company file ----------
+    public Guid? DivisionId { get; set; }
+    public Guid? SubDepartmentId { get; set; }
+    public Guid? GradeId { get; set; }
+    public Guid? CostCenterId { get; set; }
+    public Guid? RegionId { get; set; }
+    public Guid? EmployeeGroupId { get; set; }
+    public DateOnly? ConfirmationDate { get; set; }
+    public DateOnly? ContractEndDate { get; set; }
+    /// <summary>Punch code on the biometric machine, when different from the employee code.</summary>
+    public string? PunchCode { get; set; }
+    public Guid? ExitTypeId { get; set; }
+    public string? ExitReason { get; set; }
+    /// <summary>Do not re-hire.</summary>
+    public bool IsBlacklisted { get; set; }
+    public string? BlacklistReason { get; set; }
+
     public string FullName => $"{FirstName} {LastName}".Trim();
 
     public bool IsCurrent => Status is EmploymentStatus.Probation or EmploymentStatus.Active;

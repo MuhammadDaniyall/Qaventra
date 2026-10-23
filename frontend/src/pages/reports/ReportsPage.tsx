@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { GroupFilter } from '../employees/EmployeeFile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Download, FileBarChart, Play, Printer, Search, Settings2 } from 'lucide-react';
@@ -122,6 +123,7 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
     month: `${now.getFullYear()}-${now.getMonth() + 1}`,
     year: String(now.getFullYear()),
     department: '',
+    group: '',
     employee: '',
     includeLeft: false,
   });
@@ -138,6 +140,7 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
       departmentIds: f.department ? [f.department] : [],
       employeeId: f.employee || null,
       includeLeft: f.includeLeft,
+      groupIds: f.group ? [f.group] : [],
     };
   };
   const run = useMutation({ mutationFn: () => reportsApi.run(def.key, request()) });
@@ -196,6 +199,11 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
                   </option>
                 ))}
               </Select>
+            </Field>
+          )}
+          {has('department') && (
+            <Field label="Group">
+              <GroupFilter className="w-52" value={f.group} onChange={(v) => set('group', v)} />
             </Field>
           )}
           {has('employee') && (

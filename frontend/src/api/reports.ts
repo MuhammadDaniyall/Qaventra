@@ -20,6 +20,7 @@ export interface ReportRequest {
   departmentIds?: string[];
   employeeId?: string | null;
   includeLeft?: boolean;
+  groupIds?: string[];
 }
 
 export interface ReportResult {

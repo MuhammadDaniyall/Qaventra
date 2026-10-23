@@ -369,6 +369,8 @@ export interface EmployeeQuery {
   /** Only people who have left (resigned or terminated). */
   former?: boolean;
   withoutLogin?: boolean;
+  /** Division, grade, cost center, region, group or sub-department id. */
+  groupId?: string;
   page?: number;
   pageSize?: number;
 }

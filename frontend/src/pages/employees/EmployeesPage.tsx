@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GroupFilter } from './EmployeeFile';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { KeyRound, Plus, Search, UserRoundCheck, Users } from 'lucide-react';
@@ -42,18 +43,19 @@ export function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [status, setStatus] = useState<EmploymentStatus | ''>('');
+  const [groupId, setGroupId] = useState('');
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebounced(search.trim(), 300);
   const departments = useDepartments();
   const [dialog, setDialog] = useState<'logins' | 'rehire' | null>(null);
 
-  const query = { search: debouncedSearch, departmentId: departmentId || undefined, status, page, pageSize: PAGE_SIZE };
+  const query = { search: debouncedSearch, departmentId: departmentId || undefined, groupId: groupId || undefined, status, page, pageSize: PAGE_SIZE };
   const list = useQuery({
     queryKey: [...qk.employees, 'list', query],
     queryFn: () => employeesApi.list(query),
     placeholderData: keepPreviousData,
   });
-  const filtered = !!(debouncedSearch || departmentId || status);
+  const filtered = !!(debouncedSearch || departmentId || status || groupId);
 
   return (
     <>
@@ -110,6 +112,14 @@ export function EmployeesPage() {
                 </option>
               ))}
             </Select>
+            <GroupFilter
+              className="sm:w-48"
+              value={groupId}
+              onChange={(v) => {
+                setGroupId(v);
+                setPage(1);
+              }}
+            />
             <Select
               aria-label="Filter by status"
               value={status}

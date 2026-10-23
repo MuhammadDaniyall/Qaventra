@@ -12,6 +12,7 @@ import { formatDate, humanize, roleLabel } from '../../lib/format';
 import { EmergencyContactsCard, JobHistory } from '../employees/records';
 import { MyProfileChanges, ProfileChangeModal } from './ProfileChanges';
 import { CustomValuesCard } from '../settings/CustomFieldsTab';
+import { EmployeeFileCard, EmployeeRecordsCard } from '../employees/EmployeeFile';
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -110,7 +111,9 @@ export function MyProfilePage() {
           </Card>
         </div>
       </div>
-      <div className="mt-6">
+      <div className="mt-6 space-y-6">
+        <EmployeeFileCard editable={false} />
+        <EmployeeRecordsCard editable />
         <CustomValuesCard editable={false} />
       </div>
       <MyProfileChanges />

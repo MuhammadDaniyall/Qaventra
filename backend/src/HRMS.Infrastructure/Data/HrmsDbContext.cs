@@ -49,6 +49,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Loan> Loans => Set<Loan>();
     public DbSet<LoanRepayment> LoanRepayments => Set<LoanRepayment>();
     public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
+    public DbSet<OrgLookup> OrgLookups => Set<OrgLookup>();
+    public DbSet<Dependant> Dependants => Set<Dependant>();
+    public DbSet<Qualification> Qualifications => Set<Qualification>();
+    public DbSet<WorkExperience> WorkExperiences => Set<WorkExperience>();
     public DbSet<ProfileChangeRequest> ProfileChangeRequests => Set<ProfileChangeRequest>();
     public DbSet<JobChange> JobChanges => Set<JobChange>();
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
@@ -189,6 +193,52 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.BloodGroup).HasMaxLength(5);
             e.HasIndex(x => new { x.TenantId, x.EmployeeCode }).IsUnique();
             e.HasOne(x => x.Manager).WithMany().HasForeignKey(x => x.ManagerId);
+            foreach (var n in new[] { nameof(Employee.FatherName), nameof(Employee.PlaceOfBirth), nameof(Employee.Nationality), nameof(Employee.Religion),
+                         nameof(Employee.InsuranceProvider), nameof(Employee.BankAccountTitle), nameof(Employee.VisaType) })
+                e.Property(n).HasMaxLength(100);
+            foreach (var n in new[] { nameof(Employee.PassportNo), nameof(Employee.VisaNo), nameof(Employee.DrivingLicenseNo), nameof(Employee.Ntn),
+                         nameof(Employee.EobiNo), nameof(Employee.SocialSecurityNo), nameof(Employee.InsurancePolicyNo), nameof(Employee.BankBranchCode),
+                         nameof(Employee.PunchCode) })
+                e.Property(n).HasMaxLength(40);
+            e.Property(x => x.ExitReason).HasMaxLength(500);
+            e.Property(x => x.BlacklistReason).HasMaxLength(500);
+            foreach (var n in new[] { nameof(Employee.DivisionId), nameof(Employee.SubDepartmentId), nameof(Employee.GradeId), nameof(Employee.CostCenterId),
+                         nameof(Employee.RegionId), nameof(Employee.EmployeeGroupId), nameof(Employee.ExitTypeId) })
+                e.HasOne<OrgLookup>().WithMany().HasForeignKey(n).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        b.Entity<OrgLookup>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Code).HasMaxLength(30);
+            e.HasIndex(x => new { x.TenantId, x.Kind, x.Name });
+        });
+
+        b.Entity<Dependant>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Relation).HasMaxLength(50);
+            e.Property(x => x.Cnic).HasMaxLength(15);
+            e.Property(x => x.NomineeShare).HasPrecision(5, 2);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<Qualification>(e =>
+        {
+            e.Property(x => x.Degree).HasMaxLength(150);
+            e.Property(x => x.Institute).HasMaxLength(200);
+            e.Property(x => x.Field).HasMaxLength(150);
+            e.Property(x => x.Grade).HasMaxLength(30);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<WorkExperience>(e =>
+        {
+            e.Property(x => x.Organization).HasMaxLength(200);
+            e.Property(x => x.Designation).HasMaxLength(150);
+            e.Property(x => x.ReasonForLeaving).HasMaxLength(500);
+            e.Property(x => x.LastSalary).HasPrecision(18, 2);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
         });
 
         b.Entity<OfficeLocation>().Property(x => x.Name).HasMaxLength(150);
@@ -1114,7 +1164,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
-        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason);
+        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason)
+        || t == typeof(Dependant) || t == typeof(Qualification) || t == typeof(WorkExperience);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

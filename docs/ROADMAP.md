@@ -62,6 +62,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 - **Leave and attendance rules:** reason types per leave type (day limit, document needed; a reason must be chosen when a type has them); sandwich rule (offs and holidays inside a request count); document required beyond N days, enforced before approval; opening balances for everyone in one grid (brought forward and adjustments with a note); excusing late arrivals and half days through their own approval chain, with a monthly quota and time limit, turning the day into present so no late penalty or half-day deduction applies.
 
+- **Employee file:** company lists (divisions, sub-departments under departments, grades, cost centers, regions/stations, employee groups, exit types) with codes and heads; employee file with father name, nationality, religion, CNIC/passport/visa/licence numbers and dates, NTN, EOBI and social security numbers, health insurance, bank title and branch, confirmation and contract end, punch code, exit type and reason, do-not-hire list (blocks re-hire); dependants and nominees with shares, qualifications and previous jobs (employees keep their own); filters by group on the employee list and every report; new reports (employee file, dependants, qualifications, experience); file expiry dates feed the expiring documents report and alert.
+
 ## Where we aim to beat FlowHCM
 
 - Mobile-first self-service (PWA): check-in, leave, claims with camera receipts, payslips, letters.

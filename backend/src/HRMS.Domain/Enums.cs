@@ -688,3 +688,14 @@ public enum ExpenseStatus
     /// <summary>Reimbursed through a finalized payroll or a final settlement.</summary>
     Paid = 5,
 }
+
+public enum LookupKind
+{
+    Division = 1,
+    Grade = 2,
+    CostCenter = 3,
+    Region = 4,
+    EmployeeGroup = 5,
+    SubDepartment = 6,
+    ExitType = 7,
+}

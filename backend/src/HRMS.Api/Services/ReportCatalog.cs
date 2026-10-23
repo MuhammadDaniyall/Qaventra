@@ -11,7 +11,7 @@ namespace HRMS.Api.Services;
 /// <summary>Filters a report understands: "period" (from–to), "date", "month", "year", "department", "employee", "includeLeft".</summary>
 public record ReportDefinition(string Key, string Category, string Name, string Description, string[] Filters, bool HrOnly);
 
-public record ReportRequest(DateOnly? From, DateOnly? To, DateOnly? Date, int? Year, int? Month, List<Guid>? DepartmentIds, Guid? EmployeeId, bool IncludeLeft);
+public record ReportRequest(DateOnly? From, DateOnly? To, DateOnly? Date, int? Year, int? Month, List<Guid>? DepartmentIds, Guid? EmployeeId, bool IncludeLeft, List<Guid>? GroupIds = null);
 
 /// <summary>A report's result. Numeric columns are right-aligned and totalled when <see cref="Totals"/> is set.</summary>
 public record ReportResult(string Title, string? Subtitle, List<string> Headers, List<bool> Numeric, List<List<string>> Rows, List<string>? Totals);
@@ -28,7 +28,11 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("employees.headcount", "Employees", "Headcount", "Employees by department, men and women, on probation", ["department"], false),
         new("employees.movement", "Employees", "Joiners and leavers", "Who joined and who left in a period", ["period", "department"], false),
         new("employees.birthdays", "Employees", "Birthdays and anniversaries", "Birthdays and work anniversaries in a month", ["month", "department"], false),
-        new("employees.documents", "Employees", "Documents expiring", "CNICs, passports and other documents expired or expiring by a date", ["date", "department"], true),
+        new("employees.documents", "Employees", "Documents expiring", "CNICs, passports, visas, licences, insurance, contracts and uploaded documents expired or expiring by a date", ["date", "department"], true),
+        new("employees.file", "Employees", "Employee file", "Division, sub-department, grade, cost center, region, group, confirmation and contract end", ["department", "includeLeft"], true),
+        new("employees.dependants", "Employees", "Dependants and nominees", "Family members on file, nominees and insurance cover", ["department"], true),
+        new("employees.qualifications", "Employees", "Qualifications", "Degrees and certificates on file, highest first", ["department"], false),
+        new("employees.experience", "Employees", "Previous experience", "Past jobs on file with years of experience", ["department"], true),
         new("attendance.daily", "Attendance", "Daily attendance", "In, out, late, absent and on leave for one day", ["date", "department"], false),
         new("attendance.register", "Attendance", "Attendance register", "Days present, late, half, absent and on leave per person for a month", ["month", "department", "employee"], false),
         new("attendance.late", "Attendance", "Late arrivals", "Every late check-in in a period", ["period", "department", "employee"], false),
@@ -51,6 +55,8 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         var def = All.FirstOrDefault(r => r.Key == key) ?? throw new NotFoundException("Report");
         if (def.HrOnly && !me.IsHr())
             throw new ForbiddenException("Only HR can run this report.");
+        if (f.GroupIds is { Count: > 0 } gids)
+            groups = (await db.OrgLookups.Where(l => gids.Contains(l.Id)).Select(l => new { l.Id, l.Kind }).ToListAsync()).Select(x => (x.Id, x.Kind)).ToList();
         var today = await clock.TodayAsync();
         var from = f.From ?? new DateOnly(today.Year, today.Month, 1);
         var to = f.To ?? today;
@@ -113,14 +119,64 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             {
                 var by = f.Date ?? today.AddDays(30);
                 var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
-                var ids = staff.Select(s => s.Id).ToList();
-                var docs = await db.Attachments.Where(a => a.OwnerType == AttachmentOwner.EmployeeDocument && a.ExpiresOn != null && a.ExpiresOn <= by && ids.Contains(a.OwnerId))
-                    .OrderBy(a => a.ExpiresOn).Select(a => new { a.OwnerId, a.Category, a.FileName, a.ExpiresOn }).ToListAsync();
+                var docs = await ExpiriesAsync(db, staff.Select(s => s.Id).ToList(), null, by);
                 return T(def, $"Expired or expiring by {by:d MMM yyyy}", ["Code", "Name", "Document", "Expires", ""], [],
                     docs.Select(d =>
                     {
-                        var s = staff.First(x => x.Id == d.OwnerId);
-                        return L(s.EmployeeCode, s.Name, d.Category is { } c ? ScheduledService.Humanize(c.ToString()) : d.FileName, D(d.ExpiresOn!.Value), d.ExpiresOn < today ? "Expired" : "Expiring");
+                        var s = staff.First(x => x.Id == d.EmployeeId);
+                        return L(s.EmployeeCode, s.Name, d.Document, D(d.ExpiresOn), d.ExpiresOn < today ? "Expired" : "Expiring");
+                    }));
+            }
+            case "employees.file":
+            {
+                var names = await db.OrgLookups.ToDictionaryAsync(l => l.Id, l => l.Name);
+                string Nm(Guid? id) => id is { } x ? names.GetValueOrDefault(x) ?? "" : "";
+                var rows = await people.OrderBy(e => e.FirstName).ThenBy(e => e.LastName).Select(e => new
+                {
+                    e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "",
+                    e.DivisionId, e.SubDepartmentId, e.GradeId, e.CostCenterId, e.RegionId, e.EmployeeGroupId, e.ConfirmationDate, e.ContractEndDate, e.Status, e.LeavingDate,
+                }).ToListAsync();
+                return T(def, $"{rows.Count} people", ["Code", "Name", "Department", "Sub-department", "Division", "Grade", "Cost center", "Region", "Group", "Confirmed", "Contract ends", "Status"], [],
+                    rows.Select(r => L(r.EmployeeCode, r.Name, r.Department, Nm(r.SubDepartmentId), Nm(r.DivisionId), Nm(r.GradeId), Nm(r.CostCenterId), Nm(r.RegionId),
+                        Nm(r.EmployeeGroupId), r.ConfirmationDate is { } c ? D(c) : "", r.ContractEndDate is { } ce ? D(ce) : "", Status(r.Status, r.LeavingDate))));
+            }
+            case "employees.dependants":
+            {
+                var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
+                var ids = staff.Select(s => s.Id).ToList();
+                var deps = await db.Dependants.Where(d => ids.Contains(d.EmployeeId)).OrderBy(d => d.Order).ToListAsync();
+                return T(def, $"{deps.Count} family members of {deps.Select(d => d.EmployeeId).Distinct().Count()} people", ["Code", "Employee", "Name", "Relation", "CNIC", "Born", "Nominee", "Insured"], [],
+                    deps.OrderBy(d => staff.First(s => s.Id == d.EmployeeId).Name).Select(d =>
+                    {
+                        var s = staff.First(x => x.Id == d.EmployeeId);
+                        return L(s.EmployeeCode, s.Name, d.Name, d.Relation, d.Cnic, d.DateOfBirth is { } b ? D(b) : "",
+                            d.IsNominee ? (d.NomineeShare is { } sh ? $"{sh:0.##}%" : "Yes") : "", d.CoveredByInsurance ? "Yes" : "");
+                    }));
+            }
+            case "employees.qualifications":
+            {
+                var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
+                var ids = staff.Select(s => s.Id).ToList();
+                var quals = await db.Qualifications.Where(q => ids.Contains(q.EmployeeId)).ToListAsync();
+                return T(def, $"{quals.Count} qualifications", ["Code", "Employee", "Degree", "Field", "Institute", "Grade", "Year", "Highest"], [],
+                    quals.OrderBy(q => staff.First(s => s.Id == q.EmployeeId).Name).ThenByDescending(q => q.IsHighest).ThenByDescending(q => q.ToYear).Select(q =>
+                    {
+                        var s = staff.First(x => x.Id == q.EmployeeId);
+                        return L(s.EmployeeCode, s.Name, q.Degree, q.Field, q.Institute, q.Grade, q.ToYear?.ToString(), q.IsHighest ? "Yes" : "");
+                    }));
+            }
+            case "employees.experience":
+            {
+                var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
+                var ids = staff.Select(s => s.Id).ToList();
+                var jobs = await db.WorkExperiences.Where(j => ids.Contains(j.EmployeeId)).ToListAsync();
+                static decimal Years(DateOnly? a, DateOnly? b) => a is { } x && b is { } y && y >= x ? Math.Round((y.DayNumber - x.DayNumber) / 365.25m, 1) : 0;
+                return T(def, $"{jobs.Count} past jobs", ["Code", "Employee", "Organization", "Designation", "From", "To", "Years", "Last salary", "Reason for leaving"], [6, 7],
+                    jobs.OrderBy(j => staff.First(s => s.Id == j.EmployeeId).Name).ThenByDescending(j => j.FromDate).Select(j =>
+                    {
+                        var s = staff.First(x => x.Id == j.EmployeeId);
+                        return L(s.EmployeeCode, s.Name, j.Organization, j.Designation, j.FromDate is { } a ? D(a) : "", j.ToDate is { } b ? D(b) : "",
+                            Years(j.FromDate, j.ToDate).ToString("0.#"), j.LastSalary is { } ls ? ls.ToString("N0") : "", j.ReasonForLeaving);
                     }));
             }
             case "attendance.daily":
@@ -317,7 +373,49 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             q = q.Where(e => e.DepartmentId != null && d.Contains(e.DepartmentId.Value));
         if (f.EmployeeId is { } id)
             q = q.Where(e => e.Id == id);
+        foreach (var g in groups.GroupBy(x => x.Kind))
+        {
+            var ids = g.Select(x => (Guid?)x.Id).ToList();
+            q = g.Key switch
+            {
+                LookupKind.Division => q.Where(e => ids.Contains(e.DivisionId)),
+                LookupKind.SubDepartment => q.Where(e => ids.Contains(e.SubDepartmentId)),
+                LookupKind.Grade => q.Where(e => ids.Contains(e.GradeId)),
+                LookupKind.CostCenter => q.Where(e => ids.Contains(e.CostCenterId)),
+                LookupKind.Region => q.Where(e => ids.Contains(e.RegionId)),
+                LookupKind.EmployeeGroup => q.Where(e => ids.Contains(e.EmployeeGroupId)),
+                _ => q,
+            };
+        }
         return q;
+    }
+
+    private List<(Guid Id, LookupKind Kind)> groups = [];
+
+    /// <summary>
+    /// Expiry dates on employees' files and uploaded documents for the given people, from (inclusive, optional) to (inclusive).
+    /// Used by the documents report, the scheduled report and the expiry alert.
+    /// </summary>
+    public static async Task<List<(Guid EmployeeId, string Document, DateOnly ExpiresOn)>> ExpiriesAsync(HrmsDbContext db, List<Guid> ids, DateOnly? from, DateOnly to)
+    {
+        var lo = from ?? DateOnly.MinValue;
+        var list = new List<(Guid, string, DateOnly)>();
+        var docs = await db.Attachments.Where(a => a.OwnerType == AttachmentOwner.EmployeeDocument && a.ExpiresOn != null && a.ExpiresOn >= lo && a.ExpiresOn <= to && ids.Contains(a.OwnerId))
+            .Select(a => new { a.OwnerId, a.Category, a.FileName, a.ExpiresOn }).ToListAsync();
+        list.AddRange(docs.Select(d => (d.OwnerId, d.Category is { } c ? ScheduledService.Humanize(c.ToString()) : d.FileName, d.ExpiresOn!.Value)));
+        var files = await db.Employees.Where(e => ids.Contains(e.Id)).Select(e => new
+        {
+            e.Id, e.CnicExpiresOn, e.PassportExpiresOn, e.VisaExpiresOn, e.DrivingLicenseExpiresOn, e.InsuranceExpiresOn, e.ContractEndDate,
+        }).ToListAsync();
+        foreach (var e in files)
+            foreach (var (name, date) in new[]
+                     {
+                         ("CNIC", e.CnicExpiresOn), ("Passport", e.PassportExpiresOn), ("Visa", e.VisaExpiresOn), ("Driving licence", e.DrivingLicenseExpiresOn),
+                         ("Health insurance", e.InsuranceExpiresOn), ("Contract", e.ContractEndDate),
+                     })
+                if (date is { } d && d >= lo && d <= to)
+                    list.Add((e.Id, name, d));
+        return list.OrderBy(x => x.Item3).ToList();
     }
 
     private static ReportResult T(ReportDefinition def, string? subtitle, List<string> headers, int[] numeric, IEnumerable<List<string>> rows, bool totals = false)

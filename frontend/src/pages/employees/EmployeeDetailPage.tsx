@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { ArrowUpRight, FolderOpen, History, KeyRound, Laptop, Palmtree, Phone, UserRound, UserRoundCheck, Wallet } from 'lucide-react';
+import { ArrowUpRight, FolderOpen, GraduationCap, History, IdCard, KeyRound, Laptop, Palmtree, Phone, UserRound, UserRoundCheck, Wallet } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { ApiError, errorMessage } from '../../api/client';
@@ -13,13 +13,14 @@ import { formatDate, roleLabel } from '../../lib/format';
 import type { Employee, SaveEmployeeRequest } from '../../types';
 import { EmployeeForm, toSaveRequest } from './EmployeeForm';
 import { LeaveTab } from './LeaveTab';
+import { EmployeeFileCard, EmployeeRecordsCard } from './EmployeeFile';
 import { LoginTab } from './LoginTab';
 import { SalaryTab } from './SalaryTab';
 import { EmergencyContactsCard, JobChangeModal, JobHistory, RehireModal } from './records';
 import { CustomValuesCard } from '../settings/CustomFieldsTab';
 import { EmployeeAssetsTab } from '../assets/EmployeeAssets';
 
-type Tab = 'profile' | 'job' | 'emergency' | 'assets' | 'documents' | 'leave' | 'salary' | 'login';
+type Tab = 'profile' | 'file' | 'family' | 'job' | 'emergency' | 'assets' | 'documents' | 'leave' | 'salary' | 'login';
 
 export function EmployeeDetailPage() {
   const { id = '' } = useParams();
@@ -27,7 +28,7 @@ export function EmployeeDetailPage() {
   const hr = isHr(user);
   const [params, setParams] = useSearchParams();
   const requested = (params.get('tab') as Tab | null) ?? 'profile';
-  const tab: Tab = hr || requested === 'job' || requested === 'emergency' || requested === 'assets' ? requested : 'profile';
+  const tab: Tab = hr || ['job', 'emergency', 'assets', 'file', 'family'].includes(requested) ? requested : 'profile';
   const employee = useQuery({ queryKey: qk.employee(id), queryFn: () => employeesApi.get(id) });
   const [dialog, setDialog] = useState<'change' | 'rehire' | null>(() => (params.get('rehire') ? 'rehire' : null));
 
@@ -86,6 +87,8 @@ export function EmployeeDetailPage() {
         onChange={(t) => setParams(t === 'profile' ? {} : { tab: t }, { replace: true })}
         items={[
           { value: 'profile', label: 'Profile', icon: <UserRound className="size-4" /> },
+          { value: 'file', label: 'File', icon: <IdCard className="size-4" /> },
+          { value: 'family', label: 'Family & education', icon: <GraduationCap className="size-4" /> },
           { value: 'job', label: 'Job history', icon: <History className="size-4" /> },
           { value: 'emergency', label: 'Emergency', icon: <Phone className="size-4" /> },
           { value: 'assets', label: 'Assets', icon: <Laptop className="size-4" /> },
@@ -117,6 +120,8 @@ export function EmployeeDetailPage() {
       {tab === 'leave' && <LeaveTab employeeId={e.id} />}
       {tab === 'salary' && <SalaryTab employeeId={e.id} />}
       {tab === 'login' && <LoginTab employee={e} />}
+      {tab === 'file' && <EmployeeFileCard employeeId={e.id} departmentId={e.departmentId} editable={hr} />}
+      {tab === 'family' && <EmployeeRecordsCard employeeId={e.id} editable={hr} />}
       {tab === 'job' && <JobHistory employeeId={e.id} joiningDate={e.joiningDate} />}
       {tab === 'emergency' && <EmergencyContactsCard employeeId={e.id} editable={hr} />}
       {tab === 'assets' && <EmployeeAssetsTab employeeId={e.id} hr={hr} />}
