@@ -52,6 +52,22 @@ public enum TicketPriority
     Urgent = 4,
 }
 
+public enum SpaceKind
+{
+    Desk = 1,
+    MeetingRoom = 2,
+    Cabin = 3,
+}
+
+public enum BookingStatus
+{
+    Booked = 1,
+    CheckedIn = 2,
+    Cancelled = 3,
+    /// <summary>Freed because nobody checked in.</summary>
+    Released = 4,
+}
+
 public enum AlertKind
 {
     Birthday = 1,

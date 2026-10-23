@@ -84,6 +84,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<TravelSettings> TravelSettings => Set<TravelSettings>();
     public DbSet<TrainingCategory> TrainingCategories => Set<TrainingCategory>();
     public DbSet<ScheduledAlert> ScheduledAlerts => Set<ScheduledAlert>();
+    public DbSet<DeskSettings> DeskSettings => Set<DeskSettings>();
+    public DbSet<Floor> Floors => Set<Floor>();
+    public DbSet<Space> Spaces => Set<Space>();
+    public DbSet<SpaceBooking> SpaceBookings => Set<SpaceBooking>();
     public DbSet<ScheduledReport> ScheduledReports => Set<ScheduledReport>();
     public DbSet<ScheduledRun> ScheduledRuns => Set<ScheduledRun>();
     public DbSet<TrainingProgram> TrainingPrograms => Set<TrainingProgram>();
@@ -683,6 +687,39 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Weight).HasPrecision(6, 2);
             e.Property(x => x.SelfComment).HasMaxLength(2000);
             e.Property(x => x.ManagerComment).HasMaxLength(2000);
+        });
+
+        b.Entity<DeskSettings>(e =>
+        {
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.Property(x => x.MaxDaysAhead).HasDefaultValue(14);
+            e.Property(x => x.ReleaseAfterMinutes).HasDefaultValue(60);
+            e.Property(x => x.DayStartsAt).HasDefaultValue(9);
+        });
+
+        b.Entity<Floor>(e =>
+        {
+            e.HasIndex(x => new { x.OfficeLocationId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.HasOne(x => x.Office).WithMany().HasForeignKey(x => x.OfficeLocationId);
+        });
+
+        b.Entity<Space>(e =>
+        {
+            e.HasIndex(x => new { x.FloorId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.Features).HasMaxLength(300);
+            e.HasOne(x => x.Floor).WithMany().HasForeignKey(x => x.FloorId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.AssignedEmployeeId);
+        });
+
+        b.Entity<SpaceBooking>(e =>
+        {
+            e.HasIndex(x => new { x.SpaceId, x.Date });
+            e.HasIndex(x => new { x.EmployeeId, x.Date });
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.HasOne(x => x.Space).WithMany().HasForeignKey(x => x.SpaceId);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
         });
 
         b.Entity<ScheduledAlert>(e =>

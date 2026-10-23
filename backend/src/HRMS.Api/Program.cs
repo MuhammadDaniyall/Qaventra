@@ -52,6 +52,7 @@ builder.Services.AddScoped<RecruitmentService>();
 builder.Services.AddScoped<TravelService>();
 builder.Services.AddScoped<TrainingService>();
 builder.Services.AddScoped<ScheduledService>();
+builder.Services.AddScoped<DeskService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
