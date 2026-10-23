@@ -63,7 +63,7 @@ export function LeaveTypesTab() {
                     <Button size="sm" variant="ghost" onClick={() => setReasonsFor(t)}>
                       Reasons
                     </Button>
-                    <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
+                    <RowActions history={{ type: 'LeaveType', id: t.id }} label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
                   </div>
                 </Td>
               </Tr>

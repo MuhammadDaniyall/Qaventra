@@ -12,6 +12,7 @@ import { IconButton } from '../ui';
 import { Sidebar } from './Sidebar';
 import { NotificationBell } from './NotificationBell';
 import { UserMenu } from './UserMenu';
+import { QuickSearch } from './QuickSearch';
 
 const COLLAPSE_KEY = 'hrms.sidebar.collapsed';
 
@@ -93,6 +94,7 @@ export function AppLayout() {
             )}
           </div>
           <div className="ml-auto flex items-center gap-1.5">
+            {!isPlatformOwner(user) && <QuickSearch />}
             <IconButton label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>
               {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
             </IconButton>

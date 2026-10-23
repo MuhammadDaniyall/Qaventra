@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { OnBehalfField } from '../../components/engine';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Clock, Paperclip, Plus, Receipt, Trash2, Upload, Wallet } from 'lucide-react';
 import { expensesApi } from '../../api/expenses';
@@ -151,6 +152,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<DraftItem[]>([blankItem()]);
   const [error, setError] = useState<string | null>(null);
+  const [forWhom, setForWhom] = useState('');
   const total = items.reduce((t, i) => t + (Number(i.amount) || 0), 0);
 
   const update = (key: number, patch: Partial<DraftItem>) => setItems((list) => list.map((i) => (i.key === key ? { ...i, ...patch } : i)));
@@ -166,6 +168,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
           amount: Number(i.amount),
           receipt: i.receipt,
         })),
+        employeeId: forWhom || null,
       }),
     onSuccess: (c) => {
       toast.success('Claim submitted', `${formatCurrency(c.total)} sent for approval.`);
@@ -211,6 +214,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
     >
       <form id="new-claim-form" onSubmit={onSubmit} className="space-y-5">
         <FormError message={error} />
+        <OnBehalfField value={forWhom} onChange={setForWhom} />
         <Field label="Title" required>
           <Input value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Lahore client visit, October" autoFocus />
         </Field>

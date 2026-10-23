@@ -21,7 +21,8 @@ public record ExpenseItemRequest(
     [Range(0.01, 10_000_000)] decimal Amount,
     ReceiptUpload? Receipt);
 
-public record SubmitExpenseRequest([Required, StringLength(150)] string Title, [Required, MinLength(1), MaxLength(ExpenseService.MaxItems)] List<ExpenseItemRequest> Items);
+public record SubmitExpenseRequest([Required, StringLength(150)] string Title, [Required, MinLength(1), MaxLength(ExpenseService.MaxItems)] List<ExpenseItemRequest> Items,
+    Guid? EmployeeId = null);
 
 public record DecideExpenseRequest([StringLength(1000)] string? Note);
 
@@ -37,7 +38,7 @@ public record ExpenseClaimDetailDto(ExpenseClaimDto Claim, List<ExpenseItemDto> 
 [ApiController]
 [Route("api/expenses")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class ExpensesController(HrmsDbContext db, ExpenseService expenses, ApprovalEngine approvals, ICurrentUser me) : ControllerBase
+public class ExpensesController(HrmsDbContext db, ExpenseService expenses, ApprovalEngine approvals, ICurrentUser me, OnBehalfService onBehalf) : ControllerBase
 {
     [HttpGet("my")]
     public Task<List<ExpenseClaimDto>> My() => Project(db.ExpenseClaims.Where(c => c.EmployeeId == me.EmployeeId)).ToListAsync();
@@ -46,7 +47,7 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
     [RequestSizeLimit(80 * 1024 * 1024)]
     public async Task<ExpenseClaimDto> Submit(SubmitExpenseRequest req)
     {
-        var employeeId = me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
+        var employeeId = await onBehalf.ResolveAsync(req.EmployeeId);
         var claim = await expenses.SubmitAsync(employeeId, req.Title, req.Items.Select(i => new NewExpenseItem(
             i.Date, i.Category, i.Description, i.Amount,
             i.Receipt is { } r ? new NewReceipt(r.FileName, r.ContentType, r.Base64) : null)).ToList());

@@ -12,7 +12,8 @@ namespace HRMS.Api.Controllers;
 
 public record ApplyLeaveRequest(
     Guid LeaveTypeId, DateOnly FromDate, DateOnly ToDate, [StringLength(1000)] string? Reason,
-    LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null, Guid? ReasonId = null);
+    LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null, Guid? ReasonId = null,
+    Guid? EmployeeId = null);
 
 public record DecideLeaveRequest([StringLength(1000)] string? Note);
 
@@ -37,7 +38,7 @@ public record LeaveDaysDto(decimal Days);
 [ApiController]
 [Route("api/leave")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngine approvals, ICurrentUser me) : ControllerBase
+public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngine approvals, ICurrentUser me, OnBehalfService onBehalf) : ControllerBase
 {
     [HttpGet("balances")]
     public async Task<List<LeaveBalanceDto>> MyBalances([FromQuery] int? year) =>
@@ -82,7 +83,7 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
     [HttpPost]
     public async Task<LeaveRequestDto> Apply(ApplyLeaveRequest req)
     {
-        var request = await leave.ApplyAsync(MyEmployeeId(), new LeaveService.LeaveApplication(
+        var request = await leave.ApplyAsync(await onBehalf.ResolveAsync(req.EmployeeId), new LeaveService.LeaveApplication(
             req.LeaveTypeId, req.FromDate, req.ToDate, req.Reason, req.Duration, req.HalfDayPart, req.StartTime, req.EndTime, req.ReasonId));
         return await Project(db.LeaveRequests.Where(r => r.Id == request.Id)).FirstAsync();
     }

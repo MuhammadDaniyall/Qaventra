@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record SubmitCompOffRequest(DateOnly WorkedOn, decimal Days, [Required, StringLength(1000)] string Reason);
+public record SubmitCompOffRequest(DateOnly WorkedOn, decimal Days, [Required, StringLength(1000)] string Reason, Guid? EmployeeId = null);
 
 public record CompOffDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, DateOnly WorkedOn, decimal Days, string Reason,
@@ -20,7 +20,7 @@ public record CompOffDto(
 [ApiController]
 [Route("api/leave/comp-off")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class CompOffController(HrmsDbContext db, CompOffService compOff, ICurrentUser me) : ControllerBase
+public class CompOffController(HrmsDbContext db, CompOffService compOff, ICurrentUser me, OnBehalfService onBehalf) : ControllerBase
 {
     [HttpGet("my")]
     public Task<List<CompOffDto>> My() => Project(db.CompOffRequests.Where(c => c.EmployeeId == me.EmployeeId)).ToListAsync();
@@ -28,7 +28,7 @@ public class CompOffController(HrmsDbContext db, CompOffService compOff, ICurren
     [HttpPost]
     public async Task<CompOffDto> Submit(SubmitCompOffRequest req)
     {
-        var employeeId = me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
+        var employeeId = await onBehalf.ResolveAsync(req.EmployeeId);
         var c = await compOff.SubmitAsync(employeeId, req.WorkedOn, req.Days, req.Reason);
         return await Project(db.CompOffRequests.Where(x => x.Id == c.Id)).FirstAsync();
     }

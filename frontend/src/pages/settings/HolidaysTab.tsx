@@ -115,7 +115,7 @@ export function HolidaysTab() {
                   )}
                 </Td>
                 <Td>
-                  <RowActions label={h.name} onEdit={() => setEditing(h)} onDelete={() => setDeleting(h)} />
+                  <RowActions history={{ type: 'Holiday', id: h.id }} label={h.name} onEdit={() => setEditing(h)} onDelete={() => setDeleting(h)} />
                 </Td>
               </Tr>
             ))}

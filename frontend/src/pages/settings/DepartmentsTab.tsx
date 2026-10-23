@@ -54,7 +54,7 @@ export function DepartmentsTab() {
                 <Td>{d.head ?? <span className="text-zinc-400">—</span>}</Td>
                 <Td className="text-right tabular-nums">{d.employees}</Td>
                 <Td>
-                  <RowActions label={d.name} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
+                  <RowActions history={{ type: 'Department', id: d.id }} label={d.name} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
                 </Td>
               </Tr>
             ))}

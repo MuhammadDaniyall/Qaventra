@@ -5,6 +5,7 @@ import { PageSpinner, EmptyState, Button } from '../components/ui';
 import type { Me, UserRole } from '../types';
 import { useAuth } from './AuthContext';
 import { effectiveRole } from './roles';
+import { moduleForPath } from '../components/layout/nav';
 
 export function homeFor(me: Me): string {
   return effectiveRole(me) === 'SuperAdmin' ? '/platform' : '/dashboard';
@@ -33,9 +34,12 @@ export function GuestOnly({ children }: { children?: ReactNode }) {
  */
 export function RequireRole({ roles, children }: { roles: UserRole[]; children?: ReactNode }) {
   const { user } = useAuth();
+  const location = useLocation();
   if (!user) return <Navigate to="/login" replace />;
   const role = effectiveRole(user)!;
-  if (!roles.includes(role)) {
+  const module = moduleForPath(location.pathname);
+  const granted = !!user.modules && !!module && user.modules.includes(module);
+  if (!roles.includes(role) && !granted) {
     // Owner in platform mode on a company page, or anyone on a platform page: go home.
     if (role === 'SuperAdmin' || roles.every((r) => r === 'SuperAdmin')) {
       return <Navigate to={homeFor(user)} replace />;

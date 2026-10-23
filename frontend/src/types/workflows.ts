@@ -120,6 +120,7 @@ export interface ReceiptUpload {
 export interface SubmitExpenseRequest {
   title: string;
   items: Array<{ date: string; category: ExpenseCategory; description: string; amount: number; receipt: ReceiptUpload | null }>;
+  employeeId?: string | null;
 }
 
 // ---- Separation ----

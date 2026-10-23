@@ -65,7 +65,7 @@ export function OfficesTab() {
                 </Td>
                 <Td className="text-right tabular-nums">{o.radiusMeters} m</Td>
                 <Td>
-                  <RowActions label={o.name} onEdit={() => setEditing(o)} onDelete={() => setDeleting(o)} />
+                  <RowActions history={{ type: 'OfficeLocation', id: o.id }} label={o.name} onEdit={() => setEditing(o)} onDelete={() => setDeleting(o)} />
                 </Td>
               </Tr>
             ))}

@@ -22,6 +22,8 @@ const PerformancePage = lazy(() => import('./pages/performance/PerformancePage')
 const ReviewPage = lazy(() => import('./pages/performance/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CalibrationPage = lazy(() => import('./pages/performance/CalibrationPage').then((m) => ({ default: m.CalibrationPage })));
 const OpeningBalancesPage = lazy(() => import('./pages/leave/OpeningBalancesPage').then((m) => ({ default: m.OpeningBalancesPage })));
+const AccessPage = lazy(() => import('./pages/settings/AccessPage').then((m) => ({ default: m.AccessPage })));
+const SuggestionsPage = lazy(() => import('./pages/suggestions/SuggestionsPage').then((m) => ({ default: m.SuggestionsPage })));
 const ProjectsPage = lazy(() => import('./pages/projects/ProjectsPage').then((m) => ({ default: m.ProjectsPage })));
 const TimesheetPage = lazy(() => import('./pages/projects/TimesheetPage').then((m) => ({ default: m.TimesheetPage })));
 const PayChangesPage = lazy(() => import('./pages/payroll/PayChangesPage').then((m) => ({ default: m.PayChangesPage })));
@@ -100,88 +102,91 @@ export default function App() {
       <Route element={<RequireAuth />}>
         <Route element={<AppLayout />}>
           <Route element={<Lazy />}>
-          {/* Platform (owner, not inside a company) */}
-          <Route element={<RequireRole roles={['SuperAdmin']} />}>
-            <Route path="/platform" element={<PlatformDashboardPage />} />
-            <Route path="/platform/companies" element={<CompaniesPage />} />
-            <Route path="/platform/companies/:id" element={<CompanyDetailPage />} />
-            <Route path="/platform/audit-logs" element={<AuditLogsPage />} />
-          </Route>
-
-          {/* Company area */}
-          <Route element={<RequireRole roles={COMPANY_ROLES} />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            {/* Self-service needs an employee record (hidden for the owner inside a company). */}
-            <Route element={<RequireEmployee />}>
-              <Route path="/me/attendance" element={<MyAttendancePage />} />
-              <Route path="/announcements" element={<AnnouncementsPage />} />
-              <Route path="/me/assets" element={<MyAssetsPage />} />
-              <Route path="/welcome" element={<WelcomePage />} />
-              <Route path="/performance" element={<PerformancePage />} />
-              <Route path="/performance/reviews/:id" element={<ReviewPage />} />
-              <Route path="/performance/cycles/:id" element={<CalibrationPage />} />
-              <Route path="/onboarding" element={<OnboardingPage />} />
-              <Route path="/onboarding/:id" element={<OnboardingDetailPage />} />
-              <Route path="/assets" element={<AssetsPage />} />
-              <Route path="/helpdesk" element={<MyTicketsPage />} />
-              <Route path="/helpdesk/queue" element={<HelpdeskQueuePage />} />
-              <Route path="/helpdesk/:id" element={<TicketPage />} />
-              <Route path="/me/leave" element={<MyLeavePage />} />
-              <Route path="/me/payslips" element={<MyPayslipsPage />} />
-              <Route path="/me/profile" element={<MyProfilePage />} />
-              <Route path="/me/expenses" element={<MyExpensesPage />} />
-              <Route path="/me/pay" element={<MyPayPage />} />
-              <Route path="/me/documents" element={<MyDocumentsPage />} />
-              <Route path="/me/resignation" element={<MyExitPage />} />
-            </Route>
-            <Route path="/payslips/:id" element={<PayslipPage />} />
-            <Route path="/desks" element={<DesksPage />} />
-            <Route path="/piece-work" element={<PieceWorkPage />} />
-            <Route path="/training" element={<TrainingPage />} />
-            <Route path="/training/sessions/:id" element={<SessionPage />} />
-            <Route path="/travel" element={<TravelPage />} />
-            <Route path="/travel/:id" element={<TripPage />} />
-            <Route path="/recruitment" element={<RecruitmentPage />} />
-            <Route path="/recruitment/jobs/:id" element={<JobPage />} />
-            <Route path="/recruitment/applications/:id" element={<ApplicationPage />} />
-            <Route path="/letters/:id" element={<LetterPage />} />
-
-            <Route element={<RequireRole roles={APPROVER_ROLES} />}>
-              <Route path="/approvals" element={<ApprovalsInboxPage />} />
-              <Route path="/reports" element={<ReportsPage />} />
-              <Route path="/employees" element={<EmployeesPage />} />
-              <Route path="/employees/:id" element={<EmployeeDetailPage />} />
-              <Route path="/attendance/daily" element={<DailyAttendancePage />} />
-              <Route path="/attendance/roster" element={<RosterPage />} />
-              <Route path="/attendance/monthly" element={<MonthlyAttendancePage />} />
-              <Route path="/leave/approvals" element={<LeaveApprovalsPage />} />
-              <Route path="/expenses/approvals" element={<ExpenseApprovalsPage />} />
+            {/* Platform (owner, not inside a company) */}
+            <Route element={<RequireRole roles={['SuperAdmin']} />}>
+              <Route path="/platform" element={<PlatformDashboardPage />} />
+              <Route path="/platform/companies" element={<CompaniesPage />} />
+              <Route path="/platform/companies/:id" element={<CompanyDetailPage />} />
+              <Route path="/platform/audit-logs" element={<AuditLogsPage />} />
             </Route>
 
-            <Route element={<RequireRole roles={HR_ROLES} />}>
-              <Route path="/employees/new" element={<NewEmployeePage />} />
-              <Route path="/payroll" element={<PayrollRunsPage />} />
-              <Route path="/payroll/runs/:id" element={<PayrollRunPage />} />
-              <Route path="/payroll/settings" element={<PayrollSettingsPage />} />
-              <Route path="/payroll/adjustments" element={<PayAdjustmentsPage />} />
-              <Route path="/payroll/changes" element={<PayChangesPage />} />
-              <Route path="/leave/opening-balances" element={<OpeningBalancesPage />} />
+            {/* Company area */}
+            <Route element={<RequireRole roles={COMPANY_ROLES} />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              {/* Self-service needs an employee record (hidden for the owner inside a company). */}
+              <Route element={<RequireEmployee />}>
+                <Route path="/me/attendance" element={<MyAttendancePage />} />
+                <Route path="/announcements" element={<AnnouncementsPage />} />
+                <Route path="/me/assets" element={<MyAssetsPage />} />
+                <Route path="/welcome" element={<WelcomePage />} />
+                <Route path="/performance" element={<PerformancePage />} />
+                <Route path="/performance/reviews/:id" element={<ReviewPage />} />
+                <Route path="/performance/cycles/:id" element={<CalibrationPage />} />
+                <Route path="/onboarding" element={<OnboardingPage />} />
+                <Route path="/onboarding/:id" element={<OnboardingDetailPage />} />
+                <Route path="/assets" element={<AssetsPage />} />
+                <Route path="/helpdesk" element={<MyTicketsPage />} />
+                <Route path="/helpdesk/queue" element={<HelpdeskQueuePage />} />
+                <Route path="/helpdesk/:id" element={<TicketPage />} />
+                <Route path="/me/leave" element={<MyLeavePage />} />
+                <Route path="/me/payslips" element={<MyPayslipsPage />} />
+                <Route path="/me/profile" element={<MyProfilePage />} />
+                <Route path="/me/expenses" element={<MyExpensesPage />} />
+                <Route path="/me/pay" element={<MyPayPage />} />
+                <Route path="/me/documents" element={<MyDocumentsPage />} />
+                <Route path="/me/resignation" element={<MyExitPage />} />
+              </Route>
+              <Route path="/payslips/:id" element={<PayslipPage />} />
+              <Route path="/desks" element={<DesksPage />} />
+              <Route path="/piece-work" element={<PieceWorkPage />} />
+              <Route path="/training" element={<TrainingPage />} />
+              <Route path="/training/sessions/:id" element={<SessionPage />} />
+              <Route path="/travel" element={<TravelPage />} />
+              <Route path="/travel/:id" element={<TripPage />} />
+              <Route path="/recruitment" element={<RecruitmentPage />} />
+              <Route path="/recruitment/jobs/:id" element={<JobPage />} />
+              <Route path="/recruitment/applications/:id" element={<ApplicationPage />} />
+              <Route path="/letters/:id" element={<LetterPage />} />
+
               <Route path="/projects" element={<ProjectsPage />} />
+              <Route path="/suggestions" element={<SuggestionsPage />} />
               <Route path="/timesheets" element={<TimesheetPage />} />
-              <Route path="/settings" element={<OrganizationPage />} />
-              <Route path="/alerts" element={<ScheduledPage />} />
-              <Route path="/budget" element={<BudgetPage />} />
-              <Route path="/letters" element={<LettersPage />} />
-              <Route path="/separations" element={<SeparationsPage />} />
-              <Route path="/separations/:id" element={<SeparationDetailPage />} />
+
+              <Route element={<RequireRole roles={APPROVER_ROLES} />}>
+                <Route path="/approvals" element={<ApprovalsInboxPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/employees" element={<EmployeesPage />} />
+                <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+                <Route path="/attendance/daily" element={<DailyAttendancePage />} />
+                <Route path="/attendance/roster" element={<RosterPage />} />
+                <Route path="/attendance/monthly" element={<MonthlyAttendancePage />} />
+                <Route path="/leave/approvals" element={<LeaveApprovalsPage />} />
+                <Route path="/expenses/approvals" element={<ExpenseApprovalsPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={HR_ROLES} />}>
+                <Route path="/employees/new" element={<NewEmployeePage />} />
+                <Route path="/payroll" element={<PayrollRunsPage />} />
+                <Route path="/payroll/runs/:id" element={<PayrollRunPage />} />
+                <Route path="/payroll/settings" element={<PayrollSettingsPage />} />
+                <Route path="/payroll/adjustments" element={<PayAdjustmentsPage />} />
+                <Route path="/payroll/changes" element={<PayChangesPage />} />
+                <Route path="/leave/opening-balances" element={<OpeningBalancesPage />} />
+                <Route path="/settings" element={<OrganizationPage />} />
+                <Route path="/alerts" element={<ScheduledPage />} />
+                <Route path="/budget" element={<BudgetPage />} />
+                <Route path="/letters" element={<LettersPage />} />
+                <Route path="/separations" element={<SeparationsPage />} />
+                <Route path="/separations/:id" element={<SeparationDetailPage />} />
+              </Route>
+
+              <Route element={<RequireRole roles={['CompanyAdmin']} />}>
+                <Route path="/audit-logs" element={<AuditLogsPage />} />
+                <Route path="/settings/access" element={<AccessPage />} />
+              </Route>
             </Route>
 
-            <Route element={<RequireRole roles={['CompanyAdmin']} />}>
-              <Route path="/audit-logs" element={<AuditLogsPage />} />
-            </Route>
-          </Route>
-
-          <Route path="*" element={<NotFoundPage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>
       </Route>

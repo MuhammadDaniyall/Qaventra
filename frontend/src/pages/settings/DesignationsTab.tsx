@@ -50,7 +50,7 @@ export function DesignationsTab() {
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{d.title}</Td>
                 <Td className="text-right tabular-nums">{d.employees}</Td>
                 <Td>
-                  <RowActions label={d.title} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
+                  <RowActions history={{ type: 'Designation', id: d.id }} label={d.title} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
                 </Td>
               </Tr>
             ))}

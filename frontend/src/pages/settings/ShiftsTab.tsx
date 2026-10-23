@@ -84,7 +84,7 @@ export function ShiftsTab() {
                 <Td className="text-right tabular-nums">{s.graceMinutes} min</Td>
                 <Td>{s.weeklyOffDays.length ? s.weeklyOffDays.map((d) => d.slice(0, 3)).join(', ') : 'None'}</Td>
                 <Td>
-                  <RowActions label={s.name} onEdit={() => setEditing(s)} onDelete={s.isDefault ? undefined : () => setDeleting(s)} />
+                  <RowActions history={{ type: 'Shift', id: s.id }} label={s.name} onEdit={() => setEditing(s)} onDelete={s.isDefault ? undefined : () => setDeleting(s)} />
                 </Td>
               </Tr>
             ))}

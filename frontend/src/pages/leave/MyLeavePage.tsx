@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { OnBehalfField } from '../../components/engine';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CalendarDays, CalendarPlus, Paperclip, Plus, X } from 'lucide-react';
 import { ATTACHMENT_ACCEPT, attachmentProblem, attachmentsApi } from '../../api/attachments';
@@ -255,6 +256,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   const [part, setPart] = useState<HalfDayPart>('FirstHalf');
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('12:00');
+  const [forWhom, setForWhom] = useState('');
 
   const typeId = leaveTypeId || active[0]?.id || '';
   const type = active.find((t) => t.id === typeId);
@@ -275,7 +277,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   });
   const reasons = (allReasons.data ?? []).filter((r) => r.leaveTypeId === typeId && r.isActive);
   const chosenReason = reasons.find((r) => r.id === reasonId);
-  const balance = balances.find((b) => b.leaveTypeId === typeId);
+  const balance = forWhom ? undefined : balances.find((b) => b.leaveTypeId === typeId);
   const needsDocument = !!chosenReason?.requiresDocument || (!!type?.documentAfterDays && !!days.data && days.data.days > type.documentAfterDays);
   const over = balance && days.data && days.data.days > balance.available;
 
@@ -291,6 +293,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         halfDayPart: mode === 'HalfDay' ? part : null,
         startTime: mode === 'ShortLeave' ? `${startTime}:00` : null,
         endTime: mode === 'ShortLeave' ? `${endTime}:00` : null,
+        employeeId: forWhom || null,
       });
       // The request exists now; a failed upload must not hide that, so it is reported separately.
       const failed: string[] = [];
@@ -336,6 +339,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
     >
       <form id="apply-leave-form" onSubmit={submit} className="space-y-4">
         <FormError message={error} />
+        <OnBehalfField value={forWhom} onChange={setForWhom} />
         <Field label="Leave type" required hint={balance ? `${formatNumber(balance.available)} day(s) available` : undefined}>
           <Select value={typeId} onChange={(e) => setLeaveTypeId(e.target.value)}>
             {active.length === 0 && <option value="">No leave types available</option>}

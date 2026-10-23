@@ -31,6 +31,7 @@ export function ApprovalTimeline({ type, subjectId, className }: { type: Approva
 
   return (
     <>
+      {timeline.data.filedBy && <p className={cn('mb-2 text-xs text-zinc-500', className)}>Filed by {timeline.data.filedBy} on their behalf</p>}
       {timeline.data.forced && (
         <p
           className={cn(

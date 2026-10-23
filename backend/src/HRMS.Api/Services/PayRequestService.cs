@@ -32,7 +32,9 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
     public async Task<PayRequest> SubmitAsync(NewPayRequest r)
     {
         var self = r.EmployeeId == me.EmployeeId;
-        if (!me.IsHr() && !self)
+        var forTeam = !self && !me.IsHr() && me.Role == UserRole.Manager && EmployeeMayRequest(r.Kind)
+                      && await db.Employees.AnyAsync(e => e.Id == r.EmployeeId && e.ManagerId == me.EmployeeId);
+        if (!me.IsHr() && !self && !forTeam)
             throw new ForbiddenException("You can only make requests for yourself.");
         if (self && !EmployeeMayRequest(r.Kind) && !me.IsHr())
             throw new ForbiddenException("Allowances, bonuses and deductions are entered by HR.");

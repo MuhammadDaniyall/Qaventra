@@ -33,7 +33,7 @@ export interface AttendanceRequest {
 
 export const attendanceRequestsApi = {
   my: () => http.get<AttendanceRequest[]>('/attendance/requests/my'),
-  submit: (b: { date: string; kind: AttendanceRequestKind; checkIn: string; checkOut: string | null; reason: string }) =>
+  submit: (b: { date: string; kind: AttendanceRequestKind; checkIn: string; checkOut: string | null; reason: string; employeeId?: string | null }) =>
     http.post<AttendanceRequest>('/attendance/requests', b),
   approve: (id: string, note: string | null) => http.post(`/attendance/requests/${id}/approve`, { note }),
   reject: (id: string, note: string | null) => http.post(`/attendance/requests/${id}/reject`, { note }),

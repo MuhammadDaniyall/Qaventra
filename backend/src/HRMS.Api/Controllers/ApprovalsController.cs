@@ -23,7 +23,7 @@ public record SaveApprovalFlowRequest([MaxLength(5)] List<SaveFlowStep> Steps);
 
 public record InboxItemDto(
     ApprovalRequestType RequestType, Guid SubjectId, Guid EmployeeId, string EmployeeName, string EmployeeCode,
-    string Summary, int Step, int TotalSteps, bool AssignedToMe, DateTime CreatedAtUtc, string? ActingFor);
+    string Summary, int Step, int TotalSteps, bool AssignedToMe, DateTime CreatedAtUtc, string? ActingFor, string? FiledBy = null);
 
 public record DecideRequest(bool Approve, [StringLength(1000)] string? Note, bool Force = false);
 
@@ -37,7 +37,7 @@ public record SaveDelegationRequest(Guid? FromEmployeeId, Guid ToEmployeeId, Dat
 public record ApprovalStepDto(
     int Order, ApproverKind Kind, string? ApproverName, ApprovalStepStatus Status, string? DecidedByName, DateTime? DecidedAtUtc, string? Note);
 
-public record ApprovalTimelineDto(ApprovalStatus Status, List<ApprovalStepDto> Steps, bool Forced);
+public record ApprovalTimelineDto(ApprovalStatus Status, List<ApprovalStepDto> Steps, bool Forced, string? FiledBy = null);
 
 [ApiController]
 [Route("api/approvals")]
@@ -119,7 +119,7 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
         var rows = await q.OrderBy(a => a.CreatedAtUtc).Take(500).Select(a => new
         {
             a.RequestType, a.SubjectId, a.EmployeeId, a.Employee!.FirstName, a.Employee.LastName, a.Employee.EmployeeCode,
-            a.Summary, a.CurrentStep, Total = a.Steps.Count, a.CreatedAtUtc,
+            a.Summary, a.CurrentStep, Total = a.Steps.Count, a.CreatedAtUtc, a.FiledByName,
             Current = a.Steps.Where(s => s.Status == ApprovalStepStatus.Current).Select(s => new { s.Kind, s.ApproverEmployeeId }).FirstOrDefault(),
         }).ToListAsync();
 
@@ -134,7 +134,7 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
                 return new InboxItemDto(
                     r.RequestType, r.SubjectId, r.EmployeeId, $"{r.FirstName} {r.LastName}", r.EmployeeCode, r.Summary, r.CurrentStep, r.Total,
                     r.Current is { } c && (c.ApproverEmployeeId == mine && mine != null || (c.Kind == ApproverKind.Hr && isHr) || delegated),
-                    r.CreatedAtUtc, delegated ? forNames.GetValueOrDefault(r.Current!.ApproverEmployeeId!.Value) : null);
+                    r.CreatedAtUtc, delegated ? forNames.GetValueOrDefault(r.Current!.ApproverEmployeeId!.Value) : null, r.FiledByName);
             }).ToList();
     }
 
@@ -152,7 +152,7 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
         var names = await EmployeeNamesAsync(a.Steps.Select(s => s.ApproverEmployeeId));
         return new ApprovalTimelineDto(a.Status, a.Steps.OrderBy(s => s.Order).Select(s => new ApprovalStepDto(
             s.Order, s.Kind, s.ApproverEmployeeId is { } id ? names.GetValueOrDefault(id) : null,
-            s.Status, s.DecidedByName, s.DecidedAtUtc, s.Note)).ToList(), a.Forced);
+            s.Status, s.DecidedByName, s.DecidedAtUtc, s.Note)).ToList(), a.Forced, a.FiledByName);
     }
 
     /// <summary>

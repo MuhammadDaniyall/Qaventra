@@ -54,6 +54,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<PenaltyRule> PenaltyRules => Set<PenaltyRule>();
     public DbSet<PenaltyCharge> PenaltyCharges => Set<PenaltyCharge>();
     public DbSet<Project> Projects => Set<Project>();
+    public DbSet<AccessTemplate> AccessTemplates => Set<AccessTemplate>();
+    public DbSet<Suggestion> Suggestions => Set<Suggestion>();
+    public DbSet<SuggestionCategory> SuggestionCategories => Set<SuggestionCategory>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
     public DbSet<ProjectTask> ProjectTasks => Set<ProjectTask>();
     public DbSet<Timesheet> Timesheets => Set<Timesheet>();
@@ -221,6 +224,29 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Reason).HasMaxLength(500);
             e.Property(x => x.DecisionNote).HasMaxLength(1000);
             e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<AccessTemplate>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.Description).HasMaxLength(300);
+            e.Property(x => x.Modules).HasMaxLength(1000);
+        });
+
+        b.Entity<Suggestion>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Details).HasMaxLength(4000);
+            e.Property(x => x.Response).HasMaxLength(2000);
+            e.Property(x => x.RespondedByName).HasMaxLength(150);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasOne<SuggestionCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        b.Entity<SuggestionCategory>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.ReviewerIds).HasMaxLength(2000);
         });
 
         b.Entity<Project>(e =>
@@ -485,6 +511,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
         b.Entity<ApprovalRequest>(e =>
         {
+            e.Property(x => x.FiledByName).HasMaxLength(150);
             e.HasIndex(x => new { x.RequestType, x.SubjectId }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.Status });
             e.Property(x => x.Summary).HasMaxLength(300);

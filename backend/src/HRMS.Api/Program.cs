@@ -58,6 +58,7 @@ builder.Services.AddScoped<HRMS.Api.Controllers.ExemptionService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.PenaltyService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.OffDayService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.TimesheetService>();
+builder.Services.AddScoped<OnBehalfService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
@@ -98,8 +99,10 @@ builder.Services.AddAuthorizationBuilder()
     // SuperAdmin passes these only with a company-scoped token (see PlatformController.Enter), because
     // every controller using them also requires CompanyUser (a tenant_id claim).
     .AddPolicy(Policies.Admin, p => p.RequireRole(nameof(UserRole.SuperAdmin), nameof(UserRole.CompanyAdmin)))
-    .AddPolicy(Policies.Hr, p => p.RequireRole(nameof(UserRole.SuperAdmin), nameof(UserRole.CompanyAdmin), nameof(UserRole.HrManager)))
-    .AddPolicy(Policies.Approver, p => p.RequireRole(nameof(UserRole.SuperAdmin), nameof(UserRole.CompanyAdmin), nameof(UserRole.HrManager), nameof(UserRole.Manager)));
+    // HR and approver screens honour access templates: HR users can be limited to some modules, others given some.
+    .AddPolicy(Policies.Hr, p => p.AddRequirements(new ModuleRoleRequirement(UserRole.SuperAdmin, UserRole.CompanyAdmin, UserRole.HrManager)))
+    .AddPolicy(Policies.Approver, p => p.AddRequirements(new ModuleRoleRequirement(UserRole.SuperAdmin, UserRole.CompanyAdmin, UserRole.HrManager, UserRole.Manager)));
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, ModuleRoleHandler>();
 
 // Slows password guessing: by default 10 sign-in or registration attempts per minute per IP.
 var authPerMinute = builder.Configuration.GetValue("RateLimit:AuthPerMinute", 10);

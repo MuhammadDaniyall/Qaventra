@@ -33,6 +33,8 @@ public class ApprovalRequest : TenantEntity
     public DateTime? CompletedAtUtc { get; set; }
     /// <summary>HR approved it over the remaining steps.</summary>
     public bool Forced { get; set; }
+    /// <summary>Who filed it, when someone (HR or the manager) filed it on the employee's behalf.</summary>
+    public string? FiledByName { get; set; }
     public List<ApprovalStep> Steps { get; set; } = [];
 }
 

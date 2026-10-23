@@ -19,11 +19,11 @@ tested and committed locally; one production deploy at the end. Tick items as th
 - [x] Per-employee location / IP restriction for check-in
 
 ## C. Shared engine
-- [ ] "On behalf of" requests (HR and managers apply leave, attendance, expense, overtime, advance for someone)
-- [ ] Suggestions box (category, anonymous, routed to reviewers)
-- [ ] Role templates: per-screen permission sets assigned to users
-- [ ] Global search / quick access over all screens, pinned favourites
-- [ ] Per-screen change history popup (from audit log)
+- [x] "On behalf of" requests (HR and managers apply leave, attendance, expense, overtime, advance for someone)
+- [x] Suggestions box (category, anonymous, routed to reviewers)
+- [x] Role templates: per-screen permission sets assigned to users
+- [x] Global search / quick access over all screens, pinned favourites
+- [x] Per-screen change history popup (from audit log)
 
 ## D. Payroll depth
 - [ ] Provident fund (employee/employer %, balance ledger, opening balance, withdrawal), gratuity (accrual, withdrawal)

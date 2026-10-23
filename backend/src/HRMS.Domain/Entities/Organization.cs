@@ -71,6 +71,8 @@ public class User : BaseEntity, ITenantEntity
     public bool EmailNotifications { get; set; } = true;
     /// <summary>Set when HR issues a temporary password; the user must pick their own after signing in.</summary>
     public bool MustChangePassword { get; set; }
+    /// <summary>Limits (HR) or opens (others) HR modules; null = the role's usual access.</summary>
+    public Guid? AccessTemplateId { get; set; }
 }
 
 public class Department : TenantEntity

@@ -200,6 +200,7 @@ export function ApprovalsInboxPage() {
                           {item.actingFor && <Badge tone="violet">For {item.actingFor}</Badge>}
                         </span>
                         <span className="block truncate text-sm text-zinc-600 dark:text-zinc-300">{item.summary}</span>
+                        {item.filedBy && <span className="block text-xs text-zinc-500">Filed by {item.filedBy}</span>}
                         <span className="block text-xs text-zinc-500">
                           {item.totalSteps > 1 ? `Step ${item.step} of ${item.totalSteps} · ` : ''}submitted {formatDateTimeUtc(item.createdAtUtc)}
                         </span>

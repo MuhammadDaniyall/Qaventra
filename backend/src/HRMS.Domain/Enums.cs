@@ -741,3 +741,12 @@ public enum TimesheetStatus
     Approved = 3,
     Rejected = 4,
 }
+
+public enum SuggestionStatus
+{
+    New = 1,
+    UnderReview = 2,
+    Accepted = 3,
+    Implemented = 4,
+    Declined = 5,
+}

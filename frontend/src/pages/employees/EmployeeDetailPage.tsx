@@ -14,6 +14,7 @@ import type { Employee, SaveEmployeeRequest } from '../../types';
 import { EmployeeForm, toSaveRequest } from './EmployeeForm';
 import { LeaveTab } from './LeaveTab';
 import { EmployeeFileCard, EmployeeRecordsCard } from './EmployeeFile';
+import { HistoryButton } from '../../components/engine';
 import { LoginTab } from './LoginTab';
 import { SalaryTab } from './SalaryTab';
 import { EmergencyContactsCard, JobChangeModal, JobHistory, RehireModal } from './records';
@@ -68,16 +69,20 @@ export function EmployeeDetailPage() {
         }
         description={`Joined ${formatDate(e.joiningDate)}${e.department ? ` · ${e.department}` : ''}${e.manager ? ` · Reports to ${e.manager}` : ''}`}
         actions={
-          hr &&
-          (current ? (
-            <Button variant="secondary" icon={<ArrowUpRight className="size-4" />} onClick={() => setDialog('change')}>
-              Promote / transfer
-            </Button>
-          ) : (
-            <Button icon={<UserRoundCheck className="size-4" />} onClick={() => setDialog('rehire')}>
-              Re-hire
-            </Button>
-          ))
+          hr && (
+            <>
+              <HistoryButton entityType="Employee" entityId={e.id} label="Profile change history" />
+              {current ? (
+                <Button variant="secondary" icon={<ArrowUpRight className="size-4" />} onClick={() => setDialog('change')}>
+                  Promote / transfer
+                </Button>
+              ) : (
+                <Button icon={<UserRoundCheck className="size-4" />} onClick={() => setDialog('rehire')}>
+                  Re-hire
+                </Button>
+              )}
+            </>
+          )
         }
       />
 

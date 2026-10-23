@@ -12,7 +12,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record SubmitAttendanceRequest(DateOnly Date, AttendanceRequestKind Kind, TimeOnly CheckIn, TimeOnly? CheckOut, [Required, StringLength(1000)] string Reason);
+public record SubmitAttendanceRequest(DateOnly Date, AttendanceRequestKind Kind, TimeOnly CheckIn, TimeOnly? CheckOut, [Required, StringLength(1000)] string Reason,
+    Guid? EmployeeId = null);
 
 public record DecideAttendanceRequest([StringLength(1000)] string? Note);
 
@@ -24,7 +25,7 @@ public record AttendanceRequestDto(
 [ApiController]
 [Route("api/attendance/requests")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class AttendanceRequestsController(HrmsDbContext db, AttendanceRequestService requests, ApprovalEngine approvals, TenantClock clock, ICurrentUser me) : ControllerBase
+public class AttendanceRequestsController(HrmsDbContext db, AttendanceRequestService requests, ApprovalEngine approvals, TenantClock clock, ICurrentUser me, OnBehalfService onBehalf) : ControllerBase
 {
     [HttpGet("my")]
     public Task<List<AttendanceRequestDto>> My() => ProjectAsync(db.AttendanceRequests.Where(r => r.EmployeeId == me.EmployeeId));
@@ -32,7 +33,7 @@ public class AttendanceRequestsController(HrmsDbContext db, AttendanceRequestSer
     [HttpPost]
     public async Task<AttendanceRequestDto> Submit(SubmitAttendanceRequest req)
     {
-        var employeeId = me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
+        var employeeId = await onBehalf.ResolveAsync(req.EmployeeId);
         var r = await requests.SubmitAsync(employeeId, req.Date, req.Kind, req.CheckIn, req.CheckOut, req.Reason);
         return (await ProjectAsync(db.AttendanceRequests.Where(x => x.Id == r.Id))).Single();
     }

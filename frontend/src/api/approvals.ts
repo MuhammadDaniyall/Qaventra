@@ -32,6 +32,8 @@ export interface InboxItem {
   createdAtUtc: string;
   /** Set when the item is here because its approver delegated to the signed-in user. */
   actingFor: string | null;
+  /** Someone filed it on the employee's behalf. */
+  filedBy: string | null;
 }
 
 export interface Delegation {
@@ -65,6 +67,7 @@ export interface ApprovalTimeline {
   steps: ApprovalStep[];
   /** HR approved it over the remaining steps. */
   forced: boolean;
+  filedBy: string | null;
 }
 
 export const approvalsApi = {

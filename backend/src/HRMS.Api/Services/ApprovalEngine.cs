@@ -51,6 +51,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
             SubjectId = subjectId,
             EmployeeId = employeeId,
             Summary = summary.Length > 300 ? summary[..300] : summary,
+            FiledByName = me.EmployeeId != employeeId && me.UserId is not null ? await LetterService.CurrentUserNameAsync(db, me) : null,
         };
         for (var i = 0; i < planned.Count; i++)
         {

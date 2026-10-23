@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { OnBehalfField } from '../../components/engine';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Briefcase, ClipboardEdit, Clock, Fingerprint, Home, type LucideIcon } from 'lucide-react';
 import { attendanceRequestsApi, type AttendanceRequestKind } from '../../api/attendance';
@@ -40,6 +41,7 @@ export function RequestAttendanceModal({ date: initialDate, onClose }: { date?: 
   const [checkOut, setCheckOut] = useState('18:00');
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [forWhom, setForWhom] = useState('');
   const minDate = toIsoDate(new Date(Date.now() - 45 * 86_400_000));
 
   const submit = useMutation({
@@ -50,6 +52,7 @@ export function RequestAttendanceModal({ date: initialDate, onClose }: { date?: 
         checkIn: `${checkIn}:00`,
         checkOut: checkOut ? `${checkOut}:00` : null,
         reason: reason.trim(),
+        employeeId: forWhom || null,
       }),
     onSuccess: (r) => {
       toast.success('Request sent', r.status === 'Approved' ? 'Approved automatically; your attendance is updated.' : 'Your approver has been notified.');
@@ -88,6 +91,7 @@ export function RequestAttendanceModal({ date: initialDate, onClose }: { date?: 
     >
       <form id="attendance-request-form" onSubmit={onSubmit} className="space-y-4">
         <FormError message={error} />
+        <OnBehalfField value={forWhom} onChange={setForWhom} />
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Request type">
           {KINDS.map((k) => (
             <button

@@ -3,14 +3,10 @@ import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-quer
 import { Pencil, Trash2 } from 'lucide-react';
 import { ApiError, errorMessage } from '../../api/client';
 import { Button, ConfirmDialog, IconButton, Modal, FormError, useToast } from '../../components/ui';
+import { HistoryButton } from '../../components/engine';
 
 /** Save mutation for a settings modal: toasts, invalidates, collects form errors. */
-export function useSaveMutation<T>(opts: {
-  save: (value: T) => Promise<unknown>;
-  invalidate: QueryKey[];
-  successMessage: string;
-  onSuccess: () => void;
-}) {
+export function useSaveMutation<T>(opts: { save: (value: T) => Promise<unknown>; invalidate: QueryKey[]; successMessage: string; onSuccess: () => void }) {
   const toast = useToast();
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
@@ -79,9 +75,21 @@ export function EditModal({
   );
 }
 
-export function RowActions({ onEdit, onDelete, label }: { onEdit?: () => void; onDelete?: () => void; label: string }) {
+export function RowActions({
+  onEdit,
+  onDelete,
+  label,
+  history,
+}: {
+  onEdit?: () => void;
+  onDelete?: () => void;
+  label: string;
+  /** Show a change-history button for this record. */
+  history?: { type: string; id: string };
+}) {
   return (
     <div className="flex justify-end gap-1">
+      {history && <HistoryButton entityType={history.type} entityId={history.id} label={`History of ${label}`} />}
       {onEdit && (
         <IconButton label={`Edit ${label}`} onClick={onEdit}>
           <Pencil className="size-4" />

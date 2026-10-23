@@ -39,6 +39,8 @@ export interface Me {
   subscriptionEndsOn: string | null;
   /** HR issued a temporary password; the user must choose their own before going on. */
   mustChangePassword: boolean;
+  /** Access template modules; null = the role's usual access. */
+  modules?: string[] | null;
 }
 
 export interface Session {
@@ -577,6 +579,8 @@ export interface ApplyLeaveRequest {
   startTime?: string | null;
   endTime?: string | null;
   reasonId?: string | null;
+  /** Filing for someone else (HR, or a manager for their team). */
+  employeeId?: string | null;
 }
 
 // ---- Payroll ----
