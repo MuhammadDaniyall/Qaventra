@@ -47,7 +47,15 @@ export function ShiftsTab() {
       ) : list.isError ? (
         <ErrorState error={list.error} onRetry={() => list.refetch()} />
       ) : !list.data?.length ? (
-        <EmptyState icon={Clock} title="No shifts yet" action={<Button variant="secondary" onClick={() => setEditing('new')}>Add shift</Button>} />
+        <EmptyState
+          icon={Clock}
+          title="No shifts yet"
+          action={
+            <Button variant="secondary" onClick={() => setEditing('new')}>
+              Add shift
+            </Button>
+          }
+        />
       ) : (
         <Table>
           <THead>
@@ -92,8 +100,20 @@ export function ShiftsTab() {
 function ShiftModal({ item, onClose }: { item: Shift | null; onClose: () => void }) {
   const [v, setV] = useState<SaveShiftRequest>(
     item
-      ? { name: item.name, startTime: item.startTime, endTime: item.endTime, graceMinutes: item.graceMinutes, weeklyOffDays: item.weeklyOffDays, isDefault: item.isDefault }
-      : { name: '', startTime: '09:00:00', endTime: '18:00:00', graceMinutes: 15, weeklyOffDays: ['Saturday', 'Sunday'], isDefault: false },
+      ? (({ id: _id, ...rest }) => rest)(item)
+      : {
+          name: '',
+          startTime: '09:00:00',
+          endTime: '18:00:00',
+          graceMinutes: 15,
+          weeklyOffDays: ['Saturday', 'Sunday'],
+          isDefault: false,
+          earlyLeaveGraceMinutes: 15,
+          halfDayMinutes: null,
+          shortDayMinutes: null,
+          earliestCheckInMinutes: null,
+          breakMinutes: 0,
+        },
   );
   const { mutation, error, fieldErrors, setFieldErrors } = useSaveMutation({
     save: (b: SaveShiftRequest) => (item ? setupApi.updateShift(item.id, b) : setupApi.createShift(b)),
@@ -133,14 +153,100 @@ function ShiftModal({ item, onClose }: { item: Shift | null; onClose: () => void
         </Field>
       </div>
       <Field label="Grace period (minutes)" hint="Check-ins within this many minutes of the start time are not late." error={fieldErrors.graceMinutes}>
-        <Input
-          type="number"
-          min={0}
-          max={180}
-          value={v.graceMinutes}
-          onChange={(e) => setV({ ...v, graceMinutes: Number(e.target.value) || 0 })}
-        />
+        <Input type="number" min={0} max={180} value={v.graceMinutes} onChange={(e) => setV({ ...v, graceMinutes: Number(e.target.value) || 0 })} />
       </Field>
+      <details className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800">
+        <summary className="cursor-pointer text-sm font-medium text-zinc-700 dark:text-zinc-300">Flag rules (early leave, short and half days, break)</summary>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Field label="Early-leave grace (minutes)" hint="Leaving earlier than this before the end is an early leave.">
+            <Input
+              type="number"
+              min={0}
+              max={240}
+              value={v.earlyLeaveGraceMinutes}
+              onChange={(e) => setV({ ...v, earlyLeaveGraceMinutes: Number(e.target.value) || 0 })}
+            />
+          </Field>
+          <Field label="Break (minutes)" hint="Unpaid break inside the shift.">
+            <Input type="number" min={0} max={240} value={v.breakMinutes} onChange={(e) => setV({ ...v, breakMinutes: Number(e.target.value) || 0 })} />
+          </Field>
+          <Field label="Half day under (hours)" hint="Empty: under half the shift.">
+            <Input
+              type="number"
+              min={0}
+              max={24}
+              step={0.25}
+              value={v.halfDayMinutes != null ? v.halfDayMinutes / 60 : ''}
+              onChange={(e) => setV({ ...v, halfDayMinutes: e.target.value ? Math.round(Number(e.target.value) * 60) : null })}
+            />
+          </Field>
+          <Field label="Short day under (hours)" hint="Empty: no short days.">
+            <Input
+              type="number"
+              min={0}
+              max={24}
+              step={0.25}
+              value={v.shortDayMinutes != null ? v.shortDayMinutes / 60 : ''}
+              onChange={(e) => setV({ ...v, shortDayMinutes: e.target.value ? Math.round(Number(e.target.value) * 60) : null })}
+            />
+          </Field>
+          <Field label="Check-in opens (minutes before start)" hint="Empty: any time.">
+            <Input
+              type="number"
+              min={0}
+              max={720}
+              value={v.earliestCheckInMinutes ?? ''}
+              onChange={(e) => setV({ ...v, earliestCheckInMinutes: e.target.value ? Number(e.target.value) : null })}
+            />
+          </Field>
+        </div>
+      </details>
+      <details className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800">
+        <summary className="cursor-pointer text-sm font-medium text-zinc-700 dark:text-zinc-300">Flag rules (early leave, short and half days, break)</summary>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Field label="Early-leave grace (minutes)" hint="Leaving earlier than this before the end is an early leave.">
+            <Input
+              type="number"
+              min={0}
+              max={240}
+              value={v.earlyLeaveGraceMinutes}
+              onChange={(e) => setV({ ...v, earlyLeaveGraceMinutes: Number(e.target.value) || 0 })}
+            />
+          </Field>
+          <Field label="Break (minutes)" hint="Unpaid break inside the shift.">
+            <Input type="number" min={0} max={240} value={v.breakMinutes} onChange={(e) => setV({ ...v, breakMinutes: Number(e.target.value) || 0 })} />
+          </Field>
+          <Field label="Half day under (hours)" hint="Empty: under half the shift.">
+            <Input
+              type="number"
+              min={0}
+              max={24}
+              step={0.25}
+              value={v.halfDayMinutes != null ? v.halfDayMinutes / 60 : ''}
+              onChange={(e) => setV({ ...v, halfDayMinutes: e.target.value ? Math.round(Number(e.target.value) * 60) : null })}
+            />
+          </Field>
+          <Field label="Short day under (hours)" hint="Empty: no short days.">
+            <Input
+              type="number"
+              min={0}
+              max={24}
+              step={0.25}
+              value={v.shortDayMinutes != null ? v.shortDayMinutes / 60 : ''}
+              onChange={(e) => setV({ ...v, shortDayMinutes: e.target.value ? Math.round(Number(e.target.value) * 60) : null })}
+            />
+          </Field>
+          <Field label="Check-in opens (minutes before start)" hint="Empty: any time.">
+            <Input
+              type="number"
+              min={0}
+              max={720}
+              value={v.earliestCheckInMinutes ?? ''}
+              onChange={(e) => setV({ ...v, earliestCheckInMinutes: e.target.value ? Number(e.target.value) : null })}
+            />
+          </Field>
+        </div>
+      </details>
       <fieldset>
         <legend className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">Weekly off days</legend>
         <div className="flex flex-wrap gap-2">

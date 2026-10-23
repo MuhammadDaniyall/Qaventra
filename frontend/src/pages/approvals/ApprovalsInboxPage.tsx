@@ -11,6 +11,8 @@ import {
   Inbox,
   GraduationCap,
   TimerOff,
+  CalendarOff,
+  ClipboardList,
   Package,
   Plane,
   Receipt,
@@ -30,6 +32,8 @@ import { qk } from '../../api/keys';
 import { recruitmentApi } from '../../api/recruitment';
 import { trainingApi } from '../../api/training';
 import { exemptionsApi } from '../../api/leaveRules';
+import { attendanceRulesApi } from '../../api/attendanceRules';
+import { projectsApi } from '../../api/projects';
 import { travelApi } from '../../api/travel';
 import { compOffApi, leaveApi } from '../../api/leave';
 import { payApi } from '../../api/pay';
@@ -73,6 +77,8 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   Travel: Plane,
   Training: GraduationCap,
   Exemption: TimerOff,
+  OffDay: CalendarOff,
+  Timesheet: ClipboardList,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -94,6 +100,8 @@ const decideApi: Record<
   Travel: { approve: travelApi.approve, reject: travelApi.reject },
   Training: { approve: trainingApi.approve, reject: trainingApi.reject },
   Exemption: { approve: exemptionsApi.approve, reject: exemptionsApi.reject },
+  OffDay: { approve: attendanceRulesApi.approveOffDays, reject: attendanceRulesApi.rejectOffDays },
+  Timesheet: { approve: projectsApi.approve, reject: projectsApi.reject },
 };
 
 export function ApprovalsInboxPage() {
@@ -140,6 +148,8 @@ export function ApprovalsInboxPage() {
               'Travel',
               'Training',
               'Exemption',
+              'OffDay',
+              'Timesheet',
             ] as Filter[]
           ).map((t) => ({
             value: t,

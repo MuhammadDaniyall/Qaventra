@@ -156,6 +156,18 @@ public class Employee : TenantEntity
     public bool IsBlacklisted { get; set; }
     public string? BlacklistReason { get; set; }
 
+    // ---------- Where they may mark attendance ----------
+    public bool AllowWebCheckIn { get; set; } = true;
+    public bool AllowMobileCheckIn { get; set; } = true;
+    /// <summary>Skip the office location check (field staff, remote workers).</summary>
+    public bool CheckInAnywhere { get; set; }
+    /// <summary>Comma-separated IP addresses or prefixes ("203.0.113.") check-ins must come from; empty = any.</summary>
+    public string? AllowedIps { get; set; }
+    /// <summary>A personal location (e.g. home for remote work), accepted besides the offices.</summary>
+    public double? OwnLatitude { get; set; }
+    public double? OwnLongitude { get; set; }
+    public int? OwnRadiusMeters { get; set; }
+
     public string FullName => $"{FirstName} {LastName}".Trim();
 
     public bool IsCurrent => Status is EmploymentStatus.Probation or EmploymentStatus.Active;

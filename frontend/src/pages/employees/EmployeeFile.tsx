@@ -185,6 +185,60 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
             ))}
           </Section>
         ))}
+        <Section title="Marking attendance">
+          <Item label="Allowed from">
+            {draft ? (
+              <div className="flex flex-wrap gap-4">
+                <Checkbox label="Web" checked={v.allowWebCheckIn} onChange={(e) => set('allowWebCheckIn', e.target.checked)} />
+                <Checkbox label="Phone" checked={v.allowMobileCheckIn} onChange={(e) => set('allowMobileCheckIn', e.target.checked)} />
+                <Checkbox label="Anywhere (no location check)" checked={v.checkInAnywhere} onChange={(e) => set('checkInAnywhere', e.target.checked)} />
+              </div>
+            ) : (
+              [v.allowWebCheckIn && 'Web', v.allowMobileCheckIn && 'Phone', v.checkInAnywhere && 'anywhere'].filter(Boolean).join(', ') || 'Machine only'
+            )}
+          </Item>
+          <Item label="Office network only (IP addresses)">
+            {draft ? (
+              <Input placeholder="203.0.113.10, 10.0.0." value={v.allowedIps ?? ''} maxLength={500} onChange={(e) => set('allowedIps', e.target.value)} />
+            ) : (
+              v.allowedIps || <span className="text-zinc-400">Any network</span>
+            )}
+          </Item>
+          <Item label="Personal location (e.g. home)">
+            {draft ? (
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="Latitude"
+                  aria-label="Latitude"
+                  value={v.ownLatitude ?? ''}
+                  onChange={(e) => setDraft({ ...v, ownLatitude: e.target.value ? Number(e.target.value) : null })}
+                />
+                <Input
+                  type="number"
+                  step="any"
+                  placeholder="Longitude"
+                  aria-label="Longitude"
+                  value={v.ownLongitude ?? ''}
+                  onChange={(e) => setDraft({ ...v, ownLongitude: e.target.value ? Number(e.target.value) : null })}
+                />
+                <Input
+                  type="number"
+                  min={20}
+                  placeholder="Radius m"
+                  aria-label="Radius in metres"
+                  value={v.ownRadiusMeters ?? ''}
+                  onChange={(e) => setDraft({ ...v, ownRadiusMeters: e.target.value ? Number(e.target.value) : null })}
+                />
+              </div>
+            ) : v.ownLatitude != null ? (
+              `${v.ownLatitude.toFixed(5)}, ${v.ownLongitude?.toFixed(5)} (${v.ownRadiusMeters ?? 200} m)`
+            ) : (
+              <span className="text-zinc-400">—</span>
+            )}
+          </Item>
+        </Section>
         {(editable || v.exitTypeId || v.isBlacklisted) && (
           <Section title="Leaving">
             <Item label="Exit type">

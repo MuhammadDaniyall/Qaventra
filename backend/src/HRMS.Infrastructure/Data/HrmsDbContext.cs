@@ -50,6 +50,14 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<LoanRepayment> LoanRepayments => Set<LoanRepayment>();
     public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
     public DbSet<OrgLookup> OrgLookups => Set<OrgLookup>();
+    public DbSet<OffDayRequest> OffDayRequests => Set<OffDayRequest>();
+    public DbSet<PenaltyRule> PenaltyRules => Set<PenaltyRule>();
+    public DbSet<PenaltyCharge> PenaltyCharges => Set<PenaltyCharge>();
+    public DbSet<Project> Projects => Set<Project>();
+    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+    public DbSet<ProjectTask> ProjectTasks => Set<ProjectTask>();
+    public DbSet<Timesheet> Timesheets => Set<Timesheet>();
+    public DbSet<TimesheetLine> TimesheetLines => Set<TimesheetLine>();
     public DbSet<Dependant> Dependants => Set<Dependant>();
     public DbSet<Qualification> Qualifications => Set<Qualification>();
     public DbSet<WorkExperience> WorkExperiences => Set<WorkExperience>();
@@ -201,10 +209,74 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
                          nameof(Employee.PunchCode) })
                 e.Property(n).HasMaxLength(40);
             e.Property(x => x.ExitReason).HasMaxLength(500);
+            e.Property(x => x.AllowedIps).HasMaxLength(500);
             e.Property(x => x.BlacklistReason).HasMaxLength(500);
             foreach (var n in new[] { nameof(Employee.DivisionId), nameof(Employee.SubDepartmentId), nameof(Employee.GradeId), nameof(Employee.CostCenterId),
                          nameof(Employee.RegionId), nameof(Employee.EmployeeGroupId), nameof(Employee.ExitTypeId) })
                 e.HasOne<OrgLookup>().WithMany().HasForeignKey(n).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        b.Entity<OffDayRequest>(e =>
+        {
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<Project>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Code).HasMaxLength(30);
+            e.Property(x => x.Client).HasMaxLength(150);
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.BudgetHours).HasPrecision(10, 2);
+            e.HasMany(x => x.Members).WithOne().HasForeignKey(x => x.ProjectId);
+            e.HasMany(x => x.Tasks).WithOne().HasForeignKey(x => x.ProjectId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.ManagerEmployeeId);
+        });
+
+        b.Entity<ProjectMember>(e =>
+        {
+            e.Property(x => x.HourlyRate).HasPrecision(18, 2);
+            e.HasIndex(x => new { x.ProjectId, x.EmployeeId }).IsUnique();
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        b.Entity<ProjectTask>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.EstimatedHours).HasPrecision(10, 2);
+        });
+
+        b.Entity<Timesheet>(e =>
+        {
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasIndex(x => new { x.TenantId, x.EmployeeId, x.WeekStart }).IsUnique();
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.TimesheetId);
+        });
+
+        b.Entity<TimesheetLine>(e =>
+        {
+            e.Property(x => x.Note).HasMaxLength(500);
+            e.HasOne<Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.NoAction);
+            e.HasOne<ProjectTask>().WithMany().HasForeignKey(x => x.TaskId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        b.Entity<PenaltyRule>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(150);
+            e.Property(x => x.Days).HasPrecision(5, 2);
+            e.HasOne<LeaveType>().WithMany().HasForeignKey(x => x.LeaveTypeId).OnDelete(DeleteBehavior.NoAction);
+        });
+
+        b.Entity<PenaltyCharge>(e =>
+        {
+            e.Property(x => x.RuleName).HasMaxLength(150);
+            e.Property(x => x.LeaveDays).HasPrecision(6, 2);
+            e.Property(x => x.PayDays).HasPrecision(6, 2);
+            e.HasIndex(x => new { x.TenantId, x.Year, x.Month });
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
         });
 
         b.Entity<OrgLookup>(e =>
@@ -247,7 +319,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         b.Entity<Holiday>(e =>
         {
             e.Property(x => x.Name).HasMaxLength(150);
-            e.HasIndex(x => new { x.TenantId, x.Date }).IsUnique();
+            e.Property(x => x.Religion).HasMaxLength(100);
+            e.HasIndex(x => new { x.TenantId, x.Date });
         });
 
         b.Entity<AttendanceRecord>(e =>
@@ -1165,7 +1238,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
         || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason)
-        || t == typeof(Dependant) || t == typeof(Qualification) || t == typeof(WorkExperience);
+        || t == typeof(Dependant) || t == typeof(Qualification) || t == typeof(WorkExperience)
+        || t == typeof(ProjectMember) || t == typeof(ProjectTask) || t == typeof(TimesheetLine);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

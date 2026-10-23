@@ -27,7 +27,9 @@ public record EmployeeFileDto(
     [StringLength(40)] string? BankBranchCode, [StringLength(100)] string? BankAccountTitle,
     Guid? DivisionId, Guid? SubDepartmentId, Guid? GradeId, Guid? CostCenterId, Guid? RegionId, Guid? EmployeeGroupId,
     DateOnly? ConfirmationDate, DateOnly? ContractEndDate, [StringLength(40)] string? PunchCode,
-    Guid? ExitTypeId, [StringLength(500)] string? ExitReason, bool IsBlacklisted, [StringLength(500)] string? BlacklistReason);
+    Guid? ExitTypeId, [StringLength(500)] string? ExitReason, bool IsBlacklisted, [StringLength(500)] string? BlacklistReason,
+    bool AllowWebCheckIn = true, bool AllowMobileCheckIn = true, bool CheckInAnywhere = false, [StringLength(500)] string? AllowedIps = null,
+    [Range(-90, 90)] double? OwnLatitude = null, [Range(-180, 180)] double? OwnLongitude = null, [Range(20, 100_000)] int? OwnRadiusMeters = null);
 
 public record DependantDto(
     [Required, StringLength(150)] string Name, [Required, StringLength(50)] string Relation,
@@ -139,7 +141,8 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
             e.PassportNo, e.PassportIssuedOn, e.PassportExpiresOn, e.VisaNo, e.VisaType, e.VisaExpiresOn, e.DrivingLicenseNo, e.DrivingLicenseExpiresOn,
             e.Ntn, e.EobiNo, e.SocialSecurityNo, e.InsuranceProvider, e.InsurancePolicyNo, e.InsuranceExpiresOn, e.BankBranchCode, e.BankAccountTitle,
             e.DivisionId, e.SubDepartmentId, e.GradeId, e.CostCenterId, e.RegionId, e.EmployeeGroupId, e.ConfirmationDate, e.ContractEndDate,
-            e.PunchCode, e.ExitTypeId, e.ExitReason, e.IsBlacklisted, e.BlacklistReason);
+            e.PunchCode, e.ExitTypeId, e.ExitReason, e.IsBlacklisted, e.BlacklistReason,
+            e.AllowWebCheckIn, e.AllowMobileCheckIn, e.CheckInAnywhere, e.AllowedIps, e.OwnLatitude, e.OwnLongitude, e.OwnRadiusMeters);
     }
 
     [HttpPut("employees/{id:guid}/file"), Authorize(Policy = Policies.Hr)]
@@ -176,6 +179,11 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
         e.ConfirmationDate = f.ConfirmationDate; e.ContractEndDate = f.ContractEndDate; e.PunchCode = T(f.PunchCode);
         e.ExitTypeId = f.ExitTypeId; e.ExitReason = T(f.ExitReason);
         e.IsBlacklisted = f.IsBlacklisted; e.BlacklistReason = f.IsBlacklisted ? T(f.BlacklistReason) : null;
+        if ((f.OwnLatitude is null) != (f.OwnLongitude is null))
+            throw new DomainException("Enter both latitude and longitude for the personal location.");
+        e.AllowWebCheckIn = f.AllowWebCheckIn; e.AllowMobileCheckIn = f.AllowMobileCheckIn; e.CheckInAnywhere = f.CheckInAnywhere;
+        e.AllowedIps = T(f.AllowedIps); e.OwnLatitude = f.OwnLatitude; e.OwnLongitude = f.OwnLongitude;
+        e.OwnRadiusMeters = f.OwnLatitude is null ? null : f.OwnRadiusMeters ?? 200;
         await db.SaveChangesAsync();
         return await File(id);
     }

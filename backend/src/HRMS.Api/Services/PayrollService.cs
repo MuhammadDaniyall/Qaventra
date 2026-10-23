@@ -11,7 +11,7 @@ namespace HRMS.Api.Services;
 
 public record PayrollProcessResult(PayrollRun Run, IReadOnlyList<string> Warnings);
 
-public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantClock clock, NotificationService notify, ICurrentUser me)
+public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantClock clock, NotificationService notify, ICurrentUser me, IServiceProvider services)
 {
     /// <summary>Calculates (or recalculates) a draft run for the month. A finalized run is locked.</summary>
     public async Task<PayrollProcessResult> ProcessAsync(int year, int month)
@@ -122,6 +122,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             : null;
         var calendars = await schedules.ForEmployeesAsync(employeeIds, monthStart, monthEnd);
         var today = await clock.TodayAsync();
+        // Penalty rules (late, early leave, absent…) that cost pay this month.
+        var rulePenalties = await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().PayDaysAsync(employeeIds, monthStart.Year, monthStart.Month);
 
         foreach (var employee in employees)
         {
@@ -178,6 +180,12 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 }
                 if (settings.DeductHalfDays && halves > 0)
                     extras.Add(new PayItem($"Half days ({halves} × ½ day)", SalaryComponentKind.Deduction, Math.Round(dayRate * halves / 2m, 0), false));
+            }
+            if (rulePenalties.GetValueOrDefault(employee.Id) is { Count: > 0 } penaltyLines)
+            {
+                var dayRate = (salary.BasicSalary + salary.Components.Where(c => c.Kind == SalaryComponentKind.Earning).Sum(c => c.Amount)) / daysInMonth;
+                foreach (var (label, days) in penaltyLines)
+                    extras.Add(new PayItem($"{label}, {days:0.##} day{(days == 1 ? "" : "s")}", SalaryComponentKind.Deduction, Math.Round(dayRate * days, 0), false));
             }
             foreach (var item in payItems.Where(r => r.EmployeeId == employee.Id).OrderBy(r => r.Kind))
             {

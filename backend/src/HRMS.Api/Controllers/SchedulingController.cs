@@ -46,7 +46,7 @@ public record MonthlyAttendanceDto(int Year, int Month, bool Closed, DateTime? C
 [Route("api/attendance")]
 [Authorize(Policy = Policies.CompanyUser)]
 public class SchedulingController(
-    HrmsDbContext db, ScheduleService schedule, ShiftRequestService shiftRequests, ApprovalEngine approvals, TenantClock clock, ICurrentUser me)
+    HrmsDbContext db, ScheduleService schedule, ShiftRequestService shiftRequests, ApprovalEngine approvals, TenantClock clock, ICurrentUser me, PenaltyService penalties)
     : ControllerBase
 {
     // ---------- Roster ----------
@@ -204,6 +204,10 @@ public class SchedulingController(
             .Select(r => new { r.EmployeeId, r.FromDate, r.ToDate, r.Duration, r.Days }).ToListAsync()).ToLookup(r => r.EmployeeId);
         var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
         var period = await db.AttendancePeriods.FirstOrDefaultAsync(p => p.Year == year && p.Month == month);
+        var ruleDays = period is not null
+            ? (await db.PenaltyCharges.Where(c => c.Year == year && c.Month == month && ids.Contains(c.EmployeeId)).ToListAsync())
+                .GroupBy(c => c.EmployeeId).ToDictionary(g => g.Key, g => g.Sum(c => c.PayDays + c.LeaveDays))
+            : (await penalties.ComputeAsync(ids, year, month)).ToDictionary(x => x.Key, x => x.Value.Sum(l => l.Days));
 
         var rows = people.Select(p =>
         {
@@ -227,7 +231,7 @@ public class SchedulingController(
             var late = mine.Count(r => r.Status == AttendanceStatus.Late);
             var half = mine.Count(r => r.Status == AttendanceStatus.HalfDay);
             var penalty = (settings.LatesPerPenalty > 0 ? late / settings.LatesPerPenalty * settings.LatePenaltyDays : 0)
-                          + (settings.DeductHalfDays ? half / 2m : 0);
+                          + (settings.DeductHalfDays ? half / 2m : 0) + ruleDays.GetValueOrDefault(p.Id);
             return new MonthlyRowDto(p.Id, p.EmployeeCode, p.Name, p.Department, working, mine.Count, late, half, leave, absent, off,
                 mine.Sum(r => r.WorkedMinutes), penalty);
         }).ToList();
@@ -251,6 +255,7 @@ public class SchedulingController(
             ClosedByName = await db.Users.IgnoreQueryFilters().Where(u => u.Id == me.UserId).Select(u => u.FullName).FirstOrDefaultAsync(),
         });
         await db.SaveChangesAsync();
+        await penalties.ApplyOnCloseAsync(year, month);
         return NoContent();
     }
 
@@ -262,6 +267,7 @@ public class SchedulingController(
             throw new DomainException("Payroll for this month is finalized, so its attendance stays closed.");
         db.AttendancePeriods.Remove(period);
         await db.SaveChangesAsync();
+        await penalties.UndoOnReopenAsync(year, month);
         return NoContent();
     }
 

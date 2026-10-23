@@ -18,12 +18,32 @@ public class Shift : TenantEntity
     public int GraceMinutes { get; set; } = 15;
     public List<DayOfWeek> WeeklyOffDays { get; set; } = [];
     public bool IsDefault { get; set; }
+    /// <summary>Leaving more than this many minutes before the end counts as an early leave.</summary>
+    public int EarlyLeaveGraceMinutes { get; set; } = 15;
+    /// <summary>Worked less than this = half day. Null: under half the shift.</summary>
+    public int? HalfDayMinutes { get; set; }
+    /// <summary>Worked less than this (but more than a half day) = short day. Null: no short days.</summary>
+    public int? ShortDayMinutes { get; set; }
+    /// <summary>How early before the start people may check in. Null: any time.</summary>
+    public int? EarliestCheckInMinutes { get; set; }
+    /// <summary>Unpaid break inside the shift; worked time is compared against shift length minus this.</summary>
+    public int BreakMinutes { get; set; }
+
+    /// <summary>Minutes expected at work: shift length less the break.</summary>
+    public int ExpectedMinutes => Math.Max(0, (int)(EndTime - StartTime).TotalMinutes - BreakMinutes);
 }
 
 public class Holiday : TenantEntity
 {
     public DateOnly Date { get; set; }
     public string Name { get; set; } = "";
+    public HolidayKind Kind { get; set; } = HolidayKind.Public;
+    /// <summary>Comma-separated region/station ids it applies to; empty = everywhere.</summary>
+    public string? RegionIds { get; set; }
+    /// <summary>Only people of this religion (e.g. Christmas for Christians); empty = everyone.</summary>
+    public string? Religion { get; set; }
+    /// <summary>Comma-separated employee ids who work that day anyway.</summary>
+    public string? ExemptEmployeeIds { get; set; }
 }
 
 public class AttendanceRecord : TenantEntity
@@ -41,6 +61,10 @@ public class AttendanceRecord : TenantEntity
     public AttendanceStatus Status { get; set; }
     public AttendanceSource Source { get; set; } = AttendanceSource.Web;
     public int WorkedMinutes { get; set; }
+    /// <summary>Minutes after the shift start plus grace (0 when on time).</summary>
+    public int LateMinutes { get; set; }
+    /// <summary>Minutes before the shift end beyond the early-leave grace (0 when not early).</summary>
+    public int EarlyLeaveMinutes { get; set; }
     /// <summary>Why the record was entered or changed, e.g. "Work from home (approved request)".</summary>
     public string? Note { get; set; }
 }

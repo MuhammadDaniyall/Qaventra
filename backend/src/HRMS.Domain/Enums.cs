@@ -414,6 +414,7 @@ public enum AttendanceStatus
     HalfDay = 3,
     Absent = 4,
     OnLeave = 5,
+    ShortDay = 6,
 }
 
 public enum AttendanceSource
@@ -567,6 +568,8 @@ public enum ApprovalRequestType
     Travel = 11,
     Training = 12,
     Exemption = 13,
+    OffDay = 14,
+    Timesheet = 15,
 }
 
 public enum PayRequestKind
@@ -698,4 +701,43 @@ public enum LookupKind
     EmployeeGroup = 5,
     SubDepartment = 6,
     ExitType = 7,
+}
+
+public enum HolidayKind
+{
+    /// <summary>Gazetted / public holiday.</summary>
+    Public = 1,
+    /// <summary>Company or special holiday.</summary>
+    Special = 2,
+}
+
+public enum PenaltyFlag
+{
+    Late = 1,
+    EarlyLeave = 2,
+    HalfDay = 3,
+    ShortDay = 4,
+    Absent = 5,
+    MissingCheckOut = 6,
+}
+
+public enum PenaltyAction
+{
+    DeductPay = 1,
+    DeductLeave = 2,
+}
+
+public enum ProjectStatus
+{
+    Active = 1,
+    OnHold = 2,
+    Closed = 3,
+}
+
+public enum TimesheetStatus
+{
+    Draft = 1,
+    Submitted = 2,
+    Approved = 3,
+    Rejected = 4,
 }

@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { ExcuseButton, MyExemptions } from './Exemptions';
+import { MyOffDays, OffDayModal } from './OffDays';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeftRight, CalendarClock, ChevronLeft, ChevronRight, ClipboardEdit, Repeat } from 'lucide-react';
+import { ArrowLeftRight, CalendarClock, CalendarOff, ChevronLeft, ChevronRight, ClipboardEdit, Repeat } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
 import { qk } from '../../api/keys';
 import { setupApi } from '../../api/organization';
@@ -35,12 +36,14 @@ const DOT: Record<AttendanceStatus, string> = {
   HalfDay: 'bg-amber-400',
   Absent: 'bg-red-500',
   OnLeave: 'bg-sky-500',
+  ShortDay: 'bg-amber-400',
 };
 
 export function MyAttendancePage() {
   const now = new Date();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() + 1 });
   const [requesting, setRequesting] = useState(false);
+  const [offDays, setOffDays] = useState(false);
   const [shiftRequest, setShiftRequest] = useState<'Change' | 'Swap' | null>(null);
   const records = useQuery({ queryKey: qk.attendanceMy(ym.y, ym.m), queryFn: () => attendanceApi.my(ym.y, ym.m) });
   const holidays = useQuery({ queryKey: qk.holidays(ym.y), queryFn: () => setupApi.holidays(ym.y), staleTime: 300000 });
@@ -73,6 +76,9 @@ export function MyAttendancePage() {
             </Button>
             <Button variant="secondary" icon={<ArrowLeftRight className="size-4" />} onClick={() => setShiftRequest('Swap')}>
               Swap shift
+            </Button>
+            <Button variant="secondary" icon={<CalendarOff className="size-4" />} onClick={() => setOffDays(true)}>
+              Change days off
             </Button>
             <Button variant="secondary" icon={<ClipboardEdit className="size-4" />} onClick={() => setRequesting(true)}>
               Request correction
@@ -143,7 +149,7 @@ export function MyAttendancePage() {
                         <Td>{r.office ?? '—'}</Td>
                         <Td title={r.note ?? undefined}>{r.source === 'Request' ? 'Approved request' : r.source}</Td>
                         <Td className="text-right">
-                          <ExcuseButton date={r.date} flag={r.status} />
+                          <ExcuseButton date={r.date} flag={r.status} early={r.earlyLeaveMinutes} />
                         </Td>
                       </Tr>
                     ))}
@@ -155,9 +161,11 @@ export function MyAttendancePage() {
         )}
       </Card>
       <MyExemptions />
+      <MyOffDays />
       <MyShiftRequests />
       <MyAttendanceRequests />
       {requesting && <RequestAttendanceModal onClose={() => setRequesting(false)} />}
+      {offDays && <OffDayModal onClose={() => setOffDays(false)} />}
       {shiftRequest && <ShiftRequestModal kind={shiftRequest} onClose={() => setShiftRequest(null)} />}
     </>
   );

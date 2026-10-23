@@ -65,6 +65,13 @@ export interface EmployeeFile {
   exitReason: string | null;
   isBlacklisted: boolean;
   blacklistReason: string | null;
+  allowWebCheckIn: boolean;
+  allowMobileCheckIn: boolean;
+  checkInAnywhere: boolean;
+  allowedIps: string | null;
+  ownLatitude: number | null;
+  ownLongitude: number | null;
+  ownRadiusMeters: number | null;
 }
 
 export interface Dependant {

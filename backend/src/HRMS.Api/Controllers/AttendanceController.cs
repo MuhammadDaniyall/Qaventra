@@ -16,7 +16,8 @@ public record PunchRequest([Range(-90, 90)] double? Latitude, [Range(-180, 180)]
 public record ManualAttendanceRequest(Guid EmployeeId, DateOnly Date, TimeOnly CheckIn, TimeOnly? CheckOut);
 
 /// <summary>Times are company-local.</summary>
-public record AttendanceDto(Guid Id, Guid EmployeeId, DateOnly Date, DateTime CheckIn, DateTime? CheckOut, AttendanceStatus Status, AttendanceSource Source, int WorkedMinutes, string? Office, string? Note);
+public record AttendanceDto(Guid Id, Guid EmployeeId, DateOnly Date, DateTime CheckIn, DateTime? CheckOut, AttendanceStatus Status, AttendanceSource Source, int WorkedMinutes, string? Office, string? Note,
+    int LateMinutes = 0, int EarlyLeaveMinutes = 0);
 
 public record TodayDto(DateOnly Date, AttendanceDto? Record, string? ShiftName, TimeOnly? ShiftStart, TimeOnly? ShiftEnd, bool LocationRequired);
 
@@ -40,11 +41,11 @@ public class AttendanceController(HrmsDbContext db, AttendanceService attendance
 
     [HttpPost("check-in")]
     public async Task<AttendanceDto> CheckIn(PunchRequest req) =>
-        await ToDto(await attendance.CheckInAsync(MyEmployeeId(), req.Latitude, req.Longitude, req.Source));
+        await ToDto(await attendance.CheckInAsync(MyEmployeeId(), req.Latitude, req.Longitude, req.Source, HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()));
 
     [HttpPost("check-out")]
     public async Task<AttendanceDto> CheckOut(PunchRequest req) =>
-        await ToDto(await attendance.CheckOutAsync(MyEmployeeId(), req.Latitude, req.Longitude));
+        await ToDto(await attendance.CheckOutAsync(MyEmployeeId(), req.Latitude, req.Longitude, req.Source, HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString()));
 
     [HttpGet("my")]
     public async Task<List<AttendanceDto>> My([FromQuery] int year, [FromQuery] int month)
@@ -95,6 +96,6 @@ public class AttendanceController(HrmsDbContext db, AttendanceService attendance
     {
         var office = r.OfficeLocationId is { } id ? await db.OfficeLocations.Where(o => o.Id == id).Select(o => o.Name).FirstOrDefaultAsync() : null;
         return new AttendanceDto(r.Id, r.EmployeeId, r.Date, await clock.ToLocalAsync(r.CheckInUtc),
-            r.CheckOutUtc is { } o ? await clock.ToLocalAsync(o) : null, r.Status, r.Source, r.WorkedMinutes, office, r.Note);
+            r.CheckOutUtc is { } o ? await clock.ToLocalAsync(o) : null, r.Status, r.Source, r.WorkedMinutes, office, r.Note, r.LateMinutes, r.EarlyLeaveMinutes);
     }
 }

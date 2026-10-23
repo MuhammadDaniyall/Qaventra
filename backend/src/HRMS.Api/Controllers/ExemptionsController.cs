@@ -40,8 +40,8 @@ public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clo
             throw new DomainException($"Ask within {s.ExemptionWithinDays} days of the day.");
         var record = await db.AttendanceRecords.FirstOrDefaultAsync(r => r.EmployeeId == employeeId && r.Date == date)
                      ?? throw new DomainException("There is no attendance on that day. Use an attendance request instead.");
-        if (record.Status is not (AttendanceStatus.Late or AttendanceStatus.HalfDay))
-            throw new DomainException("That day is not marked late or half day.");
+        if (record.Status is not (AttendanceStatus.Late or AttendanceStatus.HalfDay or AttendanceStatus.ShortDay) && record.EarlyLeaveMinutes == 0)
+            throw new DomainException("That day is not marked late, early leave, short day or half day.");
         if (await db.AttendanceExemptions.AnyAsync(x => x.EmployeeId == employeeId && x.Date == date && (x.Status == RequestStatus.Pending || x.Status == RequestStatus.Approved)))
             throw new DomainException("You have already asked for this day.");
         var monthStart = new DateOnly(date.Year, date.Month, 1);
@@ -54,7 +54,13 @@ public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clo
 
         var x = new AttendanceExemption { EmployeeId = employeeId, Date = date, Flag = record.Status, Reason = reason.Trim() };
         db.AttendanceExemptions.Add(x);
-        var what = record.Status == AttendanceStatus.Late ? $"late arrival ({(await clock.ToLocalAsync(record.CheckInUtc)):HH:mm})" : "half day";
+        var what = record.Status switch
+        {
+            AttendanceStatus.Late => $"late arrival ({(await clock.ToLocalAsync(record.CheckInUtc)):HH:mm})",
+            AttendanceStatus.HalfDay => "half day",
+            AttendanceStatus.ShortDay => "short day",
+            _ => "early leave",
+        };
         var approval = await approvals.StartAsync(ApprovalRequestType.Exemption, x.Id, employeeId, $"Excuse {what} on {date:ddd d MMM} · {x.Reason}");
         if (approval.Status == ApprovalStatus.Approved)
             await ApplyAsync(x, "Approved automatically");
@@ -99,7 +105,9 @@ public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clo
         if (record is not null && record.Status == x.Flag)
         {
             record.Status = AttendanceStatus.Present;
-            var what = x.Flag == AttendanceStatus.Late ? "Late" : "Half day";
+            record.LateMinutes = 0;
+            record.EarlyLeaveMinutes = 0;
+            var what = x.Flag switch { AttendanceStatus.Late => "Late", AttendanceStatus.HalfDay => "Half day", AttendanceStatus.ShortDay => "Short day", _ => "Early leave" };
             record.Note = string.IsNullOrEmpty(record.Note) ? $"{what} excused (approved exemption)" : $"{record.Note}; {what.ToLowerInvariant()} excused";
         }
     }

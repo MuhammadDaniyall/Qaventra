@@ -20,7 +20,7 @@ public record ReportResult(string Title, string? Subtitle, List<string> Headers,
 /// The catalog of ready-made reports: one place to pick a report, filter it and see, export or print it.
 /// HR sees every report over everyone; managers see team reports (no pay) over their direct reports.
 /// </summary>
-public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock, ScheduleService schedules)
+public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock, ScheduleService schedules, HRMS.Api.Controllers.PenaltyService penalties)
 {
     public static readonly List<ReportDefinition> All =
     [
@@ -36,6 +36,9 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("attendance.daily", "Attendance", "Daily attendance", "In, out, late, absent and on leave for one day", ["date", "department"], false),
         new("attendance.register", "Attendance", "Attendance register", "Days present, late, half, absent and on leave per person for a month", ["month", "department", "employee"], false),
         new("attendance.late", "Attendance", "Late arrivals", "Every late check-in in a period", ["period", "department", "employee"], false),
+        new("attendance.early", "Attendance", "Early leavers", "Every check-out before the shift ended, beyond the grace", ["period", "department", "employee"], false),
+        new("attendance.penalties", "Attendance", "Attendance penalties", "Penalty rules applied for a month: days of pay and leave per person", ["month", "department", "employee"], true),
+        new("projects.hours", "Projects", "Project hours", "Hours logged on submitted and approved timesheets, by person and project", ["period", "department", "employee"], false),
         new("leave.balances", "Leave", "Leave balances", "Entitled, carried, used and remaining by leave type", ["year", "department", "employee"], false),
         new("leave.taken", "Leave", "Leave taken", "Approved leave in a period", ["period", "department", "employee"], false),
         new("payroll.sheet", "Payroll", "Salary sheet", "Gross, deductions and net pay for a month", ["month", "department"], true),
@@ -126,6 +129,59 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                         var s = staff.First(x => x.Id == d.EmployeeId);
                         return L(s.EmployeeCode, s.Name, d.Document, D(d.ExpiresOn), d.ExpiresOn < today ? "Expired" : "Expiring");
                     }));
+            }
+            case "attendance.early":
+            {
+                var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "" }).ToListAsync();
+                var ids = staff.Select(s => s.Id).ToList();
+                var recs = await db.AttendanceRecords.Where(a => a.EarlyLeaveMinutes > 0 && a.Date >= from && a.Date <= to && ids.Contains(a.EmployeeId))
+                    .OrderBy(a => a.Date).ToListAsync();
+                var rows = new List<List<string>>();
+                foreach (var a in recs)
+                {
+                    var s = staff.First(x => x.Id == a.EmployeeId);
+                    rows.Add(L(D(a.Date), s.EmployeeCode, s.Name, s.Department, a.CheckOutUtc is { } o ? (await clock.ToLocalAsync(o)).ToString("HH:mm") : "", N(a.EarlyLeaveMinutes)));
+                }
+                return T(def, $"{range}: {recs.Count} early leaves", ["Date", "Code", "Name", "Department", "Out", "Minutes early"], [5], rows, totals: true);
+            }
+            case "attendance.penalties":
+            {
+                var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
+                var lines = await penalties.ComputeAsync(staff.Select(s => s.Id).ToList(), month.Year, month.Month);
+                var closed = await db.AttendancePeriods.AnyAsync(p => p.Year == month.Year && p.Month == month.Month);
+                var charges = closed ? (await db.PenaltyCharges.Where(c => c.Year == month.Year && c.Month == month.Month).ToListAsync()).ToLookup(c => c.EmployeeId) : null;
+                var rows = new List<List<string>>();
+                foreach (var s in staff.OrderBy(s => s.Name))
+                {
+                    if (charges is not null)
+                        foreach (var c in charges[s.Id])
+                            rows.Add(L(s.EmployeeCode, s.Name, c.RuleName, N(c.Occurrences), c.PayDays.ToString("0.##"), c.LeaveDays.ToString("0.##")));
+                    else
+                        foreach (var l in lines[s.Id])
+                            rows.Add(L(s.EmployeeCode, s.Name, l.RuleName, N(l.Occurrences), l.Action == PenaltyAction.DeductPay ? l.Days.ToString("0.##") : "0",
+                                l.Action == PenaltyAction.DeductLeave ? l.Days.ToString("0.##") : "0"));
+                }
+                return T(def, month.ToString("MMMM yyyy") + (closed ? " (closed)" : " (so far)"), ["Code", "Name", "Rule", "Times", "Pay days", "Leave days"], [3, 4, 5], rows, totals: true);
+            }
+            case "projects.hours":
+            {
+                var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
+                var ids = staff.Select(s => s.Id).ToList();
+                var logged = await db.TimesheetLines.Where(l => l.Date >= from && l.Date <= to)
+                    .Join(db.Timesheets.Where(t => t.Status != TimesheetStatus.Draft && ids.Contains(t.EmployeeId)), l => l.TimesheetId, t => t.Id, (l, t) => new { t.EmployeeId, l.ProjectId, l.Minutes })
+                    .ToListAsync();
+                var projectNames = await db.Projects.ToDictionaryAsync(p => p.Id, p => p.Name);
+                var rates = await db.ProjectMembers.ToDictionaryAsync(m => (m.ProjectId, m.EmployeeId), m => m.HourlyRate ?? 0);
+                var hr = me.IsHr();
+                var rows = logged.GroupBy(x => (x.EmployeeId, x.ProjectId)).Select(g =>
+                {
+                    var s = staff.First(x => x.Id == g.Key.EmployeeId);
+                    var hours = g.Sum(x => x.Minutes) / 60m;
+                    var row = L(s.EmployeeCode, s.Name, projectNames.GetValueOrDefault(g.Key.ProjectId) ?? "", hours.ToString("0.##"));
+                    if (hr) row.Add((hours * rates.GetValueOrDefault((g.Key.ProjectId, g.Key.EmployeeId))).ToString("0"));
+                    return row;
+                }).OrderBy(r => r[1]).ThenBy(r => r[2]).ToList();
+                return T(def, range, hr ? ["Code", "Name", "Project", "Hours", "Cost"] : ["Code", "Name", "Project", "Hours"], hr ? [3, 4] : [3], rows, totals: true);
             }
             case "employees.file":
             {

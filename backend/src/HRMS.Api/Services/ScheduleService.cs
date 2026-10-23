@@ -46,13 +46,40 @@ public class ScheduleService(HrmsDbContext db)
     {
         var ids = employeeIds.Distinct().ToList();
         var shifts = await db.Shifts.ToDictionaryAsync(s => s.Id);
-        var defaults = await db.Employees.Where(e => ids.Contains(e.Id)).Select(e => new { e.Id, e.ShiftId }).ToDictionaryAsync(e => e.Id, e => e.ShiftId);
+        var people = await db.Employees.Where(e => ids.Contains(e.Id)).Select(e => new { e.Id, e.ShiftId, e.RegionId, e.Religion }).ToDictionaryAsync(e => e.Id);
         var roster = (await db.ShiftAssignments.Where(a => ids.Contains(a.EmployeeId) && a.Date >= from && a.Date <= to).ToListAsync())
             .ToLookup(a => a.EmployeeId);
-        var holidays = (await db.Holidays.Where(h => h.Date >= from && h.Date <= to).Select(h => h.Date).ToListAsync()).ToHashSet();
-        return ids.ToDictionary(id => id, id => new EmployeeSchedule(
-            defaults.GetValueOrDefault(id) is { } s ? shifts.GetValueOrDefault(s) : null,
-            roster[id].ToDictionary(a => a.Date), shifts, holidays));
+        var holidays = await db.Holidays.Where(h => h.Date >= from && h.Date <= to)
+            .Select(h => new { h.Date, h.RegionIds, h.Religion, h.ExemptEmployeeIds }).ToListAsync();
+        var everyone = holidays.Where(h => h.RegionIds == null && h.Religion == null && h.ExemptEmployeeIds == null).Select(h => h.Date).ToHashSet();
+        var targeted = holidays.Where(h => h.RegionIds != null || h.Religion != null || h.ExemptEmployeeIds != null).ToList();
+        return ids.ToDictionary(id => id, id =>
+        {
+            var p = people.GetValueOrDefault(id);
+            var mine = everyone;
+            if (targeted.Count > 0)
+            {
+                mine = [.. everyone];
+                foreach (var h in targeted)
+                    if (Applies(h.RegionIds, h.Religion, h.ExemptEmployeeIds, id, p?.RegionId, p?.Religion))
+                        mine.Add(h.Date);
+            }
+            return new EmployeeSchedule(
+                p?.ShiftId is { } s ? shifts.GetValueOrDefault(s) : null,
+                roster[id].ToDictionary(a => a.Date), shifts, mine);
+        });
+    }
+
+    /// <summary>Whether a region-, religion- or exemption-limited holiday is a day off for this person.</summary>
+    public static bool Applies(string? regionIds, string? religion, string? exemptIds, Guid employeeId, Guid? regionId, string? employeeReligion)
+    {
+        if (exemptIds is not null && HelpdeskService.Has(exemptIds, employeeId))
+            return false;
+        if (!string.IsNullOrEmpty(regionIds) && (regionId is not { } r || !HelpdeskService.Has(regionIds, r)))
+            return false;
+        if (!string.IsNullOrEmpty(religion) && !string.Equals(religion.Trim(), employeeReligion?.Trim(), StringComparison.OrdinalIgnoreCase))
+            return false;
+        return true;
     }
 
     // ---------- Closed months ----------

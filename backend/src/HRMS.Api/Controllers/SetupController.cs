@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using HRMS.Api.Auth;
+using HRMS.Api.Services;
 using HRMS.Api.Infrastructure;
 using HRMS.Domain;
 using HRMS.Domain.Common;
@@ -14,11 +15,16 @@ namespace HRMS.Api.Controllers;
 public record OfficeLocationDto(Guid Id, string Name, double Latitude, double Longitude, int RadiusMeters);
 public record SaveOfficeLocationRequest([Required, StringLength(150)] string Name, [Range(-90, 90)] double Latitude, [Range(-180, 180)] double Longitude, [Range(20, 5000)] int RadiusMeters);
 
-public record ShiftDto(Guid Id, string Name, TimeOnly StartTime, TimeOnly EndTime, int GraceMinutes, List<DayOfWeek> WeeklyOffDays, bool IsDefault);
-public record SaveShiftRequest([Required, StringLength(100)] string Name, TimeOnly StartTime, TimeOnly EndTime, [Range(0, 180)] int GraceMinutes, List<DayOfWeek> WeeklyOffDays, bool IsDefault);
+public record ShiftDto(Guid Id, string Name, TimeOnly StartTime, TimeOnly EndTime, int GraceMinutes, List<DayOfWeek> WeeklyOffDays, bool IsDefault,
+    int EarlyLeaveGraceMinutes = 15, int? HalfDayMinutes = null, int? ShortDayMinutes = null, int? EarliestCheckInMinutes = null, int BreakMinutes = 0);
+public record SaveShiftRequest([Required, StringLength(100)] string Name, TimeOnly StartTime, TimeOnly EndTime, [Range(0, 180)] int GraceMinutes, List<DayOfWeek> WeeklyOffDays, bool IsDefault,
+    [Range(0, 240)] int EarlyLeaveGraceMinutes = 15, [Range(0, 1440)] int? HalfDayMinutes = null, [Range(0, 1440)] int? ShortDayMinutes = null,
+    [Range(0, 720)] int? EarliestCheckInMinutes = null, [Range(0, 240)] int BreakMinutes = 0);
 
-public record HolidayDto(Guid Id, DateOnly Date, string Name);
-public record SaveHolidayRequest(DateOnly Date, [Required, StringLength(150)] string Name);
+public record HolidayDto(Guid Id, DateOnly Date, string Name, HolidayKind Kind = HolidayKind.Public, List<Guid>? RegionIds = null, string? Religion = null,
+    List<Guid>? ExemptEmployeeIds = null);
+public record SaveHolidayRequest(DateOnly Date, [Required, StringLength(150)] string Name, HolidayKind Kind = HolidayKind.Public, List<Guid>? RegionIds = null,
+    [StringLength(100)] string? Religion = null, List<Guid>? ExemptEmployeeIds = null);
 
 public record LeaveTypeDto(
     Guid Id, string Name, string Code, decimal AnnualQuota, bool IsPaid, bool IsActive,
@@ -76,7 +82,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
 
     [HttpGet("shifts")]
     public Task<List<ShiftDto>> Shifts() =>
-        db.Shifts.OrderBy(s => s.Name).Select(s => new ShiftDto(s.Id, s.Name, s.StartTime, s.EndTime, s.GraceMinutes, s.WeeklyOffDays, s.IsDefault)).ToListAsync();
+        db.Shifts.OrderBy(s => s.Name).Select(s => new ShiftDto(s.Id, s.Name, s.StartTime, s.EndTime, s.GraceMinutes, s.WeeklyOffDays, s.IsDefault,
+            s.EarlyLeaveGraceMinutes, s.HalfDayMinutes, s.ShortDayMinutes, s.EarliestCheckInMinutes, s.BreakMinutes)).ToListAsync();
 
     [HttpPost("shifts"), Authorize(Policy = Policies.Hr)]
     public async Task<ShiftDto> CreateShift(SaveShiftRequest req)
@@ -85,7 +92,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         await ApplyShift(s, req);
         db.Shifts.Add(s);
         await db.SaveChangesAsync();
-        return new ShiftDto(s.Id, s.Name, s.StartTime, s.EndTime, s.GraceMinutes, s.WeeklyOffDays, s.IsDefault);
+        return new ShiftDto(s.Id, s.Name, s.StartTime, s.EndTime, s.GraceMinutes, s.WeeklyOffDays, s.IsDefault,
+            s.EarlyLeaveGraceMinutes, s.HalfDayMinutes, s.ShortDayMinutes, s.EarliestCheckInMinutes, s.BreakMinutes);
     }
 
     [HttpPut("shifts/{id:guid}"), Authorize(Policy = Policies.Hr)]
@@ -116,32 +124,67 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         s.EndTime = req.EndTime;
         s.GraceMinutes = req.GraceMinutes;
         s.WeeklyOffDays = req.WeeklyOffDays.Distinct().ToList();
+        var length = (int)(req.EndTime - req.StartTime).TotalMinutes;
+        if (req.BreakMinutes >= length)
+            throw new DomainException("The break is longer than the shift.");
+        if (req.HalfDayMinutes is { } half && req.ShortDayMinutes is { } shortDay && shortDay <= half)
+            throw new DomainException("The short-day mark must be more hours than the half-day mark.");
+        if (req.ShortDayMinutes is { } sd && sd > length)
+            throw new DomainException("The short-day mark is longer than the shift.");
+        s.EarlyLeaveGraceMinutes = req.EarlyLeaveGraceMinutes;
+        s.HalfDayMinutes = req.HalfDayMinutes;
+        s.ShortDayMinutes = req.ShortDayMinutes;
+        s.EarliestCheckInMinutes = req.EarliestCheckInMinutes;
+        s.BreakMinutes = req.BreakMinutes;
         if (req.IsDefault && !s.IsDefault)
             await db.Shifts.Where(x => x.IsDefault).ForEachAsync(x => x.IsDefault = false);
         s.IsDefault = req.IsDefault || s.IsDefault;
     }
 
     [HttpGet("holidays")]
-    public Task<List<HolidayDto>> Holidays([FromQuery] int? year) =>
-        db.Holidays.Where(h => year == null || h.Date.Year == year).OrderBy(h => h.Date).Select(h => new HolidayDto(h.Id, h.Date, h.Name)).ToListAsync();
+    public async Task<List<HolidayDto>> Holidays([FromQuery] int? year) =>
+        (await db.Holidays.Where(h => year == null || h.Date.Year == year).OrderBy(h => h.Date).ToListAsync()).Select(ToDto).ToList();
+
+    private static HolidayDto ToDto(Holiday h) => new(h.Id, h.Date, h.Name, h.Kind,
+        h.RegionIds is { } r ? HelpdeskService.Ids(r) : [], h.Religion, h.ExemptEmployeeIds is { } x ? HelpdeskService.Ids(x) : []);
 
     [HttpPost("holidays"), Authorize(Policy = Policies.Hr)]
     public async Task<HolidayDto> CreateHoliday(SaveHolidayRequest req)
     {
-        var h = new Holiday { Date = req.Date, Name = req.Name.Trim() };
+        var h = new Holiday();
+        await ApplyHolidayAsync(h, req);
         db.Holidays.Add(h);
         await db.SaveChangesAsync();
-        return new HolidayDto(h.Id, h.Date, h.Name);
+        return ToDto(h);
     }
 
     [HttpPut("holidays/{id:guid}"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> UpdateHoliday(Guid id, SaveHolidayRequest req)
     {
         var h = await db.Holidays.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Holiday");
-        h.Date = req.Date;
-        h.Name = req.Name.Trim();
+        await ApplyHolidayAsync(h, req);
         await db.SaveChangesAsync();
         return NoContent();
+    }
+
+    /// <summary>A holiday for everyone, or only some regions, one religion, minus people who work that day.</summary>
+    private async Task ApplyHolidayAsync(Holiday h, SaveHolidayRequest req)
+    {
+        var name = req.Name.Trim();
+        if (await db.Holidays.AnyAsync(x => x.Id != h.Id && x.Date == req.Date && x.Name == name))
+            throw new DomainException($"{name} is already on {req.Date:d MMM yyyy}.");
+        var regions = (req.RegionIds ?? []).Distinct().ToList();
+        if (regions.Count > 0 && await db.OrgLookups.CountAsync(l => regions.Contains(l.Id) && l.Kind == LookupKind.Region) != regions.Count)
+            throw new DomainException("Choose regions from the list.");
+        var exempt = (req.ExemptEmployeeIds ?? []).Distinct().ToList();
+        if (exempt.Count > 0 && await db.Employees.CountAsync(e => exempt.Contains(e.Id)) != exempt.Count)
+            throw new NotFoundException("Employee");
+        h.Date = req.Date;
+        h.Name = name;
+        h.Kind = Enum.IsDefined(req.Kind) ? req.Kind : HolidayKind.Public;
+        h.RegionIds = regions.Count > 0 ? string.Join(',', regions) : null;
+        h.Religion = string.IsNullOrWhiteSpace(req.Religion) ? null : req.Religion.Trim();
+        h.ExemptEmployeeIds = exempt.Count > 0 ? string.Join(',', exempt) : null;
     }
 
     [HttpDelete("holidays/{id:guid}"), Authorize(Policy = Policies.Hr)]

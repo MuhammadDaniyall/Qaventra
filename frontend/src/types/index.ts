@@ -6,7 +6,7 @@ export type EmploymentStatus = 'Probation' | 'Active' | 'Resigned' | 'Terminated
 export type MaritalStatus = 'Single' | 'Married' | 'Divorced' | 'Widowed';
 export const MARITAL_STATUSES: MaritalStatus[] = ['Single', 'Married', 'Divorced', 'Widowed'];
 export const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-export type AttendanceStatus = 'Present' | 'Late' | 'HalfDay' | 'Absent' | 'OnLeave';
+export type AttendanceStatus = 'Present' | 'Late' | 'HalfDay' | 'Absent' | 'OnLeave' | 'ShortDay';
 export type AttendanceSource = 'Web' | 'Mobile' | 'Biometric' | 'Manual' | 'Request';
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type SalaryComponentKind = 'Earning' | 'Deduction';
@@ -253,6 +253,15 @@ export interface Shift {
   graceMinutes: number;
   weeklyOffDays: DayOfWeek[];
   isDefault: boolean;
+  /** Leaving more than this many minutes early counts as an early leave. */
+  earlyLeaveGraceMinutes: number;
+  /** Worked under this many minutes = half day (null: half the shift). */
+  halfDayMinutes: number | null;
+  /** Worked under this many minutes = short day (null: no short days). */
+  shortDayMinutes: number | null;
+  /** How early before the start check-in opens (null: any time). */
+  earliestCheckInMinutes: number | null;
+  breakMinutes: number;
 }
 export type SaveShiftRequest = Omit<Shift, 'id'>;
 
@@ -260,6 +269,12 @@ export interface Holiday {
   id: string;
   date: string;
   name: string;
+  kind: 'Public' | 'Special';
+  /** Region/station ids it applies to; empty = everywhere. */
+  regionIds: string[];
+  religion: string | null;
+  /** People who work that day anyway. */
+  exemptEmployeeIds: string[];
 }
 export type SaveHolidayRequest = Omit<Holiday, 'id'>;
 
@@ -473,6 +488,8 @@ export interface Attendance {
   office: string | null;
   /** Why it was entered or changed, e.g. from an approved request. */
   note: string | null;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
 }
 
 export interface Today {

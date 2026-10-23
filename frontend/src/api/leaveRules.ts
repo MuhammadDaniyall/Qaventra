@@ -22,7 +22,7 @@ export interface OpeningBalance {
   remaining: number;
 }
 
-export type ExemptionFlag = 'Late' | 'HalfDay';
+export type ExemptionFlag = 'Late' | 'HalfDay' | 'ShortDay' | 'Present';
 
 export interface Exemption {
   id: string;

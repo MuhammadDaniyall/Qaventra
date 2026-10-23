@@ -7,18 +7,18 @@ import { Button, Card, CardHeader, Field, FormError, Input, Modal, StatusBadge, 
 import { formatDate } from '../../lib/format';
 
 /** "Excuse" button for a late or half day, with the month's quota. */
-export function ExcuseButton({ date, flag }: { date: string; flag: string }) {
+export function ExcuseButton({ date, flag, early = 0 }: { date: string; flag: string; early?: number }) {
   const [open, setOpen] = useState(false);
   const mine = useQuery({ queryKey: qk.exemptions, queryFn: exemptionsApi.my });
   const asked = mine.data?.find((x) => x.date === date && (x.status === 'Pending' || x.status === 'Approved'));
-  if (flag !== 'Late' && flag !== 'HalfDay') return null;
+  if (flag !== 'Late' && flag !== 'HalfDay' && flag !== 'ShortDay' && !early) return null;
   if (asked) return <StatusBadge status={asked.status} label={asked.status === 'Pending' ? 'Excuse asked' : 'Excused'} />;
   return (
     <>
       <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
         Excuse
       </Button>
-      {open && <ExcuseModal date={date} flag={flag} onClose={() => setOpen(false)} />}
+      {open && <ExcuseModal date={date} flag={early && flag === 'Present' ? 'EarlyLeave' : flag} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -44,7 +44,7 @@ function ExcuseModal({ date, flag, onClose }: { date: string; flag: string; onCl
       open
       onClose={onClose}
       size="sm"
-      title={`Excuse ${flag === 'Late' ? 'late arrival' : 'half day'} on ${formatDate(date)}`}
+      title={`Excuse ${({ Late: 'late arrival', HalfDay: 'half day', ShortDay: 'short day', EarlyLeave: 'early leave' } as Record<string, string>)[flag] ?? 'day'} on ${formatDate(date)}`}
       description={q ? `${Math.max(0, q.allowed - q.used)} of ${q.allowed} excuses left this month` : undefined}
       footer={
         <Button loading={save.isPending} disabled={!reason.trim()} onClick={() => save.mutate()}>
@@ -79,7 +79,7 @@ export function MyExemptions() {
           {mine.data.map((x) => (
             <Tr key={x.id}>
               <Td className="whitespace-nowrap">{formatDate(x.date)}</Td>
-              <Td>{x.flag === 'Late' ? `Late${x.checkIn ? ` (in ${x.checkIn})` : ''}` : 'Half day'}</Td>
+              <Td>{x.flag === 'Late' ? `Late${x.checkIn ? ` (in ${x.checkIn})` : ''}` : x.flag === 'HalfDay' ? 'Half day' : x.flag === 'ShortDay' ? 'Short day' : 'Early leave'}</Td>
               <Td className="text-sm">
                 {x.reason}
                 {x.decisionNote && <p className="text-xs text-zinc-500">“{x.decisionNote}”</p>}

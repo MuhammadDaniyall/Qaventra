@@ -11,12 +11,12 @@ tested and committed locally; one production deploy at the end. Tick items as th
 - [x] Inactivate with exit type/reason, blacklist flag
 
 ## B. Attendance depth
-- [ ] Shift flag rules: early-leave grace, half-day and short-day minutes, earliest/latest check-in, break minutes; Early and ShortDay flags
-- [ ] Holiday types: public/gazetted vs special, office-specific, religion-specific, exempted employees
-- [ ] Off-day request (change weekly off from a date) through approvals
-- [ ] Penalty rules: flag + count → deduct leave or pay, once or every occurrence, exempted count
-- [ ] Projects and tasks; worksheet/timesheet (daily lines, hours) with approval; timesheet report
-- [ ] Per-employee location / IP restriction for check-in
+- [x] Shift flag rules: early-leave grace, half-day and short-day minutes, earliest/latest check-in, break minutes; Early and ShortDay flags
+- [x] Holiday types: public/gazetted vs special, office-specific, religion-specific, exempted employees
+- [x] Off-day request (change weekly off from a date) through approvals
+- [x] Penalty rules: flag + count → deduct leave or pay, once or every occurrence, exempted count
+- [x] Projects and tasks; worksheet/timesheet (daily lines, hours) with approval; timesheet report
+- [x] Per-employee location / IP restriction for check-in
 
 ## C. Shared engine
 - [ ] "On behalf of" requests (HR and managers apply leave, attendance, expense, overtime, advance for someone)

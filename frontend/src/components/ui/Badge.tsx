@@ -54,6 +54,7 @@ const STATUS_TONES: Record<string, Tone> = {
   Present: 'green',
   Late: 'amber',
   HalfDay: 'amber',
+  ShortDay: 'amber',
   Absent: 'red',
   OnLeave: 'blue',
   // leave
