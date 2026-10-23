@@ -285,6 +285,10 @@ export interface LeaveType {
   allowShortLeave: boolean;
   /** Credited by approved comp-off requests instead of a yearly quota. */
   isCompensatory: boolean;
+  /** Offs and holidays inside a request count as leave. */
+  sandwich: boolean;
+  /** Longer requests need a supporting document before approval. */
+  documentAfterDays: number | null;
 }
 export type SaveLeaveTypeRequest = Omit<LeaveType, 'id'>;
 
@@ -553,6 +557,7 @@ export interface ApplyLeaveRequest {
   halfDayPart?: HalfDayPart | null;
   startTime?: string | null;
   endTime?: string | null;
+  reasonId?: string | null;
 }
 
 // ---- Payroll ----

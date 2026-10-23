@@ -64,13 +64,21 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         }).ToList();
     }
 
+    /// <summary>Whether a request needs a document attached: its reason says so, or it is longer than the type allows without one.</summary>
+    public async Task<bool> NeedsDocumentAsync(LeaveRequest r, LeaveType type)
+    {
+        if (type.DocumentAfterDays is { } n && r.Days > n)
+            return true;
+        return r.ReasonId is { } rid && await db.LeaveReasons.AnyAsync(x => x.Id == rid && x.RequiresDocument);
+    }
+
     /// <summary>Working days in the range by the employee's roster: off days and holidays do not count.</summary>
     public async Task<decimal> CountDaysAsync(Guid employeeId, DateOnly from, DateOnly to) =>
         to < from ? 0 : (await schedule.ForEmployeeAsync(employeeId, from, to)).CountWorkingDays(from, to);
 
     public record LeaveApplication(
         Guid LeaveTypeId, DateOnly FromDate, DateOnly ToDate, string? Reason,
-        LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null);
+        LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null, Guid? ReasonId = null);
 
     public async Task<LeaveRequest> ApplyAsync(Guid employeeId, LeaveApplication a)
     {
@@ -92,12 +100,28 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         if (type.MinNoticeDays > 0 && from < today.AddDays(type.MinNoticeDays) && !me.IsHr())
             throw new DomainException($"{type.Name} must be requested at least {type.MinNoticeDays} day(s) in advance.");
 
+        LeaveReason? reason = null;
+        if (a.ReasonId is { } rid)
+            reason = await db.LeaveReasons.FirstOrDefaultAsync(r => r.Id == rid && r.LeaveTypeId == type.Id && r.IsActive) ?? throw new NotFoundException("Reason");
+        else if (await db.LeaveReasons.AnyAsync(r => r.LeaveTypeId == type.Id && r.IsActive))
+            throw new DomainException($"Choose a reason for the {type.Name}.");
+
         decimal days;
         if (a.Duration == LeaveDuration.FullDay)
         {
             days = await CountDaysAsync(employeeId, from, to);
             if (days <= 0)
                 throw new DomainException("The selected dates are all weekly off days or holidays.");
+            if (type.Sandwich)
+            {
+                // Offs and holidays between the first and last working day are counted too.
+                var plan = await schedule.ForEmployeeAsync(employeeId, from, to);
+                var first = from;
+                while (!plan.IsWorkingDay(first)) first = first.AddDays(1);
+                var last = to;
+                while (!plan.IsWorkingDay(last)) last = last.AddDays(-1);
+                days = last.DayNumber - first.DayNumber + 1;
+            }
         }
         else
         {
@@ -126,6 +150,8 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         }
         if (type.MaxConsecutiveDays is { } max && days > max)
             throw new DomainException($"{type.Name} can be at most {max} working day(s) at a time.");
+        if (reason?.MaxDays is { } rmax && days > rmax)
+            throw new DomainException($"{type.Name} for {reason.Name.ToLowerInvariant()} can be at most {rmax:0.#} day(s).");
 
         // Two half days (first and second half) may share a date; anything else overlapping is refused.
         var clashes = await db.LeaveRequests.Where(r => r.EmployeeId == employeeId
@@ -157,6 +183,7 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             StartTime = a.Duration == LeaveDuration.ShortLeave ? a.StartTime : null,
             EndTime = a.Duration == LeaveDuration.ShortLeave ? a.EndTime : null,
             Reason = a.Reason,
+            ReasonId = reason?.Id,
         };
         db.LeaveRequests.Add(request);
 
@@ -166,7 +193,8 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             LeaveDuration.ShortLeave => $"short leave {a.StartTime:HH\\:mm}–{a.EndTime:HH\\:mm}",
             _ => $"{days:0.#} day{(days == 1 ? "" : "s")}",
         };
-        var summary = $"{type.Name} · {length} · {from:d MMM}" + (to != from ? $" – {to:d MMM}" : "");
+        var summary = $"{type.Name}{(reason is null ? "" : $" ({reason.Name})")} · {length} · {from:d MMM}" + (to != from ? $" – {to:d MMM}" : "")
+                      + (await NeedsDocumentAsync(request, type) ? " · document needed" : "");
         var approval = await approvals.StartAsync(ApprovalRequestType.Leave, request.Id, employeeId, summary);
         await db.SaveChangesAsync();
         if (approval.Status == ApprovalStatus.Approved)
@@ -184,6 +212,9 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             ?? throw new NotFoundException("Leave request");
         if (request.Status != LeaveStatus.Pending)
             throw new DomainException($"This request is already {request.Status.ToString().ToLowerInvariant()}.");
+        if (approve && await NeedsDocumentAsync(request, request.LeaveType!)
+            && !await db.Attachments.AnyAsync(x => x.OwnerType == AttachmentOwner.Leave && x.OwnerId == request.Id))
+            throw new DomainException("This leave needs a supporting document. Ask for it to be attached before approving.");
 
         var outcome = await approvals.DecideAsync(ApprovalRequestType.Leave, request.Id, request.EmployeeId, approve, note);
         if (outcome == ApprovalStatus.Pending)

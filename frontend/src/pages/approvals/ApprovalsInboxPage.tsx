@@ -10,6 +10,7 @@ import {
   HandCoins,
   Inbox,
   GraduationCap,
+  TimerOff,
   Package,
   Plane,
   Receipt,
@@ -28,6 +29,7 @@ import { schedulingApi } from '../../api/scheduling';
 import { qk } from '../../api/keys';
 import { recruitmentApi } from '../../api/recruitment';
 import { trainingApi } from '../../api/training';
+import { exemptionsApi } from '../../api/leaveRules';
 import { travelApi } from '../../api/travel';
 import { compOffApi, leaveApi } from '../../api/leave';
 import { payApi } from '../../api/pay';
@@ -70,6 +72,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   JobRequest: UserPlus,
   Travel: Plane,
   Training: GraduationCap,
+  Exemption: TimerOff,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -90,6 +93,7 @@ const decideApi: Record<
   JobRequest: { approve: recruitmentApi.approveRequest, reject: recruitmentApi.rejectRequest },
   Travel: { approve: travelApi.approve, reject: travelApi.reject },
   Training: { approve: trainingApi.approve, reject: trainingApi.reject },
+  Exemption: { approve: exemptionsApi.approve, reject: exemptionsApi.reject },
 };
 
 export function ApprovalsInboxPage() {
@@ -135,6 +139,7 @@ export function ApprovalsInboxPage() {
               'JobRequest',
               'Travel',
               'Training',
+              'Exemption',
             ] as Filter[]
           ).map((t) => ({
             value: t,

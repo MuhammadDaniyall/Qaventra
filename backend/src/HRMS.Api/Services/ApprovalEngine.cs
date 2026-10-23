@@ -265,6 +265,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.JobRequest => "hiring request",
         ApprovalRequestType.Travel => "travel request",
         ApprovalRequestType.Training => "training request",
+        ApprovalRequestType.Exemption => "exemption request",
         _ => "request",
     };
 
@@ -282,6 +283,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.JobRequest => "/recruitment?tab=requests",
         ApprovalRequestType.Travel => "/travel",
         ApprovalRequestType.Training => "/training?tab=requests",
+        ApprovalRequestType.Exemption => "/me/attendance",
         _ => "/dashboard",
     };
 

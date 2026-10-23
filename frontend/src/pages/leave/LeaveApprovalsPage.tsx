@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ClipboardCheck, Paperclip, X } from 'lucide-react';
+import { Check, ClipboardCheck, Paperclip, Scale, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { leaveApi } from '../../api/leave';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { durationLabel } from './MyLeavePage';
@@ -36,6 +37,7 @@ type TabValue = Extract<LeaveStatus, 'Pending' | 'Approved' | 'Rejected'>;
 
 export function LeaveApprovalsPage() {
   const hr = isHr(useUser());
+  const navigate = useNavigate();
   const [status, setStatus] = useState<TabValue>('Pending');
   const [deciding, setDeciding] = useState<{ request: LeaveRequest; approve: boolean } | null>(null);
   const list = useQuery({ queryKey: qk.leaveApprovals(status), queryFn: () => leaveApi.approvals(status) });
@@ -46,7 +48,16 @@ export function LeaveApprovalsPage() {
       <PageHeader
         title="Leave approvals"
         description="Review leave requests from people who report to you."
-        actions={hr && <ExportRangeButton path="/exports/leave" name="leave" />}
+        actions={
+          hr && (
+            <>
+              <Button variant="secondary" icon={<Scale className="size-4" />} onClick={() => navigate('/leave/opening-balances')}>
+                Opening balances
+              </Button>
+              <ExportRangeButton path="/exports/leave" name="leave" />
+            </>
+          )
+        }
       />
       <Tabs<TabValue>
         className="mb-4"

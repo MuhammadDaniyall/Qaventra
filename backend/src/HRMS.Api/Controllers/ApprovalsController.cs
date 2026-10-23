@@ -186,6 +186,7 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             ApprovalRequestType.JobRequest => services.GetRequiredService<RecruitmentService>().DecideRequestAsync,
             ApprovalRequestType.Travel => services.GetRequiredService<TravelService>().DecideAsync,
             ApprovalRequestType.Training => services.GetRequiredService<TrainingService>().DecideAsync,
+            ApprovalRequestType.Exemption => services.GetRequiredService<ExemptionService>().DecideAsync,
             _ => throw new NotFoundException("Request type"),
         };
         await decide(subjectId, req.Approve, req.Note);

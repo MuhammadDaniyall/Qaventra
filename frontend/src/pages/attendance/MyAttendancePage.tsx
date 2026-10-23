@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ExcuseButton, MyExemptions } from './Exemptions';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftRight, CalendarClock, ChevronLeft, ChevronRight, ClipboardEdit, Repeat } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
@@ -126,6 +127,7 @@ export function MyAttendancePage() {
                       <Th>Worked</Th>
                       <Th>Office</Th>
                       <Th>Source</Th>
+                      <Th />
                     </tr>
                   </THead>
                   <TBody>
@@ -140,6 +142,9 @@ export function MyAttendancePage() {
                         <Td className="tabular-nums">{formatMinutes(r.workedMinutes)}</Td>
                         <Td>{r.office ?? '—'}</Td>
                         <Td title={r.note ?? undefined}>{r.source === 'Request' ? 'Approved request' : r.source}</Td>
+                        <Td className="text-right">
+                          <ExcuseButton date={r.date} flag={r.status} />
+                        </Td>
                       </Tr>
                     ))}
                   </TBody>
@@ -149,6 +154,7 @@ export function MyAttendancePage() {
           </>
         )}
       </Card>
+      <MyExemptions />
       <MyShiftRequests />
       <MyAttendanceRequests />
       {requesting && <RequestAttendanceModal onClose={() => setRequesting(false)} />}

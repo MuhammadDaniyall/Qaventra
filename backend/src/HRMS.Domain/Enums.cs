@@ -566,6 +566,7 @@ public enum ApprovalRequestType
     JobRequest = 10,
     Travel = 11,
     Training = 12,
+    Exemption = 13,
 }
 
 public enum PayRequestKind

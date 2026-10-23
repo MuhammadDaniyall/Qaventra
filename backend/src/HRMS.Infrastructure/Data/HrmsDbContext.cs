@@ -99,6 +99,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ScheduledRun> ScheduledRuns => Set<ScheduledRun>();
     public DbSet<ReportSettings> ReportSettings => Set<ReportSettings>();
     public DbSet<SalaryRevision> SalaryRevisions => Set<SalaryRevision>();
+    public DbSet<LeaveReason> LeaveReasons => Set<LeaveReason>();
+    public DbSet<AttendanceExemption> AttendanceExemptions => Set<AttendanceExemption>();
+    public DbSet<AttendanceSettings> AttendanceSettings => Set<AttendanceSettings>();
     public DbSet<RecurringPayItem> RecurringPayItems => Set<RecurringPayItem>();
     public DbSet<SalaryHold> SalaryHolds => Set<SalaryHold>();
     public DbSet<TrainingProgram> TrainingPrograms => Set<TrainingProgram>();
@@ -217,6 +220,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Code).HasMaxLength(10);
             e.Property(x => x.AnnualQuota).HasPrecision(6, 2);
             e.Property(x => x.CarryForwardMax).HasPrecision(6, 2);
+            e.Property(x => x.DocumentAfterDays).HasPrecision(6, 1);
         });
 
         b.Entity<LeaveBalance>(e =>
@@ -243,6 +247,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Days).HasPrecision(6, 2);
             e.Property(x => x.Reason).HasMaxLength(1000);
             e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne<LeaveReason>().WithMany().HasForeignKey(x => x.ReasonId).OnDelete(DeleteBehavior.NoAction);
         });
 
         b.Entity<PayrollSettings>(e =>
@@ -826,6 +831,30 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.SendHour).HasDefaultValue(9);
         });
 
+        b.Entity<LeaveReason>(e =>
+        {
+            e.HasIndex(x => new { x.LeaveTypeId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.MaxDays).HasPrecision(6, 1);
+            e.HasOne<LeaveType>().WithMany().HasForeignKey(x => x.LeaveTypeId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<AttendanceExemption>(e =>
+        {
+            e.HasIndex(x => new { x.EmployeeId, x.Date });
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<AttendanceSettings>(e =>
+        {
+            e.HasIndex(x => x.TenantId).IsUnique();
+            e.Property(x => x.ExemptionsPerMonth).HasDefaultValue(2);
+            e.Property(x => x.ExemptionWithinDays).HasDefaultValue(7);
+        });
+
         b.Entity<SalaryRevision>(e =>
         {
             e.HasIndex(x => new { x.EmployeeId, x.EffectiveFrom });
@@ -1085,7 +1114,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
-        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition);
+        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason);
 
     private LambdaExpression TenantFilter(Type entityType)
     {

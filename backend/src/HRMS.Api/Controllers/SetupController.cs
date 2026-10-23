@@ -23,12 +23,12 @@ public record SaveHolidayRequest(DateOnly Date, [Required, StringLength(150)] st
 public record LeaveTypeDto(
     Guid Id, string Name, string Code, decimal AnnualQuota, bool IsPaid, bool IsActive,
     LeaveAccrual Accrual, decimal CarryForwardMax, int? MaxConsecutiveDays, int MinNoticeDays, Gender? ApplicableGender,
-    bool AllowedOnProbation, bool AllowHalfDay, bool AllowShortLeave, bool IsCompensatory);
+    bool AllowedOnProbation, bool AllowHalfDay, bool AllowShortLeave, bool IsCompensatory, bool Sandwich, decimal? DocumentAfterDays);
 public record SaveLeaveTypeRequest(
     [Required, StringLength(100)] string Name, [Required, StringLength(10)] string Code, [Range(0, 365)] decimal AnnualQuota, bool IsPaid, bool IsActive,
     LeaveAccrual Accrual = LeaveAccrual.Upfront, [Range(0, 365)] decimal CarryForwardMax = 0, [Range(1, 365)] int? MaxConsecutiveDays = null,
     [Range(0, 90)] int MinNoticeDays = 0, Gender? ApplicableGender = null, bool AllowedOnProbation = true, bool AllowHalfDay = true,
-    bool AllowShortLeave = false, bool IsCompensatory = false);
+    bool AllowShortLeave = false, bool IsCompensatory = false, bool Sandwich = false, [Range(0.5, 365)] decimal? DocumentAfterDays = null);
 
 /// <summary>Company configuration. Everyone can read (pickers and calendars need it); only HR can change it.</summary>
 [ApiController]
@@ -156,7 +156,7 @@ public class SetupController(HrmsDbContext db) : ControllerBase
     public Task<List<LeaveTypeDto>> LeaveTypes() =>
         db.LeaveTypes.OrderBy(t => t.Name).Select(t => new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive,
             t.Accrual, t.CarryForwardMax, t.MaxConsecutiveDays, t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay,
-            t.AllowShortLeave, t.IsCompensatory)).ToListAsync();
+            t.AllowShortLeave, t.IsCompensatory, t.Sandwich, t.DocumentAfterDays)).ToListAsync();
 
     [HttpPost("leave-types"), Authorize(Policy = Policies.Hr)]
     public async Task<LeaveTypeDto> CreateLeaveType(SaveLeaveTypeRequest req)
@@ -166,7 +166,7 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         db.LeaveTypes.Add(t);
         await db.SaveChangesAsync();
         return new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive, t.Accrual, t.CarryForwardMax, t.MaxConsecutiveDays,
-            t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay, t.AllowShortLeave, t.IsCompensatory);
+            t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay, t.AllowShortLeave, t.IsCompensatory, t.Sandwich, t.DocumentAfterDays);
     }
 
     /// <summary>Quota changes apply to balances created from now on; existing balances keep their entitlement.</summary>
@@ -197,6 +197,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         t.AllowHalfDay = req.AllowHalfDay;
         t.AllowShortLeave = req.AllowShortLeave;
         t.IsCompensatory = req.IsCompensatory;
+        t.Sandwich = req.Sandwich;
+        t.DocumentAfterDays = req.DocumentAfterDays;
     }
 
     /// <summary>Only a leave type that was never used can be deleted; otherwise mark it inactive.</summary>

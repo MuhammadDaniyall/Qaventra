@@ -8,6 +8,7 @@ import { ClaimCompOffModal, MyCompOffClaims } from './CompOff';
 import { errorMessage } from '../../api/client';
 import { useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { leaveRulesApi } from '../../api/leaveRules';
 import {
   Button,
   Card,
@@ -246,6 +247,8 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   const [from, setFrom] = useState(todayIso());
   const [to, setTo] = useState(todayIso());
   const [reason, setReason] = useState('');
+  const [reasonId, setReasonId] = useState('');
+  const allReasons = useQuery({ queryKey: qk.leaveReasons, queryFn: leaveRulesApi.reasons });
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<LeaveDuration>('FullDay');
@@ -270,7 +273,10 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
     enabled: validRange,
     retry: false,
   });
+  const reasons = (allReasons.data ?? []).filter((r) => r.leaveTypeId === typeId && r.isActive);
+  const chosenReason = reasons.find((r) => r.id === reasonId);
   const balance = balances.find((b) => b.leaveTypeId === typeId);
+  const needsDocument = !!chosenReason?.requiresDocument || (!!type?.documentAfterDays && !!days.data && days.data.days > type.documentAfterDays);
   const over = balance && days.data && days.data.days > balance.available;
 
   const apply = useMutation({
@@ -280,6 +286,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         fromDate: from,
         toDate: single ? from : to,
         reason: reason.trim() || null,
+        reasonId: reasons.length ? reasonId || null : null,
         duration: mode,
         halfDayPart: mode === 'HalfDay' ? part : null,
         startTime: mode === 'ShortLeave' ? `${startTime}:00` : null,
@@ -423,9 +430,27 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         {over && !single && (
           <p className="text-xs text-amber-700 dark:text-amber-300">This is more than your available balance.</p>
         )}
+        {reasons.length > 0 && (
+          <Field label="Reason type" required hint={chosenReason?.maxDays ? `Up to ${chosenReason.maxDays} days` : undefined}>
+            <Select value={reasonId} onChange={(e) => setReasonId(e.target.value)}>
+              <option value="">Choose…</option>
+              {reasons.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        {type?.sandwich && !single && <p className="text-xs text-zinc-500">Weekends and holidays between your leave days also count as leave.</p>}
         <Field label="Reason">
           <Textarea value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} placeholder="Optional" />
         </Field>
+        {needsDocument && (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+            Attach a supporting document; your manager cannot approve this leave without it.
+          </p>
+        )}
         <div className="space-y-2">
           <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Supporting documents <span className="font-normal text-zinc-500">(e.g. medical certificate)</span>

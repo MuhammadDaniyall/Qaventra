@@ -60,6 +60,8 @@ The manuals repeat the same five patterns in almost every module. Build once, re
 
 - **Payroll depth:** salary revisions for one or many people (percent or amount, with or without allowances, from a date, preview with cost impact, raises loaded from a performance cycle, history, employee told); monthly allowances and deductions with start and end months; salary holds (left out of the bank advice until released); leave encashment (basic or gross ÷ 30, off the balance, paid with the month); optional payroll approval by the company admin (submit, approve or send back, reprocessing resets it), and marking a finalized month as paid.
 
+- **Leave and attendance rules:** reason types per leave type (day limit, document needed; a reason must be chosen when a type has them); sandwich rule (offs and holidays inside a request count); document required beyond N days, enforced before approval; opening balances for everyone in one grid (brought forward and adjustments with a note); excusing late arrivals and half days through their own approval chain, with a monthly quota and time limit, turning the day into present so no late penalty or half-day deduction applies.
+
 ## Where we aim to beat FlowHCM
 
 - Mobile-first self-service (PWA): check-in, leave, claims with camera receipts, payslips, letters.

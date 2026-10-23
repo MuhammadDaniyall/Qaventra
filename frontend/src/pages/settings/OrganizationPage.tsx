@@ -9,6 +9,7 @@ import { HolidaysTab } from './HolidaysTab';
 import { LeaveTypesTab } from './LeaveTypesTab';
 import { OfficesTab } from './OfficesTab';
 import { ShiftsTab } from './ShiftsTab';
+import { ExemptionSettingsCard } from '../attendance/Exemptions';
 
 type Tab = 'departments' | 'designations' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields';
 const TABS: Tab[] = ['departments', 'designations', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields'];
@@ -38,7 +39,12 @@ export function OrganizationPage() {
       />
       {tab === 'departments' && <DepartmentsTab />}
       {tab === 'designations' && <DesignationsTab />}
-      {tab === 'shifts' && <ShiftsTab />}
+      {tab === 'shifts' && (
+        <>
+          <ShiftsTab />
+          <ExemptionSettingsCard />
+        </>
+      )}
       {tab === 'offices' && <OfficesTab />}
       {tab === 'holidays' && <HolidaysTab />}
       {tab === 'leave-types' && <LeaveTypesTab />}

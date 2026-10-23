@@ -82,6 +82,43 @@ public class LeaveType : TenantEntity
     public bool AllowShortLeave { get; set; }
     /// <summary>Credited by approved comp-off requests instead of a yearly quota.</summary>
     public bool IsCompensatory { get; set; }
+    /// <summary>Weekly offs and holidays between the first and last day of a request count as leave too.</summary>
+    public bool Sandwich { get; set; }
+    /// <summary>Requests longer than this many days need a supporting document before approval (e.g. a medical certificate).</summary>
+    public decimal? DocumentAfterDays { get; set; }
+}
+
+/// <summary>Why someone takes a kind of leave (e.g. Sick leave: fever, surgery), with its own limit and document rule.</summary>
+public class LeaveReason : TenantEntity
+{
+    public Guid LeaveTypeId { get; set; }
+    public string Name { get; set; } = "";
+    /// <summary>Longest request for this reason, in days.</summary>
+    public decimal? MaxDays { get; set; }
+    public bool RequiresDocument { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+/// <summary>An employee asks to excuse a late arrival or an early leave on a day; approved through the exemption chain.</summary>
+public class AttendanceExemption : TenantEntity
+{
+    public Guid EmployeeId { get; set; }
+    public Employee? Employee { get; set; }
+    public DateOnly Date { get; set; }
+    /// <summary>The flag being excused: Late or HalfDay.</summary>
+    public AttendanceStatus Flag { get; set; }
+    public string Reason { get; set; } = "";
+    public RequestStatus Status { get; set; } = RequestStatus.Pending;
+    public DateTime? DecidedAtUtc { get; set; }
+    public string? DecisionNote { get; set; }
+}
+
+public class AttendanceSettings : TenantEntity
+{
+    /// <summary>Exemption requests each person may make per month; 0 switches exemptions off.</summary>
+    public int ExemptionsPerMonth { get; set; } = 2;
+    /// <summary>How many days back an exemption may be requested.</summary>
+    public int ExemptionWithinDays { get; set; } = 7;
 }
 
 public class LeaveBalance : TenantEntity
@@ -120,6 +157,7 @@ public class LeaveRequest : TenantEntity
     public TimeOnly? StartTime { get; set; }
     public TimeOnly? EndTime { get; set; }
     public string? Reason { get; set; }
+    public Guid? ReasonId { get; set; }
     public LeaveStatus Status { get; set; } = LeaveStatus.Pending;
     public Guid? DecidedByUserId { get; set; }
     public DateTime? DecidedAtUtc { get; set; }

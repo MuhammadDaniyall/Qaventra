@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LeaveReasonsModal } from './LeaveReasonsModal';
 import { Palmtree, Plus } from 'lucide-react';
 import { setupApi } from '../../api/organization';
 import { useLeaveTypes } from '../../api/hooks';
@@ -12,6 +13,7 @@ export function LeaveTypesTab() {
   const list = useLeaveTypes();
   const [editing, setEditing] = useState<LeaveType | 'new' | null>(null);
   const [deleting, setDeleting] = useState<LeaveType | null>(null);
+  const [reasonsFor, setReasonsFor] = useState<LeaveType | null>(null);
 
   return (
     <Card>
@@ -57,13 +59,19 @@ export function LeaveTypesTab() {
                   <StatusBadge status={t.isActive ? 'Active' : 'Cancelled'} label={t.isActive ? 'Active' : 'Inactive'} />
                 </Td>
                 <Td>
-                  <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
+                  <div className="flex items-center justify-end gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => setReasonsFor(t)}>
+                      Reasons
+                    </Button>
+                    <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
+                  </div>
                 </Td>
               </Tr>
             ))}
           </TBody>
         </Table>
       )}
+      {reasonsFor && <LeaveReasonsModal type={reasonsFor} onClose={() => setReasonsFor(null)} />}
       {editing && <LeaveTypeModal item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {/* A used leave type can't be deleted: the 400 message (mark it inactive instead) is shown as a toast. */}
       <DeleteConfirm
@@ -88,6 +96,8 @@ function policySummary(t: LeaveType): string {
   if (!t.allowedOnProbation) parts.push('After probation');
   if (!t.allowHalfDay) parts.push('No half days');
   if (t.allowShortLeave) parts.push('Short leave');
+  if (t.sandwich) parts.push('Sandwich');
+  if (t.documentAfterDays) parts.push(`Document after ${t.documentAfterDays} days`);
   return parts.join(' · ');
 }
 
@@ -106,6 +116,8 @@ type Form = {
   allowHalfDay: boolean;
   allowShortLeave: boolean;
   isCompensatory: boolean;
+  sandwich: boolean;
+  documentAfterDays: string;
 };
 
 function toForm(t: LeaveType | null): Form {
@@ -125,10 +137,12 @@ function toForm(t: LeaveType | null): Form {
         allowHalfDay: t.allowHalfDay,
         allowShortLeave: t.allowShortLeave,
         isCompensatory: t.isCompensatory,
+        sandwich: t.sandwich,
+        documentAfterDays: t.documentAfterDays != null ? String(t.documentAfterDays) : '',
       }
     : {
         name: '', code: '', annualQuota: '10', isPaid: true, isActive: true, accrual: 'Upfront', carryForwardMax: '0', maxConsecutiveDays: '',
-        minNoticeDays: '0', applicableGender: '', allowedOnProbation: true, allowHalfDay: true, allowShortLeave: false, isCompensatory: false,
+        minNoticeDays: '0', applicableGender: '', allowedOnProbation: true, allowHalfDay: true, allowShortLeave: false, isCompensatory: false, sandwich: false, documentAfterDays: '',
       };
 }
 
@@ -179,6 +193,8 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
           allowHalfDay: v.allowHalfDay,
           allowShortLeave: v.allowShortLeave,
           isCompensatory: v.isCompensatory,
+          sandwich: v.sandwich,
+          documentAfterDays: v.documentAfterDays ? Number(v.documentAfterDays) : null,
         });
       }}
     >
@@ -224,6 +240,9 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
             <Input type="number" min={0} max={90} value={v.minNoticeDays} onChange={(e) => set({ minNoticeDays: e.target.value })} />
           </Field>
         </div>
+        <Field label="Document needed for more than (days)" hint="Empty = never; the approver cannot approve until it is attached">
+          <Input type="number" min={0.5} max={365} step="0.5" value={v.documentAfterDays} onChange={(e) => set({ documentAfterDays: e.target.value })} />
+        </Field>
         <Field label="Who can take it">
           <Select value={v.applicableGender} onChange={(e) => set({ applicableGender: e.target.value as Gender | '' })}>
             <option value="">Everyone</option>
@@ -235,6 +254,12 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
           <Checkbox label="Allowed during probation" checked={v.allowedOnProbation} onChange={(e) => set({ allowedOnProbation: e.target.checked })} />
           <Checkbox label="Half days allowed" checked={v.allowHalfDay} onChange={(e) => set({ allowHalfDay: e.target.checked })} />
           <Checkbox label="Short leave (hours) allowed" checked={v.allowShortLeave} onChange={(e) => set({ allowShortLeave: e.target.checked })} />
+          <Checkbox
+            label="Sandwich rule"
+            description="Weekends and holidays between leave days count as leave"
+            checked={v.sandwich}
+            onChange={(e) => set({ sandwich: e.target.checked })}
+          />
           <Checkbox label="Active" checked={v.isActive} onChange={(e) => set({ isActive: e.target.checked })} />
         </div>
       </fieldset>

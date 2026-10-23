@@ -666,6 +666,51 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("AttachmentContents");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.AttendanceExemption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("DecidedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Flag")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId", "Date");
+
+                    b.HasIndex("TenantId", "Status");
+
+                    b.ToTable("AttendanceExemptions");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.AttendancePeriod", b =>
                 {
                     b.Property<Guid>("Id")
@@ -808,6 +853,36 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasIndex("TenantId", "Status");
 
                     b.ToTable("AttendanceRequests");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.AttendanceSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ExemptionWithinDays")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(7);
+
+                    b.Property<int>("ExemptionsPerMonth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(2);
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("AttendanceSettings");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.AuditLog", b =>
@@ -2255,6 +2330,44 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.ToTable("LeaveBalances");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.LeaveReason", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("MaxDays")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("decimal(6,1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("RequiresDocument")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LeaveTypeId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("LeaveReasons");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.LeaveRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2300,6 +2413,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<Guid?>("ReasonId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<TimeOnly?>("StartTime")
                         .HasColumnType("time");
 
@@ -2317,6 +2433,8 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasIndex("EmployeeId");
 
                     b.HasIndex("LeaveTypeId");
+
+                    b.HasIndex("ReasonId");
 
                     b.ToTable("LeaveRequests");
                 });
@@ -2358,6 +2476,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("DocumentAfterDays")
+                        .HasPrecision(6, 1)
+                        .HasColumnType("decimal(6,1)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -2377,6 +2499,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("Sandwich")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -5686,6 +5811,17 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.AttendanceExemption", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.AttendanceRecord", b =>
                 {
                     b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
@@ -5974,6 +6110,15 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Navigation("LeaveType");
                 });
 
+            modelBuilder.Entity("HRMS.Domain.Entities.LeaveReason", b =>
+                {
+                    b.HasOne("HRMS.Domain.Entities.LeaveType", null)
+                        .WithMany()
+                        .HasForeignKey("LeaveTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("HRMS.Domain.Entities.LeaveRequest", b =>
                 {
                     b.HasOne("HRMS.Domain.Entities.Employee", "Employee")
@@ -5987,6 +6132,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasForeignKey("LeaveTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("HRMS.Domain.Entities.LeaveReason", null)
+                        .WithMany()
+                        .HasForeignKey("ReasonId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.Navigation("Employee");
 

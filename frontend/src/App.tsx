@@ -21,6 +21,7 @@ const WelcomePage = lazy(() => import('./pages/onboarding/WelcomePage').then((m)
 const PerformancePage = lazy(() => import('./pages/performance/PerformancePage').then((m) => ({ default: m.PerformancePage })));
 const ReviewPage = lazy(() => import('./pages/performance/ReviewPage').then((m) => ({ default: m.ReviewPage })));
 const CalibrationPage = lazy(() => import('./pages/performance/CalibrationPage').then((m) => ({ default: m.CalibrationPage })));
+const OpeningBalancesPage = lazy(() => import('./pages/leave/OpeningBalancesPage').then((m) => ({ default: m.OpeningBalancesPage })));
 const PayChangesPage = lazy(() => import('./pages/payroll/PayChangesPage').then((m) => ({ default: m.PayChangesPage })));
 const ReportsPage = lazy(() => import('./pages/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 const BudgetPage = lazy(() => import('./pages/budget/BudgetPage').then((m) => ({ default: m.BudgetPage })));
@@ -162,6 +163,7 @@ export default function App() {
               <Route path="/payroll/settings" element={<PayrollSettingsPage />} />
               <Route path="/payroll/adjustments" element={<PayAdjustmentsPage />} />
               <Route path="/payroll/changes" element={<PayChangesPage />} />
+              <Route path="/leave/opening-balances" element={<OpeningBalancesPage />} />
               <Route path="/settings" element={<OrganizationPage />} />
               <Route path="/alerts" element={<ScheduledPage />} />
               <Route path="/budget" element={<BudgetPage />} />
