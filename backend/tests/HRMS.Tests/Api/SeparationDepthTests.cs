@@ -49,7 +49,7 @@ public class SeparationDepthTests(ApiFactory factory) : IClassFixture<ApiFactory
 
         var sep = await Ok(await admin.PostAsJsonAsync("/api/separations", new
         {
-            employeeId = leaver, type = "Resignation", noticeDate = Iso(Today.AddDays(-30)), lastWorkingDay = Iso(Today), noticePeriodDays = 30, reason = "Moving",
+            employeeId = leaver, type = "Resignation", noticeDate = Iso(Today.AddDays(-30)), lastWorkingDay = Iso(Today.AddDays(-1)), noticePeriodDays = 30, reason = "Moving",
         }, ApiFactory.Json));
         var id = sep.GetProperty("summary").GetProperty("id").GetGuid();
         var extras = await Ok(await admin.GetAsync($"/api/separation-setup/separations/{id}"));
