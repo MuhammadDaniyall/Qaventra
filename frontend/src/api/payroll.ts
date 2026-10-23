@@ -9,6 +9,7 @@ export const payrollApi = {
   submit: (id: string) => http.post(`/payroll/runs/${id}/submit`),
   decide: (id: string, approve: boolean, note: string | null) => http.post(`/payroll/runs/${id}/decide`, { approve, note }),
   disburse: (id: string, via: string | null) => http.post(`/payroll/runs/${id}/disburse`, { via }),
+  undisburse: (id: string) => http.post(`/payroll/runs/${id}/undisburse`),
   myPayslips: () => http.get<PayslipSummary[]>('/payroll/my-payslips'),
   payslip: (id: string) => http.get<Payslip>(`/payroll/payslips/${id}`),
   settings: () => http.get<PayrollSettings>('/payroll/settings'),

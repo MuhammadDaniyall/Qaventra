@@ -124,6 +124,16 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         var today = await clock.TodayAsync();
         // Penalty rules (late, early leave, absent…) that cost pay this month.
         var rulePenalties = await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().PayDaysAsync(employeeIds, monthStart.Year, monthStart.Month);
+        // Tax adjustments for the tax year (previous employer, credits) and what this employer already withheld this year.
+        var adjustments = (await db.TaxAdjustments.Where(a => a.TaxYearCode == taxYear.Code && employeeIds.Contains(a.EmployeeId)).ToListAsync())
+            .ToLookup(a => a.EmployeeId);
+        var yearStart = new DateOnly(taxYear.StartDate.Year, taxYear.StartDate.Month, 1);
+        var monthsLeft = Math.Max(1, 12 - ((monthStart.Year - yearStart.Year) * 12 + monthStart.Month - yearStart.Month));
+        var startPeriod = yearStart.Year * 12 + yearStart.Month;
+        var yearToDate = (await db.Payslips.Where(p => employeeIds.Contains(p.EmployeeId) && p.PayrollRun!.Status == PayrollRunStatus.Finalized
+                                                       && p.PayrollRun.Year * 12 + p.PayrollRun.Month >= startPeriod && p.PayrollRun.Year * 12 + p.PayrollRun.Month < period)
+                .Select(p => new { p.EmployeeId, p.TaxableIncome, p.IncomeTax }).ToListAsync())
+            .GroupBy(p => p.EmployeeId).ToDictionary(g => g.Key, g => (Taxable: g.Sum(x => x.TaxableIncome), Tax: g.Sum(x => x.IncomeTax)));
 
         foreach (var employee in employees)
         {
@@ -219,9 +229,38 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 extras.Add(new PayItem($"{loan.Title} installment ({number}/{loan.Installments})", SalaryComponentKind.Deduction, installment, false));
             }
 
+            // Provident fund: the member's share is deducted; the company's share is recorded on the payslip.
+            var paidFactor = Math.Clamp((daysInMonth - unpaid) / daysInMonth, 0, 1);
+            var fundBase = (settings.PfOnGross
+                ? salary.BasicSalary + salary.Components.Where(c => c.Kind == SalaryComponentKind.Earning).Sum(c => c.Amount)
+                : salary.BasicSalary) * paidFactor;
+            var pf = settings.ProvidentFundEnabled && employee.ProvidentFundMember;
+            var pfEmployee = pf ? Math.Round(fundBase * settings.PfEmployeePercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
+            var pfEmployer = pf ? Math.Round(fundBase * settings.PfEmployerPercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
+            if (pfEmployee > 0)
+                extras.Add(new PayItem("Provident fund", SalaryComponentKind.Deduction, pfEmployee, false));
+
+            Func<decimal, decimal>? taxFor = null;
+            if (adjustments[employee.Id].Any())
+            {
+                var adj = adjustments[employee.Id].ToList();
+                decimal Sum(TaxAdjustmentKind k) => adj.Where(a => a.Kind == k).Sum(a => a.Amount);
+                var ytd = yearToDate.GetValueOrDefault(employee.Id);
+                taxFor = monthTaxable =>
+                {
+                    var income = Sum(TaxAdjustmentKind.PreviousIncome) + Sum(TaxAdjustmentKind.OtherIncome) + ytd.Taxable + monthTaxable * monthsLeft;
+                    var due = TaxCalculator.AnnualTax(taxYear, income) - Sum(TaxAdjustmentKind.TaxCredit) - Sum(TaxAdjustmentKind.PreviousTax) - ytd.Tax;
+                    return Math.Max(0, Math.Round(due / monthsLeft, 0, MidpointRounding.AwayFromZero));
+                };
+            }
+
             var result = PayrollCalculator.Calculate(new PayrollInput(
                 salary, taxYear, daysInMonth, unpaid, settings.EobiEmployeeContribution, settings.EobiEmployerContribution,
-                employeeClaims.Sum(c => c.Total), extras));
+                employeeClaims.Sum(c => c.Total), extras, taxFor));
+            var wages = result.GrossEarnings - employeeClaims.Sum(c => c.Total);
+            var socialSecurity = settings.SocialSecurityPercent > 0 && !string.IsNullOrEmpty(employee.SocialSecurityNo)
+                ? Math.Round(Math.Min(wages, settings.SocialSecurityWageCeiling ?? wages) * settings.SocialSecurityPercent / 100m, 0, MidpointRounding.AwayFromZero)
+                : 0m;
 
             var payslip = new Payslip
             {
@@ -235,6 +274,9 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 IncomeTax = result.IncomeTax,
                 EobiEmployee = result.EobiEmployee,
                 EobiEmployer = result.EobiEmployer,
+                PfEmployee = pfEmployee,
+                PfEmployer = pfEmployer,
+                SocialSecurityEmployer = socialSecurity,
                 OtherDeductions = result.OtherDeductions,
                 NetPay = result.NetPay,
                 Lines = result.Lines.Select(l => new PayslipLine { Name = l.Name, Kind = l.Kind, Amount = l.Amount }).ToList(),
@@ -287,6 +329,17 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Takes back "paid" from a month marked paid by mistake.</summary>
+    public async Task UndisburseAsync(Guid runId)
+    {
+        var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Id == runId) ?? throw new NotFoundException("Payroll run");
+        if (run.DisbursedAtUtc is null)
+            throw new DomainException("This payroll is not marked paid.");
+        run.DisbursedAtUtc = null;
+        run.DisbursedVia = null;
+        await db.SaveChangesAsync();
+    }
+
     /// <summary>Records that the finalized month's salaries were transferred.</summary>
     public async Task DisburseAsync(Guid runId, string? via)
     {
@@ -325,12 +378,23 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
 
         // Paid attendance should not change any more: close the month if it has ended.
         var monthEnd = new DateOnly(run.Year, run.Month, 1).AddMonths(1).AddDays(-1);
-        if (monthEnd < await clock.TodayAsync() && !await db.AttendancePeriods.AnyAsync(p => p.Year == run.Year && p.Month == run.Month))
+        var closing = monthEnd < await clock.TodayAsync() && !await db.AttendancePeriods.AnyAsync(p => p.Year == run.Year && p.Month == run.Month);
+        if (closing)
             db.AttendancePeriods.Add(new AttendancePeriod { Year = run.Year, Month = run.Month, ClosedAtUtc = clock.UtcNow, ClosedByName = "Payroll finalized" });
+
+        // Provident fund contributions go into each member's ledger.
+        foreach (var p in await db.Payslips.Where(p => p.PayrollRunId == run.Id && (p.PfEmployee > 0 || p.PfEmployer > 0)).ToListAsync())
+            db.FundEntries.Add(new FundEntry
+            {
+                EmployeeId = p.EmployeeId, Fund = FundKind.ProvidentFund, Kind = FundEntryKind.Contribution, Date = monthEnd,
+                EmployeeAmount = p.PfEmployee, EmployerAmount = p.PfEmployer, PayrollRunId = run.Id, Note = $"Payroll {new DateOnly(run.Year, run.Month, 1):MMM yyyy}",
+            });
 
         var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
         var paid = await db.Payslips.Where(p => p.PayrollRunId == run.Id).Select(p => p.EmployeeId).ToListAsync();
         await notify.ToEmployeesAsync(paid, NotificationKind.Payslip, $"Your payslip for {month} is ready", null, "/me/payslips");
         await db.SaveChangesAsync();
+        if (closing)
+            await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().ApplyOnCloseAsync(run.Year, run.Month);
     }
 }

@@ -29,7 +29,7 @@ public class PayRequest : TenantEntity
     public Guid? PayrollRunId { get; set; }
     public DateTime? PaidAtUtc { get; set; }
 
-    public bool IsEarning => Kind is PayRequestKind.Allowance or PayRequestKind.Bonus or PayRequestKind.Overtime;
+    public bool IsEarning => Kind is PayRequestKind.Allowance or PayRequestKind.Bonus or PayRequestKind.Overtime or PayRequestKind.Commission;
 }
 
 /// <summary>A loan repaid in monthly installments deducted by payroll.</summary>

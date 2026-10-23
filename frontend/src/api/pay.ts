@@ -1,7 +1,7 @@
 import type { RequestStatus } from './attendance';
 import { http } from './client';
 
-export type PayRequestKind = 'Allowance' | 'Bonus' | 'Overtime' | 'Deduction' | 'AdvanceSalary';
+export type PayRequestKind = 'Allowance' | 'Bonus' | 'Overtime' | 'Deduction' | 'AdvanceSalary' | 'Commission';
 
 export interface PayRequest {
   id: string;
@@ -68,6 +68,7 @@ export const PAY_KIND_LABELS: Record<PayRequestKind, string> = {
   Overtime: 'Overtime',
   Deduction: 'Deduction',
   AdvanceSalary: 'Advance salary',
+  Commission: 'Commission',
 };
 
 export const payApi = {

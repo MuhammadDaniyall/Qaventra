@@ -15,6 +15,7 @@ import { EmployeeForm, toSaveRequest } from './EmployeeForm';
 import { LeaveTab } from './LeaveTab';
 import { EmployeeFileCard, EmployeeRecordsCard } from './EmployeeFile';
 import { HistoryButton } from '../../components/engine';
+import { CostSplitCard } from './CostSplit';
 import { LoginTab } from './LoginTab';
 import { SalaryTab } from './SalaryTab';
 import { EmergencyContactsCard, JobChangeModal, JobHistory, RehireModal } from './records';
@@ -123,7 +124,12 @@ export function EmployeeDetailPage() {
         </Card>
       )}
       {tab === 'leave' && <LeaveTab employeeId={e.id} />}
-      {tab === 'salary' && <SalaryTab employeeId={e.id} />}
+      {tab === 'salary' && (
+        <>
+          <SalaryTab employeeId={e.id} />
+          <CostSplitCard employeeId={e.id} />
+        </>
+      )}
       {tab === 'login' && <LoginTab employee={e} />}
       {tab === 'file' && <EmployeeFileCard employeeId={e.id} departmentId={e.departmentId} editable={hr} />}
       {tab === 'family' && <EmployeeRecordsCard employeeId={e.id} editable={hr} />}

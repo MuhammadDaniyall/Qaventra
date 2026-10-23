@@ -70,6 +70,11 @@ export function PayrollRunPage() {
     },
     onError: (err) => toast.error(err),
   });
+  const undisburse = useMutation({
+    mutationFn: () => payrollApi.undisburse(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.payrollRun(id) }),
+    onError: (e) => toast.error(e),
+  });
   const disburse = useMutation({
     mutationFn: () => payrollApi.disburse(id, 'Bank transfer'),
     onSuccess: () => {
@@ -162,6 +167,11 @@ export function PayrollRunPage() {
             {canFinalize && (
               <Button icon={<Lock className="size-4" />} onClick={() => setFinalizeOpen(true)}>
                 Finalize
+              </Button>
+            )}
+            {run.status === 'Finalized' && run.disbursedAtUtc && (
+              <Button variant="ghost" loading={undisburse.isPending} onClick={() => undisburse.mutate()}>
+                Not paid yet
               </Button>
             )}
             {run.status === 'Finalized' && !run.disbursedAtUtc && (

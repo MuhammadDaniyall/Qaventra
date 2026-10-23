@@ -185,6 +185,30 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
             ))}
           </Section>
         ))}
+        <Section title="Pay">
+          <Item label="Salary paid by">
+            {draft ? (
+              <Select value={v.paymentMethod} onChange={(e) => setDraft({ ...v, paymentMethod: e.target.value as EmployeeFile['paymentMethod'] })}>
+                <option value="BankTransfer">Bank transfer</option>
+                <option value="Cash">Cash</option>
+                <option value="Cheque">Cheque</option>
+              </Select>
+            ) : v.paymentMethod === 'BankTransfer' ? (
+              'Bank transfer'
+            ) : (
+              v.paymentMethod
+            )}
+          </Item>
+          <Item label="Provident fund">
+            {draft ? (
+              <Checkbox label="Member" checked={v.providentFundMember} onChange={(e) => set('providentFundMember', e.target.checked)} />
+            ) : v.providentFundMember ? (
+              'Member'
+            ) : (
+              <span className="text-zinc-400">Not a member</span>
+            )}
+          </Item>
+        </Section>
         <Section title="Marking attendance">
           <Item label="Allowed from">
             {draft ? (

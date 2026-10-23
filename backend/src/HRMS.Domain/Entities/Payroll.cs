@@ -23,6 +23,40 @@ public class PayrollSettings : TenantEntity
     public bool RequireApproval { get; set; }
     /// <summary>Leave encashment pays basic (false) or gross (true) salary per day, over 30 days.</summary>
     public bool EncashOnGross { get; set; }
+
+    // ---------- Provident fund ----------
+    public bool ProvidentFundEnabled { get; set; }
+    /// <summary>Percent of basic (or gross) taken from the member each month.</summary>
+    public decimal PfEmployeePercent { get; set; } = 8.33m;
+    /// <summary>Percent of basic (or gross) the company adds each month.</summary>
+    public decimal PfEmployerPercent { get; set; } = 8.33m;
+    public bool PfOnGross { get; set; }
+    /// <summary>Years of service before the employer share belongs to the person (0 = at once).</summary>
+    public int PfVestingYears { get; set; }
+
+    // ---------- Gratuity ----------
+    public bool GratuityEnabled { get; set; }
+    /// <summary>Days of salary per year of service (e.g. 30).</summary>
+    public decimal GratuityDaysPerYear { get; set; } = 30;
+    /// <summary>Service needed before any gratuity is due.</summary>
+    public decimal GratuityMinYears { get; set; } = 1;
+    public bool GratuityOnGross { get; set; }
+
+    // ---------- Social security (PESSI / SESSI) ----------
+    /// <summary>Employer contribution as a percent of wages for people with a social security number (0 = off).</summary>
+    public decimal SocialSecurityPercent { get; set; }
+    /// <summary>Wages above this are not counted; null = no ceiling.</summary>
+    public decimal? SocialSecurityWageCeiling { get; set; }
+
+    // ---------- Overtime ----------
+    /// <summary>Multiplier for overtime on a public holiday.</summary>
+    public decimal HolidayOvertimeMultiplier { get; set; } = 2m;
+    /// <summary>Multiplier for overtime on a weekly day off.</summary>
+    public decimal OffDayOvertimeMultiplier { get; set; } = 2m;
+    /// <summary>Claims under this many minutes are refused (0 = any).</summary>
+    public int OvertimeMinMinutes { get; set; }
+    /// <summary>Hours are rounded down to this many minutes (0 = exact).</summary>
+    public int OvertimeRoundMinutes { get; set; }
 }
 
 /// <summary>A Pakistani tax year (July–June) with its salaried-income slabs. Shared by all companies.</summary>
@@ -102,6 +136,10 @@ public class Payslip : TenantEntity
     public decimal IncomeTax { get; set; }
     public decimal EobiEmployee { get; set; }
     public decimal EobiEmployer { get; set; }
+    /// <summary>Provident fund: member's share (also a deduction line) and the company's share.</summary>
+    public decimal PfEmployee { get; set; }
+    public decimal PfEmployer { get; set; }
+    public decimal SocialSecurityEmployer { get; set; }
     public decimal OtherDeductions { get; set; }
     public decimal NetPay { get; set; }
     public List<PayslipLine> Lines { get; set; } = [];

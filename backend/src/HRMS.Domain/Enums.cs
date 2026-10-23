@@ -570,6 +570,7 @@ public enum ApprovalRequestType
     Exemption = 13,
     OffDay = 14,
     Timesheet = 15,
+    FundWithdrawal = 16,
 }
 
 public enum PayRequestKind
@@ -580,6 +581,7 @@ public enum PayRequestKind
     Deduction = 4,
     /// <summary>Paid out now, recovered in full from the chosen month's salary.</summary>
     AdvanceSalary = 5,
+    Commission = 6,
 }
 
 /// <summary>Status of a simple request that goes through an approval chain.</summary>
@@ -749,4 +751,39 @@ public enum SuggestionStatus
     Accepted = 3,
     Implemented = 4,
     Declined = 5,
+}
+
+public enum FundKind
+{
+    ProvidentFund = 1,
+    Gratuity = 2,
+}
+
+public enum FundEntryKind
+{
+    Opening = 1,
+    Contribution = 2,
+    Profit = 3,
+    Withdrawal = 4,
+    /// <summary>Gratuity paid out at exit or other correction.</summary>
+    Adjustment = 5,
+}
+
+public enum TaxAdjustmentKind
+{
+    /// <summary>Taxable salary from a previous employer this tax year.</summary>
+    PreviousIncome = 1,
+    /// <summary>Tax already deducted by a previous employer this tax year.</summary>
+    PreviousTax = 2,
+    /// <summary>Tax credit (donations, pension fund, etc.) reducing the year's tax.</summary>
+    TaxCredit = 3,
+    /// <summary>Other taxable income to include in the year.</summary>
+    OtherIncome = 4,
+}
+
+public enum PaymentMethod
+{
+    BankTransfer = 1,
+    Cash = 2,
+    Cheque = 3,
 }

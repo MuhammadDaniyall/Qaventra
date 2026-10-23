@@ -112,7 +112,11 @@ function MonthItems() {
       ) : items.isError ? (
         <ErrorState error={items.error} onRetry={() => items.refetch()} />
       ) : !items.data?.length ? (
-        <EmptyState icon={Wallet} title="Nothing for this month" description="Bonuses, allowances, deductions and approved overtime or advances for this payroll month appear here." />
+        <EmptyState
+          icon={Wallet}
+          title="Nothing for this month"
+          description="Bonuses, allowances, deductions and approved overtime or advances for this payroll month appear here."
+        />
       ) : (
         <Table>
           <THead>
@@ -143,11 +147,21 @@ function MonthItems() {
                     {r.reason ? ` · ${r.reason}` : ''}
                   </p>
                 </Td>
-                <Td className={r.isEarning ? 'text-right font-medium text-emerald-700 tabular-nums dark:text-emerald-300' : 'text-right font-medium tabular-nums'}>
+                <Td
+                  className={r.isEarning ? 'text-right font-medium text-emerald-700 tabular-nums dark:text-emerald-300' : 'text-right font-medium tabular-nums'}
+                >
                   {r.isEarning ? '+' : '−'}
                   {formatCurrency(r.amount)}
                 </Td>
-                <Td>{r.paidAtUtc ? <Badge tone="violet">Paid</Badge> : r.inDraftPayroll ? <Badge tone="blue">In draft payroll</Badge> : <StatusBadge status={r.status} />}</Td>
+                <Td>
+                  {r.paidAtUtc ? (
+                    <Badge tone="violet">Paid</Badge>
+                  ) : r.inDraftPayroll ? (
+                    <Badge tone="blue">In draft payroll</Badge>
+                  ) : (
+                    <StatusBadge status={r.status} />
+                  )}
+                </Td>
                 <Td className="text-right">
                   {!r.paidAtUtc && (r.status === 'Approved' || r.status === 'Pending') && (
                     <Button variant="ghost" size="sm" onClick={() => setRemoving(r)}>
@@ -163,7 +177,14 @@ function MonthItems() {
       <ConfirmDialog
         open={!!removing}
         title="Remove this item?"
-        message={removing && <>{PAY_KIND_LABELS[removing.kind]} of {formatCurrency(removing.amount)} for {removing.employeeName} will not be paid. Reprocess a draft payroll to update it.</>}
+        message={
+          removing && (
+            <>
+              {PAY_KIND_LABELS[removing.kind]} of {formatCurrency(removing.amount)} for {removing.employeeName} will not be paid. Reprocess a draft payroll to
+              update it.
+            </>
+          )
+        }
         confirmLabel="Remove"
         tone="danger"
         loading={remove.isPending}

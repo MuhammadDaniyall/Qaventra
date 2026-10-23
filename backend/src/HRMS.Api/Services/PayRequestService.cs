@@ -16,7 +16,7 @@ public record NewPayRequest(
 /// One-off pay items and loans. Employees request advance salary, overtime and loans (through approval chains);
 /// HR enters allowances, bonuses and deductions, which are approved as entered. Payroll picks up approved items.
 /// </summary>
-public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, NotificationService notify)
+public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, NotificationService notify, ScheduleService schedules)
 {
     public static string KindLabel(PayRequestKind k) => k switch
     {
@@ -24,6 +24,7 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         PayRequestKind.Bonus => "Bonus",
         PayRequestKind.Overtime => "Overtime",
         PayRequestKind.Deduction => "Deduction",
+        PayRequestKind.Commission => "Commission",
         _ => "Advance salary",
     };
 
@@ -78,7 +79,7 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             Kind = r.Kind,
             Title = string.IsNullOrWhiteSpace(r.Title) ? KindLabel(r.Kind) : r.Title.Trim(),
             Amount = amount,
-            IsTaxable = r.Kind is PayRequestKind.Overtime || (r.Kind is PayRequestKind.Allowance or PayRequestKind.Bonus && r.IsTaxable),
+            IsTaxable = r.Kind is PayRequestKind.Overtime || (r.Kind is PayRequestKind.Allowance or PayRequestKind.Bonus or PayRequestKind.Commission && r.IsTaxable),
             Year = r.Year,
             Month = r.Month,
             WorkDate = r.Kind == PayRequestKind.Overtime ? r.WorkDate : null,
@@ -112,7 +113,14 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
     {
         var salary = await LetterService.CurrentSalaryAsync(db, employeeId, on)
             ?? throw new DomainException("No salary is set for this employee, so overtime cannot be worked out.");
-        var multiplier = await db.PayrollSettings.Select(s => (decimal?)s.OvertimeMultiplier).FirstOrDefaultAsync() ?? 1.5m;
+        var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
+        if (settings.OvertimeMinMinutes > 0 && hours * 60 < settings.OvertimeMinMinutes)
+            throw new DomainException($"Overtime counts from {settings.OvertimeMinMinutes} minutes.");
+        if (settings.OvertimeRoundMinutes > 0)
+            hours = Math.Floor(hours * 60 / settings.OvertimeRoundMinutes) * settings.OvertimeRoundMinutes / 60m;
+        // Holidays and days off pay their own rate.
+        var day = await schedules.ForEmployeeAsync(employeeId, on, on);
+        var multiplier = day.IsHoliday(on) ? settings.HolidayOvertimeMultiplier : day.IsOff(on) ? settings.OffDayOvertimeMultiplier : settings.OvertimeMultiplier;
         return Math.Round(salary.Basic / 30m / 8m * multiplier * hours, 0, MidpointRounding.AwayFromZero);
     }
 

@@ -20,7 +20,8 @@ public record ReportResult(string Title, string? Subtitle, List<string> Headers,
 /// The catalog of ready-made reports: one place to pick a report, filter it and see, export or print it.
 /// HR sees every report over everyone; managers see team reports (no pay) over their direct reports.
 /// </summary>
-public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock, ScheduleService schedules, HRMS.Api.Controllers.PenaltyService penalties)
+public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock, ScheduleService schedules, HRMS.Api.Controllers.PenaltyService penalties,
+    HRMS.Api.Controllers.FundService funds)
 {
     public static readonly List<ReportDefinition> All =
     [
@@ -45,6 +46,13 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("payroll.bank", "Payroll", "Bank advice", "Net pay to transfer, with bank and account", ["month", "department"], true),
         new("payroll.tax", "Payroll", "Income tax deducted", "Taxable income and tax withheld for a month", ["month", "department"], true),
         new("payroll.eobi", "Payroll", "EOBI contributions", "Employee and employer EOBI for a month", ["month", "department"], true),
+        new("payroll.socialsecurity", "Payroll", "Social security (PESSI/SESSI)", "Employer social security contribution for a month", ["month", "department"], true),
+        new("payroll.cash", "Payroll", "Cash and cheque payments", "Net pay for people paid in cash or by cheque, with a signature column", ["month", "department"], true),
+        new("payroll.costcenters", "Payroll", "Salary cost by cost center", "Gross pay and employer costs split across cost centers", ["month"], true),
+        new("payroll.taxcertificate", "Payroll", "Tax certificate", "Taxable income and tax deducted month by month in a tax year (July to June); choose the year it ends", ["year", "employee"], true),
+        new("payroll.pf", "Payroll", "Provident fund balances", "Employee and employer shares, profit, withdrawals and vested balance", ["department", "includeLeft"], true),
+        new("payroll.gratuity", "Payroll", "Gratuity liability", "Years of service and gratuity due today", ["department"], true),
+        new("payroll.commission", "Payroll", "Commission and bonuses", "Approved commission, bonus and allowance requests in a period", ["period", "department", "employee"], true),
         new("expenses.claims", "Expenses", "Expense claims", "Claims submitted in a period with status and payment", ["period", "department", "employee"], true),
         new("approvals.pending", "Approvals", "Pending approvals", "Everything waiting, who it waits for and how long", ["department"], false),
         new("training.hours", "Training", "Training by person", "Sessions attended, hours and scores in a period", ["period", "department", "employee"], false),
@@ -327,10 +335,74 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 return T(def, range, ["Code", "Name", "Leave", "From", "To", "Days", "Paid"], [5],
                     rows.Select(r => L(r.EmployeeCode, r.Name, r.Type, D(r.FromDate), D(r.ToDate), Num(r.Days), r.IsPaid ? "Yes" : "No")), totals: true);
             }
+            case "payroll.costcenters":
+            {
+                var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month);
+                if (run is null)
+                    return T(def, $"{month:MMMM yyyy}: payroll not processed", ["Note"], [], [L("Process this month's payroll first.")]);
+                var slips = await db.Payslips.Where(p => p.PayrollRunId == run.Id)
+                    .Select(p => new { p.EmployeeId, p.Employee!.CostCenterId, p.GrossEarnings, Employer = p.EobiEmployer + p.PfEmployer + p.SocialSecurityEmployer, p.NetPay }).ToListAsync();
+                var splits = (await db.SalarySplits.ToListAsync()).ToLookup(s => s.EmployeeId);
+                var names = await db.OrgLookups.Where(l => l.Kind == LookupKind.CostCenter).ToDictionaryAsync(l => l.Id, l => l.Name);
+                var totals = new Dictionary<string, (decimal Gross, decimal Employer, decimal Net, decimal People)>();
+                foreach (var s in slips)
+                {
+                    var parts = splits[s.EmployeeId].Any()
+                        ? splits[s.EmployeeId].Select(x => (Name: names.GetValueOrDefault(x.CostCenterId) ?? "?", Share: x.Percent / 100m)).ToList()
+                        : [(Name: s.CostCenterId is { } c ? names.GetValueOrDefault(c) ?? "?" : "No cost center", Share: 1m)];
+                    foreach (var (name, share) in parts)
+                    {
+                        var t = totals.GetValueOrDefault(name);
+                        totals[name] = (t.Gross + s.GrossEarnings * share, t.Employer + s.Employer * share, t.Net + s.NetPay * share, t.People + share);
+                    }
+                }
+                return T(def, month.ToString("MMMM yyyy"), ["Cost center", "People", "Gross", "Employer costs", "Total cost", "Net pay"], [1, 2, 3, 4, 5],
+                    totals.OrderBy(x => x.Key).Select(x => L(x.Key, x.Value.People.ToString("0.##"), M(x.Value.Gross), M(x.Value.Employer), M(x.Value.Gross + x.Value.Employer), M(x.Value.Net))), totals: true);
+            }
+            case "payroll.taxcertificate":
+            {
+                // Tax year ending in June of the chosen year.
+                var endYear = f.Year ?? (today.Month >= 7 ? today.Year + 1 : today.Year);
+                var start = (endYear - 1) * 12 + 7;
+                var finish = endYear * 12 + 6;
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var rows = await db.Payslips.Where(p => ids.Contains(p.EmployeeId) && p.PayrollRun!.Status == PayrollRunStatus.Finalized
+                                                        && p.PayrollRun.Year * 12 + p.PayrollRun.Month >= start && p.PayrollRun.Year * 12 + p.PayrollRun.Month <= finish)
+                    .Select(p => new { p.Employee!.EmployeeCode, Name = p.Employee.FirstName + " " + p.Employee.LastName, p.Employee.Cnic, p.Employee.Ntn, p.PayrollRun!.Year, p.PayrollRun.Month, p.GrossEarnings, p.TaxableIncome, p.IncomeTax })
+                    .ToListAsync();
+                return T(def, $"Tax year {endYear - 1}-{endYear % 100:00} (July {endYear - 1} to June {endYear})", ["Code", "Name", "CNIC", "NTN", "Month", "Gross", "Taxable", "Tax deducted"], [5, 6, 7],
+                    rows.OrderBy(r => r.Name).ThenBy(r => r.Year).ThenBy(r => r.Month)
+                        .Select(r => L(r.EmployeeCode, r.Name, r.Cnic ?? "", r.Ntn ?? "", new DateOnly(r.Year, r.Month, 1).ToString("MMM yyyy"), M(r.GrossEarnings), M(r.TaxableIncome), M(r.IncomeTax))), totals: true);
+            }
+            case "payroll.pf":
+            case "payroll.gratuity":
+            {
+                var ids = await people.Select(e => e.Id).ToListAsync();
+                var list = await funds.SummariesAsync(ids, today);
+                return key == "payroll.pf"
+                    ? T(def, $"As of {today:d MMM yyyy}", ["Code", "Name", "Employee share", "Employer share", "Profit", "Withdrawn", "Balance", "Vested"], [2, 3, 4, 5, 6, 7],
+                        list.Where(x => x.PfMember || x.PfBalance != 0).Select(x => L(x.Code, x.Name, M(x.PfEmployeeShare), M(x.PfEmployerShare), M(x.PfProfit), M(x.PfWithdrawn), M(x.PfBalance), M(x.PfVested))), totals: true)
+                    : T(def, $"As of {today:d MMM yyyy}", ["Code", "Name", "Years of service", "Accrued", "Withdrawn", "Due"], [2, 3, 4, 5],
+                        list.Select(x => L(x.Code, x.Name, x.ServiceYears.ToString("0.##"), M(x.GratuityAccrued), M(x.GratuityWithdrawn), M(x.GratuityBalance))), totals: true);
+            }
+            case "payroll.commission":
+            {
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var rows = await db.PayRequests.Where(r => ids.Contains(r.EmployeeId) && r.Status == RequestStatus.Approved
+                                                         && (r.Kind == PayRequestKind.Commission || r.Kind == PayRequestKind.Bonus || r.Kind == PayRequestKind.Allowance)
+                                                         && r.Year * 12 + r.Month >= from.Year * 12 + from.Month && r.Year * 12 + r.Month <= to.Year * 12 + to.Month)
+                    .OrderBy(r => r.Year).ThenBy(r => r.Month)
+                    .Select(r => new { r.Employee!.EmployeeCode, Name = r.Employee.FirstName + " " + r.Employee.LastName, r.Kind, r.Title, r.Year, r.Month, r.Amount, r.IsTaxable, Paid = r.PaidAtUtc != null })
+                    .ToListAsync();
+                return T(def, range, ["Code", "Name", "Kind", "Title", "Month", "Amount", "Taxable", "Paid"], [5],
+                    rows.Select(r => L(r.EmployeeCode, r.Name, r.Kind.ToString(), r.Title, new DateOnly(r.Year, r.Month, 1).ToString("MMM yyyy"), M(r.Amount), r.IsTaxable ? "Yes" : "No", r.Paid ? "Yes" : "")), totals: true);
+            }
             case "payroll.sheet":
             case "payroll.bank":
             case "payroll.tax":
             case "payroll.eobi":
+            case "payroll.cash":
+            case "payroll.socialsecurity":
             {
                 var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month);
                 if (run is null)
@@ -341,6 +413,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     {
                         p.EmployeeId, p.Employee!.EmployeeCode, Name = p.Employee.FirstName + " " + p.Employee.LastName, Department = p.Employee.Department != null ? p.Employee.Department.Name : "",
                         p.Employee.Cnic, p.Employee.BankName, p.Employee.BankAccount, p.PaidDays, p.GrossEarnings, p.TaxableIncome, p.IncomeTax, p.EobiEmployee, p.EobiEmployer, p.OtherDeductions, p.NetPay,
+                        p.Employee.PaymentMethod, p.Employee.SocialSecurityNo, p.SocialSecurityEmployer,
                     }).ToListAsync();
                 var sub = $"{month:MMMM yyyy} · {(run.Status == PayrollRunStatus.Finalized ? "finalized" : "draft")}";
                 // Held salaries are not transferred until released.
@@ -350,7 +423,13 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     "payroll.sheet" => T(def, sub, ["Code", "Name", "Department", "Paid days", "Gross", "Income tax", "EOBI", "Other deductions", "Net pay"], [3, 4, 5, 6, 7, 8],
                         slips.Select(s => L(s.EmployeeCode, s.Name, s.Department, Num(s.PaidDays), M(s.GrossEarnings), M(s.IncomeTax), M(s.EobiEmployee), M(s.OtherDeductions), M(s.NetPay))), totals: true),
                     "payroll.bank" => T(def, held.Count > 0 ? $"{sub} · {held.Count} on hold, not included" : sub, ["Code", "Name", "Bank", "Account", "Amount"], [4],
-                        slips.Where(s => !held.Contains(s.EmployeeId)).Select(s => L(s.EmployeeCode, s.Name, s.BankName ?? "", s.BankAccount ?? "Cash / cheque", M(s.NetPay))), totals: true),
+                        slips.Where(s => !held.Contains(s.EmployeeId) && s.PaymentMethod == PaymentMethod.BankTransfer)
+                            .Select(s => L(s.EmployeeCode, s.Name, s.BankName ?? "", s.BankAccount ?? "", M(s.NetPay))), totals: true),
+                    "payroll.cash" => T(def, sub, ["Code", "Name", "Department", "Paid by", "Net pay", "Signature"], [4],
+                        slips.Where(s => !held.Contains(s.EmployeeId) && s.PaymentMethod != PaymentMethod.BankTransfer)
+                            .Select(s => L(s.EmployeeCode, s.Name, s.Department, s.PaymentMethod == PaymentMethod.Cash ? "Cash" : "Cheque", M(s.NetPay), "")), totals: true),
+                    "payroll.socialsecurity" => T(def, sub, ["Code", "Name", "CNIC", "Social security no.", "Wages", "Employer contribution"], [4, 5],
+                        slips.Where(s => s.SocialSecurityEmployer > 0).Select(s => L(s.EmployeeCode, s.Name, s.Cnic ?? "", s.SocialSecurityNo ?? "", M(s.GrossEarnings), M(s.SocialSecurityEmployer))), totals: true),
                     "payroll.tax" => T(def, sub, ["Code", "Name", "CNIC", "Taxable income", "Tax deducted"], [3, 4],
                         slips.Where(s => s.IncomeTax > 0 || s.TaxableIncome > 0).Select(s => L(s.EmployeeCode, s.Name, s.Cnic ?? "", M(s.TaxableIncome), M(s.IncomeTax))), totals: true),
                     _ => T(def, sub, ["Code", "Name", "CNIC", "Employee share", "Employer share", "Total"], [3, 4, 5],

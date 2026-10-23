@@ -674,6 +674,21 @@ export interface PayrollSettings {
   deductHalfDays: boolean;
   requireApproval?: boolean;
   encashOnGross?: boolean;
+  providentFundEnabled?: boolean;
+  pfEmployeePercent?: number;
+  pfEmployerPercent?: number;
+  pfOnGross?: boolean;
+  pfVestingYears?: number;
+  gratuityEnabled?: boolean;
+  gratuityDaysPerYear?: number;
+  gratuityMinYears?: number;
+  gratuityOnGross?: boolean;
+  socialSecurityPercent?: number;
+  socialSecurityWageCeiling?: number | null;
+  holidayOvertimeMultiplier?: number;
+  offDayOvertimeMultiplier?: number;
+  overtimeMinMinutes?: number;
+  overtimeRoundMinutes?: number;
 }
 
 // ---- Dashboard ----

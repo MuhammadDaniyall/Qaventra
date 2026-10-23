@@ -26,12 +26,12 @@ tested and committed locally; one production deploy at the end. Tick items as th
 - [x] Per-screen change history popup (from audit log)
 
 ## D. Payroll depth
-- [ ] Provident fund (employee/employer %, balance ledger, opening balance, withdrawal), gratuity (accrual, withdrawal)
-- [ ] Tax adjustment (opening tax/previous employer, withholding credit, tax credit), tax certificate
-- [ ] Commission requests; un-disburse / reopen; payslip email to all; cheque print report
-- [ ] Payment method split (bank/cash), salary distribution across cost centers
-- [ ] Social security (PESSI/SESSI) contribution settings
-- [ ] Overtime rules by day type (working day / holiday) with rounding and minimum minutes
+- [x] Provident fund (employee/employer %, balance ledger, opening balance, withdrawal), gratuity (accrual, withdrawal)
+- [x] Tax adjustment (opening tax/previous employer, withholding credit, tax credit), tax certificate
+- [x] Commission requests; un-disburse / reopen; payslip email to all; cheque print report
+- [x] Payment method split (bank/cash), salary distribution across cost centers
+- [x] Social security (PESSI/SESSI) contribution settings
+- [x] Overtime rules by day type (working day / holiday) with rounding and minimum minutes
 
 ## E. Expense depth
 - [ ] Configurable categories/types with yearly quotas and rates (per km, per unit), distance mapping

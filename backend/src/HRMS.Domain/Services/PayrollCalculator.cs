@@ -10,7 +10,8 @@ public record PayrollInput(
     decimal EobiEmployee,
     decimal EobiEmployer,
     decimal Reimbursements = 0m,
-    IReadOnlyList<PayItem>? Extras = null);
+    IReadOnlyList<PayItem>? Extras = null,
+    Func<decimal, decimal>? TaxFor = null);
 
 /// <summary>A one-off line for the month (bonus, overtime, deduction, loan installment): never prorated.</summary>
 public record PayItem(string Name, SalaryComponentKind Kind, decimal Amount, bool IsTaxable);
@@ -90,7 +91,8 @@ public static class PayrollCalculator
             }
         }
 
-        var tax = TaxCalculator.MonthlyTax(input.TaxYear, taxable);
+        // A projected-year rule (previous employer, tax credits) when given; otherwise the month annualised.
+        var tax = input.TaxFor is { } taxFor ? taxFor(taxable) : TaxCalculator.MonthlyTax(input.TaxYear, taxable);
         if (tax > 0)
             lines.Add(new("Income Tax", SalaryComponentKind.Deduction, tax));
 

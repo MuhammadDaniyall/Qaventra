@@ -99,9 +99,7 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
         <section className="flex flex-wrap items-end justify-between gap-4 rounded-xl bg-zinc-50 p-5 dark:bg-zinc-800/50">
           <div>
             <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">Net pay</p>
-            <p className="mt-1 text-4xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
-              {formatCurrency(p.netPay)}
-            </p>
+            <p className="mt-1 text-4xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay)}</p>
           </div>
           <div className="text-right text-xs text-zinc-500 dark:text-zinc-400">
             <p>Taxable income: {formatCurrency(p.taxableIncome)}</p>
@@ -115,17 +113,7 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
   );
 }
 
-function LineTable({
-  title,
-  lines,
-  total,
-  totalLabel,
-}: {
-  title: string;
-  lines: Array<{ name: string; amount: number }>;
-  total: number;
-  totalLabel: string;
-}) {
+function LineTable({ title, lines, total, totalLabel }: { title: string; lines: Array<{ name: string; amount: number }>; total: number; totalLabel: string }) {
   return (
     <div>
       <h3 className="mb-2 text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">{title}</h3>

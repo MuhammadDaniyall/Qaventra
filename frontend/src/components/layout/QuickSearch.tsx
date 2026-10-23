@@ -25,6 +25,7 @@ const EXTRA: { to: string; label: string; hr?: boolean }[] = [
   { to: '/leave/opening-balances', label: 'Opening leave balances', hr: true },
   { to: '/payroll/changes', label: 'Salary revisions, holds and encashment', hr: true },
   { to: '/payroll/settings', label: 'Payroll settings', hr: true },
+  { to: '/payroll/funds', label: 'Provident fund, gratuity and tax adjustments', hr: true },
   { to: '/employees/new', label: 'Add employee', hr: true },
   { to: '/me/profile', label: 'My profile' },
   { to: '/suggestions', label: 'Suggestions' },

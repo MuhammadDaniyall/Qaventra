@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MyFundsCard } from '../payroll/FundsPage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Banknote, Clock3, HandCoins } from 'lucide-react';
 import { qk } from '../../api/keys';
@@ -86,6 +87,7 @@ export function MyPayPage() {
         </div>
       )}
 
+      <MyFundsCard />
       <Card>
         <CardHeader title="My requests" />
         {requests.isLoading ? (
@@ -93,7 +95,11 @@ export function MyPayPage() {
         ) : requests.isError ? (
           <ErrorState error={requests.error} onRetry={() => requests.refetch()} />
         ) : !requests.data?.length ? (
-          <EmptyState icon={Banknote} title="No pay requests yet" description="Ask for an advance, claim overtime or apply for a loan from the buttons above." />
+          <EmptyState
+            icon={Banknote}
+            title="No pay requests yet"
+            description="Ask for an advance, claim overtime or apply for a loan from the buttons above."
+          />
         ) : (
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {requests.data.map((r) => (
@@ -108,7 +114,13 @@ export function MyPayPage() {
                       {monthLabel(r.year, r.month)} payroll{r.reason ? ` · ${r.reason}` : ''}
                     </span>
                   </button>
-                  <span className={r.isEarning ? 'font-semibold text-emerald-700 tabular-nums dark:text-emerald-300' : 'font-semibold text-zinc-900 tabular-nums dark:text-white'}>
+                  <span
+                    className={
+                      r.isEarning
+                        ? 'font-semibold text-emerald-700 tabular-nums dark:text-emerald-300'
+                        : 'font-semibold text-zinc-900 tabular-nums dark:text-white'
+                    }
+                  >
                     {r.isEarning ? '+' : '−'}
                     {formatCurrency(r.amount)}
                   </span>

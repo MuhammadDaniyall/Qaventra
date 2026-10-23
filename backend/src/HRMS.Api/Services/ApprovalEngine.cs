@@ -269,6 +269,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.Exemption => "exemption request",
         ApprovalRequestType.OffDay => "days off request",
         ApprovalRequestType.Timesheet => "timesheet",
+        ApprovalRequestType.FundWithdrawal => "fund withdrawal",
         _ => "request",
     };
 
@@ -289,6 +290,7 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
         ApprovalRequestType.Exemption => "/me/attendance",
         ApprovalRequestType.OffDay => "/me/attendance",
         ApprovalRequestType.Timesheet => "/timesheets",
+        ApprovalRequestType.FundWithdrawal => "/me/pay",
         _ => "/dashboard",
     };
 

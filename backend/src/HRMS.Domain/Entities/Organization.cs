@@ -158,6 +158,10 @@ public class Employee : TenantEntity
     public bool IsBlacklisted { get; set; }
     public string? BlacklistReason { get; set; }
 
+    // ---------- Pay ----------
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.BankTransfer;
+    public bool ProvidentFundMember { get; set; }
+
     // ---------- Where they may mark attendance ----------
     public bool AllowWebCheckIn { get; set; } = true;
     public bool AllowMobileCheckIn { get; set; } = true;

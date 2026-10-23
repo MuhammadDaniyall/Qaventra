@@ -89,6 +89,7 @@ export function PayRequestModal({ kind, hr = false, onClose }: { kind: PayReques
     Allowance: 'Add allowance, bonus or deduction',
     Bonus: 'Add allowance, bonus or deduction',
     Deduction: 'Add allowance, bonus or deduction',
+    Commission: 'Add allowance, bonus or deduction',
   };
 
   return (
@@ -132,6 +133,7 @@ export function PayRequestModal({ kind, hr = false, onClose }: { kind: PayReques
               <Select value={itemKind} onChange={(e) => setItemKind(e.target.value as PayRequestKind)}>
                 <option value="Allowance">Allowance</option>
                 <option value="Bonus">Bonus</option>
+                <option value="Commission">Commission</option>
                 <option value="Deduction">Deduction</option>
               </Select>
             </Field>
@@ -158,9 +160,7 @@ export function PayRequestModal({ kind, hr = false, onClose }: { kind: PayReques
         )}
         {isOvertime && !hr && (
           <div className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm dark:bg-zinc-800/50" aria-live="polite">
-            <span className="text-zinc-600 dark:text-zinc-300">
-              You will be paid{quote.data ? ` (${quote.data.multiplier}× hourly basic)` : ''}
-            </span>
+            <span className="text-zinc-600 dark:text-zinc-300">You will be paid{quote.data ? ` (${quote.data.multiplier}× hourly basic)` : ''}</span>
             <span className="font-semibold text-zinc-900 tabular-nums dark:text-white">
               {quote.isFetching ? <Spinner className="size-4" /> : quote.isError ? '—' : formatCurrency(quote.data?.amount)}
             </span>
@@ -177,7 +177,12 @@ export function PayRequestModal({ kind, hr = false, onClose }: { kind: PayReques
           </Select>
         </Field>
         {hr && itemKind !== 'Deduction' && (
-          <Checkbox label="Taxable" description="Counts towards income tax (most allowances and bonuses are)." checked={taxable} onChange={(e) => setTaxable(e.target.checked)} />
+          <Checkbox
+            label="Taxable"
+            description="Counts towards income tax (most allowances and bonuses are)."
+            checked={taxable}
+            onChange={(e) => setTaxable(e.target.checked)}
+          />
         )}
         <Field label="Reason">
           <Textarea value={reason} rows={2} maxLength={1000} onChange={(e) => setReason(e.target.value)} />
@@ -205,7 +210,15 @@ export function LoanModal({ hr = false, onClose }: { hr?: boolean; onClose: () =
 
   const submit = useMutation({
     mutationFn: () =>
-      payApi.requestLoan({ employeeId: hr ? employeeId : null, title: title.trim(), amount: Number(amount), installments: n, startYear: sy, startMonth: sm, reason: reason.trim() || null }),
+      payApi.requestLoan({
+        employeeId: hr ? employeeId : null,
+        title: title.trim(),
+        amount: Number(amount),
+        installments: n,
+        startYear: sy,
+        startMonth: sm,
+        reason: reason.trim() || null,
+      }),
     onSuccess: () => {
       toast.success(hr ? 'Loan recorded' : 'Loan request sent', hr ? 'Installments start with the chosen payroll month.' : 'Your approver has been notified.');
       qc.invalidateQueries({ queryKey: qk.pay });

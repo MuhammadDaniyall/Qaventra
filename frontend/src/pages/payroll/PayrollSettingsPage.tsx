@@ -38,6 +38,24 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
   const [encashOnGross, setEncashOnGross] = useState(initial.encashOnGross ?? false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [x, setX] = useState({
+    providentFundEnabled: initial.providentFundEnabled ?? false,
+    pfEmployeePercent: String(initial.pfEmployeePercent ?? 8.33),
+    pfEmployerPercent: String(initial.pfEmployerPercent ?? 8.33),
+    pfOnGross: initial.pfOnGross ?? false,
+    pfVestingYears: String(initial.pfVestingYears ?? 0),
+    gratuityEnabled: initial.gratuityEnabled ?? false,
+    gratuityDaysPerYear: String(initial.gratuityDaysPerYear ?? 30),
+    gratuityMinYears: String(initial.gratuityMinYears ?? 1),
+    gratuityOnGross: initial.gratuityOnGross ?? false,
+    socialSecurityPercent: String(initial.socialSecurityPercent ?? 0),
+    socialSecurityWageCeiling: initial.socialSecurityWageCeiling != null ? String(initial.socialSecurityWageCeiling) : '',
+    holidayOvertimeMultiplier: String(initial.holidayOvertimeMultiplier ?? 2),
+    offDayOvertimeMultiplier: String(initial.offDayOvertimeMultiplier ?? 2),
+    overtimeMinMinutes: String(initial.overtimeMinMinutes ?? 0),
+    overtimeRoundMinutes: String(initial.overtimeRoundMinutes ?? 0),
+  });
+  const setXv = (p: Partial<typeof x>) => setX((v) => ({ ...v, ...p }));
 
   const save = useMutation({
     mutationFn: (b: PayrollSettings) => payrollApi.saveSettings(b),
@@ -77,6 +95,21 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
       deductHalfDays: halfDays,
       requireApproval,
       encashOnGross,
+      providentFundEnabled: x.providentFundEnabled,
+      pfEmployeePercent: Number(x.pfEmployeePercent) || 0,
+      pfEmployerPercent: Number(x.pfEmployerPercent) || 0,
+      pfOnGross: x.pfOnGross,
+      pfVestingYears: Number(x.pfVestingYears) || 0,
+      gratuityEnabled: x.gratuityEnabled,
+      gratuityDaysPerYear: Number(x.gratuityDaysPerYear) || 0,
+      gratuityMinYears: Number(x.gratuityMinYears) || 0,
+      gratuityOnGross: x.gratuityOnGross,
+      socialSecurityPercent: Number(x.socialSecurityPercent) || 0,
+      socialSecurityWageCeiling: x.socialSecurityWageCeiling ? Number(x.socialSecurityWageCeiling) : null,
+      holidayOvertimeMultiplier: Number(x.holidayOvertimeMultiplier) || 0,
+      offDayOvertimeMultiplier: Number(x.offDayOvertimeMultiplier) || 0,
+      overtimeMinMinutes: Number(x.overtimeMinMinutes) || 0,
+      overtimeRoundMinutes: Number(x.overtimeRoundMinutes) || 0,
     });
   };
 
@@ -139,13 +172,114 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
             label="Encash leave on gross salary"
             description="Off: a day of leave is paid at basic ÷ 30. On: at gross ÷ 30."
           />
-          <div className="flex justify-end">
-            <Button type="submit" loading={save.isPending}>
-              Save settings
-            </Button>
-          </div>
         </CardBody>
       </Card>
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader title="Overtime by day" description="Rates for overtime on holidays and days off; small claims and rounding." />
+        <CardBody className="grid gap-4 sm:grid-cols-2">
+          <Field label="Holiday rate (x hourly basic)">
+            <Input
+              type="number"
+              min={0}
+              max={5}
+              step="0.25"
+              value={x.holidayOvertimeMultiplier}
+              onChange={(e) => setXv({ holidayOvertimeMultiplier: e.target.value })}
+            />
+          </Field>
+          <Field label="Day-off rate (x hourly basic)">
+            <Input
+              type="number"
+              min={0}
+              max={5}
+              step="0.25"
+              value={x.offDayOvertimeMultiplier}
+              onChange={(e) => setXv({ offDayOvertimeMultiplier: e.target.value })}
+            />
+          </Field>
+          <Field label="Counts from (minutes)" hint="0 = any">
+            <Input type="number" min={0} max={480} value={x.overtimeMinMinutes} onChange={(e) => setXv({ overtimeMinMinutes: e.target.value })} />
+          </Field>
+          <Field label="Round down to (minutes)" hint="e.g. 30; 0 = exact">
+            <Input type="number" min={0} max={120} value={x.overtimeRoundMinutes} onChange={(e) => setXv({ overtimeRoundMinutes: e.target.value })} />
+          </Field>
+        </CardBody>
+      </Card>
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader
+          title="Provident fund"
+          description="Members are ticked on each person's file. Contributions go into the fund each time payroll is finalized."
+        />
+        <CardBody className="space-y-4">
+          <Switch checked={x.providentFundEnabled} onChange={(v) => setXv({ providentFundEnabled: v })} label="Run a provident fund" />
+          {x.providentFundEnabled && (
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Member share (%)">
+                <Input type="number" min={0} max={50} step="0.01" value={x.pfEmployeePercent} onChange={(e) => setXv({ pfEmployeePercent: e.target.value })} />
+              </Field>
+              <Field label="Company share (%)">
+                <Input type="number" min={0} max={50} step="0.01" value={x.pfEmployerPercent} onChange={(e) => setXv({ pfEmployerPercent: e.target.value })} />
+              </Field>
+              <Field label="Company share vests after (years)" hint="0 = at once">
+                <Input type="number" min={0} max={30} value={x.pfVestingYears} onChange={(e) => setXv({ pfVestingYears: e.target.value })} />
+              </Field>
+              <div className="sm:col-span-3">
+                <Switch checked={x.pfOnGross} onChange={(v) => setXv({ pfOnGross: v })} label="On gross salary" description="Off: on basic salary." />
+              </div>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader title="Gratuity" description="Due = salary ÷ 30 × days per year × years of service, once the minimum service is reached." />
+        <CardBody className="space-y-4">
+          <Switch checked={x.gratuityEnabled} onChange={(v) => setXv({ gratuityEnabled: v })} label="Pay gratuity" />
+          {x.gratuityEnabled && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Days of salary per year">
+                <Input type="number" min={0} max={90} value={x.gratuityDaysPerYear} onChange={(e) => setXv({ gratuityDaysPerYear: e.target.value })} />
+              </Field>
+              <Field label="Minimum service (years)">
+                <Input type="number" min={0} max={30} step="0.5" value={x.gratuityMinYears} onChange={(e) => setXv({ gratuityMinYears: e.target.value })} />
+              </Field>
+              <div className="sm:col-span-2">
+                <Switch
+                  checked={x.gratuityOnGross}
+                  onChange={(v) => setXv({ gratuityOnGross: v })}
+                  label="On gross salary"
+                  description="Off: on basic salary."
+                />
+              </div>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader
+          title="Social security (PESSI / SESSI)"
+          description="Employer contribution for people with a social security number on their file. 0 turns it off."
+        />
+        <CardBody className="grid gap-4 sm:grid-cols-2">
+          <Field label="Employer contribution (% of wages)">
+            <Input
+              type="number"
+              min={0}
+              max={50}
+              step="0.01"
+              value={x.socialSecurityPercent}
+              onChange={(e) => setXv({ socialSecurityPercent: e.target.value })}
+            />
+          </Field>
+          <Field label="Wage ceiling (PKR)" hint="Wages above this are not counted">
+            <Input type="number" min={0} value={x.socialSecurityWageCeiling} onChange={(e) => setXv({ socialSecurityWageCeiling: e.target.value })} />
+          </Field>
+        </CardBody>
+      </Card>
+      <div className="mt-6 flex max-w-2xl justify-end">
+        <Button type="submit" loading={save.isPending}>
+          Save settings
+        </Button>
+      </div>
     </form>
   );
 }

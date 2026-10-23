@@ -40,7 +40,12 @@ public record PayslipDto(
 public record PayrollSettingsDto(
     [Range(0, 1_000_000)] decimal EobiEmployeeContribution, [Range(0, 1_000_000)] decimal EobiEmployerContribution, bool DeductAbsentDays,
     [Range(0, 5)] decimal OvertimeMultiplier = 1.5m, [Range(0, 31)] int LatesPerPenalty = 0, [Range(0, 5)] decimal LatePenaltyDays = 1m,
-    bool DeductHalfDays = false, bool RequireApproval = false, bool EncashOnGross = false);
+    bool DeductHalfDays = false, bool RequireApproval = false, bool EncashOnGross = false,
+    bool ProvidentFundEnabled = false, [Range(0, 50)] decimal PfEmployeePercent = 8.33m, [Range(0, 50)] decimal PfEmployerPercent = 8.33m, bool PfOnGross = false,
+    [Range(0, 30)] int PfVestingYears = 0, bool GratuityEnabled = false, [Range(0, 90)] decimal GratuityDaysPerYear = 30, [Range(0, 30)] decimal GratuityMinYears = 1,
+    bool GratuityOnGross = false, [Range(0, 50)] decimal SocialSecurityPercent = 0, [Range(0, 10_000_000)] decimal? SocialSecurityWageCeiling = null,
+    [Range(0, 5)] decimal HolidayOvertimeMultiplier = 2m, [Range(0, 5)] decimal OffDayOvertimeMultiplier = 2m, [Range(0, 480)] int OvertimeMinMinutes = 0,
+    [Range(0, 120)] int OvertimeRoundMinutes = 0);
 
 [ApiController]
 [Route("api/payroll")]
@@ -72,6 +77,13 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
     public async Task<IActionResult> Decide(Guid id, PayrollDecisionRequest req)
     {
         await payroll.DecideAsync(id, req.Approve, req.Note);
+        return NoContent();
+    }
+
+    [HttpPost("runs/{id:guid}/undisburse"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> Undisburse(Guid id)
+    {
+        await payroll.UndisburseAsync(id);
         return NoContent();
     }
 
@@ -124,7 +136,10 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
     {
         var s = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
         return new PayrollSettingsDto(s.EobiEmployeeContribution, s.EobiEmployerContribution, s.DeductAbsentDays, s.OvertimeMultiplier,
-            s.LatesPerPenalty, s.LatePenaltyDays, s.DeductHalfDays, s.RequireApproval, s.EncashOnGross);
+            s.LatesPerPenalty, s.LatePenaltyDays, s.DeductHalfDays, s.RequireApproval, s.EncashOnGross,
+            s.ProvidentFundEnabled, s.PfEmployeePercent, s.PfEmployerPercent, s.PfOnGross, s.PfVestingYears, s.GratuityEnabled, s.GratuityDaysPerYear,
+            s.GratuityMinYears, s.GratuityOnGross, s.SocialSecurityPercent, s.SocialSecurityWageCeiling, s.HolidayOvertimeMultiplier, s.OffDayOvertimeMultiplier,
+            s.OvertimeMinMinutes, s.OvertimeRoundMinutes);
     }
 
     [HttpPut("settings"), Authorize(Policy = Policies.Hr)]
@@ -145,6 +160,21 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         s.DeductHalfDays = req.DeductHalfDays;
         s.RequireApproval = req.RequireApproval;
         s.EncashOnGross = req.EncashOnGross;
+        s.ProvidentFundEnabled = req.ProvidentFundEnabled;
+        s.PfEmployeePercent = req.PfEmployeePercent;
+        s.PfEmployerPercent = req.PfEmployerPercent;
+        s.PfOnGross = req.PfOnGross;
+        s.PfVestingYears = req.PfVestingYears;
+        s.GratuityEnabled = req.GratuityEnabled;
+        s.GratuityDaysPerYear = req.GratuityDaysPerYear;
+        s.GratuityMinYears = req.GratuityMinYears;
+        s.GratuityOnGross = req.GratuityOnGross;
+        s.SocialSecurityPercent = req.SocialSecurityPercent;
+        s.SocialSecurityWageCeiling = req.SocialSecurityWageCeiling;
+        s.HolidayOvertimeMultiplier = req.HolidayOvertimeMultiplier;
+        s.OffDayOvertimeMultiplier = req.OffDayOvertimeMultiplier;
+        s.OvertimeMinMinutes = req.OvertimeMinMinutes;
+        s.OvertimeRoundMinutes = req.OvertimeRoundMinutes;
         await db.SaveChangesAsync();
         return NoContent();
     }

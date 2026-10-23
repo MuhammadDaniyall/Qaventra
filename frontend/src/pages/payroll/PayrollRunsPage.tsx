@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Play, Coins, Settings2, TrendingUp, Wallet } from 'lucide-react';
+import { Play, Coins, Settings2, TrendingUp, PiggyBank, Wallet } from 'lucide-react';
 import { payrollApi } from '../../api/payroll';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
@@ -46,6 +46,9 @@ export function PayrollRunsPage() {
             </Button>
             <Button variant="secondary" icon={<TrendingUp className="size-4" />} onClick={() => navigate('/payroll/changes')}>
               Pay changes
+            </Button>
+            <Button variant="secondary" icon={<PiggyBank className="size-4" />} onClick={() => navigate('/payroll/funds')}>
+              Funds and tax
             </Button>
             <Button variant="secondary" icon={<Coins className="size-4" />} onClick={() => navigate('/payroll/adjustments')}>
               Pay adjustments

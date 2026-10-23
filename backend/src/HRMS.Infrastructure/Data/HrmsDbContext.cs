@@ -55,6 +55,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<PenaltyCharge> PenaltyCharges => Set<PenaltyCharge>();
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<AccessTemplate> AccessTemplates => Set<AccessTemplate>();
+    public DbSet<FundEntry> FundEntries => Set<FundEntry>();
+    public DbSet<FundWithdrawal> FundWithdrawals => Set<FundWithdrawal>();
+    public DbSet<TaxAdjustment> TaxAdjustments => Set<TaxAdjustment>();
+    public DbSet<SalarySplit> SalarySplits => Set<SalarySplit>();
     public DbSet<Suggestion> Suggestions => Set<Suggestion>();
     public DbSet<SuggestionCategory> SuggestionCategories => Set<SuggestionCategory>();
     public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
@@ -224,6 +228,39 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Reason).HasMaxLength(500);
             e.Property(x => x.DecisionNote).HasMaxLength(1000);
             e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<FundEntry>(e =>
+        {
+            e.Property(x => x.EmployeeAmount).HasPrecision(18, 2);
+            e.Property(x => x.EmployerAmount).HasPrecision(18, 2);
+            e.Property(x => x.Note).HasMaxLength(300);
+            e.HasIndex(x => new { x.TenantId, x.EmployeeId, x.Fund });
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<FundWithdrawal>(e =>
+        {
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.Property(x => x.DecisionNote).HasMaxLength(1000);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<TaxAdjustment>(e =>
+        {
+            e.Property(x => x.TaxYearCode).HasMaxLength(20);
+            e.Property(x => x.Amount).HasPrecision(18, 2);
+            e.Property(x => x.Note).HasMaxLength(300);
+            e.HasIndex(x => new { x.TenantId, x.EmployeeId, x.TaxYearCode });
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+        });
+
+        b.Entity<SalarySplit>(e =>
+        {
+            e.Property(x => x.Percent).HasPrecision(5, 2);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasOne<OrgLookup>().WithMany().HasForeignKey(x => x.CostCenterId).OnDelete(DeleteBehavior.NoAction);
         });
 
         b.Entity<AccessTemplate>(e =>

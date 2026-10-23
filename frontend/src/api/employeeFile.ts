@@ -72,6 +72,8 @@ export interface EmployeeFile {
   ownLatitude: number | null;
   ownLongitude: number | null;
   ownRadiusMeters: number | null;
+  paymentMethod: 'BankTransfer' | 'Cash' | 'Cheque';
+  providentFundMember: boolean;
 }
 
 export interface Dependant {

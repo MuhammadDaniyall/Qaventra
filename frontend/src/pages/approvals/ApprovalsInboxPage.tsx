@@ -13,6 +13,7 @@ import {
   TimerOff,
   CalendarOff,
   ClipboardList,
+  PiggyBank,
   Package,
   Plane,
   Receipt,
@@ -34,6 +35,7 @@ import { trainingApi } from '../../api/training';
 import { exemptionsApi } from '../../api/leaveRules';
 import { attendanceRulesApi } from '../../api/attendanceRules';
 import { projectsApi } from '../../api/projects';
+import { fundsApi } from '../../api/funds';
 import { travelApi } from '../../api/travel';
 import { compOffApi, leaveApi } from '../../api/leave';
 import { payApi } from '../../api/pay';
@@ -79,6 +81,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   Exemption: TimerOff,
   OffDay: CalendarOff,
   Timesheet: ClipboardList,
+  FundWithdrawal: PiggyBank,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -102,6 +105,7 @@ const decideApi: Record<
   Exemption: { approve: exemptionsApi.approve, reject: exemptionsApi.reject },
   OffDay: { approve: attendanceRulesApi.approveOffDays, reject: attendanceRulesApi.rejectOffDays },
   Timesheet: { approve: projectsApi.approve, reject: projectsApi.reject },
+  FundWithdrawal: { approve: fundsApi.approve, reject: fundsApi.reject },
 };
 
 export function ApprovalsInboxPage() {
@@ -150,6 +154,7 @@ export function ApprovalsInboxPage() {
               'Exemption',
               'OffDay',
               'Timesheet',
+              'FundWithdrawal',
             ] as Filter[]
           ).map((t) => ({
             value: t,
