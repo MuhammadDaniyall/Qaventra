@@ -101,7 +101,7 @@ export function RequestAttendanceModal({ date: initialDate, onClose }: { date?: 
               aria-checked={kind === k.value}
               onClick={() => setKind(k.value)}
               className={cn(
-                'flex items-start gap-2 rounded-xl border p-3 text-left transition-colors',
+                'flex items-start gap-2 rounded-xl border p-3 text-start transition-colors',
                 kind === k.value
                   ? 'border-accent-500 bg-accent-50 dark:bg-accent-500/10'
                   : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-700',

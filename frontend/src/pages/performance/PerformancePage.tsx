@@ -468,7 +468,7 @@ function SettingsTab() {
                 <Input type="number" min={0} max={100} value={v.bellCurve[i]} onChange={(e) => setDraft({ ...v, bellCurve: v.bellCurve.map((x, j) => (j === i ? Number(e.target.value) : x)) })} aria-label={`Rating ${i + 1} share`} />
               </div>
             ))}
-            <p className={bellTotal === 100 ? 'text-right text-xs text-zinc-500' : 'text-right text-xs font-medium text-red-600'}>Shares add up to {bellTotal}%</p>
+            <p className={bellTotal === 100 ? 'text-end text-xs text-zinc-500' : 'text-end text-xs font-medium text-red-600'}>Shares add up to {bellTotal}%</p>
           </div>
         </div>
         <div>

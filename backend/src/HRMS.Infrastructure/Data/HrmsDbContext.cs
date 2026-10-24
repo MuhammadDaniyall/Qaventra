@@ -43,6 +43,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<AttachmentContent> AttachmentContents => Set<AttachmentContent>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+    public DbSet<PushKeys> PushKeys => Set<PushKeys>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
     public DbSet<CompOffRequest> CompOffRequests => Set<CompOffRequest>();
     public DbSet<PayRequest> PayRequests => Set<PayRequest>();
@@ -672,6 +674,22 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Body).HasMaxLength(1000);
             e.Property(x => x.Link).HasMaxLength(300);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId);
+        });
+
+        b.Entity<PushSubscription>(e =>
+        {
+            e.HasIndex(x => x.Endpoint).IsUnique();
+            e.HasIndex(x => x.UserId);
+            e.Property(x => x.Endpoint).HasMaxLength(800);
+            e.Property(x => x.P256dh).HasMaxLength(200);
+            e.Property(x => x.Auth).HasMaxLength(100);
+            e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<PushKeys>(e =>
+        {
+            e.Property(x => x.PublicKey).HasMaxLength(200);
+            e.Property(x => x.PrivateKey).HasMaxLength(200);
         });
 
         b.Entity<PayRequest>(e =>
@@ -1443,7 +1461,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         var logs = new List<AuditLog>();
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or Notification || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            if (entry.Entity is AuditLog or Notification or PushSubscription or HRMS.Domain.Entities.PushKeys || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
                 continue;
 
             var changes = new Dictionary<string, object?>();

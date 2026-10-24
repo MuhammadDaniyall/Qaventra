@@ -6,7 +6,9 @@ import { qk } from '../../api/keys';
 import { notificationsApi, type AppNotification, type NotificationKind } from '../../api/notifications';
 import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
-import { Button } from '../ui';
+import { Button, Switch } from '../ui';
+import { tx } from '../../lib/i18n';
+import { usePush } from '../../lib/push';
 
 const ICONS: Record<NotificationKind, LucideIcon> = {
   ApprovalNeeded: Inbox,
@@ -89,16 +91,16 @@ export function NotificationBell() {
       {open && (
         <div className="absolute end-0 z-40 mt-2 w-[min(24rem,calc(100vw-2rem))] animate-pop-in overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-            <p className="text-sm font-semibold text-zinc-900 dark:text-white">Notifications</p>
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white">{tx('Notifications')}</p>
             {unread > 0 && (
               <Button variant="ghost" size="sm" icon={<CheckCheck className="size-3.5" />} loading={readAll.isPending} onClick={() => readAll.mutate()}>
-                Mark all read
+                {tx('Mark all read')}
               </Button>
             )}
           </div>
           <ul className="max-h-[60vh] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800">
             {!feed.data?.items.length ? (
-              <li className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">You're all caught up.</li>
+              <li className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">{tx("You're all caught up.")}</li>
             ) : (
               feed.data.items.map((n) => {
                 const Icon = ICONS[n.kind] ?? Bell;
@@ -108,7 +110,7 @@ export function NotificationBell() {
                       type="button"
                       onClick={() => openItem(n)}
                       className={cn(
-                        'flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60',
+                        'flex w-full gap-3 px-4 py-3 text-start transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60',
                         !n.readAtUtc && 'bg-accent-50/50 dark:bg-accent-500/5',
                       )}
                     >
@@ -129,8 +131,30 @@ export function NotificationBell() {
               })
             )}
           </ul>
+          <PushSwitch />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Turns phone/browser notifications on for this device; hidden where the browser has no push support. */
+function PushSwitch() {
+  const push = usePush();
+  if (push.state === 'unsupported') return null;
+  return (
+    <div className="border-t border-zinc-100 px-4 py-3 dark:border-zinc-800">
+      <Switch
+        checked={push.state === 'on'}
+        disabled={push.state === 'loading' || push.state === 'blocked'}
+        onChange={(on) => (on ? push.enable() : push.disable())}
+        label="Notifications on this device"
+        description={
+          push.state === 'blocked'
+            ? 'Blocked in this browser. Allow notifications for this site in the browser settings.'
+            : (push.error ?? 'Get a phone or desktop alert when something needs you.')
+        }
+      />
     </div>
   );
 }

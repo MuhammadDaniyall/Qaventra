@@ -2,7 +2,10 @@
  * Urdu for the English UI text. Keys are the exact English strings shown in the app; anything missing stays
  * in English. Add new entries here as screens are translated.
  */
+import { UR_SCREENS } from './i18n-ur-screens';
+
 export const UR: Record<string, string> = {
+  ...UR_SCREENS,
   // Navigation
   Home: 'ہوم',
   Requests: 'درخواستیں',
@@ -570,4 +573,9 @@ export const UR: Record<string, string> = {
   'No designation': 'عہدہ درج نہیں',
   '{count} left': '{count} چھوڑ گئے',
   "You're offline. Changes can't be saved until the connection is back.": 'آپ آف لائن ہیں۔ کنکشن بحال ہونے تک تبدیلیاں محفوظ نہیں ہو سکتیں۔',
+  'Mark all read': 'سب پڑھا ہوا نشان لگائیں',
+  "You're all caught up.": 'کوئی نئی اطلاع نہیں۔',
+  'Notifications on this device': 'اس آلے پر اطلاعات',
+  'Get a phone or desktop alert when something needs you.': 'جب کسی کام میں آپ کی ضرورت ہو تو فون یا کمپیوٹر پر اطلاع پائیں۔',
+  'Blocked in this browser. Allow notifications for this site in the browser settings.': 'اس براؤزر میں بند ہیں۔ براؤزر کی ترتیبات میں اس سائٹ کے لیے اطلاعات کی اجازت دیں۔',
 };

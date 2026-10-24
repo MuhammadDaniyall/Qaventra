@@ -16,7 +16,14 @@ It runs the backend tests, builds the package, asks for `yes`, uploads over FTPS
 ./deploy/deploy-prod.sh
 ```
 
-Same steps and the same `secrets` files as the Windows script. Copy `deploy\secrets\monsterasp.txt` and `deploy\secrets\production.json` from the Windows machine first, so the JWT key and Owner login stay the same (a fresh `production.json` signs everyone out and creates a new Owner password). LocalDB is Windows-only, so on a Mac only the domain tests (tax, payroll, calendar, geo-fence) run before the upload; the API tests still run on Windows. `--build-only` builds `out/site` without uploading, `--skip-tests` and `--yes` work like on Windows. Needs the .NET 10 SDK, Node, curl, python3 and zip.
+Same steps and the same `secrets` files as the Windows script. Copy `deploy\secrets\monsterasp.txt` and `deploy\secrets\production.json` from the Windows machine first, so the JWT key and Owner login stay the same (a fresh `production.json` signs everyone out and creates a new Owner password). LocalDB is Windows-only, so on a Mac the script runs only the domain tests (tax, payroll, calendar, geo-fence) unless `HRMS_TEST_SQL` points at a SQL Server. To run every test on a Mac, start SQL Server in Docker once and export the connection string (no database name; each test class makes and drops its own):
+
+```
+docker run -d --platform linux/amd64 --name qaventra-test-sql -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD='<a strong password>' -p 14333:1433 mcr.microsoft.com/mssql/server:2022-latest
+export HRMS_TEST_SQL="Server=localhost,14333;User Id=sa;Password=<that password>;TrustServerCertificate=True"
+```
+
+`--build-only` builds `out/site` without uploading, `--skip-tests` and `--yes` work like on Windows. Needs the .NET 10 SDK, Node, curl, python3 and zip.
 
 ## Files
 

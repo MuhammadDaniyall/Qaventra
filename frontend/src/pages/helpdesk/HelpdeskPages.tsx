@@ -557,7 +557,7 @@ function ReportTable({ title, rows }: { title: string; rows: ReportRow[] }) {
               <Td className="text-end tabular-nums">{r.open}</Td>
               <Td className="text-end tabular-nums">{hours(r.avgFirstResponseHours)}</Td>
               <Td className="text-end tabular-nums">{hours(r.avgResolutionHours)}</Td>
-              <Td className={cn('text-right tabular-nums', r.slaMetPercent !== null && r.slaMetPercent < 80 && 'font-medium text-red-600 dark:text-red-400')}>
+              <Td className={cn('text-end tabular-nums', r.slaMetPercent !== null && r.slaMetPercent < 80 && 'font-medium text-red-600 dark:text-red-400')}>
                 {r.slaMetPercent === null ? '—' : `${r.slaMetPercent}%`}
               </Td>
               <Td className="text-end tabular-nums">{r.avgRating === null ? '—' : `${r.avgRating}★ (${r.rated})`}</Td>

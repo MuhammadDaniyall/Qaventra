@@ -73,6 +73,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       ref={ref}
       className={cn(control, 'h-10 sm:h-9', borderFor(rest['aria-invalid'] === true), className)}
       {...rest}
+      placeholder={tx(rest.placeholder)}
     />
   );
 });
@@ -85,6 +86,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
         rows={rows}
         className={cn(control, 'py-2', borderFor(rest['aria-invalid'] === true), className)}
         {...rest}
+        placeholder={tx(rest.placeholder)}
       />
     );
   },

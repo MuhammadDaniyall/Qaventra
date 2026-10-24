@@ -27,7 +27,7 @@ Multi-company HR software for Pakistani businesses: employees, attendance with g
    ```
    Open http://localhost:5173
 
-Run the tests with `dotnet test backend/tests/HRMS.Tests` (needs LocalDB; each run creates and drops its own database).
+Run the tests with `dotnet test backend/tests/HRMS.Tests` (needs LocalDB on Windows, or `HRMS_TEST_SQL` pointing at any SQL Server elsewhere, see `deploy/README.md`; each run creates and drops its own database).
 
 ## Roles
 

@@ -66,6 +66,10 @@ builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpO
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHostedService<EmailBackgroundService>();
+builder.Services.AddSingleton(builder.Configuration.GetSection("Push").Get<PushOptions>() ?? new PushOptions());
+builder.Services.AddSingleton<PushQueue>();
+builder.Services.AddScoped<PushKeyStore>();
+builder.Services.AddHostedService<PushBackgroundService>();
 builder.Services.AddHostedService<HelpdeskReminderService>();
 builder.Services.AddHostedService<ScheduledWorkService>();
 builder.Services.AddScoped<LeaveService>();

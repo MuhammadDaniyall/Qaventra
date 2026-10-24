@@ -9,7 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace HRMS.Tests.Api;
 
-/// <summary>Runs the real API against a throwaway LocalDB database that is dropped after the test class.</summary>
+/// <summary>
+/// Runs the real API against a throwaway database that is dropped after the test class. LocalDB on Windows; elsewhere
+/// set HRMS_TEST_SQL to a SQL Server connection string without a database, e.g. a Docker container:
+/// "Server=localhost,14333;User Id=sa;Password=...;TrustServerCertificate=True".
+/// </summary>
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string SuperAdminEmail = "root@hrms.test";
@@ -22,7 +26,10 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.UseSetting("ConnectionStrings:Hrms", $"Server=(localdb)\\MSSQLLocalDB;Database={_database};Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=True");
+        var server = Environment.GetEnvironmentVariable("HRMS_TEST_SQL") is { Length: > 0 } custom
+            ? custom.TrimEnd(';')
+            : "Server=(localdb)\\MSSQLLocalDB;Trusted_Connection=True;TrustServerCertificate=True";
+        builder.UseSetting("ConnectionStrings:Hrms", $"{server};Database={_database};MultipleActiveResultSets=True");
         builder.UseSetting("Jwt:Key", "test-signing-key-test-signing-key-0123456789");
         builder.UseSetting("Database:MigrateOnStartup", "true");
         builder.UseSetting("SuperAdmin:Email", SuperAdminEmail);

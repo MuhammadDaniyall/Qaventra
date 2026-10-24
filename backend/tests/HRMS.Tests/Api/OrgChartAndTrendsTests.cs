@@ -38,7 +38,8 @@ public class OrgChartAndTrendsTests(ApiFactory factory) : IClassFixture<ApiFacto
 
         var nodes = (await Read(await admin.GetAsync("/api/employees/org-chart"))).EnumerateArray().ToList();
 
-        Assert.Equal(2, nodes.Count);
+        // The company admin's own employee record is on the chart too; people who left are not.
+        Assert.DoesNotContain(nodes, n => n.GetProperty("name").GetString()!.StartsWith("Gone"));
         var rehan = nodes.Single(n => n.GetProperty("id").GetGuid() == report);
         Assert.Equal(boss, rehan.GetProperty("managerId").GetGuid());
         Assert.Equal(JsonValueKind.Null, nodes.Single(n => n.GetProperty("id").GetGuid() == boss).GetProperty("managerId").ValueKind);
@@ -50,6 +51,8 @@ public class OrgChartAndTrendsTests(ApiFactory factory) : IClassFixture<ApiFacto
         var (admin, _, _) = await factory.CreateCompanyAsync("Trends Co");
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var thisMonth = new DateOnly(today.Year, today.Month, 1).ToString("yyyy-MM-dd");
+        // The company admin's own employee record already counts, so compare against the starting numbers.
+        var before = (await Read(await admin.GetAsync("/api/dashboard/trends"))).EnumerateArray().Last();
         await CreateEmployee(admin, "Old", joiningDate: "2020-01-01");
         await CreateEmployee(admin, "New", joiningDate: thisMonth);
 
@@ -59,8 +62,8 @@ public class OrgChartAndTrendsTests(ApiFactory factory) : IClassFixture<ApiFacto
         var current = months[^1];
         Assert.Equal(today.Year, current.GetProperty("year").GetInt32());
         Assert.Equal(today.Month, current.GetProperty("month").GetInt32());
-        Assert.Equal(1, current.GetProperty("joiners").GetInt32());
-        Assert.Equal(2, current.GetProperty("headcount").GetInt32());
+        Assert.Equal(before.GetProperty("joiners").GetInt32() + 1, current.GetProperty("joiners").GetInt32());
+        Assert.Equal(before.GetProperty("headcount").GetInt32() + 2, current.GetProperty("headcount").GetInt32());
     }
 
     [Fact]

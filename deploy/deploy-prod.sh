@@ -42,9 +42,11 @@ site_url="$(secret SiteUrl)"; site_url="${site_url%/}"
 
 if (( ! skip_tests )); then
   step 'Running backend tests'
-  # The API tests need SQL Server LocalDB, which only exists on Windows; the business-rule tests run everywhere.
-  if [[ "$(uname)" == "Darwin" || "$(uname)" == "Linux" ]]; then
-    echo 'LocalDB is Windows-only: running the domain tests (tax, payroll, calendar, geo-fence) here.'
+  # The API tests need a SQL Server: LocalDB on Windows, or HRMS_TEST_SQL (see README, Docker) elsewhere.
+  if [[ -n "${HRMS_TEST_SQL:-}" ]]; then
+    dotnet test "$root/backend/tests/HRMS.Tests" --nologo -v q || fail 'Tests failed. Nothing was deployed.'
+  else
+    echo 'No HRMS_TEST_SQL: running only the domain tests (tax, payroll, calendar, geo-fence).'
     dotnet test "$root/backend/tests/HRMS.Tests" --nologo -v q --filter "FullyQualifiedName~HRMS.Tests.Domain" \
       || fail 'Tests failed. Nothing was deployed.'
   fi

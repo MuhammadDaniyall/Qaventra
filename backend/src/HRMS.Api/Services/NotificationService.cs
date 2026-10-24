@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Services;
 
 /// <summary>
-/// Creates in-app notifications and queues the matching emails. Rows are added to the context and saved with the
+/// Creates in-app notifications and queues the matching emails and phone/browser pushes. Rows are added to the context and saved with the
 /// caller's change; emails go out only after that save succeeds, so nobody is told about something that was rolled back.
 /// The person who caused the event is never notified about it.
 /// </summary>
@@ -16,14 +16,17 @@ public class NotificationService
     private readonly HrmsDbContext _db;
     private readonly ICurrentUser _me;
     private readonly EmailQueue _queue;
+    private readonly PushQueue _push;
     private readonly string? _baseUrl;
     private readonly List<EmailMessage> _pending = [];
+    private readonly List<PushMessage> _pendingPush = [];
 
-    public NotificationService(HrmsDbContext db, ICurrentUser me, EmailQueue queue, IHttpContextAccessor http)
+    public NotificationService(HrmsDbContext db, ICurrentUser me, EmailQueue queue, PushQueue push, IHttpContextAccessor http)
     {
         _db = db;
         _me = me;
         _queue = queue;
+        _push = push;
         var request = http.HttpContext?.Request;
         _baseUrl = request is null ? null : $"{request.Scheme}://{request.Host}";
         _db.SavedChanges += (_, _) => Flush();
@@ -52,6 +55,7 @@ public class NotificationService
         foreach (var r in recipients)
         {
             _db.Notifications.Add(new Notification { UserId = r.Id, Kind = kind, Title = title, Body = body, Link = link });
+            _pendingPush.Add(new PushMessage(r.Id, title, body, link));
             if (r.EmailNotifications)
                 _pending.Add(new EmailMessage(r.Email, title, Html(title, body, link)));
         }
@@ -67,6 +71,9 @@ public class NotificationService
         foreach (var m in _pending)
             _queue.Enqueue(m);
         _pending.Clear();
+        foreach (var p in _pendingPush)
+            _push.Enqueue(p);
+        _pendingPush.Clear();
     }
 
     private string Html(string title, string? body, string? link,

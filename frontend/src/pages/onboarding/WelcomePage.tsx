@@ -75,7 +75,7 @@ function Step({ done, title, hint, to }: { done: boolean; title: string; hint: s
     <li className="flex items-start gap-3 px-5 py-3">
       {done ? <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-500" /> : <Circle className="mt-0.5 size-5 shrink-0 text-zinc-300 dark:text-zinc-600" />}
       <div className="min-w-0 flex-1">
-        <p className={cn('text-sm font-medium', done ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-100')}>{title}</p>
+        <p className={cn('text-sm font-medium', done ? 'text-zinc-500 line-through dark:text-zinc-400' : 'text-zinc-900 dark:text-zinc-100')}>{title}</p>
         <p className="text-xs text-zinc-500">{hint}</p>
       </div>
       {to && !done && (

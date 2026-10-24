@@ -497,7 +497,7 @@ export function IssuedLoginsView({ result }: { result: IssueLoginsResult }) {
                       <p className="font-medium text-zinc-900 dark:text-zinc-100">{c.name}</p>
                       <p className="text-xs text-zinc-500">{c.email}</p>
                     </td>
-                    <td className="px-3 py-2 text-right font-mono text-zinc-900 dark:text-zinc-100">{c.password}</td>
+                    <td className="px-3 py-2 text-end font-mono text-zinc-900 dark:text-zinc-100">{c.password}</td>
                   </tr>
                 ))}
               </tbody>

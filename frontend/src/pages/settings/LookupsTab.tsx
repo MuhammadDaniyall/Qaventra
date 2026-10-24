@@ -45,7 +45,7 @@ export function LookupsTab() {
             type="button"
             onClick={() => setKind(k.kind)}
             className={cn(
-              'flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm',
+              'flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-start text-sm',
               kind === k.kind
                 ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-900'
                 : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800',
