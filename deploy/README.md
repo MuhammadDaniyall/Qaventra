@@ -10,11 +10,20 @@ Production runs on MonsterASP.NET (free plan) at https://qaventra.runasp.net, wi
 
 It runs the backend tests, builds the package, asks for `yes`, uploads over FTPS and checks the live site (web app 200, API 401 without login, database answers a fake login with 401). If the tests fail, nothing is uploaded.
 
+### From a Mac (or Linux)
+
+```
+./deploy/deploy-prod.sh
+```
+
+Same steps and the same `secrets` files as the Windows script. Copy `deploy\secrets\monsterasp.txt` and `deploy\secrets\production.json` from the Windows machine first, so the JWT key and Owner login stay the same (a fresh `production.json` signs everyone out and creates a new Owner password). LocalDB is Windows-only, so on a Mac only the domain tests (tax, payroll, calendar, geo-fence) run before the upload; the API tests still run on Windows. `--build-only` builds `out/site` without uploading, `--skip-tests` and `--yes` work like on Windows. Needs the .NET 10 SDK, Node, curl, python3 and zip.
+
 ## Files
 
 | File | What it does |
 |---|---|
 | `deploy-prod.ps1` | The whole deployment, start to finish |
+| `deploy-prod.sh` | The same deployment from macOS or Linux, in one script |
 | `build-package.ps1` | Builds the web app and API into `out\site` and `out\qaventra-site.zip`, writes `appsettings.Production.json` |
 | `upload-ftps.ps1` | Uploads `out\site` to `/wwwroot` over FTPS with curl; shows an "updating" page during the upload; `web.config` goes last |
 | `secrets\monsterasp.txt` | `ConnectionString=`, `SiteUser=`, `SitePassword=`, `SiteUrl=` (git-ignored) |
