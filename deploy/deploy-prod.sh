@@ -123,7 +123,17 @@ esc = lambda v: v.replace('\\', '\\\\').replace('"', '\\"')
 with open(path, 'w') as f:
     f.write(f'user = "{esc(user)}:{esc(pw)}"\n')
 PY
-ftp() { curl -s -S --ssl-reqd -K "$cfg" "$@"; }
+# Some home and office DNS servers don't know the *.siteasp.net FTP names. Fall back to public DNS and pin the
+# address with --resolve, which keeps the real host name for TLS.
+ftp_host="$site_user.siteasp.net"
+resolve=()
+if ! python3 -c 'import socket, sys; socket.gethostbyname(sys.argv[1])' "$ftp_host" 2>/dev/null; then
+  ftp_ip="$(dig +short A "$ftp_host" @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | tail -1 || true)"
+  [[ -n "$ftp_ip" ]] || fail "Can't find $ftp_host, even with public DNS. Check the internet connection and SiteUser."
+  echo "This network's DNS doesn't know $ftp_host; using $ftp_ip from public DNS."
+  resolve=(--resolve "$ftp_host:21:$ftp_ip")
+fi
+ftp() { curl -s -S --ssl-reqd -K "$cfg" ${resolve[@]+"${resolve[@]}"} "$@"; }
 
 # Take the running app offline while files are replaced. If this silently fails the old app keeps every DLL
 # locked, so retry and confirm the site really serves the offline page before replacing anything.
@@ -186,10 +196,10 @@ ftp "$base/" -Q '-DELE app_offline.htm' >/dev/null
 
 step 'Health check'
 for i in $(seq 1 12); do
-  web="$(curl -s -o /dev/null -m 60 -w '%{http_code}' "$site_url/" || echo 000)"
-  me="$(curl -s -o /dev/null -m 60 -w '%{http_code}' "$site_url/api/auth/me" || echo 000)"
+  web="$(curl -s -o /dev/null -m 60 -w '%{http_code}' "$site_url/" || true)"
+  me="$(curl -s -o /dev/null -m 60 -w '%{http_code}' "$site_url/api/auth/me" || true)"
   login="$(curl -s -o /dev/null -m 60 -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
-    -d '{"email":"health-check@qaventra.invalid","password":"not-a-real-password"}' "$site_url/api/auth/login" || echo 000)"
+    -d '{"email":"health-check@qaventra.invalid","password":"not-a-real-password"}' "$site_url/api/auth/login" || true)"
   echo "web app $web | API without login $me | database (fake login) $login"
   if [[ "$web" == 200 && "$me" == 401 && "$login" == 401 ]]; then
     printf '\n\033[32mDeployed and healthy: %s\033[0m\n' "$site_url"
