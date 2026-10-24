@@ -24,7 +24,7 @@ const variants: Record<Variant, string> = {
 
 const sizes: Record<Size, string> = {
   sm: 'h-8 px-3 text-xs gap-1.5',
-  md: 'h-9 px-3.5 text-sm gap-2',
+  md: 'h-10 px-3.5 text-sm gap-2 sm:h-9',
   lg: 'h-11 px-5 text-sm gap-2',
 };
 
@@ -65,7 +65,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex size-9 items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900',
+        'inline-flex size-10 items-center justify-center rounded-lg text-zinc-500 sm:size-9 transition-colors hover:bg-zinc-100 hover:text-zinc-900',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500',
         'disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white',
         className,

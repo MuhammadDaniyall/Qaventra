@@ -66,17 +66,18 @@ export function EmployeeDetailPage() {
               {e.loginRole && <Badge tone="accent">{roleLabel(e.loginRole)}</Badge>}
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm lg:grid-cols-4">
-              {[
-                ['Department', e.department ?? '—'],
-                ['Reports to', e.manager ?? '—'],
-                ['Joined', `${formatDate(e.joiningDate)} · ${tenure(e.joiningDate)}`],
-                ['Contact', e.phone ?? e.email ?? '—'],
-              ].map(([k, v]) => (
+              {(
+                [
+                  ['Department', e.department ?? '—', null],
+                  ['Reports to', e.manager ?? '—', null],
+                  ['Joined', formatDate(e.joiningDate), tenure(e.joiningDate)],
+                  ['Contact', e.phone ?? e.email ?? '—', e.phone ? e.email : null],
+                ] as [string, string, string | null][]
+              ).map(([k, v, sub]) => (
                 <div key={k} className="min-w-0">
                   <dt className="text-xs text-zinc-500 dark:text-zinc-400">{k}</dt>
-                  <dd className="truncate font-medium text-zinc-900 dark:text-zinc-100" title={v}>
-                    {v}
-                  </dd>
+                  <dd className="font-medium break-words text-zinc-900 dark:text-zinc-100">{v}</dd>
+                  {sub && <dd className="truncate text-xs text-zinc-500 dark:text-zinc-400" title={sub}>{sub}</dd>}
                 </div>
               ))}
             </dl>

@@ -13,7 +13,8 @@ import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/cn';
 
 const control =
-  'block w-full rounded-lg border bg-white px-3 text-sm text-zinc-900 shadow-xs transition-colors placeholder:text-zinc-400 ' +
+  // text-base below sm stops iOS Safari from zooming into a focused field.
+  'block w-full rounded-lg border bg-white px-3 text-base text-zinc-900 shadow-xs transition-colors placeholder:text-zinc-400 sm:text-sm ' +
   'focus:outline-none focus:ring-2 focus:ring-accent-500/30 focus:border-accent-500 ' +
   'disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 ' +
   'dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:disabled:bg-zinc-800/50';
@@ -69,7 +70,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
   return (
     <input
       ref={ref}
-      className={cn(control, 'h-9', borderFor(rest['aria-invalid'] === true), className)}
+      className={cn(control, 'h-10 sm:h-9', borderFor(rest['aria-invalid'] === true), className)}
       {...rest}
     />
   );
@@ -96,7 +97,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
     <div className="relative">
       <select
         ref={ref}
-        className={cn(control, 'h-9 appearance-none pr-9', borderFor(rest['aria-invalid'] === true), className)}
+        className={cn(control, 'h-10 appearance-none pr-9 sm:h-9', borderFor(rest['aria-invalid'] === true), className)}
         {...rest}
       >
         {children}

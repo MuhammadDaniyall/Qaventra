@@ -229,7 +229,7 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
 
       <fieldset className="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
         <legend className="px-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">Policy</legend>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Carry forward (max days)" hint="0 = none" error={fieldErrors.carryForwardMax}>
             <Input type="number" min={0} max={365} step="0.5" value={v.carryForwardMax} onChange={(e) => set({ carryForwardMax: e.target.value })} />
           </Field>

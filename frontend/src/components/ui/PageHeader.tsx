@@ -26,10 +26,10 @@ export function PageHeader({
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">{title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-[26px] dark:text-white">{title}</h1>
           {description && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{description}</p>}
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        {actions && <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{actions}</div>}
       </div>
     </div>
   );

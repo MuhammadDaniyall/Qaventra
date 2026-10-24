@@ -28,7 +28,7 @@ export function Tabs<T extends string>({
   return (
     <div
       role="tablist"
-      className={cn('-mx-1 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 dark:border-zinc-800', className)}
+      className={cn('no-scrollbar -mx-1 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 dark:border-zinc-800', className)}
     >
       {items.map((item, i) => {
         const active = item.value === value;

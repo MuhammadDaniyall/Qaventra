@@ -6,7 +6,8 @@ import { Button } from './Button';
 /** Horizontally scrollable table wrapper; lives inside a Card. */
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="w-full overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
+    // relative: keeps absolutely positioned cell content (sr-only labels) inside the scroll box, so it can't widen the page.
+    <div className="relative w-full overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
       <table className={cn('w-full min-w-max text-left text-sm', className)}>{children}</table>
     </div>
   );
