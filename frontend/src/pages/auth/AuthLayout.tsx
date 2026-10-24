@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { CalendarCheck, MapPin, ShieldCheck, Wallet } from 'lucide-react';
-import { Logo } from '../../components/layout/Sidebar';
+import { Logo } from '../../components/layout/Logo';
 import { APP_NAME } from '../../lib/brand';
 
 const points = [

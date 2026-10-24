@@ -6,10 +6,9 @@ import { employeesApi } from '../../api/employees';
 import { useUser } from '../../auth/AuthContext';
 import { isApprover } from '../../auth/roles';
 import { cn } from '../../lib/cn';
+import { useFavourites } from '../../lib/favourites';
 import { useDebounced } from '../../lib/hooks';
 import { navFor } from './nav';
-
-const FAV_KEY = 'hrms.favourites';
 
 /** Screens reached from inside other pages, so they can be found by name too. */
 const EXTRA: { to: string; label: string; hr?: boolean }[] = [
@@ -33,14 +32,6 @@ const EXTRA: { to: string; label: string; hr?: boolean }[] = [
   { to: '/suggestions', label: 'Suggestions' },
 ];
 
-function readFavourites(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(FAV_KEY) ?? '[]') as string[];
-  } catch {
-    return [];
-  }
-}
-
 /** Ctrl+K: jump to any screen or person; star screens to keep them at the top. */
 export function QuickSearch() {
   const user = useUser();
@@ -48,7 +39,7 @@ export function QuickSearch() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
-  const [favs, setFavs] = useState<string[]>(readFavourites);
+  const { favs, toggle: toggleFav } = useFavourites();
   const input = useRef<HTMLInputElement>(null);
   const approver = isApprover(user);
   const term = useDebounced(q.trim(), 250);
@@ -106,17 +97,6 @@ export function QuickSearch() {
     setOpen(false);
     navigate(to);
   };
-  const toggleFav = (to: string) =>
-    setFavs((f) => {
-      const next = f.includes(to) ? f.filter((x) => x !== to) : [...f, to];
-      try {
-        localStorage.setItem(FAV_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
-
   return (
     <>
       <button

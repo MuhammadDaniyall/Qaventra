@@ -32,6 +32,7 @@ import {
 } from '../../components/ui';
 import { formatCurrency, formatDateTimeUtc, formatNumber, monthLabel } from '../../lib/format';
 import { RunPayrollModal } from './PayrollRunsPage';
+import { RunStepper, RunVariance } from './RunProgress';
 import { WarningsPanel } from './WarningsPanel';
 
 export function PayrollRunPage() {
@@ -183,6 +184,8 @@ export function PayrollRunPage() {
         }
       />
 
+      <RunStepper run={run} needsApproval={needsApproval} />
+
       {run.status === 'Submitted' && (
         <div className="mb-4 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
           Waiting for the company admin to approve.
@@ -209,8 +212,10 @@ export function PayrollRunPage() {
         <StatCard label="Total net pay" value={formatCurrency(run.totalNet)} icon={Wallet} tone="green" />
       </div>
 
-      <Card className="mt-6">
-        <div className="flex items-center justify-between gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
+      <div className="mt-6">{run.status !== 'Finalized' && <RunVariance detail={detail.data} />}</div>
+
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
           <h2 className="text-sm font-semibold">Payslips</h2>
           <div className="relative w-full max-w-xs">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />

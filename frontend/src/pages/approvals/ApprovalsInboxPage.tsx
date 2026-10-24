@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CalendarPlus,
   Check,
+  CheckCheck,
   ChevronDown,
   Clock,
   HandCoins,
@@ -13,6 +14,7 @@ import {
   TimerOff,
   CalendarOff,
   ClipboardList,
+  Search,
   PiggyBank,
   UserMinus,
   FileSignature,
@@ -55,11 +57,11 @@ import {
   EmptyState,
   ErrorState,
   Field,
+  Input,
   Modal,
   PageHeader,
   SkeletonRows,
   Switch,
-  Tabs,
   Textarea,
   useToast,
 } from '../../components/ui';
@@ -129,11 +131,21 @@ export function ApprovalsInboxPage() {
   const [open, setOpen] = useState<string | null>(null);
   const [claimId, setClaimId] = useState<string | null>(null);
   const [deciding, setDeciding] = useState<{ item: InboxItem; approve: boolean } | null>(null);
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulk, setBulk] = useState(false);
   const inbox = useQuery({ queryKey: qk.approvalInbox, queryFn: approvalsApi.inbox });
 
-  const all = inbox.data ?? [];
-  const visible = all.filter((i) => (filter === 'all' || i.requestType === filter) && (!hr || !onlyMine || i.assignedToMe));
-  const count = (t: Filter) => all.filter((i) => (t === 'all' || i.requestType === t) && (!hr || !onlyMine || i.assignedToMe)).length;
+  const term = search.trim().toLowerCase();
+  const all = (inbox.data ?? []).filter(
+    (i) => (!hr || !onlyMine || i.assignedToMe) && (!term || i.employeeName.toLowerCase().includes(term) || i.employeeCode.toLowerCase().includes(term)),
+  );
+  const visible = all.filter((i) => filter === 'all' || i.requestType === filter);
+  const count = (t: Filter) => all.filter((i) => t === 'all' || i.requestType === t).length;
+  const types = [...new Set(all.map((i) => i.requestType))];
+  // Expense claims need their receipts looked at, so they are approved one by one.
+  const bulkable = visible.filter((i) => i.assignedToMe && i.requestType !== 'Expense');
+  const toApprove = bulkable.filter((i) => selected.includes(i.subjectId));
 
   return (
     <>
@@ -141,55 +153,56 @@ export function ApprovalsInboxPage() {
         title="Approvals"
         description={
           all.length
-            ? `${count('all')} request${count('all') === 1 ? '' : 's'} waiting for your decision.`
+            ? `${all.length} request${all.length === 1 ? '' : 's'} waiting for your decision.`
             : 'Leave requests, expense claims and more, in one place.'
         }
       />
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Tabs<Filter>
-          value={filter}
-          onChange={setFilter}
-          items={(
-            [
-              'all',
-              'Leave',
-              'Expense',
-              'Attendance',
-              'CompOff',
-              'PayRequest',
-              'Loan',
-              'ProfileChange',
-              'ShiftChange',
-              'Asset',
-              'JobRequest',
-              'Travel',
-              'Training',
-              'Exemption',
-              'OffDay',
-              'Timesheet',
-              'FundWithdrawal',
-              'ExpenseAdvance',
-              'FinalSettlement',
-              'Letter',
-            ] as Filter[]
-          ).map((t) => ({
-            value: t,
-            label: (
-              <>
-                {t === 'all' ? 'All' : REQUEST_LABELS[t]}
-                {count(t) > 0 && (
-                  <span className="ml-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">{count(t)}</span>
-                )}
-              </>
-            ),
-          }))}
-        />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="relative w-full sm:w-64">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name" aria-label="Search by name" className="pl-9" />
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Request type">
+          {(['all', ...types] as Filter[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={filter === t}
+              onClick={() => setFilter(t)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm font-medium transition-colors',
+                filter === t
+                  ? 'border-accent-200 bg-accent-50 text-accent-700 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-300'
+                  : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800',
+              )}
+            >
+              {t === 'all' ? 'All' : REQUEST_LABELS[t]}
+              <span className="text-xs text-zinc-400 tabular-nums">{count(t)}</span>
+            </button>
+          ))}
+        </div>
         {hr && (
-          <div className="w-72">
+          <div className="sm:ml-auto sm:w-64">
             <Switch checked={onlyMine} onChange={setOnlyMine} label="Only steps assigned to me" />
           </div>
         )}
       </div>
+
+      {bulkable.length > 1 && (
+        <div className="sticky top-14 z-20 mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-white/95 px-4 py-2.5 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
+          <Checkbox
+            label={toApprove.length ? `${toApprove.length} selected` : 'Select all'}
+            checked={toApprove.length > 0 && toApprove.length === bulkable.length}
+            onChange={(e) => setSelected(e.target.checked ? bulkable.map((i) => i.subjectId) : [])}
+          />
+          {toApprove.length > 0 && (
+            <Button size="sm" variant="success" className="ml-auto" icon={<CheckCheck className="size-3.5" />} onClick={() => setBulk(true)}>
+              Approve {toApprove.length}
+            </Button>
+          )}
+        </div>
+      )}
 
       <Card>
         {inbox.isLoading ? (
@@ -205,7 +218,19 @@ export function ApprovalsInboxPage() {
               const expanded = open === item.subjectId;
               return (
                 <li key={item.subjectId}>
-                  <div className="flex flex-wrap items-center gap-4 px-4 py-3.5 sm:px-5">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 sm:px-5">
+                    {bulkable.length > 1 && (
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${item.employeeName}`}
+                        disabled={!bulkable.includes(item)}
+                        checked={selected.includes(item.subjectId)}
+                        onChange={(e) =>
+                          setSelected((s) => (e.target.checked ? [...s, item.subjectId] : s.filter((x) => x !== item.subjectId)))
+                        }
+                        className="size-4 shrink-0 rounded border-zinc-300 accent-accent-600 disabled:opacity-30"
+                      />
+                    )}
                     <button
                       type="button"
                       onClick={() => setOpen(expanded ? null : item.subjectId)}
@@ -228,7 +253,7 @@ export function ApprovalsInboxPage() {
                       </span>
                       <ChevronDown className={cn('ml-auto size-4 shrink-0 text-zinc-400 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
                     </button>
-                    <div className="flex gap-2">
+                    <div className="flex w-full gap-2 sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
                       {item.requestType === 'Expense' ? (
                         <Button size="sm" variant="secondary" onClick={() => setClaimId(item.subjectId)}>
                           Review receipts
@@ -258,6 +283,15 @@ export function ApprovalsInboxPage() {
 
       <Delegations />
 
+      {bulk && (
+        <BulkApproveModal
+          items={toApprove}
+          onClose={(done) => {
+            setBulk(false);
+            if (done) setSelected([]);
+          }}
+        />
+      )}
       {deciding && <DecisionModal {...deciding} onClose={() => setDeciding(null)} />}
       {claimId && <ClaimDrawer claimId={claimId} onClose={() => setClaimId(null)} />}
     </>
@@ -331,6 +365,59 @@ function DecisionModal({ item, approve, onClose }: { item: InboxItem; approve: b
         required={force}
         hint={force ? 'Why it cannot wait for the other approvers' : 'Optional, shown to the employee'}
       >
+        <Textarea value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} />
+      </Field>
+    </Modal>
+  );
+}
+
+/** Approves the selected requests one after another and reports how many went through. */
+function BulkApproveModal({ items, onClose }: { items: InboxItem[]; onClose: (done: boolean) => void }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [note, setNote] = useState('');
+  const run = useMutation({
+    mutationFn: async () => {
+      const results = await Promise.allSettled(items.map((i) => decideApi[i.requestType].approve(i.subjectId, note.trim() || null)));
+      return results.filter((r) => r.status === 'rejected').length;
+    },
+    onSuccess: (failed) => {
+      const ok = items.length - failed;
+      if (failed) toast.error(`${failed} could not be approved`, `${ok} approved. Open the others to see why.`);
+      else toast.success(`${ok} approved`);
+      qc.invalidateQueries();
+      onClose(true);
+    },
+    onError: (err) => toast.error(err),
+  });
+
+  return (
+    <Modal
+      open
+      onClose={() => onClose(false)}
+      size="sm"
+      title={`Approve ${items.length} requests?`}
+      description="Each one moves to its next approver, or is approved if this is the last step."
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => onClose(false)}>
+            Cancel
+          </Button>
+          <Button variant="success" loading={run.isPending} onClick={() => run.mutate()}>
+            Approve {items.length}
+          </Button>
+        </>
+      }
+    >
+      <ul className="mb-4 max-h-48 space-y-1 overflow-y-auto text-sm">
+        {items.map((i) => (
+          <li key={i.subjectId} className="flex gap-2">
+            <span className="font-medium text-zinc-900 dark:text-white">{i.employeeName}</span>
+            <span className="truncate text-zinc-500 dark:text-zinc-400">{i.summary}</span>
+          </li>
+        ))}
+      </ul>
+      <Field label="Note" hint="Optional, shown to each employee">
         <Textarea value={note} maxLength={1000} onChange={(e) => setNote(e.target.value)} />
       </Field>
     </Modal>

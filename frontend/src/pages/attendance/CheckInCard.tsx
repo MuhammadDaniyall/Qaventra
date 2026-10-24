@@ -84,7 +84,6 @@ export function CheckInCard({ className }: { className?: string }) {
 
   return (
     <Card className={cn('relative overflow-hidden', className)}>
-      <div className="pointer-events-none absolute -top-24 -right-24 size-64 rounded-full bg-accent-500/10 blur-3xl" />
       <div className="relative flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{formatDate(t.date)}</p>

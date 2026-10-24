@@ -1,4 +1,5 @@
-const pkr = new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', maximumFractionDigits: 0 });
+/** Lakh and crore grouping, as amounts are read in Pakistan: Rs 12,50,000. */
+const lakh = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 const num = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 2 });
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTHS_LONG = [
@@ -7,7 +8,8 @@ const MONTHS_LONG = [
 ];
 
 export function formatCurrency(value: number | null | undefined): string {
-  return value == null ? '—' : pkr.format(value);
+  if (value == null) return '—';
+  return `${value < 0 ? '-' : ''}Rs ${lakh.format(Math.abs(value))}`;
 }
 
 export function formatNumber(value: number | null | undefined): string {

@@ -6,7 +6,7 @@ import { Button } from './Button';
 /** Horizontally scrollable table wrapper; lives inside a Card. */
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full overflow-x-auto overscroll-x-contain [scrollbar-width:thin]">
       <table className={cn('w-full min-w-max text-left text-sm', className)}>{children}</table>
     </div>
   );
@@ -14,7 +14,7 @@ export function Table({ children, className }: { children: ReactNode; className?
 
 export function THead({ children }: { children: ReactNode }) {
   return (
-    <thead className="border-b border-zinc-200 bg-zinc-50/70 text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
+    <thead className="border-b border-zinc-200 bg-zinc-50/70 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
       {children}
     </thead>
   );
@@ -32,7 +32,7 @@ export function Tr({
   return (
     <tr
       className={cn(
-        'transition-colors',
+        'transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30',
         onClick && 'cursor-pointer hover:bg-zinc-50 focus-visible:bg-zinc-50 focus-visible:outline-none dark:hover:bg-zinc-800/50 dark:focus-visible:bg-zinc-800/50',
         className,
       )}

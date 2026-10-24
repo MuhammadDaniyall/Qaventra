@@ -71,6 +71,7 @@ const ExpenseApprovalsPage = lazy(() => import('./pages/expenses/ExpenseApproval
 const MyExpensesPage = lazy(() => import('./pages/expenses/MyExpensesPage').then((m) => ({ default: m.MyExpensesPage })));
 const LetterPage = lazy(() => import('./pages/letters/LetterPage').then((m) => ({ default: m.LetterPage })));
 const LettersPage = lazy(() => import('./pages/letters/LettersPage').then((m) => ({ default: m.LettersPage })));
+const MyRequestsPage = lazy(() => import('./pages/requests/MyRequestsPage').then((m) => ({ default: m.MyRequestsPage })));
 const MyDocumentsPage = lazy(() => import('./pages/letters/MyDocumentsPage').then((m) => ({ default: m.MyDocumentsPage })));
 const MyExitPage = lazy(() => import('./pages/separations/MyExitPage').then((m) => ({ default: m.MyExitPage })));
 const SeparationDetailPage = lazy(() => import('./pages/separations/SeparationDetailPage').then((m) => ({ default: m.SeparationDetailPage })));
@@ -140,6 +141,7 @@ export default function App() {
                 <Route path="/me/expenses" element={<MyExpensesPage />} />
                 <Route path="/me/pay" element={<MyPayPage />} />
                 <Route path="/me/documents" element={<MyDocumentsPage />} />
+                <Route path="/me/requests" element={<MyRequestsPage />} />
                 <Route path="/me/resignation" element={<MyExitPage />} />
               </Route>
               <Route path="/payslips/:id" element={<PayslipPage />} />
