@@ -106,7 +106,7 @@ export function MyExpensesPage() {
               <tr>
                 <Th>Claim</Th>
                 <Th>Submitted</Th>
-                <Th className="text-right">Amount</Th>
+                <Th className="text-end">Amount</Th>
                 <Th>Status</Th>
                 <Th>Paid via</Th>
               </tr>
@@ -116,16 +116,16 @@ export function MyExpensesPage() {
                 <Tr key={c.id} className="cursor-pointer" onClick={() => setOpenId(c.id)}>
                   <Td>
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">{c.title}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {c.itemCount} item{c.itemCount === 1 ? '' : 's'} · {c.receiptCount} receipt{c.receiptCount === 1 ? '' : 's'}
                     </p>
                   </Td>
                   <Td>{formatDateTimeUtc(c.createdAtUtc)}</Td>
-                  <Td className="text-right font-medium tabular-nums">{formatCurrency(c.total)}</Td>
+                  <Td className="text-end font-medium tabular-nums">{formatCurrency(c.total)}</Td>
                   <Td>
                     <StatusBadge status={c.status} />
                   </Td>
-                  <Td className="text-zinc-500">{c.paidVia ?? '—'}</Td>
+                  <Td className="text-zinc-500 dark:text-zinc-400">{c.paidVia ?? '—'}</Td>
                 </Tr>
               ))}
             </TBody>
@@ -248,8 +248,8 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
       description="Add one line per receipt. Photos and PDFs up to 3 MB."
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-500">
-            Total <span className="ml-1 text-lg font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(total)}</span>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Total <span className="ms-1 text-lg font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(total)}</span>
           </p>
           <div className="flex gap-2">
             <Button variant="secondary" onClick={onClose}>
@@ -290,7 +290,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
           {items.map((item, index) => (
             <li key={item.key} className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Item {index + 1}</p>
+                <p className="text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Item {index + 1}</p>
                 {items.length > 1 && (
                   <IconButton label={`Remove item ${index + 1}`} onClick={() => setItems((l) => l.filter((i) => i.key !== item.key))}>
                     <Trash2 className="size-4" />
@@ -372,7 +372,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
                 </Field>
                 <Field label="Amount (Rs)" required>
                   {typeOf(item) && typeOf(item)!.calculation !== 'Amount' ? (
-                    <Input readOnly value={amountOf(item)} className="text-right tabular-nums" aria-label="Worked out amount" />
+                    <Input readOnly value={amountOf(item)} className="text-end tabular-nums" aria-label="Worked out amount" />
                   ) : (
                     <Input
                       type="number"
@@ -381,7 +381,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
                       step="1"
                       value={item.amount}
                       onChange={(e) => update(item.key, { amount: e.target.value })}
-                      className="text-right tabular-nums"
+                      className="text-end tabular-nums"
                     />
                   )}
                 </Field>
@@ -430,7 +430,7 @@ function ReceiptPicker({
         {isImage ? (
           <img src={receipt.base64} alt="" className="size-10 rounded object-cover" />
         ) : (
-          <Paperclip className="m-2.5 size-5 text-zinc-400" aria-hidden="true" />
+          <Paperclip className="m-2.5 size-5 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
         )}
         <p className="min-w-0 flex-1 truncate text-sm text-zinc-700 dark:text-zinc-300">{receipt.fileName}</p>
         <Button variant="ghost" size="sm" onClick={() => onChange(null)}>

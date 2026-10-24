@@ -197,7 +197,7 @@ function ImportDialog({ kind, invalidate, onClose }: { kind: ImportKind; invalid
             <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-600 text-xs font-semibold text-white">1</span>
             <div className="flex-1">
               <p className="text-zinc-700 dark:text-zinc-300">Download the template and fill it in.</p>
-              <Button variant="ghost" size="sm" className="mt-1 -ml-2" icon={<FileSpreadsheet className="size-4" />} onClick={() => excelApi.template(kind).catch((e) => toast.error(e))}>
+              <Button variant="ghost" size="sm" className="mt-1 -ms-2" icon={<FileSpreadsheet className="size-4" />} onClick={() => excelApi.template(kind).catch((e) => toast.error(e))}>
                 Download template
               </Button>
             </div>
@@ -267,7 +267,7 @@ function ImportDialog({ kind, invalidate, onClose }: { kind: ImportKind; invalid
               <Stat label="Ready" value={result.valid} tone="green" />
               <Stat label="With problems" value={result.invalid} tone={result.invalid ? 'red' : undefined} />
             </div>
-            {result.total === 0 && <p className="text-sm text-zinc-500">The sheet has no data rows.</p>}
+            {result.total === 0 && <p className="text-sm text-zinc-500 dark:text-zinc-400">The sheet has no data rows.</p>}
             {ready && (
               <p className="flex items-center gap-2 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
                 <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
@@ -283,9 +283,9 @@ function ImportDialog({ kind, invalidate, onClose }: { kind: ImportKind; invalid
                   {problems.map((r) => (
                     <li key={r.row} className="px-3 py-2 text-sm">
                       <p className="font-medium text-zinc-900 dark:text-zinc-100">
-                        Row {r.row} <span className="font-normal text-zinc-500">· {r.label}</span>
+                        Row {r.row} <span className="font-normal text-zinc-500 dark:text-zinc-400">· {r.label}</span>
                       </p>
-                      <ul className="mt-0.5 list-disc pl-5 text-red-700 dark:text-red-300">
+                      <ul className="mt-0.5 list-disc ps-5 text-red-700 dark:text-red-300">
                         {r.errors.map((e) => (
                           <li key={e}>{e}</li>
                         ))}
@@ -296,7 +296,7 @@ function ImportDialog({ kind, invalidate, onClose }: { kind: ImportKind; invalid
               </div>
             )}
             {notes.length > 0 && problems.length === 0 && (
-              <ul className="space-y-1 text-xs text-zinc-500">
+              <ul className="space-y-1 text-xs text-zinc-500 dark:text-zinc-400">
                 {Array.from(new Set(notes.flatMap((r) => r.notes))).slice(0, 8).map((n) => (
                   <li key={n} className="flex items-start gap-1.5">
                     <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -323,7 +323,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: 'gr
       >
         {value}
       </p>
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
     </div>
   );
 }

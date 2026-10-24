@@ -63,8 +63,8 @@ export function OpeningBalancesPage() {
             aria-label="Year"
           />
           <div className="relative w-72">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-            <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, code or leave type" />
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+            <Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, code or leave type" />
           </div>
           <Input
             className="w-64"
@@ -88,11 +88,11 @@ export function OpeningBalancesPage() {
                 <Tr>
                   <Th>Employee</Th>
                   <Th>Leave</Th>
-                  <Th className="text-right">Entitled</Th>
+                  <Th className="text-end">Entitled</Th>
                   <Th className="w-32">Brought forward</Th>
                   <Th className="w-32">Adjustment</Th>
-                  <Th className="text-right">Used</Th>
-                  <Th className="text-right">Remaining</Th>
+                  <Th className="text-end">Used</Th>
+                  <Th className="text-end">Remaining</Th>
                 </Tr>
               </THead>
               <TBody>
@@ -107,10 +107,10 @@ export function OpeningBalancesPage() {
                   return (
                     <Tr key={k} className={cn(e && 'bg-amber-50/60 dark:bg-amber-500/5')}>
                       <Td>
-                        {r.name} <span className="text-xs text-zinc-500">{r.code}</span>
+                        {r.name} <span className="text-xs text-zinc-500 dark:text-zinc-400">{r.code}</span>
                       </Td>
                       <Td>{r.leaveType}</Td>
-                      <Td className="text-right tabular-nums">{r.entitled}</Td>
+                      <Td className="text-end tabular-nums">{r.entitled}</Td>
                       <Td>
                         <Input
                           aria-label="Brought forward"
@@ -130,8 +130,8 @@ export function OpeningBalancesPage() {
                           onChange={(ev) => set({ adjustment: ev.target.value })}
                         />
                       </Td>
-                      <Td className="text-right tabular-nums">{r.used}</Td>
-                      <Td className="text-right font-medium tabular-nums">{remaining}</Td>
+                      <Td className="text-end tabular-nums">{r.used}</Td>
+                      <Td className="text-end font-medium tabular-nums">{remaining}</Td>
                     </Tr>
                   );
                 })}

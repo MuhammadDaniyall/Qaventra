@@ -148,7 +148,7 @@ export function MyAttendancePage() {
                         <Td className="tabular-nums">{formatMinutes(r.workedMinutes)}</Td>
                         <Td>{r.office ?? '—'}</Td>
                         <Td title={r.note ?? undefined}>{r.source === 'Request' ? 'Approved request' : r.source}</Td>
-                        <Td className="text-right">
+                        <Td className="text-end">
                           <ExcuseButton date={r.date} flag={r.status} early={r.earlyLeaveMinutes} />
                         </Td>
                       </Tr>
@@ -191,7 +191,7 @@ function MonthCalendar({
 
   return (
     <div className="p-4 sm:p-5">
-      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-400 uppercase">
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase">
         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
           <div key={d} className="py-1">
             {d}

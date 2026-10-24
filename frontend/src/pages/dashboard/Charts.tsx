@@ -10,7 +10,7 @@ interface TipPayload {
   dataKey?: string | number;
 }
 
-function ChartTooltip({ active, payload, label, labelFormat }: {
+export function ChartTooltip({ active, payload, label, labelFormat }: {
   active?: boolean;
   payload?: TipPayload[];
   label?: string | number;
@@ -26,7 +26,7 @@ function ChartTooltip({ active, payload, label, labelFormat }: {
         <p key={String(p.dataKey)} className="flex items-center gap-2 text-zinc-600 dark:text-zinc-300">
           <span className="size-2 rounded-sm" style={{ background: p.color }} />
           <span>{p.name}</span>
-          <span className="ml-auto pl-3 font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{p.value}</span>
+          <span className="ms-auto ps-3 font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{p.value}</span>
         </p>
       ))}
     </div>
@@ -51,7 +51,7 @@ export function AttendanceTrendChart({ data }: { data: TrendPoint[] }) {
           <span className="size-2.5 rounded-sm" style={{ background: c.series2 }} /> Late
         </span>
       </div>
-      <div className="h-64" role="img" aria-label="Attendance over the last 14 days, on time versus late">
+      <div className="h-64" role="img" aria-label="Attendance over the last 14 days, on time versus late" dir="ltr">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 4, right: 4, left: -20, bottom: 0 }} barCategoryGap="28%">
             <CartesianGrid vertical={false} stroke={c.grid} strokeDasharray="0" />
@@ -84,7 +84,7 @@ export function DepartmentChart({ data }: { data: NameCount[] }) {
   const rows = data.slice(0, 8);
   const height = Math.max(160, rows.length * 34 + 24);
   return (
-    <div style={{ height }} role="img" aria-label="Headcount by department">
+    <div style={{ height }} role="img" aria-label="Headcount by department" dir="ltr">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={rows} layout="vertical" margin={{ top: 0, right: 28, left: 0, bottom: 0 }} barCategoryGap="30%">
           <XAxis type="number" hide allowDecimals={false} />

@@ -95,11 +95,11 @@ export function CompaniesPage() {
             ))}
           </div>
           <div className="relative w-full lg:max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
             <Input
               aria-label="Search companies"
               placeholder="Search name, city or admin"
-              className="pl-9"
+              className="ps-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -128,13 +128,13 @@ export function CompaniesPage() {
               <tr>
                 <Th>Company</Th>
                 <Th>City</Th>
-                <Th className="text-right">Employees</Th>
+                <Th className="text-end">Employees</Th>
                 <Th>Plan</Th>
                 <Th>Expires</Th>
                 <Th>Company Super Admin</Th>
                 <Th>Access</Th>
                 <Th>Last activity</Th>
-                <Th className="text-right">Actions</Th>
+                <Th className="text-end">Actions</Th>
               </tr>
             </THead>
             <TBody>
@@ -142,8 +142,8 @@ export function CompaniesPage() {
                 <Tr key={c.id} onClick={() => navigate(`/platform/companies/${c.id}`)}>
                   <Td className="font-medium text-zinc-900 dark:text-zinc-100">{c.name}</Td>
                   <Td>{c.city ?? '—'}</Td>
-                  <Td className="text-right tabular-nums">{seatsLabel(c)}</Td>
-                  <Td>{c.billingCycle ? planLabel(c) : <span className="text-zinc-400">No plan</span>}</Td>
+                  <Td className="text-end tabular-nums">{seatsLabel(c)}</Td>
+                  <Td>{c.billingCycle ? planLabel(c) : <span className="text-zinc-500 dark:text-zinc-400">No plan</span>}</Td>
                   <Td>
                     <ExpiresCell company={c} />
                   </Td>
@@ -155,7 +155,7 @@ export function CompaniesPage() {
                     <AccessBadge company={c} />
                   </Td>
                   <Td>{formatDateTimeUtc(c.lastActivityUtc)}</Td>
-                  <Td className="text-right" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <Td className="text-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-1">
                       <Button
                         size="sm"
@@ -208,7 +208,7 @@ function RowMenu({ company, onAction }: { company: Company; onAction: (a: Compan
   }, [open]);
 
   const item =
-    'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-zinc-100 focus-visible:bg-zinc-100 focus-visible:outline-none dark:text-zinc-200 dark:hover:bg-zinc-800 dark:focus-visible:bg-zinc-800';
+    'flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-start text-sm text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 hover:bg-zinc-100 focus-visible:bg-zinc-100 focus-visible:outline-none dark:text-zinc-200 dark:hover:bg-zinc-800 dark:focus-visible:bg-zinc-800';
   const pick = (a: CompanyAction) => {
     setOpen(false);
     onAction(a, company);
@@ -222,10 +222,10 @@ function RowMenu({ company, onAction }: { company: Company; onAction: (a: Compan
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-30 mt-1 w-60 animate-pop-in rounded-xl border border-zinc-200 bg-white p-1.5 text-left shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+          className="absolute end-0 z-30 mt-1 w-60 animate-pop-in rounded-xl border border-zinc-200 bg-white p-1.5 text-start shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
         >
           <button type="button" role="menuitem" className={item} onClick={() => pick('edit')}>
-            <Pencil className="size-4 text-zinc-400" /> Edit company
+            <Pencil className="size-4 text-zinc-500 dark:text-zinc-400" /> Edit company
           </button>
           <button
             type="button"
@@ -235,11 +235,11 @@ function RowMenu({ company, onAction }: { company: Company; onAction: (a: Compan
             title={company.billingCycle ? undefined : 'Set a billing cycle first (Edit company)'}
             onClick={() => pick('payment')}
           >
-            <Banknote className="size-4 text-zinc-400" /> Record payment
-            {!company.billingCycle && <span className="ml-auto text-[10px] text-zinc-400">no cycle</span>}
+            <Banknote className="size-4 text-zinc-500 dark:text-zinc-400" /> Record payment
+            {!company.billingCycle && <span className="ms-auto text-[10px] text-zinc-500 dark:text-zinc-400">no cycle</span>}
           </button>
           <button type="button" role="menuitem" className={item} onClick={() => pick('reset')}>
-            <KeyRound className="size-4 text-zinc-400" /> Reset admin password
+            <KeyRound className="size-4 text-zinc-500 dark:text-zinc-400" /> Reset admin password
           </button>
           <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
           <button

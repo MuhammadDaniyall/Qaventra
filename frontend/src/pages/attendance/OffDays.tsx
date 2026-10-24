@@ -101,7 +101,7 @@ export function MyOffDays() {
                 {formatDate(x.fromDate)} – {formatDate(x.toDate)}
               </Td>
               <Td>
-                {short(x.offDays)} <span className="text-xs text-zinc-500">instead of {short(x.usualOffDays)}</span>
+                {short(x.offDays)} <span className="text-xs text-zinc-500 dark:text-zinc-400">instead of {short(x.usualOffDays)}</span>
               </Td>
               <Td className="text-sm">
                 {x.reason}
@@ -110,7 +110,7 @@ export function MyOffDays() {
               <Td>
                 <StatusBadge status={x.status} />
               </Td>
-              <Td className="text-right">
+              <Td className="text-end">
                 {x.status === 'Pending' && (
                   <Button size="sm" variant="ghost" loading={cancel.isPending && cancel.variables === x.id} onClick={() => cancel.mutate(x.id)}>
                     Cancel

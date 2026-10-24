@@ -73,7 +73,7 @@ function ReceiptThumb({ claimId, item }: { claimId: string; item: ExpenseItem })
     };
   }, [claimId, item.receiptId, isImage]);
 
-  if (!isImage) return <FileText className="size-5 text-zinc-400" aria-hidden="true" />;
+  if (!isImage) return <FileText className="size-5 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />;
   return url ? <img src={url} alt="" className="size-full object-cover" /> : <div className="size-full animate-pulse bg-zinc-100 dark:bg-zinc-800" />;
 }
 
@@ -150,10 +150,10 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
               <Avatar name={d.claim.employeeName} />
               <div className="min-w-0">
                 <p className="truncate font-medium text-zinc-900 dark:text-white">{d.claim.employeeName}</p>
-                <p className="font-mono text-xs text-zinc-500">{d.claim.employeeCode}</p>
+                <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{d.claim.employeeCode}</p>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-end">
               <p className="text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{formatCurrency(d.claim.total)}</p>
               <StatusBadge status={d.claim.status} />
             </div>
@@ -171,12 +171,12 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
                 >
                   {item.receiptId ? (
                     opening === item.id ? (
-                      <span className="text-[10px] text-zinc-500">Opening…</span>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Opening…</span>
                     ) : (
                       <ReceiptThumb claimId={claimId} item={item} />
                     )
                   ) : (
-                    <CategoryIcon category={item.category} className="size-5 text-zinc-400" />
+                    <CategoryIcon category={item.category} className="size-5 text-zinc-500 dark:text-zinc-400" />
                   )}
                 </button>
                 <div className="min-w-0 flex-1">
@@ -192,13 +192,13 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
           </ul>
 
           <section>
-            <p className="mb-3 text-xs font-medium tracking-wide text-zinc-500 uppercase">Approval</p>
+            <p className="mb-3 text-xs font-medium tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Approval</p>
             <ApprovalTimeline type="Expense" subjectId={claimId} />
           </section>
 
           {(d.claim.decisionNote || d.claim.decidedAtUtc) && (
             <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-zinc-800">
-              <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">Decision</p>
+              <p className="text-xs font-medium tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Decision</p>
               <p className="mt-1 text-zinc-700 dark:text-zinc-300">
                 {humanize(d.claim.status)} on {formatDateTimeUtc(d.claim.decidedAtUtc)}
               </p>

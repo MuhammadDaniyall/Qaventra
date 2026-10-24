@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { IconButton } from './Button';
+import { tx } from '../../lib/i18n';
 
 function useOverlay(open: boolean, onClose: () => void, panel: React.RefObject<HTMLDivElement | null>) {
   const onCloseRef = useRef(onClose);
@@ -90,12 +91,12 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3">
           <div>
             <h2 id={titleId} className="text-base font-semibold text-zinc-900 dark:text-white">
-              {title}
+              {tx(title)}
             </h2>
-            {description && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{description}</p>}
+            {description && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{tx(description)}</p>}
           </div>
           {!hideClose && (
-            <IconButton label="Close" data-close onClick={onClose} className="-mt-1 -mr-2">
+            <IconButton label="Close" data-close onClick={onClose} className="-mt-1 -me-2">
               <X className="size-4" />
             </IconButton>
           )}
@@ -141,7 +142,7 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'absolute inset-y-0 right-0 flex w-full animate-slide-in-right flex-col border-l border-zinc-200 bg-white shadow-2xl outline-none',
+          'absolute inset-y-0 end-0 flex w-full animate-slide-in-right flex-col rtl:animate-slide-in-left border-s border-zinc-200 bg-white shadow-2xl outline-none',
           'dark:border-zinc-800 dark:bg-zinc-900',
           drawerWidths[width],
         )}
@@ -149,11 +150,11 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
         <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-4 dark:border-zinc-800">
           <div className="min-w-0">
             <h2 id={titleId} className="truncate text-base font-semibold text-zinc-900 dark:text-white">
-              {title}
+              {tx(title)}
             </h2>
-            {description && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{description}</p>}
+            {description && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{tx(description)}</p>}
           </div>
-          <IconButton label="Close" data-close onClick={onClose} className="-mr-2">
+          <IconButton label="Close" data-close onClick={onClose} className="-me-2">
             <X className="size-4" />
           </IconButton>
         </div>

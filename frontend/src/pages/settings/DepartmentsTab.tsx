@@ -40,8 +40,8 @@ export function DepartmentsTab() {
               <Th>Name</Th>
               <Th>Code</Th>
               <Th>Head</Th>
-              <Th className="text-right">Employees</Th>
-              <Th className="text-right">
+              <Th className="text-end">Employees</Th>
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -51,8 +51,8 @@ export function DepartmentsTab() {
               <Tr key={d.id}>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{d.name}</Td>
                 <Td className="font-mono text-xs">{d.code ?? '—'}</Td>
-                <Td>{d.head ?? <span className="text-zinc-400">—</span>}</Td>
-                <Td className="text-right tabular-nums">{d.employees}</Td>
+                <Td>{d.head ?? <span className="text-zinc-500 dark:text-zinc-400">—</span>}</Td>
+                <Td className="text-end tabular-nums">{d.employees}</Td>
                 <Td>
                   <RowActions history={{ type: 'Department', id: d.id }} label={d.name} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
                 </Td>

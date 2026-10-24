@@ -42,8 +42,8 @@ export function OfficesTab() {
             <tr>
               <Th>Name</Th>
               <Th>Coordinates</Th>
-              <Th className="text-right">Radius</Th>
-              <Th className="text-right">
+              <Th className="text-end">Radius</Th>
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -63,7 +63,7 @@ export function OfficesTab() {
                     <ExternalLink className="size-3" />
                   </a>
                 </Td>
-                <Td className="text-right tabular-nums">{o.radiusMeters} m</Td>
+                <Td className="text-end tabular-nums">{o.radiusMeters} m</Td>
                 <Td>
                   <RowActions history={{ type: 'OfficeLocation', id: o.id }} label={o.name} onEdit={() => setEditing(o)} onDelete={() => setDeleting(o)} />
                 </Td>

@@ -8,6 +8,7 @@ import { isApprover } from '../../auth/roles';
 import { cn } from '../../lib/cn';
 import { useFavourites } from '../../lib/favourites';
 import { useDebounced } from '../../lib/hooks';
+import { tx } from '../../lib/i18n';
 import { navFor } from './nav';
 
 /** Screens reached from inside other pages, so they can be found by name too. */
@@ -102,13 +103,13 @@ export function QuickSearch() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="hidden h-9 items-center gap-2 rounded-lg border border-zinc-200 px-3 text-sm text-zinc-500 hover:bg-zinc-50 sm:flex dark:border-zinc-700 dark:hover:bg-zinc-800"
+        className="hidden h-9 items-center gap-2 rounded-lg border border-zinc-200 px-3 text-sm text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 sm:flex dark:border-zinc-700 dark:hover:bg-zinc-800"
       >
         <Search className="size-4" />
-        Search
+        {tx('Search')}
         <kbd className="rounded border border-zinc-200 px-1 text-[10px] dark:border-zinc-700">Ctrl K</kbd>
       </button>
-      <button type="button" aria-label="Search" onClick={() => setOpen(true)} className="rounded-lg p-2 text-zinc-500 sm:hidden">
+      <button type="button" aria-label="Search" onClick={() => setOpen(true)} className="rounded-lg p-2 text-zinc-500 dark:text-zinc-400 sm:hidden">
         <Search className="size-[18px]" />
       </button>
       {open && (
@@ -120,7 +121,7 @@ export function QuickSearch() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 border-b border-zinc-100 px-4 dark:border-zinc-800">
-              <Search className="size-4 text-zinc-400" />
+              <Search className="size-4 text-zinc-500 dark:text-zinc-400" />
               <input
                 ref={input}
                 value={q}
@@ -145,9 +146,9 @@ export function QuickSearch() {
                     onClick={() => go(r.to)}
                     className={cn('flex cursor-pointer items-center gap-3 px-4 py-2 text-sm', i === active && 'bg-zinc-100 dark:bg-zinc-800')}
                   >
-                    {r.kind === 'person' ? <UserRound className="size-4 text-zinc-400" /> : <span className="size-4" />}
-                    <span className="flex-1">{r.label}</span>
-                    <span className="text-xs text-zinc-400">{r.hint}</span>
+                    {r.kind === 'person' ? <UserRound className="size-4 text-zinc-500 dark:text-zinc-400" /> : <span className="size-4" />}
+                    <span className="flex-1">{tx(r.label)}</span>
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">{r.hint}</span>
                     {r.kind === 'screen' && (
                       <button
                         type="button"
@@ -161,7 +162,7 @@ export function QuickSearch() {
                   </div>
                 </li>
               ))}
-              {!results.length && <li className="px-4 py-6 text-center text-sm text-zinc-500">Nothing found.</li>}
+              {!results.length && <li className="px-4 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">Nothing found.</li>}
             </ul>
           </div>
         </div>

@@ -71,7 +71,7 @@ export function AssignmentCards({ items, action }: { items: Assignment[]; action
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">{a.assetName}</p>
-              <p className="text-xs text-zinc-500">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 <span className="font-mono">{a.tag}</span> · {a.type}
                 {a.serialNumber ? ` · SN ${a.serialNumber}` : ''}
               </p>
@@ -93,7 +93,7 @@ export function AssignmentCards({ items, action }: { items: Assignment[]; action
                 {a.conditionIn ? ` · ${a.conditionIn.toLowerCase()}` : ''}
               </div>
             )}
-            {a.notes && <div className="whitespace-pre-line text-zinc-500">{a.notes}</div>}
+            {a.notes && <div className="whitespace-pre-line text-zinc-500 dark:text-zinc-400">{a.notes}</div>}
           </dl>
           {(a.returnRequested || action) && (
             <div className="mt-3 flex items-center justify-between gap-2">

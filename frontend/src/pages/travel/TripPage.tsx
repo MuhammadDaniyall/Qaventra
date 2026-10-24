@@ -143,7 +143,7 @@ function TripView({ t }: { t: Trip }) {
                   <Th>From → to</Th>
                   <Th>How</Th>
                   <Th>Booking</Th>
-                  <Th className="text-right">Cost</Th>
+                  <Th className="text-end">Cost</Th>
                 </Tr>
               </THead>
               <TBody>
@@ -152,11 +152,11 @@ function TripView({ t }: { t: Trip }) {
                     <Td className="whitespace-nowrap">{formatDate(l.date)}</Td>
                     <Td>
                       {l.from} → {l.to}
-                      {l.preference && <p className="text-xs text-zinc-500">{l.preference}</p>}
+                      {l.preference && <p className="text-xs text-zinc-500 dark:text-zinc-400">{l.preference}</p>}
                     </Td>
                     <Td>{MODE_LABELS[l.mode]}</Td>
                     <Td className="font-mono text-xs">{l.bookingRef ?? '—'}</Td>
-                    <Td className="text-right tabular-nums">{l.bookingCost != null ? formatCurrency(l.bookingCost) : '—'}</Td>
+                    <Td className="text-end tabular-nums">{l.bookingCost != null ? formatCurrency(l.bookingCost) : '—'}</Td>
                   </Tr>
                 ))}
               </TBody>
@@ -169,18 +169,18 @@ function TripView({ t }: { t: Trip }) {
               <dl className="grid gap-4 px-5 py-4 text-sm sm:grid-cols-2">
                 {t.needsHotel && (
                   <div>
-                    <dt className="text-xs text-zinc-500">Hotel</dt>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">Hotel</dt>
                     <dd>
                       {t.hotelName ? (
                         <>
                           <span className="font-medium">{t.hotelName}</span>
-                          {t.hotelRef && <span className="ml-1 font-mono text-xs text-zinc-500">{t.hotelRef}</span>}
-                          {t.hotelCost != null && <span className="ml-1 text-zinc-500">· {formatCurrency(t.hotelCost)}</span>}
+                          {t.hotelRef && <span className="ms-1 font-mono text-xs text-zinc-500 dark:text-zinc-400">{t.hotelRef}</span>}
+                          {t.hotelCost != null && <span className="ms-1 text-zinc-500 dark:text-zinc-400">· {formatCurrency(t.hotelCost)}</span>}
                         </>
                       ) : (
-                        <span className="text-zinc-500">Not booked yet</span>
+                        <span className="text-zinc-500 dark:text-zinc-400">Not booked yet</span>
                       )}
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
                         {t.hotelCity} · {formatDate(t.checkIn)} – {formatDate(t.checkOut)}
                       </p>
                     </dd>
@@ -188,13 +188,13 @@ function TripView({ t }: { t: Trip }) {
                 )}
                 {t.needsPickDrop && (
                   <div>
-                    <dt className="text-xs text-zinc-500">Pick and drop</dt>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">Pick and drop</dt>
                     <dd>{t.pickDropNotes ?? 'Needed'}</dd>
                   </div>
                 )}
                 {t.bookingNotes && (
                   <div className="sm:col-span-2">
-                    <dt className="text-xs text-zinc-500">Notes from the travel desk</dt>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">Notes from the travel desk</dt>
                     <dd className="whitespace-pre-line">{t.bookingNotes}</dd>
                   </div>
                 )}
@@ -237,9 +237,9 @@ function TripView({ t }: { t: Trip }) {
                       <Td className="whitespace-nowrap">{formatDate(e.date)}</Td>
                       <Td>
                         {e.description}
-                        <span className="ml-1 text-xs text-zinc-500">{CATEGORY_LABELS[e.category]}</span>
+                        <span className="ms-1 text-xs text-zinc-500 dark:text-zinc-400">{CATEGORY_LABELS[e.category]}</span>
                       </Td>
-                      <Td className="text-right tabular-nums">{formatCurrency(e.amount)}</Td>
+                      <Td className="text-end tabular-nums">{formatCurrency(e.amount)}</Td>
                     </Tr>
                   ))}
                   <Tr>
@@ -247,22 +247,22 @@ function TripView({ t }: { t: Trip }) {
                     <Td>
                       Daily allowance: {t.perDiemDays ?? 0} days × {formatCurrency(t.perDiemRate ?? 0)}
                     </Td>
-                    <Td className="text-right tabular-nums">{formatCurrency((t.perDiemDays ?? 0) * (t.perDiemRate ?? 0))}</Td>
+                    <Td className="text-end tabular-nums">{formatCurrency((t.perDiemDays ?? 0) * (t.perDiemRate ?? 0))}</Td>
                   </Tr>
                   <Tr>
                     <Td />
                     <Td className="font-medium">Claimed</Td>
-                    <Td className="text-right font-medium tabular-nums">{formatCurrency(t.claimed)}</Td>
+                    <Td className="text-end font-medium tabular-nums">{formatCurrency(t.claimed)}</Td>
                   </Tr>
                   <Tr>
                     <Td />
                     <Td>Less advance</Td>
-                    <Td className="text-right tabular-nums">−{formatCurrency(t.advancePaid ?? 0)}</Td>
+                    <Td className="text-end tabular-nums">−{formatCurrency(t.advancePaid ?? 0)}</Td>
                   </Tr>
                   <Tr>
                     <Td />
                     <Td className="font-semibold">{t.net >= 0 ? 'To pay the traveller' : 'To recover from salary'}</Td>
-                    <Td className="text-right font-semibold tabular-nums">{formatCurrency(Math.abs(t.net))}</Td>
+                    <Td className="text-end font-semibold tabular-nums">{formatCurrency(Math.abs(t.net))}</Td>
                   </Tr>
                 </TBody>
               </Table>
@@ -301,8 +301,8 @@ function TripView({ t }: { t: Trip }) {
                 ] as Array<[string, string]>
               ).map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-3">
-                  <dt className="text-zinc-500">{k}</dt>
-                  <dd className="text-right">{v}</dd>
+                  <dt className="text-zinc-500 dark:text-zinc-400">{k}</dt>
+                  <dd className="text-end">{v}</dd>
                 </div>
               ))}
             </dl>
@@ -311,9 +311,9 @@ function TripView({ t }: { t: Trip }) {
             <CardHeader title="Approval" />
             <div className="px-5 py-4">
               <ApprovalTimeline type="Travel" subjectId={t.id} />
-              {t.decisionNote && <p className="mt-2 text-xs text-zinc-500">“{t.decisionNote}”</p>}
+              {t.decisionNote && <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">“{t.decisionNote}”</p>}
               {t.bookedByName && (
-                <p className="mt-3 text-xs text-zinc-500">
+                <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
                   Booked by {t.bookedByName}, {formatDateTimeUtc(t.bookedAtUtc)}
                 </p>
               )}
@@ -388,7 +388,7 @@ function BookingModal({ t, onClose }: { t: Trip; onClose: () => void }) {
               <span className="font-medium">
                 {l.from} → {l.to}
               </span>
-              <span className="block text-xs text-zinc-500">
+              <span className="block text-xs text-zinc-500 dark:text-zinc-400">
                 {formatDate(l.date)} · {MODE_LABELS[l.mode]}
                 {l.preference ? ` · ${l.preference}` : ''}
               </span>

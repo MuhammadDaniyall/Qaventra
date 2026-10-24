@@ -19,7 +19,7 @@ export const attachmentsKey = (owner: AttachmentOwner, ownerId: string) => ['att
 
 function FileIcon({ a }: { a: Attachment }) {
   const Icon = a.contentType.startsWith('image/') ? FileImage : /sheet|excel/.test(a.contentType) ? FileSpreadsheet : FileText;
-  return <Icon className="size-5 text-zinc-400" aria-hidden="true" />;
+  return <Icon className="size-5 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />;
 }
 
 function expiryBadge(expiresOn: string | null) {
@@ -96,7 +96,7 @@ export function AttachmentList({
 
   return (
     <div className={cn('space-y-3', className)}>
-      {list.data.items.length === 0 && !list.data.canAdd && <p className="text-sm text-zinc-500">{emptyText}</p>}
+      {list.data.items.length === 0 && !list.data.canAdd && <p className="text-sm text-zinc-500 dark:text-zinc-400">{emptyText}</p>}
 
       {list.data.items.length > 0 && (
         <ul className="divide-y divide-zinc-100 rounded-xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
@@ -107,11 +107,11 @@ export function AttachmentList({
                 <button
                   type="button"
                   onClick={() => attachmentsApi.open(a).catch((err) => toast.error(err))}
-                  className="block max-w-full truncate text-left text-sm font-medium text-zinc-900 hover:text-accent-700 hover:underline dark:text-zinc-100"
+                  className="block max-w-full truncate text-start text-sm font-medium text-zinc-900 hover:text-accent-700 hover:underline dark:text-zinc-100"
                 >
                   {a.fileName}
                 </button>
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500">
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
                   {a.category && <span>{DOCUMENT_CATEGORIES.find((c) => c.value === a.category)?.label}</span>}
                   <span>{formatBytes(a.sizeBytes)}</span>
                   <span>
@@ -173,7 +173,7 @@ export function AttachmentList({
             {upload.isPending ? 'Uploading…' : (
               <>
                 Attach files <span className="hidden sm:inline">or drop them here</span>
-                <span className="text-xs text-zinc-400">PDF, images, Word, Excel · 5 MB each</span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">PDF, images, Word, Excel · 5 MB each</span>
               </>
             )}
           </button>

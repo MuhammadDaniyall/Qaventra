@@ -83,8 +83,8 @@ export function MyAdvances() {
             <Tr key={a.id}>
               <Td className="text-sm">{formatDateTimeUtc(a.createdAtUtc)}</Td>
               <Td>{a.purpose}</Td>
-              <Td className="text-right tabular-nums">{formatNumber(a.amount)}</Td>
-              <Td className="text-right text-sm text-zinc-500">
+              <Td className="text-end tabular-nums">{formatNumber(a.amount)}</Td>
+              <Td className="text-end text-sm text-zinc-500 dark:text-zinc-400">
                 {a.closedAtUtc
                   ? a.recovered
                     ? `${formatNumber(a.recovered)} recovered`
@@ -96,7 +96,7 @@ export function MyAdvances() {
               <Td>
                 <StatusBadge status={a.closedAtUtc ? 'Closed' : a.status} />
               </Td>
-              <Td className="text-right">
+              <Td className="text-end">
                 {a.status === 'Pending' && (
                   <Button size="sm" variant="ghost" onClick={() => cancel.mutate(a.id)}>
                     Cancel

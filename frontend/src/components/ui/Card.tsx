@@ -1,5 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 
 export function Card({ className, ...rest }: HTMLAttributes<HTMLDivElement>) {
   return (
@@ -32,8 +33,8 @@ export function CardHeader({
       )}
     >
       <div className="min-w-0">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
-        {description && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{description}</p>}
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{tx(title)}</h2>
+        {description && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{tx(description)}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

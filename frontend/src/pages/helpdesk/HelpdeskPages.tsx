@@ -150,7 +150,7 @@ function Queue() {
       }}
       aria-pressed={scope === key && status === 'open'}
       className={cn(
-        'flex items-center gap-3 rounded-xl border bg-white p-4 text-left transition dark:bg-zinc-900',
+        'flex items-center gap-3 rounded-xl border bg-white p-4 text-start transition dark:bg-zinc-900',
         scope === key && status === 'open' ? 'border-accent-500 ring-2 ring-accent-500/20' : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-800',
       )}
     >
@@ -159,7 +159,7 @@ function Queue() {
       </span>
       <span>
         <span className="block text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{value ?? '–'}</span>
-        <span className="block text-xs text-zinc-500">{label}</span>
+        <span className="block text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
       </span>
     </button>
   );
@@ -175,8 +175,8 @@ function Queue() {
       <Card>
         <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row sm:items-center dark:border-zinc-800">
           <div className="relative flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-            <Input className="pl-9" placeholder="HD-0042, subject or name" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search tickets" />
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+            <Input className="ps-9" placeholder="HD-0042, subject or name" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search tickets" />
           </div>
           <Select className="sm:w-48" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} aria-label="Category">
             <option value="">All categories</option>
@@ -224,7 +224,7 @@ function Categories() {
       <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4 dark:border-zinc-800">
         <div>
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Categories</h2>
-          <p className="text-xs text-zinc-500">What people can ask about, who answers and how fast.</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">What people can ask about, who answers and how fast.</p>
         </div>
         <Button size="sm" icon={<Plus className="size-3.5" />} onClick={() => setEditing('new')}>
           Add category
@@ -246,9 +246,9 @@ function Categories() {
               <Th>Category</Th>
               <Th>Agents</Th>
               <Th>Types</Th>
-              <Th className="text-right">Target</Th>
-              <Th className="text-right">Open</Th>
-              <Th className="text-right">
+              <Th className="text-end">Target</Th>
+              <Th className="text-end">Open</Th>
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -260,11 +260,11 @@ function Categories() {
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">
                     {c.name} {!c.isActive && <Badge>Off</Badge>}
                   </p>
-                  {c.description && <p className="text-xs text-zinc-500">{c.description}</p>}
+                  {c.description && <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.description}</p>}
                 </Td>
                 <Td className="text-sm">
-                  {c.agents.length ? c.agents.join(', ') : <span className="text-zinc-400">HR only</span>}
-                  <p className="text-xs text-zinc-500">
+                  {c.agents.length ? c.agents.join(', ') : <span className="text-zinc-500 dark:text-zinc-400">HR only</span>}
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {c.assignmentMode === 'RoundRobin' ? 'Assigned in turn' : c.assignmentMode === 'LeastBusy' ? 'Assigned to least busy' : 'Agents take tickets'}
                     {c.lead ? ` · Lead: ${c.lead}` : ''}
                   </p>
@@ -274,8 +274,8 @@ function Categories() {
                     {c.types.length ? `${c.types.length} type${c.types.length === 1 ? '' : 's'}` : 'Add types'}
                   </Button>
                 </Td>
-                <Td className="text-right tabular-nums">{c.targetHours} h</Td>
-                <Td className="text-right tabular-nums">{c.openTickets}</Td>
+                <Td className="text-end tabular-nums">{c.targetHours} h</Td>
+                <Td className="text-end tabular-nums">{c.openTickets}</Td>
                 <Td>
                   <RowActions label={c.name} onEdit={() => setEditing(c)} onDelete={() => setDeleting(c)} />
                 </Td>
@@ -432,7 +432,7 @@ function TypesModal({ category, onClose }: { category: TicketCategory; onClose: 
     >
       <div className="space-y-3">
         {category.types.length === 0 ? (
-          <p className="text-sm text-zinc-500">No types yet. Tickets use the category's target and agents.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">No types yet. Tickets use the category's target and agents.</p>
         ) : (
           <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
             {category.types.map((t) => (
@@ -539,28 +539,28 @@ function ReportTable({ title, rows }: { title: string; rows: ReportRow[] }) {
         <THead>
           <tr>
             <Th>Name</Th>
-            <Th className="text-right">Raised</Th>
-            <Th className="text-right">Resolved</Th>
-            <Th className="text-right">Open</Th>
-            <Th className="text-right">First answer</Th>
-            <Th className="text-right">Time to fix</Th>
-            <Th className="text-right">Within target</Th>
-            <Th className="text-right">Rating</Th>
+            <Th className="text-end">Raised</Th>
+            <Th className="text-end">Resolved</Th>
+            <Th className="text-end">Open</Th>
+            <Th className="text-end">First answer</Th>
+            <Th className="text-end">Time to fix</Th>
+            <Th className="text-end">Within target</Th>
+            <Th className="text-end">Rating</Th>
           </tr>
         </THead>
         <TBody>
           {rows.map((r) => (
             <Tr key={r.id ?? r.name}>
               <Td className="font-medium text-zinc-900 dark:text-zinc-100">{r.name}</Td>
-              <Td className="text-right tabular-nums">{r.raised}</Td>
-              <Td className="text-right tabular-nums">{r.resolved}</Td>
-              <Td className="text-right tabular-nums">{r.open}</Td>
-              <Td className="text-right tabular-nums">{hours(r.avgFirstResponseHours)}</Td>
-              <Td className="text-right tabular-nums">{hours(r.avgResolutionHours)}</Td>
+              <Td className="text-end tabular-nums">{r.raised}</Td>
+              <Td className="text-end tabular-nums">{r.resolved}</Td>
+              <Td className="text-end tabular-nums">{r.open}</Td>
+              <Td className="text-end tabular-nums">{hours(r.avgFirstResponseHours)}</Td>
+              <Td className="text-end tabular-nums">{hours(r.avgResolutionHours)}</Td>
               <Td className={cn('text-right tabular-nums', r.slaMetPercent !== null && r.slaMetPercent < 80 && 'font-medium text-red-600 dark:text-red-400')}>
                 {r.slaMetPercent === null ? '—' : `${r.slaMetPercent}%`}
               </Td>
-              <Td className="text-right tabular-nums">{r.avgRating === null ? '—' : `${r.avgRating}★ (${r.rated})`}</Td>
+              <Td className="text-end tabular-nums">{r.avgRating === null ? '—' : `${r.avgRating}★ (${r.rated})`}</Td>
             </Tr>
           ))}
         </TBody>
@@ -597,7 +597,7 @@ function Reports() {
               <span className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                 <span className="block h-full rounded-full bg-accent-500" style={{ width: `${(v / max) * 100}%` }} />
               </span>
-              <span className="text-right text-zinc-900 tabular-nums dark:text-zinc-100">{v}</span>
+              <span className="text-end text-zinc-900 tabular-nums dark:text-zinc-100">{v}</span>
             </li>
           ))}
         </ul>
@@ -615,7 +615,7 @@ function Reports() {
         </Field>
         <Button
           variant="secondary"
-          className="ml-auto"
+          className="ms-auto"
           icon={<Download className="size-4" />}
           loading={exporting}
           onClick={() => {

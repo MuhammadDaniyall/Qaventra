@@ -115,8 +115,8 @@ export function DailyAttendancePage() {
             </div>
           )}
           <div className="relative lg:w-64">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-            <Input aria-label="Search" placeholder="Search name or code" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+            <Input aria-label="Search" placeholder="Search name or code" className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
 
@@ -137,7 +137,7 @@ export function DailyAttendancePage() {
                 <Th>Check out</Th>
                 <Th>Worked</Th>
                 <Th>Office</Th>
-                {hr && <Th className="text-right">Manual entry</Th>}
+                {hr && <Th className="text-end">Manual entry</Th>}
               </tr>
             </THead>
             <TBody>
@@ -145,7 +145,7 @@ export function DailyAttendancePage() {
                 <Tr key={r.employeeId}>
                   <Td>
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">{r.fullName}</p>
-                    <p className="font-mono text-xs text-zinc-500">{r.employeeCode}</p>
+                    <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{r.employeeCode}</p>
                   </Td>
                   <Td>{r.department ?? '—'}</Td>
                   <Td>
@@ -162,7 +162,7 @@ export function DailyAttendancePage() {
                   <Td className="tabular-nums">{formatMinutes(r.record?.workedMinutes)}</Td>
                   <Td>{r.record?.office ?? (r.record?.source === 'Manual' ? 'Manual' : '—')}</Td>
                   {hr && (
-                    <Td className="text-right">
+                    <Td className="text-end">
                       <Button
                         variant="ghost"
                         size="sm"

@@ -94,7 +94,7 @@ export function ProjectsPage() {
                 return (
                   <Tr key={p.id} className="cursor-pointer" onClick={() => setOpen(p.id)}>
                     <Td className="font-medium text-zinc-900 dark:text-zinc-100">
-                      {p.name} {p.code && <span className="font-mono text-xs text-zinc-500">{p.code}</span>}
+                      {p.name} {p.code && <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{p.code}</span>}
                     </Td>
                     <Td>{p.client}</Td>
                     <Td>{p.manager}</Td>
@@ -357,12 +357,12 @@ function Tasks({ project }: { project: Project }) {
                 onClick={() => toggle.mutate(t)}
                 className="disabled:opacity-50"
               >
-                {t.isDone ? <CheckCircle2 className="size-4 text-emerald-500" /> : <Circle className="size-4 text-zinc-400" />}
+                {t.isDone ? <CheckCircle2 className="size-4 text-emerald-500" /> : <Circle className="size-4 text-zinc-500 dark:text-zinc-400" />}
               </button>
-              <span className={cn('flex-1', t.isDone && 'text-zinc-400 line-through')}>{t.name}</span>
-              <span className="text-xs text-zinc-500">{t.assignee}</span>
-              {t.dueDate && <span className="text-xs text-zinc-500">due {formatDate(t.dueDate)}</span>}
-              <span className="text-xs tabular-nums text-zinc-500">
+              <span className={cn('flex-1', t.isDone && 'text-zinc-500 dark:text-zinc-400 line-through')}>{t.name}</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">{t.assignee}</span>
+              {t.dueDate && <span className="text-xs text-zinc-500 dark:text-zinc-400">due {formatDate(t.dueDate)}</span>}
+              <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
                 {formatNumber(t.loggedHours)}
                 {t.estimatedHours ? `/${formatNumber(t.estimatedHours)}` : ''} h
               </span>
@@ -374,7 +374,7 @@ function Tasks({ project }: { project: Project }) {
             </li>
           );
         })}
-        {!project.tasks.length && <li className="px-5 py-3 text-sm text-zinc-500">No tasks.</li>}
+        {!project.tasks.length && <li className="px-5 py-3 text-sm text-zinc-500 dark:text-zinc-400">No tasks.</li>}
       </ul>
       {project.canManage && (
         <div className="grid gap-2 border-t border-zinc-100 p-4 sm:grid-cols-[1fr_10rem_9rem_6rem_auto] dark:border-zinc-800">

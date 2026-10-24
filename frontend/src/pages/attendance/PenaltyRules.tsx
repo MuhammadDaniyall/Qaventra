@@ -48,7 +48,7 @@ export function PenaltyRulesCard() {
             <tr>
               <Th>Rule</Th>
               <Th>What happens</Th>
-              <Th className="text-right">
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -57,7 +57,7 @@ export function PenaltyRulesCard() {
             {rules.data.map((r) => (
               <Tr key={r.id}>
                 <Td className="font-medium">
-                  {r.name} {!r.isActive && <Badge className="ml-1">Off</Badge>}
+                  {r.name} {!r.isActive && <Badge className="ms-1">Off</Badge>}
                 </Td>
                 <Td className="text-sm text-zinc-600 dark:text-zinc-300">{describeRule(r, leaveName(r.leaveTypeId))}</Td>
                 <Td>

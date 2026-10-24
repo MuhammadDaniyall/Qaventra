@@ -55,13 +55,13 @@ export function SeparationSteps({ s }: { s: Separation }) {
                 ? 'bg-accent-600 text-white'
                 : i === current
                   ? 'bg-accent-50 text-accent-700 ring-2 ring-accent-500 dark:bg-accent-500/15 dark:text-accent-200'
-                  : 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800',
+                  : 'bg-zinc-100 text-zinc-500 dark:text-zinc-400 dark:bg-zinc-800',
             )}
             aria-hidden="true"
           >
             {step.done ? <Check className="size-3.5" /> : i + 1}
           </span>
-          <span className={cn('text-sm', step.done || i === current ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500')}>
+          <span className={cn('text-sm', step.done || i === current ? 'font-medium text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400')}>
             {step.label}
             <span className="sr-only">{step.done ? ' (done)' : i === current ? ' (current)' : ''}</span>
           </span>

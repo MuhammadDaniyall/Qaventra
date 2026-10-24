@@ -128,13 +128,13 @@ function SessionView({ d }: { d: SessionDetail }) {
                   <Tr key={e.id}>
                     <Td>
                       <p className="font-medium">{e.employeeName}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
                         {[e.employeeCode, e.department, e.nominatedByName ? `by ${e.nominatedByName}` : null].filter(Boolean).join(' · ')}
                       </p>
                     </Td>
                     <Td>
                       <StatusBadge status={e.status} label={ENROLLMENT_LABELS[e.status]} />
-                      {e.completedOn && <p className="text-xs text-zinc-500">{formatDate(e.completedOn)}</p>}
+                      {e.completedOn && <p className="text-xs text-zinc-500 dark:text-zinc-400">{formatDate(e.completedOn)}</p>}
                     </Td>
                     <Td className="tabular-nums">{e.score != null ? `${e.score}%` : '—'}</Td>
                     {s.canRun && (
@@ -142,7 +142,7 @@ function SessionView({ d }: { d: SessionDetail }) {
                         {e.feedbackRating != null ? (
                           <>
                             ★ {e.feedbackRating}
-                            {e.trainerRating != null && <span className="text-xs text-zinc-500"> · trainer {e.trainerRating}</span>}
+                            {e.trainerRating != null && <span className="text-xs text-zinc-500 dark:text-zinc-400"> · trainer {e.trainerRating}</span>}
                             {e.feedbackComment && <p className="text-xs text-zinc-500">“{e.feedbackComment}”</p>}
                           </>
                         ) : (
@@ -150,7 +150,7 @@ function SessionView({ d }: { d: SessionDetail }) {
                         )}
                       </Td>
                     )}
-                    <Td className="text-right">
+                    <Td className="text-end">
                       {upcoming && e.status === 'Enrolled' && (
                         <Button size="sm" variant="ghost" loading={withdraw.isPending && withdraw.variables === e.id} onClick={() => withdraw.mutate(e.id)}>
                           Withdraw
@@ -176,8 +176,8 @@ function SessionView({ d }: { d: SessionDetail }) {
               ] as Array<[string, string]>
             ).map(([k, v]) => (
               <div key={k} className="flex justify-between gap-3">
-                <dt className="text-zinc-500">{k}</dt>
-                <dd className="text-right">{v}</dd>
+                <dt className="text-zinc-500 dark:text-zinc-400">{k}</dt>
+                <dd className="text-end">{v}</dd>
               </div>
             ))}
             {s.notes && <p className="border-t border-zinc-100 pt-2 whitespace-pre-line dark:border-zinc-800">{s.notes}</p>}
@@ -247,7 +247,7 @@ function NominateModal({ d, onClose }: { d: SessionDetail; onClose: () => void }
             />
           </li>
         ))}
-        {!shown.length && <li className="px-3 py-4 text-sm text-zinc-500">Nobody else to nominate.</li>}
+        {!shown.length && <li className="px-3 py-4 text-sm text-zinc-500 dark:text-zinc-400">Nobody else to nominate.</li>}
       </ul>
       <FormError message={save.isError ? errorMessage(save.error) : null} />
     </Modal>
@@ -317,7 +317,7 @@ function AttendanceModal({ d, onClose }: { d: SessionDetail; onClose: () => void
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-xs text-zinc-500">Completed counts towards required training. Attended means they came but there is nothing to pass.</p>
+      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Completed counts towards required training. Attended means they came but there is nothing to pass.</p>
       <FormError message={save.isError ? errorMessage(save.error) : null} />
     </Modal>
   );

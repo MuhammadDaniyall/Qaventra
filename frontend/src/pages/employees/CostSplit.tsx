@@ -100,7 +100,7 @@ export function CostSplitCard({ employeeId }: { employeeId: string }) {
               <Button size="sm" variant="ghost" icon={<Plus className="size-4" />} onClick={() => setDraft([...draft, { costCenterId: '', percent: '' }])}>
                 Add cost center
               </Button>
-              <span className={total === 100 || !draft.length ? 'text-sm text-zinc-500' : 'text-sm text-red-600'}>{total}%</span>
+              <span className={total === 100 || !draft.length ? 'text-sm text-zinc-500 dark:text-zinc-400' : 'text-sm text-red-600'}>{total}%</span>
             </div>
           </>
         )}

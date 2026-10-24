@@ -18,7 +18,7 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-1 gap-1 px-5 py-3 sm:grid-cols-[180px_1fr] sm:gap-4">
       <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
-      <dd className="text-sm text-zinc-900 dark:text-zinc-100">{value || <span className="text-zinc-400">—</span>}</dd>
+      <dd className="text-sm text-zinc-900 dark:text-zinc-100">{value || <span className="text-zinc-500 dark:text-zinc-400">—</span>}</dd>
     </div>
   );
 }

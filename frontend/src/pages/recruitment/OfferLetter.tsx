@@ -32,9 +32,9 @@ export function OfferLetterButton({ applicationId }: { applicationId: string }) 
             <div className="flex justify-between border-b-2 border-accent-600 pb-4">
               <div>
                 <p className="text-xl font-semibold">{l.companyName}</p>
-                {l.companyAddress && <p className="text-sm text-zinc-500">{l.companyAddress}</p>}
+                {l.companyAddress && <p className="text-sm text-zinc-500 dark:text-zinc-400">{l.companyAddress}</p>}
               </div>
-              <div className="text-right text-sm">
+              <div className="text-end text-sm">
                 <p>Ref: {l.referenceNo}</p>
                 <p>Date: {formatDate(l.issuedOn)}</p>
               </div>
@@ -44,9 +44,9 @@ export function OfferLetterButton({ applicationId }: { applicationId: string }) 
             <div className="mt-4 font-serif text-[15px] leading-7 whitespace-pre-wrap">{l.body}</div>
             <div className="mt-12 w-56 border-t border-zinc-400 pt-2 text-sm">
               <p className="font-medium">{l.issuedByName ?? 'Human Resources'}</p>
-              <p className="text-zinc-500">For {l.companyName}</p>
+              <p className="text-zinc-500 dark:text-zinc-400">For {l.companyName}</p>
             </div>
-            {l.footer && <p className="mt-8 border-t pt-2 text-center text-xs text-zinc-500">{l.footer}</p>}
+            {l.footer && <p className="mt-8 border-t pt-2 text-center text-xs text-zinc-500 dark:text-zinc-400">{l.footer}</p>}
           </article>
         </Modal>
       )}

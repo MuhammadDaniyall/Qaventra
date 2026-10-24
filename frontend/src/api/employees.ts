@@ -25,6 +25,7 @@ export const employeesApi = {
   lookupAll: () => http.get<Lookup[]>('/employees/lookup', { includeFormer: true }),
   me: () => http.get<Employee>('/employees/me'),
   get: (id: string) => http.get<Employee>(`/employees/${id}`),
+  orgChart: () => http.get<OrgChartNode[]>('/employees/org-chart'),
   create: (b: SaveEmployeeRequest) => http.post<Employee>('/employees', b),
   update: (id: string, b: SaveEmployeeRequest) => http.put<Employee>(`/employees/${id}`, b),
   createLogin: (id: string, b: CreateLoginRequest) => http.post(`/employees/${id}/login`, b),
@@ -58,3 +59,12 @@ export const profileChangesApi = {
   reject: (id: string, note: string | null) => http.post(`/employees/profile-changes/${id}/reject`, { note }),
   cancel: (id: string) => http.post(`/employees/profile-changes/${id}/cancel`),
 };
+
+/** One person on the org chart. */
+export interface OrgChartNode {
+  id: string;
+  name: string;
+  designation: string | null;
+  department: string | null;
+  managerId: string | null;
+}

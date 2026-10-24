@@ -143,7 +143,7 @@ function JobsTab({ me }: { me: RecruitmentMe }) {
                 <Th>Status</Th>
                 <Th>Pipeline</Th>
                 <Th>Team</Th>
-                <Th className="text-right">Candidates</Th>
+                <Th className="text-end">Candidates</Th>
               </Tr>
             </THead>
             <TBody>
@@ -157,7 +157,7 @@ function JobsTab({ me }: { me: RecruitmentMe }) {
                     >
                       {j.title}
                     </Link>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {[j.department, j.location, EMPLOYMENT_LABELS[j.employmentType], `${j.positions} position${j.positions === 1 ? '' : 's'}`]
                         .filter(Boolean)
                         .join(' · ')}
@@ -165,7 +165,7 @@ function JobsTab({ me }: { me: RecruitmentMe }) {
                   </Td>
                   <Td>
                     <PostStatusBadge status={j.status} />
-                    {j.closesOn && j.status === 'Open' && <p className="mt-1 text-xs text-zinc-500">Closes {formatDate(j.closesOn)}</p>}
+                    {j.closesOn && j.status === 'Open' && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Closes {formatDate(j.closesOn)}</p>}
                   </Td>
                   <Td>
                     <div className="flex flex-wrap gap-1">
@@ -180,7 +180,7 @@ function JobsTab({ me }: { me: RecruitmentMe }) {
                     {j.recruiter && <p>Recruiter: {j.recruiter}</p>}
                     {j.hiringManager && <p>Manager: {j.hiringManager}</p>}
                   </Td>
-                  <Td className="text-right tabular-nums">{j.total}</Td>
+                  <Td className="text-end tabular-nums">{j.total}</Td>
                 </Tr>
               ))}
             </TBody>
@@ -215,7 +215,7 @@ function CareersLinkCard({ slug, onCopy }: { slug: string | null; onCopy: (text:
         <p className="text-sm font-medium text-zinc-900 dark:text-white">Careers page</p>
         {editing ? (
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-zinc-500">{window.location.origin}/careers/</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{window.location.origin}/careers/</span>
             <Input className="h-8 w-56" value={value} maxLength={60} onChange={(e) => setValue(e.target.value)} />
             <Button size="sm" loading={save.isPending} onClick={() => save.mutate()}>
               Save
@@ -229,7 +229,7 @@ function CareersLinkCard({ slug, onCopy }: { slug: string | null; onCopy: (text:
             {careersUrl(slug)}
           </a>
         ) : (
-          <p className="text-xs text-zinc-500">The link is made when you open your first job.</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">The link is made when you open your first job.</p>
         )}
       </div>
       {!editing && (
@@ -305,7 +305,7 @@ function RequestsTab({ me }: { me: RecruitmentMe }) {
                   <p className="font-medium text-zinc-900 dark:text-white">
                     {r.positions} × {r.title}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {[r.department, r.replaces ? `Replaces ${r.replaces}` : 'New position', r.salaryMax ? `up to ${formatCurrency(r.salaryMax)}` : null]
                       .filter(Boolean)
                       .join(' · ')}
@@ -314,14 +314,14 @@ function RequestsTab({ me }: { me: RecruitmentMe }) {
                 </Td>
                 <Td className="text-sm">
                   {r.requestedBy}
-                  <p className="text-xs text-zinc-500">{formatDateTimeUtc(r.createdAtUtc)}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(r.createdAtUtc)}</p>
                 </Td>
                 <Td className="text-sm">{r.neededBy ? formatDate(r.neededBy) : '—'}</Td>
                 <Td>
                   <StatusBadge status={r.status} />
-                  {r.decisionNote && <p className="mt-1 text-xs text-zinc-500">“{r.decisionNote}”</p>}
+                  {r.decisionNote && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">“{r.decisionNote}”</p>}
                 </Td>
-                <Td className="text-right">
+                <Td className="text-end">
                   <div className="flex justify-end gap-2">
                     {r.jobPostId ? (
                       me.isHr && (
@@ -504,8 +504,8 @@ function CandidatesTab({ me }: { me: RecruitmentMe }) {
     <Card>
       <div className="flex flex-wrap items-center gap-3 border-b border-zinc-100 px-5 py-3 dark:border-zinc-800">
         <div className="relative min-w-60 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-          <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, phone, skills, city…" />
+          <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+          <Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email, phone, skills, city…" />
         </div>
         {me.isHr && <Checkbox label="Do-not-hire list only" checked={blacklisted} onChange={(e) => setBlacklisted(e.target.checked)} />}
       </div>
@@ -543,11 +543,11 @@ function CandidatesTab({ me }: { me: RecruitmentMe }) {
                     )}
                     {c.hired && <Badge tone="green">Employee</Badge>}
                   </span>
-                  <p className="text-xs text-zinc-500">{[c.email, c.phone, c.city].filter(Boolean).join(' · ')}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{[c.email, c.phone, c.city].filter(Boolean).join(' · ')}</p>
                 </Td>
                 <Td className="text-sm">
                   {c.currentTitle ?? '—'}
-                  {c.experienceYears != null && <p className="text-xs text-zinc-500">{c.experienceYears} yrs</p>}
+                  {c.experienceYears != null && <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.experienceYears} yrs</p>}
                 </Td>
                 <Td className="text-sm">{SOURCE_LABELS[c.source]}</Td>
                 <Td className="text-sm">
@@ -557,9 +557,9 @@ function CandidatesTab({ me }: { me: RecruitmentMe }) {
                       <StageBadge stage={c.latestStage} />
                     </div>
                   )}
-                  {c.applications > 1 && <p className="text-xs text-zinc-500">{c.applications} jobs</p>}
+                  {c.applications > 1 && <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.applications} jobs</p>}
                 </Td>
-                <Td className="text-xs text-zinc-500">{formatDateTimeUtc(c.createdAtUtc)}</Td>
+                <Td className="text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(c.createdAtUtc)}</Td>
               </Tr>
             ))}
           </TBody>
@@ -634,19 +634,19 @@ function CandidateDrawer({ id, isHr, onClose, onOpen }: { id: string; isHr: bool
                 ] as Array<[string, string | null]>
               ).map(([k, v]) => (
                 <div key={k}>
-                  <dt className="text-xs text-zinc-500">{k}</dt>
+                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">{k}</dt>
                   <dd className="text-zinc-900 dark:text-zinc-100">{v ?? '—'}</dd>
                 </div>
               ))}
               {d.skills && (
                 <div className="col-span-2">
-                  <dt className="text-xs text-zinc-500">Skills</dt>
+                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">Skills</dt>
                   <dd>{d.skills}</dd>
                 </div>
               )}
               {d.linkedInUrl && (
                 <div className="col-span-2">
-                  <dt className="text-xs text-zinc-500">LinkedIn</dt>
+                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">LinkedIn</dt>
                   <dd>
                     <a href={d.linkedInUrl} target="_blank" rel="noreferrer noopener" className="text-accent-600 hover:underline">
                       {d.linkedInUrl}
@@ -667,7 +667,7 @@ function CandidateDrawer({ id, isHr, onClose, onOpen }: { id: string; isHr: bool
                     >
                       <span>
                         {a.job}
-                        <span className="block text-xs text-zinc-500">{formatDateTimeUtc(a.appliedAtUtc)}</span>
+                        <span className="block text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(a.appliedAtUtc)}</span>
                       </span>
                       <StageBadge stage={a.stage} />
                     </Link>
@@ -700,7 +700,7 @@ function CandidateDrawer({ id, isHr, onClose, onOpen }: { id: string; isHr: bool
                       <button type="button" className="text-accent-600 hover:underline" onClick={() => onOpen(x.id)}>
                         {x.name}
                       </button>{' '}
-                      <span className="text-xs text-zinc-500">{[x.email, x.phone].filter(Boolean).join(' · ')}</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">{[x.email, x.phone].filter(Boolean).join(' · ')}</span>
                     </li>
                   ))}
                 </ul>
@@ -764,11 +764,11 @@ function InterviewsTab() {
         to={`/recruitment/applications/${i.applicationId}`}
         className="flex flex-wrap items-center gap-3 px-5 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/40"
       >
-        <CalendarClock className="size-4 text-zinc-400" />
+        <CalendarClock className="size-4 text-zinc-500 dark:text-zinc-400" />
         <span className="min-w-0 flex-1">
           <span className="font-medium text-zinc-900 dark:text-white">{i.candidate}</span>
-          <span className="text-sm text-zinc-500"> · {i.job}</span>
-          <span className="block text-xs text-zinc-500">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400"> · {i.job}</span>
+          <span className="block text-xs text-zinc-500 dark:text-zinc-400">
             {i.title} (round {i.round}) · {formatDateTimeUtc(i.startsAtUtc)} · {i.durationMinutes} min · {MODE_LABELS[i.mode]}
             {i.where ? ` · ${i.where}` : ''}
           </span>
@@ -798,7 +798,7 @@ function InterviewsTab() {
         {upcoming.length ? (
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">{upcoming.map((i) => row(i, 'Prepare'))}</ul>
         ) : (
-          <p className="px-5 py-6 text-sm text-zinc-500">Nothing scheduled.</p>
+          <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">Nothing scheduled.</p>
         )}
       </Card>
       {done.length > 0 && (
@@ -845,7 +845,7 @@ function OpeningsTab() {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="font-semibold text-zinc-900 dark:text-white">{o.title}</h3>
-                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
                     {o.department && <span>{o.department}</span>}
                     {o.location && (
                       <span className="inline-flex items-center gap-1">
@@ -871,7 +871,7 @@ function OpeningsTab() {
                 {o.description}
               </p>
               {expanded === o.id && o.requirements && (
-                <ul className="mt-2 list-disc pl-5 text-sm text-zinc-700 dark:text-zinc-300">
+                <ul className="mt-2 list-disc ps-5 text-sm text-zinc-700 dark:text-zinc-300">
                   {o.requirements
                     .split('\n')
                     .filter((l) => l.trim())
@@ -903,7 +903,7 @@ function OpeningsTab() {
             ))}
           </ul>
         ) : (
-          <p className="px-5 py-6 text-sm text-zinc-500">No referrals yet.</p>
+          <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">No referrals yet.</p>
         )}
       </Card>
       {referring && <ReferModal opening={referring} onClose={() => setReferring(null)} />}
@@ -962,7 +962,7 @@ function ReportTab() {
   const tile = (label: string, value: string | number) => (
     <Card className="p-4">
       <p className="text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{value}</p>
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
     </Card>
   );
   return (
@@ -985,12 +985,12 @@ function ReportTab() {
               <Tr>
                 <Th>Job</Th>
                 {PIPELINE.map((s) => (
-                  <Th key={s} className="text-right">
+                  <Th key={s} className="text-end">
                     {STAGE_LABELS[s]}
                   </Th>
                 ))}
-                <Th className="text-right">Rejected</Th>
-                <Th className="text-right">Total</Th>
+                <Th className="text-end">Rejected</Th>
+                <Th className="text-end">Total</Th>
               </Tr>
             </THead>
             <TBody>
@@ -1000,17 +1000,17 @@ function ReportTab() {
                     <Link to={`/recruitment/jobs/${j.jobPostId}`} className="font-medium hover:text-accent-600">
                       {j.job}
                     </Link>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {j.status} · {j.hired}/{j.positions} hired
                     </p>
                   </Td>
                   {PIPELINE.map((s: ApplicationStage) => (
-                    <Td key={s} className="text-right tabular-nums">
+                    <Td key={s} className="text-end tabular-nums">
                       {j.byStage[s] ?? 0}
                     </Td>
                   ))}
-                  <Td className="text-right tabular-nums text-zinc-500">{j.byStage.Rejected ?? 0}</Td>
-                  <Td className="text-right font-medium tabular-nums">{j.total}</Td>
+                  <Td className="text-end tabular-nums text-zinc-500 dark:text-zinc-400">{j.byStage.Rejected ?? 0}</Td>
+                  <Td className="text-end font-medium tabular-nums">{j.total}</Td>
                 </Tr>
               ))}
             </TBody>
@@ -1028,7 +1028,7 @@ function ReportTab() {
                 <div key={s}>
                   <div className="mb-1 flex justify-between text-sm">
                     <span>{SOURCE_LABELS[s]}</span>
-                    <span className="text-zinc-500 tabular-nums">
+                    <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">
                       {n} applied · {d.hiredBySource[s] ?? 0} hired
                     </span>
                   </div>
@@ -1043,7 +1043,7 @@ function ReportTab() {
                 </div>
               );
             })}
-          {!totalSource && <p className="text-sm text-zinc-500">No applications yet.</p>}
+          {!totalSource && <p className="text-sm text-zinc-500 dark:text-zinc-400">No applications yet.</p>}
         </div>
       </Card>
     </div>

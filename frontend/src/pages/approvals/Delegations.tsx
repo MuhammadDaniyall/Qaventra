@@ -44,12 +44,12 @@ export function Delegations() {
                 <p>
                   <span className="font-medium">{d.to}</span> approves for <span className="font-medium">{d.from}</span>
                   {d.isActive && (
-                    <Badge tone="green" className="ml-2">
+                    <Badge tone="green" className="ms-2">
                       Now
                     </Badge>
                   )}
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {formatDate(d.fromDate)} – {formatDate(d.toDate)} ·{' '}
                   {d.requestTypes.length ? d.requestTypes.map((t) => REQUEST_LABELS[t]).join(', ') : 'All requests'}
                   {d.reason ? ` · ${d.reason}` : ''}
@@ -64,7 +64,7 @@ export function Delegations() {
           ))}
         </ul>
       ) : (
-        <p className="px-5 py-4 text-sm text-zinc-500">No delegations running.</p>
+        <p className="px-5 py-4 text-sm text-zinc-500 dark:text-zinc-400">No delegations running.</p>
       )}
       {open && <DelegateModal onClose={() => setOpen(false)} />}
     </Card>
@@ -154,7 +154,7 @@ function DelegateModal({ onClose }: { onClose: () => void }) {
         <div className="space-y-2 sm:col-span-2">
           <Checkbox label="All kinds of requests" checked={all} onChange={(e) => setAll(e.target.checked)} />
           {!all && (
-            <div className="grid grid-cols-2 gap-1.5 pl-6">
+            <div className="grid grid-cols-2 gap-1.5 ps-6">
               {(Object.keys(REQUEST_LABELS) as ApprovalRequestType[]).map((t) => (
                 <Checkbox
                   key={t}

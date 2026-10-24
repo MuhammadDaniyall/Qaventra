@@ -29,7 +29,7 @@ export function CareersPage() {
           </span>
           <div>
             <p className="text-lg font-semibold text-zinc-900 dark:text-white">{page.data?.company ?? 'Careers'}</p>
-            <p className="text-sm text-zinc-500">Careers{page.data?.city ? ` · ${page.data.city}` : ''}</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Careers{page.data?.city ? ` · ${page.data.city}` : ''}</p>
           </div>
         </div>
       </header>
@@ -48,7 +48,7 @@ export function CareersPage() {
           <JobList company={company} jobs={page.data!.jobs} />
         )}
       </main>
-      <footer className="pb-8 text-center text-xs text-zinc-400">Powered by Qaventra HRMS</footer>
+      <footer className="pb-8 text-center text-xs text-zinc-500">Powered by Qaventra HRMS</footer>
     </div>
   );
 }
@@ -147,7 +147,7 @@ function JobDetail({ company, companyName, job }: { company: string; companyName
         {job.requirements && (
           <>
             <h2 className="mt-5 mb-2 font-semibold text-zinc-900 dark:text-white">What we are looking for</h2>
-            <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
+            <ul className="list-disc space-y-1 ps-5 text-sm text-zinc-700 dark:text-zinc-300">
               {job.requirements
                 .split('\n')
                 .filter((l) => l.trim())
@@ -164,7 +164,7 @@ function JobDetail({ company, companyName, job }: { company: string; companyName
         <div className="mt-4">
           <FormError message={problem ?? (apply.isError ? errorMessage(apply.error) : null)} />
         </div>
-        <p className="mt-4 text-xs text-zinc-500">By applying you agree that {companyName} may keep your details and CV to consider you for jobs.</p>
+        <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">By applying you agree that {companyName} may keep your details and CV to consider you for jobs.</p>
         <Button type="submit" className="mt-4" loading={apply.isPending}>
           Send application
         </Button>

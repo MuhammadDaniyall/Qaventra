@@ -60,7 +60,7 @@ export function MyPayPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium text-zinc-900 dark:text-white">{l.title}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {formatCurrency(l.amount)} · {formatCurrency(l.installmentAmount)} × {l.installments} from {monthLabel(l.startYear, l.startMonth)}
                     </p>
                   </div>
@@ -71,13 +71,13 @@ export function MyPayPage() {
                     <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden="true">
                       <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
                     </div>
-                    <p className="mt-2 text-xs text-zinc-500">
+                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
                       {formatCurrency(l.repaid)} repaid ({l.installmentsTaken}/{l.installments}) · {formatCurrency(l.remaining)} left
                     </p>
                   </>
                 )}
                 {l.status === 'Pending' && (
-                  <Button variant="ghost" size="sm" className="mt-2 -ml-2" onClick={() => setCancelling({ id: l.id, loan: true })}>
+                  <Button variant="ghost" size="sm" className="mt-2 -ms-2" onClick={() => setCancelling({ id: l.id, loan: true })}>
                     Cancel request
                   </Button>
                 )}
@@ -105,11 +105,11 @@ export function MyPayPage() {
             {requests.data.map((r) => (
               <li key={r.id} className="px-5 py-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} className="min-w-0 flex-1 text-left" aria-expanded={open === r.id}>
+                  <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} className="min-w-0 flex-1 text-start" aria-expanded={open === r.id}>
                     <span className="block text-sm font-medium text-zinc-900 dark:text-white">
                       {r.kind === 'Overtime' ? `Overtime · ${r.hours} h on ${formatDate(r.workDate)}` : `${PAY_KIND_LABELS[r.kind]} · ${r.title}`}
                     </span>
-                    <span className="block text-xs text-zinc-500">
+                    <span className="block text-xs text-zinc-500 dark:text-zinc-400">
                       {r.isEarning ? '' : 'Deducted from '}
                       {monthLabel(r.year, r.month)} payroll{r.reason ? ` · ${r.reason}` : ''}
                     </span>

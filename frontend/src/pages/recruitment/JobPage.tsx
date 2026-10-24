@@ -244,7 +244,7 @@ export function JobPage() {
                   )}
                   aria-label={col === 'Closed' ? 'Not going ahead' : STAGE_LABELS[col]}
                 >
-                  <h2 className="mb-2 flex items-center justify-between px-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">
+                  <h2 className="mb-2 flex items-center justify-between px-1 text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">
                     {col === 'Closed' ? 'Not going ahead' : STAGE_LABELS[col]}
                     <span className="rounded-full bg-white px-1.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{list.length}</span>
                   </h2>
@@ -257,7 +257,7 @@ export function JobPage() {
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-zinc-500">Drag a card to move the candidate. Offers and hiring happen on the candidate's page.</p>
+          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Drag a card to move the candidate. Offers and hiring happen on the candidate's page.</p>
         </div>
       )}
 
@@ -285,7 +285,7 @@ function CandidateCard({ card }: { card: PipelineCard }) {
       to={`/recruitment/applications/${card.id}`}
       draggable={card.stage !== 'Hired'}
       onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
-      className="block rounded-lg border border-zinc-200 bg-white p-2.5 text-left shadow-xs transition hover:border-accent-300 dark:border-zinc-700 dark:bg-zinc-900"
+      className="block rounded-lg border border-zinc-200 bg-white p-2.5 text-start shadow-xs transition hover:border-accent-300 dark:border-zinc-700 dark:bg-zinc-900"
     >
       <p className="flex items-center gap-1 text-sm font-medium text-zinc-900 dark:text-white">
         <span className="truncate">{card.name}</span>
@@ -297,7 +297,7 @@ function CandidateCard({ card }: { card: PipelineCard }) {
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         {card.rating ? <Stars value={card.rating} size="sm" /> : null}
         {card.interviews > 0 && (
-          <span className="inline-flex items-center gap-0.5 text-[11px] text-zinc-500">
+          <span className="inline-flex items-center gap-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
             <CalendarClock className="size-3" />
             {card.interviews}
             {card.averageFeedback != null && ` · ${card.averageFeedback.toFixed(1)}/5`}
@@ -309,7 +309,7 @@ function CandidateCard({ card }: { card: PipelineCard }) {
         )}
         {CLOSED_STAGES.includes(card.stage) && <StageBadge stage={card.stage} />}
       </div>
-      <p className="mt-1 text-[11px] text-zinc-400" title={SOURCE_LABELS[card.source]}>
+      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400" title={SOURCE_LABELS[card.source]}>
         {relative(card.stageChangedAtUtc ?? card.appliedAtUtc)}
       </p>
     </Link>

@@ -121,7 +121,7 @@ export function RosterPage() {
               { value: '14', label: '2 weeks' },
             ]}
           />
-          <div className="ml-auto w-56">
+          <div className="ms-auto w-56">
             <Select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} aria-label="Department">
               <option value="">All departments</option>
               {departments.data?.map((d) => (
@@ -139,10 +139,10 @@ export function RosterPage() {
                 {shortName(s)} · {s.name} {formatTime(s.startTime)}–{formatTime(s.endTime)}
               </span>
             ))}
-            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-zinc-500 dark:bg-zinc-800">Off</span>
+            <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-zinc-500 dark:text-zinc-400 dark:bg-zinc-800">Off</span>
             <span className="rounded-md bg-amber-50 px-2 py-0.5 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">Holiday</span>
-            <span className="text-zinc-500">
-              <span className="mr-1 inline-block size-1.5 rounded-full bg-accent-500 align-middle" /> changed on the roster
+            <span className="text-zinc-500 dark:text-zinc-400">
+              <span className="me-1 inline-block size-1.5 rounded-full bg-accent-500 align-middle" /> changed on the roster
             </span>
           </div>
         )}
@@ -157,7 +157,7 @@ export function RosterPage() {
             <table className="w-full border-separate border-spacing-0 text-sm">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 min-w-48 border-b border-zinc-100 bg-white px-4 py-2 text-left text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
+                  <th className="sticky start-0 z-10 min-w-48 border-b border-zinc-100 bg-white px-4 py-2 text-start text-xs font-medium text-zinc-500 dark:text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900">
                     Employee
                   </th>
                   {roster.data.rows[0].days.map((c) => {
@@ -167,7 +167,7 @@ export function RosterPage() {
                         key={c.date}
                         className={cn(
                           'min-w-16 border-b border-zinc-100 px-1 py-2 text-center text-xs font-medium dark:border-zinc-800',
-                          c.date === today ? 'text-accent-600 dark:text-accent-400' : 'text-zinc-500',
+                          c.date === today ? 'text-accent-600 dark:text-accent-400' : 'text-zinc-500 dark:text-zinc-400',
                         )}
                       >
                         <span className="block">{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
@@ -180,9 +180,9 @@ export function RosterPage() {
               <tbody>
                 {roster.data.rows.map((row) => (
                   <tr key={row.employeeId} className="group">
-                    <td className="sticky left-0 z-10 border-b border-zinc-100 bg-white px-4 py-2 group-hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:group-hover:bg-zinc-800/60">
+                    <td className="sticky start-0 z-10 border-b border-zinc-100 bg-white px-4 py-2 group-hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:group-hover:bg-zinc-800/60">
                       <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">{row.name}</p>
-                      <p className="truncate text-xs text-zinc-500">{row.department ?? row.employeeCode}</p>
+                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{row.department ?? row.employeeCode}</p>
                     </td>
                     {row.days.map((c) => {
                       const shift = c.shiftId ? shiftById.get(c.shiftId) : undefined;
@@ -200,15 +200,15 @@ export function RosterPage() {
                             className={cn(
                               'relative inline-flex h-8 w-full min-w-12 items-center justify-center rounded-md text-xs font-semibold transition',
                               c.isHoliday && !c.isOff ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
-                                : c.isOff ? 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500'
-                                : shift ? colors.get(shift.id) : 'text-zinc-400',
+                                : c.isOff ? 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
+                                : shift ? colors.get(shift.id) : 'text-zinc-500 dark:text-zinc-400',
                               hr && !locked && 'hover:ring-2 hover:ring-accent-400/60',
                               locked && 'opacity-60',
                             )}
                           >
                             {label}
-                            {c.rostered && <span className="absolute top-1 right-1 size-1.5 rounded-full bg-accent-500" aria-hidden="true" />}
-                            {locked && <Lock className="absolute right-0.5 bottom-0.5 size-2.5 opacity-60" aria-hidden="true" />}
+                            {c.rostered && <span className="absolute top-1 end-1 size-1.5 rounded-full bg-accent-500" aria-hidden="true" />}
+                            {locked && <Lock className="absolute end-0.5 bottom-0.5 size-2.5 opacity-60" aria-hidden="true" />}
                           </button>
                         </td>
                       );
@@ -253,12 +253,12 @@ function ChoicePicker({ shifts, value, onChange, showReset }: { shifts: RosterSh
         onClick={() => onChange(choice)}
         aria-pressed={!!active}
         className={cn(
-          'rounded-lg border px-3 py-2 text-left text-sm transition',
+          'rounded-lg border px-3 py-2 text-start text-sm transition',
           active ? 'border-accent-500 bg-accent-50 ring-2 ring-accent-500/30 dark:bg-accent-500/10' : 'border-zinc-200 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800',
         )}
       >
         <span className="block font-medium text-zinc-900 dark:text-zinc-100">{label}</span>
-        <span className="block text-xs text-zinc-500">{hint}</span>
+        <span className="block text-xs text-zinc-500 dark:text-zinc-400">{hint}</span>
       </button>
     );
   };
@@ -373,8 +373,8 @@ function AssignModal({ shifts, defaultFrom, defaultTo, onClose }: { shifts: Rost
           <FormError message={error} />
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-              <Input className="pl-9" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search people" />
+              <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+              <Input className="ps-9" placeholder="Search" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search people" />
             </div>
             <Select className="w-40" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} aria-label="Department">
               <option value="">All departments</option>

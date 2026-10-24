@@ -71,6 +71,8 @@ const ExpenseApprovalsPage = lazy(() => import('./pages/expenses/ExpenseApproval
 const MyExpensesPage = lazy(() => import('./pages/expenses/MyExpensesPage').then((m) => ({ default: m.MyExpensesPage })));
 const LetterPage = lazy(() => import('./pages/letters/LetterPage').then((m) => ({ default: m.LetterPage })));
 const LettersPage = lazy(() => import('./pages/letters/LettersPage').then((m) => ({ default: m.LettersPage })));
+const InsightsPage = lazy(() => import('./pages/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })));
+const OrgChartPage = lazy(() => import('./pages/orgchart/OrgChartPage').then((m) => ({ default: m.OrgChartPage })));
 const MyRequestsPage = lazy(() => import('./pages/requests/MyRequestsPage').then((m) => ({ default: m.MyRequestsPage })));
 const MyDocumentsPage = lazy(() => import('./pages/letters/MyDocumentsPage').then((m) => ({ default: m.MyDocumentsPage })));
 const MyExitPage = lazy(() => import('./pages/separations/MyExitPage').then((m) => ({ default: m.MyExitPage })));
@@ -120,6 +122,7 @@ export default function App() {
             {/* Company area */}
             <Route element={<RequireRole roles={COMPANY_ROLES} />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/org-chart" element={<OrgChartPage />} />
               {/* Self-service needs an employee record (hidden for the owner inside a company). */}
               <Route element={<RequireEmployee />}>
                 <Route path="/me/attendance" element={<MyAttendancePage />} />
@@ -185,6 +188,7 @@ export default function App() {
               <Route path="/separations/setup" element={<SeparationSetupPage />} />
                 <Route path="/leave/opening-balances" element={<OpeningBalancesPage />} />
                 <Route path="/settings" element={<OrganizationPage />} />
+                <Route path="/insights" element={<InsightsPage />} />
                 <Route path="/alerts" element={<ScheduledPage />} />
                 <Route path="/budget" element={<BudgetPage />} />
                 <Route path="/letters" element={<LettersPage />} />

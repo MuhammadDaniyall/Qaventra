@@ -121,9 +121,9 @@ function TicketView({ detail }: { detail: TicketDetail }) {
                 <div className="text-sm">
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">
                     {t.employeeName}
-                    {detail.raisedBy && detail.raisedBy !== t.employeeName && <span className="font-normal text-zinc-500"> · raised by {detail.raisedBy}</span>}
+                    {detail.raisedBy && detail.raisedBy !== t.employeeName && <span className="font-normal text-zinc-500 dark:text-zinc-400"> · raised by {detail.raisedBy}</span>}
                   </p>
-                  <p className="text-xs text-zinc-500">{formatDateTimeUtc(t.createdAtUtc)}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(t.createdAtUtc)}</p>
                 </div>
               </div>
               <p className="text-sm leading-relaxed whitespace-pre-line text-zinc-800 dark:text-zinc-200">{detail.description}</p>
@@ -160,7 +160,7 @@ function Thread({ detail }: { detail: TicketDetail }) {
     <ol className="space-y-3">
       {detail.comments.map((c) =>
         c.isSystem ? (
-          <li key={c.id} className="flex items-center gap-2 px-2 text-xs text-zinc-500">
+          <li key={c.id} className="flex items-center gap-2 px-2 text-xs text-zinc-500 dark:text-zinc-400">
             <span className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
             <span>
               {c.body} · {c.authorName} · {relative(c.createdAtUtc)}
@@ -187,12 +187,12 @@ function Thread({ detail }: { detail: TicketDetail }) {
                   <Lock className="size-3" /> Internal note
                 </span>
               )}
-              <span className="text-zinc-500" title={formatDateTimeUtc(c.createdAtUtc)}>
+              <span className="text-zinc-500 dark:text-zinc-400" title={formatDateTimeUtc(c.createdAtUtc)}>
                 {relative(c.createdAtUtc)}
                 {c.editedAtUtc && ' · edited'}
               </span>
               {c.canEdit && (
-                <span className="ml-auto flex gap-0.5">
+                <span className="ms-auto flex gap-0.5">
                   <IconButton label="Edit reply" onClick={() => setEditing(c)}>
                     <Pencil className="size-3.5" />
                   </IconButton>
@@ -203,7 +203,7 @@ function Thread({ detail }: { detail: TicketDetail }) {
               )}
             </div>
             {c.isDeleted ? (
-              <p className="text-sm text-zinc-400 italic">This reply was deleted.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 italic">This reply was deleted.</p>
             ) : (
               <p className="text-sm whitespace-pre-line text-zinc-800 dark:text-zinc-200">{c.body}</p>
             )}
@@ -396,14 +396,14 @@ function SidePanel({ detail }: { detail: TicketDetail }) {
           )}
           <div>
             <div className="mb-1 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">Involved</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Involved</span>
               {detail.isAgent && active && (
                 <Button variant="ghost" size="sm" icon={<UserPlus className="size-3.5" />} onClick={() => setInvolving(true)}>
                   Add
                 </Button>
               )}
             </div>
-            <p className="text-zinc-800 dark:text-zinc-200">{detail.involved.length ? detail.involved.join(', ') : <span className="text-zinc-400">Nobody</span>}</p>
+            <p className="text-zinc-800 dark:text-zinc-200">{detail.involved.length ? detail.involved.join(', ') : <span className="text-zinc-500 dark:text-zinc-400">Nobody</span>}</p>
           </div>
         </CardBody>
       </Card>
@@ -416,7 +416,7 @@ function SidePanel({ detail }: { detail: TicketDetail }) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
       <div className="text-zinc-900 dark:text-zinc-100">{value}</div>
     </div>
   );

@@ -125,12 +125,12 @@ export function MyLeavePage() {
               <tr>
                 <Th>Type</Th>
                 <Th>Dates</Th>
-                <Th className="text-right">Days</Th>
+                <Th className="text-end">Days</Th>
                 <Th>Status</Th>
                 <Th>Reason</Th>
                 <Th>Decision note</Th>
                 <Th>Files</Th>
-                <Th className="text-right">
+                <Th className="text-end">
                   <span className="sr-only">Actions</span>
                 </Th>
               </tr>
@@ -142,9 +142,9 @@ export function MyLeavePage() {
                   <Td>
                     {formatDate(r.fromDate)}
                     {r.toDate !== r.fromDate && <> – {formatDate(r.toDate)}</>}
-                    {r.duration !== 'FullDay' && <span className="block text-xs text-zinc-500">{durationLabel(r)}</span>}
+                    {r.duration !== 'FullDay' && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{durationLabel(r)}</span>}
                   </Td>
-                  <Td className="text-right tabular-nums">{formatNumber(r.days)}</Td>
+                  <Td className="text-end tabular-nums">{formatNumber(r.days)}</Td>
                   <Td>
                     <StatusBadge status={r.status} />
                   </Td>
@@ -157,7 +157,7 @@ export function MyLeavePage() {
                       </Button>
                     )}
                   </Td>
-                  <Td className="text-right">
+                  <Td className="text-end">
                     {r.status === 'Pending' && (
                       <Button variant="ghost" size="sm" onClick={() => setCancelling(r)}>
                         Cancel
@@ -215,11 +215,11 @@ function BalanceCard({ b }: { b: LeaveBalance }) {
     <Card className="p-4">
       <div className="flex items-center justify-between gap-2">
         <p className="truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">{b.leaveType}</p>
-        <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 dark:bg-zinc-800">{b.code}</span>
+        <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 dark:text-zinc-400 dark:bg-zinc-800">{b.code}</span>
       </div>
       <p className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
         {formatNumber(b.available)}
-        <span className="ml-1 text-sm font-normal text-zinc-500">/ {formatNumber(total)} days</span>
+        <span className="ms-1 text-sm font-normal text-zinc-500 dark:text-zinc-400">/ {formatNumber(total)} days</span>
       </p>
       <div className="mt-3 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden="true">
         <div className="h-full rounded-full bg-accent-500" style={{ width: `${usedPct}%` }} />
@@ -423,7 +423,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
           </>
         )}
         {type && (type.minNoticeDays > 0 || type.maxConsecutiveDays) && (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {[type.minNoticeDays > 0 ? `Apply at least ${type.minNoticeDays} day(s) ahead` : null, type.maxConsecutiveDays ? `at most ${type.maxConsecutiveDays} day(s) at a time` : null]
               .filter(Boolean)
               .join(' · ')}
@@ -446,7 +446,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
             </Select>
           </Field>
         )}
-        {type?.sandwich && !single && <p className="text-xs text-zinc-500">Weekends and holidays between your leave days also count as leave.</p>}
+        {type?.sandwich && !single && <p className="text-xs text-zinc-500 dark:text-zinc-400">Weekends and holidays between your leave days also count as leave.</p>}
         <Field label="Reason">
           <Textarea value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} placeholder="Optional" />
         </Field>
@@ -457,11 +457,11 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         )}
         <div className="space-y-2">
           <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Supporting documents <span className="font-normal text-zinc-500">(e.g. medical certificate)</span>
+            Supporting documents <span className="font-normal text-zinc-500 dark:text-zinc-400">(e.g. medical certificate)</span>
           </p>
           {files.map((f) => (
             <div key={f.name} className="flex items-center gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-800/50">
-              <Paperclip className="size-4 text-zinc-400" aria-hidden="true" />
+              <Paperclip className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
               <span className="min-w-0 flex-1 truncate">{f.name}</span>
               <IconButton label={`Remove ${f.name}`} onClick={() => setFiles((l) => l.filter((x) => x !== f))}>
                 <X className="size-4" />

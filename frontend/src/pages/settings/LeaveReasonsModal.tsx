@@ -40,9 +40,9 @@ export function LeaveReasonsModal({ type, onClose }: { type: LeaveType; onClose:
           <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-sm">
             <span className="flex-1">
               {r.name}
-              {r.maxDays != null && <span className="ml-2 text-xs text-zinc-500">up to {r.maxDays} days</span>}
-              {r.requiresDocument && <Badge className="ml-2">Document</Badge>}
-              {!r.isActive && <Badge className="ml-2">Off</Badge>}
+              {r.maxDays != null && <span className="ms-2 text-xs text-zinc-500 dark:text-zinc-400">up to {r.maxDays} days</span>}
+              {r.requiresDocument && <Badge className="ms-2">Document</Badge>}
+              {!r.isActive && <Badge className="ms-2">Off</Badge>}
             </span>
             <Button size="sm" variant="ghost" onClick={() => toggle.mutate(r)}>
               {r.isActive ? 'Turn off' : 'Turn on'}
@@ -52,7 +52,7 @@ export function LeaveReasonsModal({ type, onClose }: { type: LeaveType; onClose:
             </IconButton>
           </li>
         ))}
-        {!reasons.length && <li className="px-3 py-3 text-sm text-zinc-500">No reasons: people just describe it.</li>}
+        {!reasons.length && <li className="px-3 py-3 text-sm text-zinc-500 dark:text-zinc-400">No reasons: people just describe it.</li>}
       </ul>
       <div className="grid grid-cols-[1fr_7rem] gap-2">
         <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="e.g. Fever, Surgery" aria-label="Reason" />

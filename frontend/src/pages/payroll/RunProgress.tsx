@@ -38,14 +38,14 @@ export function RunStepper({ run, needsApproval }: { run: PayrollRun; needsAppro
                 'flex size-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold',
                 done && 'border-emerald-500 bg-emerald-500 text-white',
                 active && 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300',
-                !done && !active && 'border-zinc-200 text-zinc-400 dark:border-zinc-700',
+                !done && !active && 'border-zinc-200 text-zinc-500 dark:text-zinc-400 dark:border-zinc-700',
               )}
               aria-current={active ? 'step' : undefined}
             >
               {done ? <Check className="size-4" /> : i + 1}
             </span>
             <span className="min-w-0">
-              <span className={cn('block text-sm font-medium', done || active ? 'text-zinc-900 dark:text-white' : 'text-zinc-500')}>{s.label}</span>
+              <span className={cn('block text-sm font-medium', done || active ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-400')}>{s.label}</span>
               <span className="block text-xs text-zinc-500 dark:text-zinc-400">{s.hint}</span>
             </span>
             {i < steps.length - 1 && <span className="mx-4 hidden h-px flex-1 bg-zinc-200 sm:block dark:bg-zinc-700" aria-hidden="true" />}

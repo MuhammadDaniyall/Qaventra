@@ -70,7 +70,7 @@ export function LeaveApprovalsPage() {
               <>
                 Pending
                 {!!pendingCount.data?.length && (
-                  <span className="ml-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                  <span className="ms-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
                     {pendingCount.data.length}
                   </span>
                 )}
@@ -99,10 +99,10 @@ export function LeaveApprovalsPage() {
                 <Th>Employee</Th>
                 <Th>Type</Th>
                 <Th>Dates</Th>
-                <Th className="text-right">Days</Th>
+                <Th className="text-end">Days</Th>
                 <Th>Reason</Th>
                 <Th>{status === 'Pending' ? 'Requested' : 'Decided'}</Th>
-                {status === 'Pending' ? <Th className="text-right">Decision</Th> : <Th>Note</Th>}
+                {status === 'Pending' ? <Th className="text-end">Decision</Th> : <Th>Note</Th>}
               </tr>
             </THead>
             <TBody>
@@ -113,7 +113,7 @@ export function LeaveApprovalsPage() {
                       <Avatar name={r.employeeName} size="sm" />
                       <div>
                         <p className="font-medium text-zinc-900 dark:text-zinc-100">{r.employeeName}</p>
-                        <p className="font-mono text-xs text-zinc-500">{r.employeeCode}</p>
+                        <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{r.employeeCode}</p>
                       </div>
                     </div>
                   </Td>
@@ -121,16 +121,16 @@ export function LeaveApprovalsPage() {
                   <Td>
                     {formatDate(r.fromDate)}
                     {r.toDate !== r.fromDate && <> – {formatDate(r.toDate)}</>}
-                    {r.duration !== 'FullDay' && <span className="block text-xs text-zinc-500">{durationLabel(r)}</span>}
+                    {r.duration !== 'FullDay' && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{durationLabel(r)}</span>}
                   </Td>
-                  <Td className="text-right tabular-nums">{formatNumber(r.days)}</Td>
+                  <Td className="text-end tabular-nums">{formatNumber(r.days)}</Td>
                   <Td className="max-w-xs truncate" title={r.reason ?? undefined}>
-                    {r.attachmentCount > 0 && <Paperclip className="mr-1 inline size-3.5 text-zinc-400" aria-label={`${r.attachmentCount} file(s)`} />}
+                    {r.attachmentCount > 0 && <Paperclip className="me-1 inline size-3.5 text-zinc-500 dark:text-zinc-400" aria-label={`${r.attachmentCount} file(s)`} />}
                     {r.reason ?? '—'}
                   </Td>
                   <Td>{formatDateTimeUtc(status === 'Pending' ? r.createdAtUtc : r.decidedAtUtc)}</Td>
                   {status === 'Pending' ? (
-                    <Td className="text-right">
+                    <Td className="text-end">
                       <div className="inline-flex gap-2">
                         <Button size="sm" variant="secondary" icon={<X className="size-3.5" />} onClick={() => setDeciding({ request: r, approve: false })}>
                           Reject
@@ -142,7 +142,7 @@ export function LeaveApprovalsPage() {
                     </Td>
                   ) : (
                     <Td className="max-w-xs truncate" title={r.decisionNote ?? undefined}>
-                      <span className="mr-2"><StatusBadge status={r.status} /></span>
+                      <span className="me-2"><StatusBadge status={r.status} /></span>
                       {r.decisionNote ?? ''}
                     </Td>
                   )}

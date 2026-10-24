@@ -11,7 +11,7 @@ export function WarningsPanel({ warnings }: { warnings: string[] }) {
         <AlertTriangle className="size-4 shrink-0" />
         {warnings.length} warning{warnings.length === 1 ? '' : 's'} — review before finalizing
       </div>
-      <ul className="mt-2 list-disc space-y-1 pl-6">
+      <ul className="mt-2 list-disc space-y-1 ps-6">
         {warnings.map((w, i) => (
           <li key={i}>{w}</li>
         ))}

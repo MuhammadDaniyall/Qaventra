@@ -166,12 +166,12 @@ export function MyAttendanceRequests() {
         {list.data.map((r) => (
           <li key={r.id} className="px-5 py-3">
             <div className="flex flex-wrap items-center gap-3">
-              <ClipboardEdit className="size-4 text-zinc-400" aria-hidden="true" />
-              <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} className="min-w-0 flex-1 text-left" aria-expanded={open === r.id}>
+              <ClipboardEdit className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+              <button type="button" onClick={() => setOpen(open === r.id ? null : r.id)} className="min-w-0 flex-1 text-start" aria-expanded={open === r.id}>
                 <span className="block text-sm font-medium text-zinc-900 dark:text-white">
                   {kindLabel(r.kind)} · {formatDate(r.date)}
                 </span>
-                <span className="block truncate text-xs text-zinc-500">
+                <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
                   {formatTime(r.checkIn)}
                   {r.checkOut && ` – ${formatTime(r.checkOut)}`} · {r.reason}
                 </span>
@@ -184,7 +184,7 @@ export function MyAttendanceRequests() {
               )}
             </div>
             {open === r.id && (
-              <div className="mt-3 ml-7">
+              <div className="mt-3 ms-7">
                 <ApprovalTimeline type="Attendance" subjectId={r.id} />
               </div>
             )}

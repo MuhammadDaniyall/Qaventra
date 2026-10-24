@@ -64,7 +64,7 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
           <Th>Status</Th>
           <Th>Assignee</Th>
           <Th>Due</Th>
-          <Th className="text-right">Updated</Th>
+          <Th className="text-end">Updated</Th>
         </tr>
       </THead>
       <TBody>
@@ -98,7 +98,7 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
                 </span>
               )}
             </Td>
-            <Td className="text-sm">{t.assignee ?? <span className="text-zinc-400">Unassigned</span>}</Td>
+            <Td className="text-sm">{t.assignee ?? <span className="text-zinc-500">Unassigned</span>}</Td>
             <Td className="text-sm">
               {open(t) ? (
                 <span className={cn('flex items-center gap-1', t.isOverdue ? 'font-medium text-red-600 dark:text-red-400' : 'text-zinc-600 dark:text-zinc-300')} title={formatDateTimeUtc(t.dueAtUtc)}>
@@ -106,10 +106,10 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
                   {t.isOverdue ? `Overdue ${relative(t.dueAtUtc).replace(' ago', '')}` : relative(t.dueAtUtc)}
                 </span>
               ) : (
-                <span className="text-zinc-400">—</span>
+                <span className="text-zinc-500 dark:text-zinc-400">—</span>
               )}
             </Td>
-            <Td className="text-right text-xs text-zinc-500" title={formatDateTimeUtc(t.lastActivityAtUtc)}>
+            <Td className="text-end text-xs text-zinc-500" title={formatDateTimeUtc(t.lastActivityAtUtc)}>
               {relative(t.lastActivityAtUtc)}
             </Td>
           </Tr>

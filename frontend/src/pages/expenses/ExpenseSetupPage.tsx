@@ -89,9 +89,9 @@ function Types() {
             <tr>
               <Th>Type</Th>
               <Th>Worked out</Th>
-              <Th className="text-right">Per item</Th>
-              <Th className="text-right">A year</Th>
-              <Th className="text-right">
+              <Th className="text-end">Per item</Th>
+              <Th className="text-end">A year</Th>
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -100,17 +100,17 @@ function Types() {
             {list.data.map((t) => (
               <Tr key={t.id}>
                 <Td className="font-medium">
-                  {t.name} <span className="text-xs font-normal text-zinc-500">{humanize(t.category)}</span>
-                  {!t.isActive && <Badge className="ml-2">Off</Badge>}
-                  {t.receiptRequired && <Badge className="ml-2">Receipt</Badge>}
+                  {t.name} <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">{humanize(t.category)}</span>
+                  {!t.isActive && <Badge className="ms-2">Off</Badge>}
+                  {t.receiptRequired && <Badge className="ms-2">Receipt</Badge>}
                 </Td>
                 <Td className="text-sm">
                   {CALC_LABEL[t.calculation]}
                   {t.rate != null && ` · Rs ${formatNumber(t.rate)}/${t.unit ?? 'unit'}`}
-                  {t.gradeRates.length > 0 && <span className="text-xs text-zinc-500"> · {t.gradeRates.length} grade rate(s)</span>}
+                  {t.gradeRates.length > 0 && <span className="text-xs text-zinc-500 dark:text-zinc-400"> · {t.gradeRates.length} grade rate(s)</span>}
                 </Td>
-                <Td className="text-right tabular-nums">{t.perClaimLimit != null ? formatNumber(t.perClaimLimit) : '—'}</Td>
-                <Td className="text-right tabular-nums">{t.yearlyLimit != null ? formatNumber(t.yearlyLimit) : '—'}</Td>
+                <Td className="text-end tabular-nums">{t.perClaimLimit != null ? formatNumber(t.perClaimLimit) : '—'}</Td>
+                <Td className="text-end tabular-nums">{t.yearlyLimit != null ? formatNumber(t.yearlyLimit) : '—'}</Td>
                 <Td>
                   <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
                 </Td>
@@ -284,8 +284,8 @@ function Distances() {
               <Td>
                 {r.fromCity} ↔ {r.toCity}
               </Td>
-              <Td className="text-right tabular-nums">{formatNumber(r.km)} km</Td>
-              <Td className="text-right">
+              <Td className="text-end tabular-nums">{formatNumber(r.km)} km</Td>
+              <Td className="text-end">
                 <IconButton label="Delete" onClick={() => remove.mutate(r.id)}>
                   <Trash2 className="size-4" />
                 </IconButton>
@@ -325,9 +325,9 @@ function Advances() {
           <tr>
             <Th>Employee</Th>
             <Th>Purpose</Th>
-            <Th className="text-right">Amount</Th>
-            <Th className="text-right">Claimed</Th>
-            <Th className="text-right">Open</Th>
+            <Th className="text-end">Amount</Th>
+            <Th className="text-end">Claimed</Th>
+            <Th className="text-end">Open</Th>
             <Th>Status</Th>
             <Th />
           </tr>
@@ -336,16 +336,16 @@ function Advances() {
           {list.data.map((a) => (
             <Tr key={a.id}>
               <Td>
-                {a.employeeName} <span className="text-xs text-zinc-500">{a.employeeCode}</span>
+                {a.employeeName} <span className="text-xs text-zinc-500 dark:text-zinc-400">{a.employeeCode}</span>
               </Td>
               <Td className="text-sm">{a.purpose}</Td>
-              <Td className="text-right tabular-nums">{formatNumber(a.amount)}</Td>
-              <Td className="text-right tabular-nums">{formatNumber(a.adjusted)}</Td>
-              <Td className="text-right tabular-nums">{a.closedAtUtc ? `recovered ${formatNumber(a.recovered)}` : formatNumber(a.outstanding)}</Td>
+              <Td className="text-end tabular-nums">{formatNumber(a.amount)}</Td>
+              <Td className="text-end tabular-nums">{formatNumber(a.adjusted)}</Td>
+              <Td className="text-end tabular-nums">{a.closedAtUtc ? `recovered ${formatNumber(a.recovered)}` : formatNumber(a.outstanding)}</Td>
               <Td>
                 <StatusBadge status={a.closedAtUtc ? 'Closed' : a.status} />
               </Td>
-              <Td className="text-right">
+              <Td className="text-end">
                 {a.status === 'Pending' && (
                   <div className="flex justify-end gap-1">
                     <Button size="sm" variant="ghost" onClick={() => act.mutate({ id: a.id, what: 'reject' })}>

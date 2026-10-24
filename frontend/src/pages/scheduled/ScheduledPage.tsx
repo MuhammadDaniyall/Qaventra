@@ -137,13 +137,13 @@ function AlertsTab() {
                   <p className="flex items-center gap-2 font-medium text-zinc-900 dark:text-white">
                     {a.name} {!a.isActive && <Badge>Off</Badge>}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {ALERT_KINDS[a.kind].label} · “{a.titleTemplate}”
                   </p>
                 </Td>
                 <Td className="text-sm">
                   {a.kind === 'NotCheckedIn' ? 'Same day' : a.daysBefore ? `${a.daysBefore} days before` : 'On the day'}
-                  <p className="text-xs text-zinc-500">at {hourLabel(a.sendHour)}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">at {hourLabel(a.sendHour)}</p>
                 </Td>
                 <Td className="text-sm">
                   {[
@@ -184,13 +184,13 @@ function AlertsTab() {
       {preview && (
         <Modal open onClose={() => setPreview(null)} title={preview.name} description={`${preview.count} today`}>
           {preview.titles.length ? (
-            <ul className="list-disc space-y-1 pl-5 text-sm">
+            <ul className="list-disc space-y-1 ps-5 text-sm">
               {preview.titles.map((t, i) => (
                 <li key={i}>{t}</li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-zinc-500">Nobody to alert about today.</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Nobody to alert about today.</p>
           )}
         </Modal>
       )}
@@ -447,7 +447,7 @@ function ReportsTab() {
                   <p className="flex items-center gap-2 font-medium text-zinc-900 dark:text-white">
                     {r.name} {!r.isActive && <Badge>Off</Badge>}
                   </p>
-                  <p className="text-xs text-zinc-500">{REPORT_KINDS[r.kind].label}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{REPORT_KINDS[r.kind].label}</p>
                 </Td>
                 <Td className="text-sm">{when(r)}</Td>
                 <Td className="max-w-56 text-sm">
@@ -455,7 +455,7 @@ function ReportsTab() {
                 </Td>
                 <Td className="text-sm">
                   {r.isActive && r.nextRunAtUtc ? formatDateTimeUtc(r.nextRunAtUtc) : '—'}
-                  {r.lastSentAtUtc && <p className="text-xs text-zinc-500">Last {formatDateTimeUtc(r.lastSentAtUtc)}</p>}
+                  {r.lastSentAtUtc && <p className="text-xs text-zinc-500 dark:text-zinc-400">Last {formatDateTimeUtc(r.lastSentAtUtc)}</p>}
                 </Td>
                 <Td>
                   <div className="flex justify-end gap-1">
@@ -504,7 +504,7 @@ function PreviewModal({ table, onClose }: { table: ReportTable; onClose: () => v
 }
 
 function ReportPreview({ table }: { table: ReportTable }) {
-  if (!table.rows.length) return <p className="text-sm text-zinc-500">Nothing to report right now.</p>;
+  if (!table.rows.length) return <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing to report right now.</p>;
   return (
     <div className="max-h-[60vh] overflow-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
       <Table>
@@ -527,7 +527,7 @@ function ReportPreview({ table }: { table: ReportTable }) {
           ))}
         </TBody>
       </Table>
-      {table.rows.length > 100 && <p className="px-3 py-2 text-xs text-zinc-500">Showing 100 of {table.rows.length} rows.</p>}
+      {table.rows.length > 100 && <p className="px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">Showing 100 of {table.rows.length} rows.</p>}
     </div>
   );
 }
@@ -666,7 +666,7 @@ function ReportModal({ item, onClose }: { item: ScheduledReport | null; onClose:
       {preview && (
         <div className="mt-4">
           <p className="mb-2 text-sm font-medium">
-            {preview.title} <span className="font-normal text-zinc-500">· {preview.subtitle}</span>
+            {preview.title} <span className="font-normal text-zinc-500 dark:text-zinc-400">· {preview.subtitle}</span>
           </p>
           <ReportPreview table={preview} />
         </div>
@@ -692,7 +692,7 @@ function HistoryTab() {
               <Th>When</Th>
               <Th>What</Th>
               <Th>About</Th>
-              <Th className="text-right">Recipients</Th>
+              <Th className="text-end">Recipients</Th>
             </Tr>
           </THead>
           <TBody>
@@ -701,16 +701,16 @@ function HistoryTab() {
                 <Td className="text-sm whitespace-nowrap">{formatDateTimeUtc(r.createdAtUtc)}</Td>
                 <Td>
                   <p className="font-medium">{r.name}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {r.alertId ? 'Alert' : 'Report'}
                     {r.manual ? ' · sent by hand' : ''}
                   </p>
                 </Td>
                 <Td className="text-sm">
                   {r.reportId ? `${r.items} rows` : `${r.items} people`}
-                  {r.note && <p className="text-xs text-zinc-500">{r.note}</p>}
+                  {r.note && <p className="text-xs text-zinc-500 dark:text-zinc-400">{r.note}</p>}
                 </Td>
-                <Td className="text-right tabular-nums">{r.recipients}</Td>
+                <Td className="text-end tabular-nums">{r.recipients}</Td>
               </Tr>
             ))}
           </TBody>

@@ -100,12 +100,12 @@ function LetterView({ l, back, hr }: { l: LetterDocument; back: { to: string; la
             {l.companyAddress && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{l.companyAddress}</p>}
             {l.companyPhone && <p className="text-sm text-zinc-500 dark:text-zinc-400">{l.companyPhone}</p>}
           </div>
-          <div className="text-right text-sm text-zinc-600 dark:text-zinc-300">
+          <div className="text-end text-sm text-zinc-600 dark:text-zinc-300">
             <p>
-              <span className="text-zinc-400">Ref:</span> <span className="font-mono">{l.referenceNo}</span>
+              <span className="text-zinc-500 dark:text-zinc-400">Ref:</span> <span className="font-mono">{l.referenceNo}</span>
             </p>
             <p>
-              <span className="text-zinc-400">Date:</span> {formatDate(l.issuedOn)}
+              <span className="text-zinc-500 dark:text-zinc-400">Date:</span> {formatDate(l.issuedOn)}
             </p>
           </div>
         </header>
@@ -113,7 +113,7 @@ function LetterView({ l, back, hr }: { l: LetterDocument; back: { to: string; la
         <div className="mt-8 text-sm text-zinc-700 dark:text-zinc-300">
           <p className="font-medium text-zinc-900 dark:text-white">{l.employeeName}</p>
           {l.designation && <p>{l.designation}</p>}
-          <p className="font-mono text-xs text-zinc-500">{l.employeeCode}</p>
+          <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{l.employeeCode}</p>
         </div>
 
         <h2 className="mt-8 font-semibold text-zinc-900 underline decoration-zinc-300 underline-offset-4 dark:text-white">Subject: {l.subject}</h2>
@@ -123,9 +123,9 @@ function LetterView({ l, back, hr }: { l: LetterDocument; back: { to: string; la
         <footer className="mt-16">
           <div className="w-56 border-t border-zinc-400 pt-2 text-sm">
             <p className="font-medium text-zinc-900 dark:text-white">{l.issuedByName ?? 'Human Resources'}</p>
-            <p className="text-zinc-500">For {l.companyName}</p>
+            <p className="text-zinc-500 dark:text-zinc-400">For {l.companyName}</p>
           </div>
-          {l.footer && <p className="mt-10 border-t border-zinc-200 pt-2 text-center text-xs text-zinc-500 dark:border-zinc-700">{l.footer}</p>}
+          {l.footer && <p className="mt-10 border-t border-zinc-200 pt-2 text-center text-xs text-zinc-500 dark:text-zinc-400 dark:border-zinc-700">{l.footer}</p>}
         </footer>
       </article>
 

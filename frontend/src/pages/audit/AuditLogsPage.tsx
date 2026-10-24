@@ -177,7 +177,7 @@ export function AuditLogsPage() {
                   <Th>Role</Th>
                   <Th>Action</Th>
                   <Th>Entity / path</Th>
-                  <Th className="text-right">Status</Th>
+                  <Th className="text-end">Status</Th>
                   <Th>IP</Th>
                 </tr>
               </THead>
@@ -188,7 +188,7 @@ export function AuditLogsPage() {
                     <Td>
                       <StatusBadge status={l.category} />
                     </Td>
-                    {isPlatform && <Td>{l.companyName ?? <span className="text-zinc-400">Platform</span>}</Td>}
+                    {isPlatform && <Td>{l.companyName ?? <span className="text-zinc-500 dark:text-zinc-400">Platform</span>}</Td>}
                     <Td>{l.userEmail ?? '—'}</Td>
                     <Td>{l.role ? roleLabel(l.role) : '—'}</Td>
                     <Td className="font-medium text-zinc-900 dark:text-zinc-100">{l.action}</Td>
@@ -196,13 +196,13 @@ export function AuditLogsPage() {
                       {l.entityType ? (
                         <>
                           {l.entityType}
-                          {l.entityId && <span className="text-zinc-400"> · {l.entityId.slice(0, 8)}</span>}
+                          {l.entityId && <span className="text-zinc-500 dark:text-zinc-400"> · {l.entityId.slice(0, 8)}</span>}
                         </>
                       ) : (
                         <span className="font-mono text-xs">{l.path ?? '—'}</span>
                       )}
                     </Td>
-                    <Td className="text-right">
+                    <Td className="text-end">
                       {l.statusCode != null ? <Badge tone={statusTone(l.statusCode)}>{l.statusCode}</Badge> : '—'}
                     </Td>
                     <Td className="font-mono text-xs">{l.ipAddress ?? '—'}</Td>
@@ -251,7 +251,7 @@ function AuditDetail({ log }: { log: AuditLog }) {
         {rows.map(([k, v]) => (
           <div key={k} className="grid grid-cols-[140px_1fr] gap-3 px-3 py-2 text-sm">
             <dt className="text-zinc-500 dark:text-zinc-400">{k}</dt>
-            <dd className="min-w-0 break-all text-zinc-900 dark:text-zinc-100">{v ?? <span className="text-zinc-400">—</span>}</dd>
+            <dd className="min-w-0 break-all text-zinc-900 dark:text-zinc-100">{v ?? <span className="text-zinc-500 dark:text-zinc-400">—</span>}</dd>
           </div>
         ))}
       </dl>

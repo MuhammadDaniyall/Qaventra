@@ -65,8 +65,8 @@ export function ReportsPage() {
         <Card className="self-start">
           <div className="border-b border-zinc-100 p-3 dark:border-zinc-800">
             <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-              <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a report" />
+              <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+              <Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a report" />
             </div>
           </div>
           {list.isLoading ? (
@@ -75,14 +75,14 @@ export function ReportsPage() {
             <nav className="max-h-[70vh] overflow-y-auto py-2">
               {groups.map(([category, reports]) => (
                 <div key={category} className="mb-2">
-                  <p className="px-4 py-1 text-[11px] font-semibold tracking-wide text-zinc-400 uppercase">{category}</p>
+                  <p className="px-4 py-1 text-[11px] font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">{category}</p>
                   {reports.map((r) => (
                     <button
                       key={r.key}
                       type="button"
                       onClick={() => setParams({ report: r.key })}
                       className={cn(
-                        'block w-full px-4 py-1.5 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/50',
+                        'block w-full px-4 py-1.5 text-start text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/50',
                         r.key === key
                           ? 'bg-accent-50 font-medium text-accent-700 dark:bg-accent-500/10 dark:text-accent-200'
                           : 'text-zinc-700 dark:text-zinc-300',
@@ -93,7 +93,7 @@ export function ReportsPage() {
                   ))}
                 </div>
               ))}
-              {!groups.length && <p className="px-4 py-3 text-sm text-zinc-500">No report matches.</p>}
+              {!groups.length && <p className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">No report matches.</p>}
             </nav>
           )}
         </Card>
@@ -258,7 +258,7 @@ function ResultTable({ r }: { r: ReportResult }) {
     <Card>
       <CardHeader title={r.title} description={`${r.subtitle ?? ''}${r.subtitle ? ' · ' : ''}${r.rows.length} rows`} />
       {!r.rows.length ? (
-        <p className="px-5 py-6 text-sm text-zinc-500">Nothing to show for these filters.</p>
+        <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">Nothing to show for these filters.</p>
       ) : (
         <div className="max-h-[65vh] overflow-auto">
           <table className="w-full text-sm">
@@ -269,7 +269,7 @@ function ResultTable({ r }: { r: ReportResult }) {
                     key={i}
                     className={cn(
                       'border-b border-zinc-200 px-3 py-2 text-xs font-semibold whitespace-nowrap text-zinc-600 dark:border-zinc-700 dark:text-zinc-300',
-                      r.numeric[i] ? 'text-right' : 'text-left',
+                      r.numeric[i] ? 'text-end' : 'text-start',
                     )}
                   >
                     {h}
@@ -281,7 +281,7 @@ function ResultTable({ r }: { r: ReportResult }) {
               {r.rows.map((row, i) => (
                 <tr key={i} className="border-b border-zinc-100 dark:border-zinc-800">
                   {row.map((c, j) => (
-                    <td key={j} className={cn('px-3 py-1.5', r.numeric[j] && 'text-right tabular-nums')}>
+                    <td key={j} className={cn('px-3 py-1.5', r.numeric[j] && 'text-end tabular-nums')}>
                       {c}
                     </td>
                   ))}
@@ -292,7 +292,7 @@ function ResultTable({ r }: { r: ReportResult }) {
               <tfoot className="sticky bottom-0 bg-zinc-50 font-semibold dark:bg-zinc-900">
                 <tr>
                   {r.totals.map((c, j) => (
-                    <td key={j} className={cn('border-t border-zinc-300 px-3 py-2 dark:border-zinc-600', r.numeric[j] && 'text-right tabular-nums')}>
+                    <td key={j} className={cn('border-t border-zinc-300 px-3 py-2 dark:border-zinc-600', r.numeric[j] && 'text-end tabular-nums')}>
                       {c}
                     </td>
                   ))}

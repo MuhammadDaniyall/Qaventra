@@ -100,7 +100,7 @@ function MyRequests({ requests }: { requests: AssetRequest[] }) {
                 {r.kind === 'Return' ? `Return ${r.assetLabel}` : r.type}
                 {r.returnBy ? ` · until ${formatDate(r.returnBy)}` : ''}
               </p>
-              <p className="truncate text-xs text-zinc-500">
+              <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                 {r.reason} · {formatDateTimeUtc(r.createdAtUtc)}
                 {r.decisionNote ? ` · ${r.decisionNote}` : ''}
               </p>

@@ -16,6 +16,9 @@ public record EmployeeListItemDto(
     Guid Id, string EmployeeCode, string FullName, string? Email, string? Phone,
     string? Department, string? Designation, EmploymentStatus Status, DateOnly JoiningDate, bool HasLogin);
 
+/// <summary>One box on the org chart: who the person is and who they report to.</summary>
+public record OrgChartNodeDto(Guid Id, string Name, string? Designation, string? Department, Guid? ManagerId);
+
 public record EmployeeDto(
     Guid Id, string EmployeeCode, string FirstName, string LastName, string? Email, string? Phone, string? Cnic,
     DateOnly? DateOfBirth, Gender? Gender, DateOnly JoiningDate, DateOnly? LeavingDate, EmploymentStatus Status,
@@ -106,6 +109,19 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
             .OrderBy(e => e.FirstName)
             .Select(e => new LookupDto(e.Id, e.EmployeeCode + " · " + e.FirstName + " " + e.LastName
                 + (e.Status == EmploymentStatus.Resigned || e.Status == EmploymentStatus.Terminated ? " (left)" : "")))
+            .ToListAsync();
+
+    /// <summary>Current employees with their manager, for the org chart. Everyone in the company may see it.</summary>
+    [HttpGet("org-chart")]
+    public Task<List<OrgChartNodeDto>> OrgChart() =>
+        db.Employees.AsNoTracking()
+            .Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)
+            .OrderBy(e => e.FirstName).ThenBy(e => e.LastName)
+            .Select(e => new OrgChartNodeDto(
+                e.Id, e.FirstName + " " + e.LastName,
+                e.Designation != null ? e.Designation.Title : null,
+                e.Department != null ? e.Department.Name : null,
+                e.ManagerId))
             .ToListAsync();
 
     [HttpGet("me")]

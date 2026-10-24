@@ -80,14 +80,14 @@ export function NotificationBell() {
       >
         <Bell className="size-[18px]" />
         {unread > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white tabular-nums">
+          <span className="absolute top-1 end-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white tabular-nums">
             {unread > 99 ? '99+' : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-[min(24rem,calc(100vw-2rem))] animate-pop-in overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="absolute end-0 z-40 mt-2 w-[min(24rem,calc(100vw-2rem))] animate-pop-in overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
             <p className="text-sm font-semibold text-zinc-900 dark:text-white">Notifications</p>
             {unread > 0 && (
@@ -98,7 +98,7 @@ export function NotificationBell() {
           </div>
           <ul className="max-h-[60vh] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800">
             {!feed.data?.items.length ? (
-              <li className="px-4 py-10 text-center text-sm text-zinc-500">You're all caught up.</li>
+              <li className="px-4 py-10 text-center text-sm text-zinc-500 dark:text-zinc-400">You're all caught up.</li>
             ) : (
               feed.data.items.map((n) => {
                 const Icon = ICONS[n.kind] ?? Bell;
@@ -112,15 +112,15 @@ export function NotificationBell() {
                         !n.readAtUtc && 'bg-accent-50/50 dark:bg-accent-500/5',
                       )}
                     >
-                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800">
+                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:text-zinc-400 dark:bg-zinc-800">
                         <Icon className="size-4" aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className={cn('block text-sm', n.readAtUtc ? 'text-zinc-700 dark:text-zinc-300' : 'font-medium text-zinc-900 dark:text-white')}>
                           {n.title}
                         </span>
-                        {n.body && <span className="line-clamp-2 block text-xs whitespace-pre-line text-zinc-500">{n.body}</span>}
-                        <span className="mt-0.5 block text-[11px] text-zinc-400">{ago(n.createdAtUtc)}</span>
+                        {n.body && <span className="line-clamp-2 block text-xs whitespace-pre-line text-zinc-500 dark:text-zinc-400">{n.body}</span>}
+                        <span className="mt-0.5 block text-[11px] text-zinc-500 dark:text-zinc-400">{ago(n.createdAtUtc)}</span>
                       </span>
                       {!n.readAtUtc && <span className="mt-2 size-2 shrink-0 rounded-full bg-accent-500" aria-label="Unread" />}
                     </button>

@@ -161,7 +161,7 @@ function CancelSeparationButton({ s }: { s: Separation }) {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-zinc-500">{label}</dt>
+      <dt className="text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
       <dd className="mt-0.5 truncate font-medium text-zinc-900 dark:text-zinc-100" title={value}>
         {value}
       </dd>
@@ -285,8 +285,8 @@ function ClearanceCard({ s }: { s: Separation }) {
               {c.isCleared ? <CheckCircle2 className="size-5 text-emerald-500" /> : <Circle className="size-5 text-zinc-300 hover:text-emerald-400" />}
             </button>
             <div className="min-w-0 flex-1">
-              <p className={cn('text-sm', c.isCleared ? 'text-zinc-500 line-through decoration-zinc-300' : 'text-zinc-900 dark:text-zinc-100')}>{c.title}</p>
-              <p className="text-xs text-zinc-500">
+              <p className={cn('text-sm', c.isCleared ? 'text-zinc-500 dark:text-zinc-400 line-through decoration-zinc-300' : 'text-zinc-900 dark:text-zinc-100')}>{c.title}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {c.department}
                 {c.isCleared && c.clearedByName && (
                   <>
@@ -352,17 +352,17 @@ function ExitInterviewCard({ s }: { s: Separation }) {
         {s.exitInterviewAtUtc ? (
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between">
-              <dt className="text-zinc-500">Rating</dt>
+              <dt className="text-zinc-500 dark:text-zinc-400">Rating</dt>
               <dd>
                 <Stars value={s.exitRating ?? 0} size="sm" />
               </dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-zinc-500">Main reason</dt>
+              <dt className="text-zinc-500 dark:text-zinc-400">Main reason</dt>
               <dd className="font-medium text-zinc-900 dark:text-zinc-100">{s.exitReason ?? 'Not given'}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-zinc-500">Would recommend us</dt>
+              <dt className="text-zinc-500 dark:text-zinc-400">Would recommend us</dt>
               <dd className="inline-flex items-center gap-1 font-medium">
                 {s.wouldRecommend ? (
                   <>
@@ -378,7 +378,7 @@ function ExitInterviewCard({ s }: { s: Separation }) {
             {s.exitFeedback && <p className="rounded-lg bg-zinc-50 p-3 text-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-300">“{s.exitFeedback}”</p>}
           </dl>
         ) : (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {s.summary.type === 'Resignation'
               ? 'Waiting for the employee. Ask them to open Resignation in their menu.'
               : 'Not usually collected for this type of separation.'}
@@ -553,7 +553,7 @@ function SettlementCard({ s, st }: { s: Separation; st: Settlement }) {
           <div className="flex flex-wrap items-end justify-between gap-4 border-t border-zinc-100 pt-5 dark:border-zinc-800">
             <ul className="space-y-1 text-sm">
               {checks.map((c) => (
-                <li key={c.label} className={cn('flex items-center gap-2', c.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-zinc-500')}>
+                <li key={c.label} className={cn('flex items-center gap-2', c.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-zinc-500 dark:text-zinc-400')}>
                   {c.ok ? <CheckCircle2 className="size-4" aria-hidden="true" /> : <Circle className="size-4" aria-hidden="true" />}
                   {c.label}
                 </li>

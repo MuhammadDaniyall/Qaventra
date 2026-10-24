@@ -147,7 +147,7 @@ function GoalsEditor({ r }: { r: Review }) {
         );
       })}
       {r.sections.filter((s) => s.kind === 'Competencies').length > 0 && (
-        <p className="text-sm text-zinc-500">Also rated: {r.sections.filter((s) => s.kind === 'Competencies').map((s) => `${s.name} (${s.items.map((i) => i.title).join(', ')})`).join('; ')}.</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Also rated: {r.sections.filter((s) => s.kind === 'Competencies').map((s) => `${s.name} (${s.items.map((i) => i.title).join(', ')})`).join('; ')}.</p>
       )}
       <Card>
         <CardBody className="flex flex-wrap items-center justify-end gap-2">
@@ -225,7 +225,7 @@ function ScoreForm({ r, mode }: { r: Review; mode: 'self' | 'manager' }) {
               <li key={i.id} className="space-y-3 px-5 py-4">
                 <ItemHeader i={i} />
                 {!self && i.selfScore && (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     Self rating: <span className="font-medium text-zinc-700 dark:text-zinc-300">{i.selfScore}</span>
                     {i.selfComment ? ` · “${i.selfComment}”` : ''}
                   </p>
@@ -266,7 +266,7 @@ function ScoreForm({ r, mode }: { r: Review; mode: 'self' | 'manager' }) {
           )}
         </CardBody>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
-          <span className="text-sm text-zinc-500">
+          <span className="text-sm text-zinc-500 dark:text-zinc-400">
             {rated} of {r.items.length} rated
           </span>
           <div className="flex gap-2">
@@ -288,8 +288,8 @@ function ItemHeader({ i }: { i: ReviewItem }) {
     <div className="flex flex-wrap items-start justify-between gap-2">
       <div>
         <p className="font-medium text-zinc-900 dark:text-zinc-100">{i.title}</p>
-        {i.target && <p className="text-xs text-zinc-500">Target: {i.target}</p>}
-        {i.description && <p className="text-xs text-zinc-500">{i.description}</p>}
+        {i.target && <p className="text-xs text-zinc-500 dark:text-zinc-400">Target: {i.target}</p>}
+        {i.description && <p className="text-xs text-zinc-500 dark:text-zinc-400">{i.description}</p>}
       </div>
       <Badge>{i.weight}%</Badge>
     </div>
@@ -299,7 +299,7 @@ function ItemHeader({ i }: { i: ReviewItem }) {
 function Score({ label, value }: { label: string; value: number | null }) {
   return (
     <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-zinc-900 tabular-nums dark:text-white">{value ?? '—'}</p>
     </div>
   );
@@ -328,7 +328,7 @@ function ReadOnly({ r }: { r: Review }) {
           <div className="col-span-2 rounded-xl border border-accent-200 bg-accent-50 p-4 dark:border-accent-500/30 dark:bg-accent-500/10">
             <p className="text-xs text-accent-700 dark:text-accent-300">Final rating</p>
             <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-white">{r.finalRating ? `${r.finalRating} · ${r.finalLabel ?? ''}` : '—'}</p>
-            {r.potential && !r.isEmployee && <p className="text-xs text-zinc-500">Potential: {POTENTIAL_LABELS[r.potential]}</p>}
+            {r.potential && !r.isEmployee && <p className="text-xs text-zinc-500 dark:text-zinc-400">Potential: {POTENTIAL_LABELS[r.potential]}</p>}
           </div>
         </div>
       )}
@@ -373,7 +373,7 @@ function ReadOnly({ r }: { r: Review }) {
               .filter(([, v]) => v)
               .map(([k, v]) => (
                 <div key={k}>
-                  <p className="text-xs text-zinc-500">{k}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{k}</p>
                   <p className="text-sm whitespace-pre-line text-zinc-800 dark:text-zinc-200">{v}</p>
                 </div>
               ))}

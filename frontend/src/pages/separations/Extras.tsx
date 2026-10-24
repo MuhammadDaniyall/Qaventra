@@ -48,7 +48,7 @@ export function ClearanceOwnersCard({ separationId, titles }: { separationId: st
         {extras.data.clearance.map((c) => (
           <li key={c.itemId} className="grid grid-cols-[1fr_5rem_11rem] items-center gap-2 px-5 py-2 text-sm">
             <span className="truncate">
-              {titles[c.itemId]} {!c.open && <Badge className="ml-1">Waiting</Badge>}
+              {titles[c.itemId]} {!c.open && <Badge className="ms-1">Waiting</Badge>}
             </span>
             <Select
               aria-label="Level"
@@ -103,7 +103,7 @@ export function ExitQuestionsCard({ separationId, canAnswer }: { separationId: s
   const v = draft ?? Object.fromEntries(answers.map((a) => [a.questionId, a.answer ?? '']));
   const field = (a: ExitAnswer) => {
     const set = (x: string) => setDraft({ ...v, [a.questionId]: x });
-    if (!draft) return <p className="text-sm text-zinc-600 dark:text-zinc-300">{a.answer || <span className="text-zinc-400">Not answered</span>}</p>;
+    if (!draft) return <p className="text-sm text-zinc-600 dark:text-zinc-300">{a.answer || <span className="text-zinc-500 dark:text-zinc-400">Not answered</span>}</p>;
     if (a.kind === 'Rating')
       return (
         <div className="flex gap-1">
@@ -146,7 +146,7 @@ export function ExitQuestionsCard({ separationId, canAnswer }: { separationId: s
         {answers.map((a) => (
           <div key={a.questionId}>
             <p className="mb-1 text-sm font-medium">
-              {a.question} {a.category && <span className="text-xs font-normal text-zinc-500">· {a.category}</span>}
+              {a.question} {a.category && <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">· {a.category}</span>}
             </p>
             {field(a)}
           </div>
@@ -219,7 +219,7 @@ export function ExitPanelCard({ separationId }: { separationId: string }) {
                   {v.ids.map((id) => (
                     <Badge key={id}>
                       {people.data?.find((p) => p.id === id)?.name}
-                      <button type="button" className="ml-1" aria-label="Remove" onClick={() => setF({ ...v, ids: v.ids.filter((x) => x !== id) })}>
+                      <button type="button" className="ms-1" aria-label="Remove" onClick={() => setF({ ...v, ids: v.ids.filter((x) => x !== id) })}>
                         ×
                       </button>
                     </Badge>
@@ -244,10 +244,10 @@ export function ExitPanelCard({ separationId }: { separationId: string }) {
         ) : (
           <div className="space-y-1 text-sm">
             <p>
-              <span className="text-zinc-500">When:</span> {e.interviewScheduledUtc ? formatDateTimeUtc(e.interviewScheduledUtc) : 'Not scheduled'}
+              <span className="text-zinc-500 dark:text-zinc-400">When:</span> {e.interviewScheduledUtc ? formatDateTimeUtc(e.interviewScheduledUtc) : 'Not scheduled'}
             </p>
             <p>
-              <span className="text-zinc-500">Panel:</span>{' '}
+              <span className="text-zinc-500 dark:text-zinc-400">Panel:</span>{' '}
               {e.interviewerIds.length ? e.interviewerIds.map((id) => people.data?.find((p) => p.id === id)?.name).join(', ') : 'None'}
             </p>
             {e.interviewNotes && <p className="whitespace-pre-line text-zinc-600 dark:text-zinc-300">{e.interviewNotes}</p>}
@@ -279,13 +279,13 @@ export function SettlementApprovalCard({ separationId, completed }: { separation
         {e.settlementApprovedAtUtc ? (
           <p className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
             <CheckCircle2 className="size-4" /> Approved {formatDateTimeUtc(e.settlementApprovedAtUtc)}
-            {e.settlementApprovalNote && <span className="text-zinc-500">· {e.settlementApprovalNote}</span>}
+            {e.settlementApprovalNote && <span className="text-zinc-500 dark:text-zinc-400">· {e.settlementApprovalNote}</span>}
           </p>
         ) : e.settlementSubmittedAtUtc ? (
           <p className="text-amber-700 dark:text-amber-300">Waiting for approval since {formatDateTimeUtc(e.settlementSubmittedAtUtc)}.</p>
         ) : (
           <div className="flex items-center justify-between gap-3">
-            <p className="text-zinc-500">
+            <p className="text-zinc-500 dark:text-zinc-400">
               Optional: send the saved settlement through the final settlement approval chain. Completion then waits for it.
               {e.settlementApprovalNote && <span className="block text-red-600">Sent back: {e.settlementApprovalNote}</span>}
             </p>
@@ -339,8 +339,8 @@ export function MyClearancesPage() {
               <li key={c.itemId} className="flex items-center gap-3 px-5 py-3 text-sm">
                 <Checkbox label="" checked={c.isCleared} onChange={() => toggle.mutate(c)} aria-label={`Cleared: ${c.title}`} />
                 <span className="flex-1">
-                  <span className="font-medium">{c.title}</span> <span className="text-zinc-500">({c.department})</span>
-                  <span className="block text-xs text-zinc-500">
+                  <span className="font-medium">{c.title}</span> <span className="text-zinc-500 dark:text-zinc-400">({c.department})</span>
+                  <span className="block text-xs text-zinc-500 dark:text-zinc-400">
                     {c.employeeName} · {c.employeeCode}
                     {c.lastWorkingDay && ` · last day ${formatDate(c.lastWorkingDay)}`}
                   </span>
@@ -401,13 +401,13 @@ function ClearanceTemplates() {
           <li key={t.id} className="flex items-center gap-3 px-5 py-3 text-sm">
             <span className="font-medium">{t.name}</span>
             {t.isDefault && <Badge tone="accent">Default</Badge>}
-            <span className="flex-1 text-xs text-zinc-500">
+            <span className="flex-1 text-xs text-zinc-500 dark:text-zinc-400">
               {t.items.length} items · {Math.max(...t.items.map((i) => i.level))} level(s)
             </span>
             <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
           </li>
         ))}
-        {!list.data?.length && <li className="px-5 py-3 text-sm text-zinc-500">No templates: the built-in checklist is used.</li>}
+        {!list.data?.length && <li className="px-5 py-3 text-sm text-zinc-500 dark:text-zinc-400">No templates: the built-in checklist is used.</li>}
       </ul>
       {editing && <ClearanceTemplateModal item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       <DeleteConfirm item={deleting} name="Template" remove={separationSetupApi.deleteClearanceTemplate} invalidate={[KEY]} onClose={() => setDeleting(null)} />
@@ -503,11 +503,11 @@ function ExitTemplates() {
           <li key={t.id} className="flex items-center gap-3 px-5 py-3 text-sm">
             <span className="font-medium">{t.name}</span>
             {t.isDefault && <Badge tone="accent">Default</Badge>}
-            <span className="flex-1 text-xs text-zinc-500">{t.questions.length} questions</span>
+            <span className="flex-1 text-xs text-zinc-500 dark:text-zinc-400">{t.questions.length} questions</span>
             <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
           </li>
         ))}
-        {!list.data?.length && <li className="px-5 py-3 text-sm text-zinc-500">No templates yet.</li>}
+        {!list.data?.length && <li className="px-5 py-3 text-sm text-zinc-500 dark:text-zinc-400">No templates yet.</li>}
       </ul>
       {editing && <ExitTemplateModal item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       <DeleteConfirm item={deleting} name="Template" remove={separationSetupApi.deleteExitTemplate} invalidate={[KEY]} onClose={() => setDeleting(null)} />

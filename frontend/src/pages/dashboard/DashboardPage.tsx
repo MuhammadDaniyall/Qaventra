@@ -24,7 +24,9 @@ import { DashboardNews } from '../announcements/DashboardNews';
 import { WelcomeBanner } from '../onboarding/WelcomePage';
 import { AttendanceTrendChart, DepartmentChart } from './Charts';
 import { NewRequestMenu } from '../requests/MyRequestsPage';
+import { SetupGuide } from './SetupGuide';
 import { ActionCenter, HolidaysCard, LeaveBalanceCard, MyRequestsCard } from './HomeCards';
+import { tx } from '../../lib/i18n';
 
 function greeting() {
   const h = new Date().getHours();
@@ -48,7 +50,7 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        title={`${greeting()}, ${user.fullName.split(' ')[0]}`}
+        title={`${tx(greeting())}, ${user.fullName.split(' ')[0]}`}
         description={`${todayLabel()} · ${user.companyName ?? 'your company'}`}
         actions={
           <>
@@ -64,6 +66,7 @@ export function DashboardPage() {
         }
       />
 
+      {hr && <SetupGuide className="mb-6" />}
       {self && <WelcomeBanner className="mb-6" />}
       <DashboardNews className="mb-6" />
 
@@ -82,9 +85,9 @@ export function DashboardPage() {
       ) : approver ? (
         <>
           <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-base font-semibold text-zinc-900 dark:text-white">Today at {user.companyName ?? 'your company'}</h2>
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-white">{tx('Today at')} {user.companyName ?? tx('your company')}</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 2xl:grid-cols-6">
             <StatCard label="Headcount" value={d?.headcount} icon={Users} loading={loading} />
             <StatCard label="Present today" value={d?.presentToday} icon={UserCheck} tone="green" loading={loading} />
             <StatCard label="Late today" value={d?.lateToday} icon={Clock} tone="amber" loading={loading} />
@@ -139,7 +142,7 @@ function LastPayrollCard({ d, loading }: { d: Dashboard | undefined; loading: bo
         title="Last payroll"
         actions={
           <Link to="/payroll" className="text-sm font-medium text-accent-600 hover:underline dark:text-accent-400">
-            Open payroll
+            {tx('Open payroll')}
           </Link>
         }
       />

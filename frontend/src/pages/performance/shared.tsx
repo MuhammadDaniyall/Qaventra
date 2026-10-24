@@ -82,7 +82,7 @@ export function NineBox({ reviews, onPick }: { reviews: ReviewListItem[]; onPick
       <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1.5">
         {[3, 2, 1].map((pot) => (
           <Fragment key={pot}>
-            <div className="flex items-center pr-2 text-xs font-medium text-zinc-500 [writing-mode:vertical-rl] rotate-180">
+            <div className="flex items-center pe-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 [writing-mode:vertical-rl] rotate-180">
               {POTENTIAL_LABELS[pot]}
             </div>
             {[1, 2, 3].map((perf) => {
@@ -92,7 +92,7 @@ export function NineBox({ reviews, onPick }: { reviews: ReviewListItem[]; onPick
               return (
                 <div key={key} className={cn('min-h-24 rounded-lg p-2', tone)}>
                   <p className="mb-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
-                    {BOX_NAMES[key]} <span className="font-normal text-zinc-400">{people.length || ''}</span>
+                    {BOX_NAMES[key]} <span className="font-normal text-zinc-500">{people.length || ''}</span>
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {people.map((p) => (
@@ -108,12 +108,12 @@ export function NineBox({ reviews, onPick }: { reviews: ReviewListItem[]; onPick
         ))}
         <div />
         {['Low', 'Medium', 'High'].map((l) => (
-          <p key={l} className="pt-1 text-center text-xs font-medium text-zinc-500">
+          <p key={l} className="pt-1 text-center text-xs font-medium text-zinc-500 dark:text-zinc-400">
             {l} performance
           </p>
         ))}
       </div>
-      <p className="mt-2 text-xs text-zinc-500">Rows: potential (from the manager). Columns: final rating 1–2, 3, 4–5.</p>
+      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Rows: potential (from the manager). Columns: final rating 1–2, 3, 4–5.</p>
     </div>
   );
 }

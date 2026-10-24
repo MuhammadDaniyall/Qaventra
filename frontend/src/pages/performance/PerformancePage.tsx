@@ -98,9 +98,9 @@ function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; qu
           <tr>
             <Th>{mine ? 'Cycle' : 'Employee'}</Th>
             <Th>Stage</Th>
-            <Th className="text-right">Self</Th>
-            <Th className="text-right">Manager</Th>
-            <Th className="text-right">Final</Th>
+            <Th className="text-end">Self</Th>
+            <Th className="text-end">Manager</Th>
+            <Th className="text-end">Final</Th>
           </tr>
         </THead>
         <TBody>
@@ -108,14 +108,14 @@ function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; qu
             <Tr key={r.id} onClick={() => navigate(`/performance/reviews/${r.id}`)}>
               <Td>
                 <p className="font-medium text-zinc-900 dark:text-zinc-100">{mine ? r.cycle : r.employeeName}</p>
-                <p className="text-xs text-zinc-500">{mine ? (r.reviewer ? `Reviewer: ${r.reviewer}` : 'Reviewed by HR') : `${r.cycle}${r.department ? ` · ${r.department}` : ''}`}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{mine ? (r.reviewer ? `Reviewer: ${r.reviewer}` : 'Reviewed by HR') : `${r.cycle}${r.department ? ` · ${r.department}` : ''}`}</p>
               </Td>
               <Td>
                 <Badge tone={r.stage === 'Done' ? 'green' : r.stage === 'SignOff' ? 'violet' : 'amber'}>{STAGE_LABELS[r.stage]}</Badge>
               </Td>
-              <Td className="text-right tabular-nums">{r.selfScore ?? '—'}</Td>
-              <Td className="text-right tabular-nums">{r.managerScore ?? '—'}</Td>
-              <Td className="text-right font-medium tabular-nums">{r.finalRating ?? '—'}</Td>
+              <Td className="text-end tabular-nums">{r.selfScore ?? '—'}</Td>
+              <Td className="text-end tabular-nums">{r.managerScore ?? '—'}</Td>
+              <Td className="text-end font-medium tabular-nums">{r.finalRating ?? '—'}</Td>
             </Tr>
           ))}
         </TBody>
@@ -161,7 +161,7 @@ function Cycles() {
               <Th>Cycle</Th>
               <Th>Status</Th>
               <Th>Progress</Th>
-              <Th className="text-right">
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -173,7 +173,7 @@ function Cycles() {
                 <Tr key={c.id} onClick={c.status === 'Draft' ? undefined : () => navigate(`/performance/cycles/${c.id}`)}>
                   <Td>
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">{c.name}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {formatDate(c.periodFrom)} – {formatDate(c.periodTo)} · {c.template} · {c.departments.length ? c.departments.join(', ') : 'Everyone'}
                     </p>
                   </Td>
@@ -185,7 +185,7 @@ function Cycles() {
                       ? '—'
                       : `${done}/${c.reviews} released · ${c.byStage.Calibration ?? 0} with HR · ${(c.byStage.ManagerReview ?? 0) + (c.byStage.SelfReview ?? 0) + (c.byStage.Goals ?? 0) + (c.byStage.GoalsSubmitted ?? 0)} in progress`}
                   </Td>
-                  <Td className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <Td className="text-end" onClick={(e) => e.stopPropagation()}>
                     {c.status === 'Draft' ? (
                       <div className="flex justify-end gap-1">
                         <Button size="sm" icon={<Rocket className="size-3.5" />} onClick={() => setLaunching(c)}>
@@ -417,7 +417,7 @@ function TemplateModal({ item, onClose }: { item: PerformanceTemplate | null; on
               </IconButton>
             </div>
             {s.kind === 'Goals' ? (
-              <p className="text-xs text-zinc-500">Each person writes their own goals at the start of the cycle; their manager approves them.</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Each person writes their own goals at the start of the cycle; their manager approves them.</p>
             ) : (
               <Textarea
                 rows={3}
@@ -473,7 +473,7 @@ function SettingsTab() {
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Suggested raise</p>
-          <p className="mb-3 text-xs text-zinc-500">The raise shown at calibration for a final rating at or above each step.</p>
+          <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">The raise shown at calibration for a final rating at or above each step.</p>
           <div className="space-y-2">
             {v.raiseSlabs.map((s, i) => (
               <div key={i} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">

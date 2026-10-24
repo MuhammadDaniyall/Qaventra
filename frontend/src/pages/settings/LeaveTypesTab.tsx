@@ -38,11 +38,11 @@ export function LeaveTypesTab() {
             <tr>
               <Th>Name</Th>
               <Th>Code</Th>
-              <Th className="text-right">Annual quota</Th>
+              <Th className="text-end">Annual quota</Th>
               <Th>Pay</Th>
               <Th>Policy</Th>
               <Th>Status</Th>
-              <Th className="text-right">
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -52,9 +52,9 @@ export function LeaveTypesTab() {
               <Tr key={t.id}>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{t.name}</Td>
                 <Td className="font-mono text-xs">{t.code}</Td>
-                <Td className="text-right tabular-nums">{t.isCompensatory ? 'From comp-off' : `${formatNumber(t.annualQuota)} days`}</Td>
+                <Td className="text-end tabular-nums">{t.isCompensatory ? 'From comp-off' : `${formatNumber(t.annualQuota)} days`}</Td>
                 <Td>{t.isPaid ? <Badge tone="green">Paid</Badge> : <Badge tone="gray">Unpaid</Badge>}</Td>
-                <Td className="max-w-xs whitespace-normal text-xs text-zinc-500">{policySummary(t) || '—'}</Td>
+                <Td className="max-w-xs whitespace-normal text-xs text-zinc-500 dark:text-zinc-400">{policySummary(t) || '—'}</Td>
                 <Td>
                   <StatusBadge status={t.isActive ? 'Active' : 'Cancelled'} label={t.isActive ? 'Active' : 'Inactive'} />
                 </Td>
@@ -228,7 +228,7 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
       />
 
       <fieldset className="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
-        <legend className="px-1 text-xs font-semibold tracking-wide text-zinc-500 uppercase">Policy</legend>
+        <legend className="px-1 text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Policy</legend>
         <div className="grid gap-3 sm:grid-cols-3">
           <Field label="Carry forward (max days)" hint="0 = none" error={fieldErrors.carryForwardMax}>
             <Input type="number" min={0} max={365} step="0.5" value={v.carryForwardMax} onChange={(e) => set({ carryForwardMax: e.target.value })} />

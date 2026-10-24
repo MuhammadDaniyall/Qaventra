@@ -86,7 +86,7 @@ export function OnboardingDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card>
           <CardHeader title="Tasks" description={`${s.done} of ${s.total} done${s.overdue ? ` · ${s.overdue} late` : ''}`} />
-          {d.tasks.length ? <TaskList tasks={d.tasks} onDelete={hr && active ? setDeleting : undefined} /> : <CardBody className="text-sm text-zinc-500">No tasks yet.</CardBody>}
+          {d.tasks.length ? <TaskList tasks={d.tasks} onDelete={hr && active ? setDeleting : undefined} /> : <CardBody className="text-sm text-zinc-500 dark:text-zinc-400">No tasks yet.</CardBody>}
         </Card>
         <div className="space-y-4">
           <FirstDay d={d} />
@@ -134,9 +134,9 @@ export function OnboardingDetailPage() {
 export function FirstDay({ d }: { d: OnboardingDetail }) {
   const row = (Icon: typeof Clock, label: string, value: React.ReactNode) => (
     <div className="flex items-start gap-3">
-      <Icon className="mt-0.5 size-4 shrink-0 text-zinc-400" />
+      <Icon className="mt-0.5 size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
       <div>
-        <p className="text-xs text-zinc-500">{label}</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
         <div className="text-sm text-zinc-900 dark:text-zinc-100">{value}</div>
       </div>
     </div>
@@ -156,7 +156,7 @@ export function FirstDay({ d }: { d: OnboardingDetail }) {
             <>
               {d.buddy}
               {d.buddyPhone && (
-                <a href={`tel:${d.buddyPhone}`} className="ml-2 text-accent-600 hover:underline dark:text-accent-400">
+                <a href={`tel:${d.buddyPhone}`} className="ms-2 text-accent-600 hover:underline dark:text-accent-400">
                   {d.buddyPhone}
                 </a>
               )}

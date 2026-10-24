@@ -36,10 +36,10 @@ export function DashboardNews({ className }: { className?: string }) {
         {items.map((a) => (
           <li key={a.id}>
             <Link to="/announcements" className="flex items-center gap-3 px-5 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50">
-              {a.isPinned ? <Pin className="size-4 shrink-0 text-accent-500" /> : <Megaphone className="size-4 shrink-0 text-zinc-400" />}
+              {a.isPinned ? <Pin className="size-4 shrink-0 text-accent-500" /> : <Megaphone className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{a.title}</span>
-                <span className="block truncate text-xs text-zinc-500">{a.body}</span>
+                <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{a.body}</span>
               </span>
               {!a.isRead && <span className="size-2 shrink-0 rounded-full bg-accent-500" aria-label="Unread" />}
             </Link>

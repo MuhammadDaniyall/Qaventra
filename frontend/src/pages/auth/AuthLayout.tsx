@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { CalendarCheck, MapPin, ShieldCheck, Wallet } from 'lucide-react';
 import { Logo } from '../../components/layout/Logo';
 import { APP_NAME } from '../../lib/brand';
+import { tx, useT } from '../../lib/i18n';
 
 const points = [
   { icon: MapPin, title: 'Geo-fenced attendance', text: 'Check in from the browser, verified against your office locations.' },
@@ -11,16 +12,27 @@ const points = [
 ];
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: ReactNode; children: ReactNode }) {
+  const { lang, setLang } = useT();
   return (
     <div className="grid min-h-screen lg:grid-cols-[1fr_1.05fr]">
       <div className="flex flex-col px-6 py-8 sm:px-10">
-        <Logo />
+        <div className="flex items-center justify-between">
+          <Logo />
+          {/* Each option is written in its own language so people can find it. */}
+          <button
+            type="button"
+            onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-accent-500 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {lang === 'ur' ? <span lang="en">English</span> : <span lang="ur">اردو</span>}
+          </button>
+        </div>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">{title}</h1>
-          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">{tx(title)}</h1>
+          <p className="mt-1.5 text-sm text-zinc-500 dark:text-zinc-400">{tx(subtitle)}</p>
           <div className="mt-8">{children}</div>
         </div>
-        <p className="text-xs text-zinc-400">© {new Date().getFullYear()} {APP_NAME}</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">© {new Date().getFullYear()} {APP_NAME}</p>
       </div>
 
       <div className="relative hidden overflow-hidden bg-zinc-950 lg:block">

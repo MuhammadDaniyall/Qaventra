@@ -20,6 +20,7 @@ import { Card, CardHeader, EmptyState, Skeleton, StatusBadge } from '../../compo
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatNumber, monthLabel } from '../../lib/format';
 import type { Dashboard, Holiday } from '../../types';
+import { tx } from '../../lib/i18n';
 
 const linkCls = 'text-sm font-medium text-accent-600 hover:underline dark:text-accent-400';
 
@@ -30,12 +31,12 @@ export function LeaveBalanceCard({ className }: { className?: string }) {
 
   return (
     <Card className={className}>
-      <CardHeader title="Leave balance" actions={<Link to="/me/leave" className={linkCls}>Apply</Link>} />
+      <CardHeader title="Leave balance" actions={<Link to="/me/leave" className={linkCls}>{tx('Apply')}</Link>} />
       <div className="space-y-4 p-5">
         {balances.isLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : !rows.length ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">No leave types assigned yet.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{tx('No leave types assigned yet.')}</p>
         ) : (
           rows.map((b) => {
             const total = Math.max(b.earned + b.carriedForward + b.adjustment + b.credited, b.available, 1);
@@ -43,10 +44,10 @@ export function LeaveBalanceCard({ className }: { className?: string }) {
             return (
               <div key={b.leaveTypeId}>
                 <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="truncate text-zinc-600 dark:text-zinc-300">{b.leaveType}</span>
+                  <span className="truncate text-zinc-600 dark:text-zinc-300">{tx(b.leaveType)}</span>
                   <span className="font-medium text-zinc-900 tabular-nums dark:text-white">
                     {formatNumber(b.available)}
-                    <span className="font-normal text-zinc-400"> / {formatNumber(total)}</span>
+                    <span className="font-normal text-zinc-500 dark:text-zinc-400"> / {formatNumber(total)}</span>
                   </span>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
@@ -92,7 +93,7 @@ export function MyRequestsCard({ className }: { className?: string }) {
 
   return (
     <Card className={className}>
-      <CardHeader title="Your requests" description="Latest leave and expense requests" actions={<Link to="/me/requests" className={linkCls}>See all</Link>} />
+      <CardHeader title="Your requests" description="Latest leave and expense requests" actions={<Link to="/me/requests" className={linkCls}>{tx('See all')}</Link>} />
       {loading ? (
         <div className="p-5">
           <Skeleton className="h-24 w-full" />
@@ -103,7 +104,7 @@ export function MyRequestsCard({ className }: { className?: string }) {
           title="No requests yet"
           description="Leave and expense requests you make show up here."
           className="py-8"
-          action={<Link to="/me/leave" className={linkCls}>Apply for leave</Link>}
+          action={<Link to="/me/leave" className={linkCls}>{tx('Apply for leave')}</Link>}
         />
       ) : (
         <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -195,7 +196,7 @@ export function ActionCenter({ d, hr, className }: { d: Dashboard | undefined; h
       ) : !tasks.length ? (
         <div className="flex items-center gap-3 px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">
           <CircleCheck className="size-5 text-emerald-500" aria-hidden="true" />
-          All clear. Nothing waits for you right now.
+          {tx('All clear. Nothing waits for you right now.')}
         </div>
       ) : (
         <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -209,8 +210,8 @@ export function ActionCenter({ d, hr, className }: { d: Dashboard | undefined; h
                   <t.icon className="size-4" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{t.title}</span>
-                  <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{t.detail}</span>
+                  <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{tx(t.title)}</span>
+                  <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{tx(t.detail)}</span>
                 </span>
                 <ChevronRight className="size-4 text-zinc-300 transition-transform group-hover:translate-x-0.5 dark:text-zinc-600" />
               </Link>

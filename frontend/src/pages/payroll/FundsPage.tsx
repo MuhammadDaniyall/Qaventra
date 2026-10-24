@@ -98,26 +98,26 @@ function ProvidentFund() {
           <THead>
             <tr>
               <Th>Employee</Th>
-              <Th className="text-right">Own share</Th>
-              <Th className="text-right">Company share</Th>
-              <Th className="text-right">Profit</Th>
-              <Th className="text-right">Withdrawn</Th>
-              <Th className="text-right">Balance</Th>
-              <Th className="text-right">Vested</Th>
+              <Th className="text-end">Own share</Th>
+              <Th className="text-end">Company share</Th>
+              <Th className="text-end">Profit</Th>
+              <Th className="text-end">Withdrawn</Th>
+              <Th className="text-end">Balance</Th>
+              <Th className="text-end">Vested</Th>
             </tr>
           </THead>
           <TBody>
             {rows.map((x) => (
               <Tr key={x.employeeId}>
                 <Td>
-                  {x.name} <span className="text-xs text-zinc-500">{x.code}</span>
+                  {x.name} <span className="text-xs text-zinc-500 dark:text-zinc-400">{x.code}</span>
                 </Td>
-                <Td className="text-right tabular-nums">{formatNumber(x.pfEmployeeShare)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(x.pfEmployerShare)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(x.pfProfit)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(x.pfWithdrawn)}</Td>
-                <Td className="text-right font-medium tabular-nums">{formatNumber(x.pfBalance)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(x.pfVested)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(x.pfEmployeeShare)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(x.pfEmployerShare)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(x.pfProfit)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(x.pfWithdrawn)}</Td>
+                <Td className="text-end font-medium tabular-nums">{formatNumber(x.pfBalance)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(x.pfVested)}</Td>
               </Tr>
             ))}
           </TBody>
@@ -150,22 +150,22 @@ function Gratuity() {
           <THead>
             <tr>
               <Th>Employee</Th>
-              <Th className="text-right">Years</Th>
-              <Th className="text-right">Accrued</Th>
-              <Th className="text-right">Paid</Th>
-              <Th className="text-right">Due</Th>
+              <Th className="text-end">Years</Th>
+              <Th className="text-end">Accrued</Th>
+              <Th className="text-end">Paid</Th>
+              <Th className="text-end">Due</Th>
             </tr>
           </THead>
           <TBody>
             {(summary.data ?? []).map((x: FundSummary) => (
               <Tr key={x.employeeId}>
                 <Td>
-                  {x.name} <span className="text-xs text-zinc-500">{x.code}</span>
+                  {x.name} <span className="text-xs text-zinc-500 dark:text-zinc-400">{x.code}</span>
                 </Td>
-                <Td className="text-right tabular-nums">{x.serviceYears.toFixed(1)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(x.gratuityAccrued)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(x.gratuityWithdrawn)}</Td>
-                <Td className="text-right font-medium tabular-nums">{formatNumber(x.gratuityBalance)}</Td>
+                <Td className="text-end tabular-nums">{x.serviceYears.toFixed(1)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(x.gratuityAccrued)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(x.gratuityWithdrawn)}</Td>
+                <Td className="text-end font-medium tabular-nums">{formatNumber(x.gratuityBalance)}</Td>
               </Tr>
             ))}
           </TBody>
@@ -311,7 +311,7 @@ function Withdrawals() {
           <tr>
             <Th>Employee</Th>
             <Th>Fund</Th>
-            <Th className="text-right">Amount</Th>
+            <Th className="text-end">Amount</Th>
             <Th>Reason</Th>
             <Th>Status</Th>
             <Th />
@@ -321,18 +321,18 @@ function Withdrawals() {
           {list.data.map((w) => (
             <Tr key={w.id}>
               <Td>
-                {w.employeeName} <span className="text-xs text-zinc-500">{w.employeeCode}</span>
+                {w.employeeName} <span className="text-xs text-zinc-500 dark:text-zinc-400">{w.employeeCode}</span>
               </Td>
               <Td>{w.fund === 'ProvidentFund' ? 'Provident fund' : 'Gratuity'}</Td>
-              <Td className="text-right tabular-nums">{formatNumber(w.amount)}</Td>
+              <Td className="text-end tabular-nums">{formatNumber(w.amount)}</Td>
               <Td className="text-sm">
                 {w.reason}
-                {w.payWithSalary && <Badge className="ml-2">With salary</Badge>}
+                {w.payWithSalary && <Badge className="ms-2">With salary</Badge>}
               </Td>
               <Td>
                 <StatusBadge status={w.status} />
               </Td>
-              <Td className="text-right">
+              <Td className="text-end">
                 {w.status === 'Pending' && (
                   <div className="flex justify-end gap-1">
                     <Button size="sm" variant="ghost" onClick={() => decide.mutate({ id: w.id, approve: false })}>
@@ -413,12 +413,12 @@ function TaxAdjustments() {
           {(list.data ?? []).map((t) => (
             <Tr key={t.id}>
               <Td>
-                {t.employeeName} <span className="text-xs text-zinc-500">{t.employeeCode}</span>
+                {t.employeeName} <span className="text-xs text-zinc-500 dark:text-zinc-400">{t.employeeCode}</span>
               </Td>
               <Td>{TAX_ADJUSTMENT_LABELS[t.kind]}</Td>
-              <Td className="text-right tabular-nums">{formatNumber(t.amount)}</Td>
-              <Td className="text-sm text-zinc-500">{t.note}</Td>
-              <Td className="text-right">
+              <Td className="text-end tabular-nums">{formatNumber(t.amount)}</Td>
+              <Td className="text-sm text-zinc-500 dark:text-zinc-400">{t.note}</Td>
+              <Td className="text-end">
                 <IconButton label="Delete" onClick={() => remove.mutate(t.id)}>
                   <Trash2 className="size-4" />
                 </IconButton>
@@ -427,7 +427,7 @@ function TaxAdjustments() {
           ))}
           {!list.data?.length && (
             <Tr>
-              <Td className="text-sm text-zinc-500">No adjustments for {current}.</Td>
+              <Td className="text-sm text-zinc-500 dark:text-zinc-400">No adjustments for {current}.</Td>
             </Tr>
           )}
         </TBody>
@@ -456,9 +456,9 @@ export function MyFundsCard() {
       <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
         {(m.pfMember || m.pfBalance !== 0) && (
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-            <p className="text-sm text-zinc-500">Provident fund</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Provident fund</p>
             <p className="text-2xl font-semibold tabular-nums">{formatNumber(m.pfBalance)}</p>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Yours {formatNumber(m.pfEmployeeShare)} · company {formatNumber(m.pfEmployerShare)} · profit {formatNumber(m.pfProfit)} · can withdraw{' '}
               {formatNumber(m.pfVested)}
             </p>
@@ -469,7 +469,7 @@ export function MyFundsCard() {
         )}
         {m.gratuityBalance > 0 && (
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-            <p className="text-sm text-zinc-500">Gratuity due today</p>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Gratuity due today</p>
             <p className="text-2xl font-semibold tabular-nums">{formatNumber(m.gratuityBalance)}</p>
             <Button size="sm" variant="secondary" className="mt-3" onClick={() => setAsking('Gratuity')}>
               Ask to withdraw
@@ -484,11 +484,11 @@ export function MyFundsCard() {
               <Tr key={w.id}>
                 <Td>{formatDate(w.createdAtUtc.slice(0, 10))}</Td>
                 <Td>{w.fund === 'ProvidentFund' ? 'Provident fund' : 'Gratuity'}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(w.amount)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(w.amount)}</Td>
                 <Td>
                   <StatusBadge status={w.status} />
                 </Td>
-                <Td className="text-right">
+                <Td className="text-end">
                   {w.status === 'Pending' && (
                     <Button size="sm" variant="ghost" onClick={() => cancel.mutate(w.id)}>
                       Cancel

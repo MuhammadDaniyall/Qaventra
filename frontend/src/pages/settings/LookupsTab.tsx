@@ -79,8 +79,8 @@ export function LookupsTab() {
                 <Th>Name</Th>
                 <Th>Code</Th>
                 {kind === 'SubDepartment' && <Th>Department</Th>}
-                <Th className="text-right">Employees</Th>
-                <Th className="text-right">
+                <Th className="text-end">Employees</Th>
+                <Th className="text-end">
                   <span className="sr-only">Actions</span>
                 </Th>
               </tr>
@@ -89,11 +89,11 @@ export function LookupsTab() {
               {rows.map((x) => (
                 <Tr key={x.id}>
                   <Td className="font-medium text-zinc-900 dark:text-zinc-100">
-                    {x.name} {!x.isActive && <Badge className="ml-1">Off</Badge>}
+                    {x.name} {!x.isActive && <Badge className="ms-1">Off</Badge>}
                   </Td>
                   <Td className="font-mono text-xs">{x.code}</Td>
                   {kind === 'SubDepartment' && <Td>{deptName(x.parentId)}</Td>}
-                  <Td className="text-right tabular-nums">{x.employees}</Td>
+                  <Td className="text-end tabular-nums">{x.employees}</Td>
                   <Td>
                     <RowActions label={x.name} onEdit={() => setEditing(x)} onDelete={() => setDeleting(x)} />
                   </Td>

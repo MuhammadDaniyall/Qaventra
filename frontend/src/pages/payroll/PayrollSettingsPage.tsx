@@ -142,7 +142,7 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
           />
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Late arrival penalty</p>
-            <p className="mb-3 text-xs text-zinc-500">Shown as its own deduction on the payslip. Set late arrivals to 0 to switch it off.</p>
+            <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">Shown as its own deduction on the payslip. Set late arrivals to 0 to switch it off.</p>
             <div className="flex flex-wrap items-end gap-3 text-sm text-zinc-700 dark:text-zinc-300">
               <span className="pb-2">Every</span>
               <Field label="Late arrivals" error={fieldErrors.latesPerPenalty}>

@@ -72,9 +72,9 @@ export function CandidateStatusPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <div>
-        <p className="text-sm text-zinc-500">{p.company}</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">{p.company}</p>
         <h1 className="text-2xl font-semibold">Hello {p.name}</h1>
-        <p className="text-sm text-zinc-500">Your applications and where they stand.</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Your applications and where they stand.</p>
       </div>
       {!p.applications.length && <EmptyState icon={Briefcase} title="No applications" />}
       {p.applications.map((a) => (
@@ -92,7 +92,7 @@ export function CandidateStatusPage() {
                 <p className="font-medium">
                   Offer: PKR {formatNumber(a.offeredSalary ?? 0)} a month{a.offeredJoiningDate && `, joining ${formatDate(a.offeredJoiningDate)}`}
                 </p>
-                <p className="text-zinc-500">{a.offerStatus === 'Sent' ? 'Waiting for your answer' : `You ${a.offerStatus.toLowerCase()} this offer`}</p>
+                <p className="text-zinc-500 dark:text-zinc-400">{a.offerStatus === 'Sent' ? 'Waiting for your answer' : `You ${a.offerStatus.toLowerCase()} this offer`}</p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {a.hasOfferLetter && (
                     <Button size="sm" variant="secondary" onClick={() => openLetter(a.id)}>

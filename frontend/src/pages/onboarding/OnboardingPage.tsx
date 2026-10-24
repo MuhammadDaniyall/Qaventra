@@ -123,7 +123,7 @@ function List({ status }: { status: 'InProgress' | 'Completed' }) {
               <Tr key={o.id} onClick={() => navigate(`/onboarding/${o.id}`)}>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{o.employeeName}</p>
-                  <p className="text-xs text-zinc-500">{[o.designation, o.department].filter(Boolean).join(' · ') || o.employeeCode}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{[o.designation, o.department].filter(Boolean).join(' · ') || o.employeeCode}</p>
                 </Td>
                 <Td className="text-sm">{formatDate(o.joiningDate)}</Td>
                 <Td>
@@ -131,7 +131,7 @@ function List({ status }: { status: 'InProgress' | 'Completed' }) {
                     <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
                       <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="text-xs text-zinc-500 tabular-nums">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
                       {o.done}/{o.total}
                     </span>
                     {o.overdue > 0 && <Badge tone="red">{o.overdue} late</Badge>}
@@ -290,7 +290,7 @@ function Templates() {
                 <p className="font-medium text-zinc-900 dark:text-zinc-100">
                   {t.name} {t.isDefault && <Badge tone="accent">Default</Badge>}
                 </p>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {t.tasks.length} task{t.tasks.length === 1 ? '' : 's'}
                   {t.description ? ` · ${t.description}` : ''}
                 </p>
@@ -430,7 +430,7 @@ function TemplateModal({ item, onClose }: { item: OnboardingTemplate | null; onC
             <Button variant="ghost" size="sm" icon={<Plus className="size-3.5" />} onClick={() => setTasks((t) => [...t, blankTask()])}>
               Add task
             </Button>
-            <p className="text-xs text-zinc-500">The number is days from the joining date: −2 is two days before, 7 is the first week.</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">The number is days from the joining date: −2 is two days before, 7 is the first week.</p>
           </div>
         </div>
       </div>

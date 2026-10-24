@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { Card } from './Card';
 import { Skeleton } from './Spinner';
+import { tx } from '../../lib/i18n';
 
 const iconTones = {
   accent: 'bg-accent-50 text-accent-600 dark:bg-accent-500/10 dark:text-accent-300',
@@ -32,7 +33,7 @@ export function StatCard({
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-zinc-500 dark:text-zinc-400">{label}</p>
+          <p className="truncate text-xs font-medium text-zinc-500 dark:text-zinc-400">{tx(label)}</p>
           {loading ? (
             <Skeleton className="mt-2 h-7 w-16" />
           ) : (
@@ -40,7 +41,7 @@ export function StatCard({
               {value}
             </p>
           )}
-          {hint && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>}
+          {hint && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{tx(hint)}</p>}
         </div>
         <div className={cn('hidden size-9 shrink-0 items-center justify-center rounded-lg sm:flex', iconTones[tone])}>
           <Icon className="size-4.5" aria-hidden="true" />

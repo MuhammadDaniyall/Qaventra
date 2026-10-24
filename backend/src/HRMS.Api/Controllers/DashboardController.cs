@@ -17,6 +17,11 @@ public record DashboardDto(
     List<NameCountDto> ByDepartment, List<TrendPointDto> AttendanceTrend,
     PayrollRunDto? LastPayroll, List<HolidayDto> UpcomingHolidays);
 
+/// <summary>One month of workforce numbers. Turnover is leavers over the average of the opening and closing headcount.</summary>
+public record MonthTrendDto(
+    int Year, int Month, int Headcount, int Joiners, int Leavers, decimal TurnoverPercent,
+    decimal LeaveDays, int LateArrivals, decimal AverageWorkedHours);
+
 [ApiController]
 [Route("api/dashboard")]
 [Authorize(Policy = Policies.CompanyUser)]
@@ -65,5 +70,55 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
             lastPayroll,
             await db.Holidays.Where(h => h.Date >= today).OrderBy(h => h.Date).Take(5)
                 .Select(h => new HolidayDto(h.Id, h.Date, h.Name)).ToListAsync());
+    }
+
+    /// <summary>The last 12 months (this month included) for the HR reports dashboard.</summary>
+    [HttpGet("trends"), Authorize(Policy = Policies.Hr)]
+    public async Task<List<MonthTrendDto>> Trends()
+    {
+        var today = await clock.TodayAsync();
+        var first = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
+
+        var people = await db.Employees.AsNoTracking()
+            .Select(e => new { e.JoiningDate, e.LeavingDate }).ToListAsync();
+        var leave = await db.LeaveRequests.AsNoTracking()
+            .Where(r => r.Status == LeaveStatus.Approved && r.FromDate >= first)
+            .Select(r => new { r.FromDate, r.Days }).ToListAsync();
+        var attendance = await db.AttendanceRecords.AsNoTracking()
+            .Where(a => a.Date >= first)
+            .GroupBy(a => new { a.Date.Year, a.Date.Month })
+            .Select(g => new
+            {
+                g.Key.Year, g.Key.Month,
+                Late = g.Count(a => a.Status == AttendanceStatus.Late),
+                Records = g.Count(a => a.WorkedMinutes > 0),
+                Minutes = g.Sum(a => (long)a.WorkedMinutes),
+            })
+            .ToListAsync();
+
+        // On the books on a day: joined by then and not yet gone.
+        int OnBooks(DateOnly day) => people.Count(p => p.JoiningDate <= day && (p.LeavingDate is null || p.LeavingDate >= day));
+
+        var months = new List<MonthTrendDto>();
+        for (var i = 0; i < 12; i++)
+        {
+            var start = first.AddMonths(i);
+            var end = start.AddMonths(1).AddDays(-1);
+            var last = end > today ? today : end;
+            var opening = OnBooks(start.AddDays(-1));
+            var closing = OnBooks(last);
+            var leavers = people.Count(p => p.LeavingDate is { } d && d >= start && d <= last);
+            var average = (opening + closing) / 2m;
+            var a = attendance.FirstOrDefault(x => x.Year == start.Year && x.Month == start.Month);
+            months.Add(new MonthTrendDto(
+                start.Year, start.Month, closing,
+                people.Count(p => p.JoiningDate >= start && p.JoiningDate <= last),
+                leavers,
+                average > 0 ? Math.Round(leavers / average * 100, 1) : 0,
+                leave.Where(r => r.FromDate >= start && r.FromDate <= end).Sum(r => r.Days),
+                a?.Late ?? 0,
+                a is { Records: > 0 } ? Math.Round(a.Minutes / 60m / a.Records, 1) : 0));
+        }
+        return months;
     }
 }

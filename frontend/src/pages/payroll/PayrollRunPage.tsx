@@ -218,8 +218,8 @@ export function PayrollRunPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
           <h2 className="text-sm font-semibold">Payslips</h2>
           <div className="relative w-full max-w-xs">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-            <Input aria-label="Search payslips" placeholder="Search employee" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+            <Input aria-label="Search payslips" placeholder="Search employee" className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
         {slips.length === 0 ? (
@@ -234,12 +234,12 @@ export function PayrollRunPage() {
               <tr>
                 <Th>Employee</Th>
                 <Th>Department</Th>
-                <Th className="text-right">Paid days</Th>
-                <Th className="text-right">Gross</Th>
-                <Th className="text-right">Income tax</Th>
-                <Th className="text-right">EOBI</Th>
-                <Th className="text-right">Other deductions</Th>
-                <Th className="text-right">Net pay</Th>
+                <Th className="text-end">Paid days</Th>
+                <Th className="text-end">Gross</Th>
+                <Th className="text-end">Income tax</Th>
+                <Th className="text-end">EOBI</Th>
+                <Th className="text-end">Other deductions</Th>
+                <Th className="text-end">Net pay</Th>
               </tr>
             </THead>
             <TBody>
@@ -247,16 +247,16 @@ export function PayrollRunPage() {
                 <Tr key={p.id} onClick={() => navigate(`/payslips/${p.id}`)}>
                   <Td>
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">{p.employeeName}</p>
-                    <p className="font-mono text-xs text-zinc-500">{p.employeeCode}</p>
+                    <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{p.employeeCode}</p>
                     {p.heldReason && <Badge tone="amber">On hold: {p.heldReason}</Badge>}
                   </Td>
                   <Td>{p.department ?? '—'}</Td>
-                  <Td className="text-right tabular-nums">{formatNumber(p.paidDays)}</Td>
-                  <Td className="text-right tabular-nums">{formatCurrency(p.grossEarnings)}</Td>
-                  <Td className="text-right tabular-nums">{formatCurrency(p.incomeTax)}</Td>
-                  <Td className="text-right tabular-nums">{formatCurrency(p.eobiEmployee)}</Td>
-                  <Td className="text-right tabular-nums">{formatCurrency(p.otherDeductions)}</Td>
-                  <Td className="text-right font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay)}</Td>
+                  <Td className="text-end tabular-nums">{formatNumber(p.paidDays)}</Td>
+                  <Td className="text-end tabular-nums">{formatCurrency(p.grossEarnings)}</Td>
+                  <Td className="text-end tabular-nums">{formatCurrency(p.incomeTax)}</Td>
+                  <Td className="text-end tabular-nums">{formatCurrency(p.eobiEmployee)}</Td>
+                  <Td className="text-end tabular-nums">{formatCurrency(p.otherDeductions)}</Td>
+                  <Td className="text-end font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay)}</Td>
                 </Tr>
               ))}
             </TBody>

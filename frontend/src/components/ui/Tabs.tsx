@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 
 export interface TabItem<T extends string> {
   value: T;
@@ -59,7 +60,7 @@ export function Tabs<T extends string>({
             )}
           >
             {item.icon}
-            {item.label}
+            {tx(item.label)}
           </button>
         );
       })}

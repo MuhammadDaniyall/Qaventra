@@ -70,6 +70,7 @@ import { formatDateTimeUtc } from '../../lib/format';
 import { ClaimDrawer } from '../expenses/shared';
 import { ProfileChangeDetails } from '../profile/ProfileChanges';
 import { Delegations } from './Delegations';
+import { tx } from '../../lib/i18n';
 
 const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   Leave: CalendarDays,
@@ -157,11 +158,18 @@ export function ApprovalsInboxPage() {
             : 'Leave requests, expense claims and more, in one place.'
         }
       />
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <div className="relative w-full sm:w-64">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name" aria-label="Search by name" className="pl-9" />
+          <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name" aria-label="Search by name" className="ps-9" />
         </div>
+        {hr && (
+          <div className="sm:ms-auto">
+            <Switch checked={onlyMine} onChange={setOnlyMine} label="Only steps assigned to me" />
+          </div>
+        )}
+      </div>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Request type">
           {(['all', ...types] as Filter[]).map((t) => (
             <button
@@ -177,16 +185,11 @@ export function ApprovalsInboxPage() {
                   : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800',
               )}
             >
-              {t === 'all' ? 'All' : REQUEST_LABELS[t]}
-              <span className="text-xs text-zinc-400 tabular-nums">{count(t)}</span>
+              {tx(t === 'all' ? 'All' : REQUEST_LABELS[t])}
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">{count(t)}</span>
             </button>
           ))}
         </div>
-        {hr && (
-          <div className="sm:ml-auto sm:w-64">
-            <Switch checked={onlyMine} onChange={setOnlyMine} label="Only steps assigned to me" />
-          </div>
-        )}
       </div>
 
       {bulkable.length > 1 && (
@@ -197,7 +200,7 @@ export function ApprovalsInboxPage() {
             onChange={(e) => setSelected(e.target.checked ? bulkable.map((i) => i.subjectId) : [])}
           />
           {toApprove.length > 0 && (
-            <Button size="sm" variant="success" className="ml-auto" icon={<CheckCheck className="size-3.5" />} onClick={() => setBulk(true)}>
+            <Button size="sm" variant="success" className="ms-auto" icon={<CheckCheck className="size-3.5" />} onClick={() => setBulk(true)}>
               Approve {toApprove.length}
             </Button>
           )}
@@ -235,23 +238,23 @@ export function ApprovalsInboxPage() {
                       type="button"
                       onClick={() => setOpen(expanded ? null : item.subjectId)}
                       aria-expanded={expanded}
-                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                      className="flex min-w-0 flex-1 items-center gap-3 text-start"
                     >
                       <Avatar name={item.employeeName} size="sm" />
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
                           <span className="truncate font-medium text-zinc-900 dark:text-white">{item.employeeName}</span>
-                          <Icon className="size-3.5 shrink-0 text-zinc-400" aria-label={item.requestType} />
+                          <Icon className="size-3.5 shrink-0 text-zinc-500 dark:text-zinc-400" aria-label={item.requestType} />
                           {!item.assignedToMe && <Badge tone="blue">Waiting for someone else</Badge>}
                           {item.actingFor && <Badge tone="violet">For {item.actingFor}</Badge>}
                         </span>
                         <span className="block truncate text-sm text-zinc-600 dark:text-zinc-300">{item.summary}</span>
-                        {item.filedBy && <span className="block text-xs text-zinc-500">Filed by {item.filedBy}</span>}
-                        <span className="block text-xs text-zinc-500">
+                        {item.filedBy && <span className="block text-xs text-zinc-500 dark:text-zinc-400">Filed by {item.filedBy}</span>}
+                        <span className="block text-xs text-zinc-500 dark:text-zinc-400">
                           {item.totalSteps > 1 ? `Step ${item.step} of ${item.totalSteps} · ` : ''}submitted {formatDateTimeUtc(item.createdAtUtc)}
                         </span>
                       </span>
-                      <ChevronDown className={cn('ml-auto size-4 shrink-0 text-zinc-400 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
+                      <ChevronDown className={cn('ms-auto size-4 shrink-0 text-zinc-500 dark:text-zinc-400 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
                     </button>
                     <div className="flex w-full gap-2 sm:w-auto [&>button]:flex-1 sm:[&>button]:flex-none">
                       {item.requestType === 'Expense' ? (

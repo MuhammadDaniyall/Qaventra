@@ -1,6 +1,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { Spinner } from './Spinner';
+import { tx } from '../../lib/i18n';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
 type Size = 'sm' | 'md' | 'lg';
@@ -48,7 +49,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {loading ? <Spinner className="size-4" /> : icon}
-      {children}
+      {tx(children)}
     </button>
   );
 });
@@ -62,10 +63,10 @@ export function IconButton({
   return (
     <button
       type="button"
-      aria-label={label}
-      title={label}
+      aria-label={tx(label)}
+      title={tx(label)}
       className={cn(
-        'inline-flex size-10 items-center justify-center rounded-lg text-zinc-500 sm:size-9 transition-colors hover:bg-zinc-100 hover:text-zinc-900',
+        'inline-flex size-10 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 sm:size-9 transition-colors hover:bg-zinc-100 hover:text-zinc-900',
         'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500',
         'disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white',
         className,

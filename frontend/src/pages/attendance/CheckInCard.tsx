@@ -73,7 +73,7 @@ export function CheckInCard({ className }: { className?: string }) {
   }
   if (today.isError) {
     return (
-      <Card className={cn('p-6 text-sm text-zinc-500', className)}>
+      <Card className={cn('p-6 text-sm text-zinc-500 dark:text-zinc-400', className)}>
         Check-in is unavailable: {errorMessage(today.error)}
       </Card>
     );
@@ -89,7 +89,7 @@ export function CheckInCard({ className }: { className?: string }) {
           <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{formatDate(t.date)}</p>
           <p className="mt-1 text-4xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
             {pad(now.getHours() % 12 === 0 ? 12 : now.getHours() % 12)}:{pad(now.getMinutes())}
-            <span className="ml-1.5 text-lg font-medium text-zinc-400">{now.getHours() >= 12 ? 'PM' : 'AM'}</span>
+            <span className="ms-1.5 text-lg font-medium text-zinc-500 dark:text-zinc-400">{now.getHours() >= 12 ? 'PM' : 'AM'}</span>
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-zinc-500 dark:text-zinc-400">
             {t.shiftName && (

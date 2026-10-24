@@ -78,8 +78,8 @@ export function PlatformDashboardPage() {
               <tr>
                 <Th>Company</Th>
                 <Th>Expires</Th>
-                <Th className="text-right">Bill per cycle</Th>
-                <Th className="text-right">Action</Th>
+                <Th className="text-end">Bill per cycle</Th>
+                <Th className="text-end">Action</Th>
               </tr>
             </THead>
             <TBody>
@@ -89,8 +89,8 @@ export function PlatformDashboardPage() {
                   <Td>
                     <ExpiresCell company={c} />
                   </Td>
-                  <Td className="text-right tabular-nums">{c.amountPerCycle != null ? formatCurrency(c.amountPerCycle) : '—'}</Td>
-                  <Td className="text-right" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <Td className="text-end tabular-nums">{c.amountPerCycle != null ? formatCurrency(c.amountPerCycle) : '—'}</Td>
+                  <Td className="text-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <Button
                       size="sm"
                       variant="secondary"

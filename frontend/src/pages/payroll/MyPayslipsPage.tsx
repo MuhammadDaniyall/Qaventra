@@ -25,10 +25,10 @@ export function MyPayslipsPage() {
             <THead>
               <tr>
                 <Th>Month</Th>
-                <Th className="text-right">Paid days</Th>
-                <Th className="text-right">Gross</Th>
-                <Th className="text-right">Income tax</Th>
-                <Th className="text-right">Net pay</Th>
+                <Th className="text-end">Paid days</Th>
+                <Th className="text-end">Gross</Th>
+                <Th className="text-end">Income tax</Th>
+                <Th className="text-end">Net pay</Th>
                 <Th>
                   <span className="sr-only">Open</span>
                 </Th>
@@ -40,16 +40,16 @@ export function MyPayslipsPage() {
                   <Tr key={p.id} onClick={() => navigate(`/payslips/${p.id}`)}>
                     <Td className="font-medium text-zinc-900 dark:text-zinc-100">
                       <span className="inline-flex items-center gap-2">
-                        <FileText className="size-4 text-zinc-400" />
+                        <FileText className="size-4 text-zinc-500 dark:text-zinc-400" />
                         {monthLabel(p.year, p.month)}
                       </span>
                     </Td>
-                    <Td className="text-right tabular-nums">{formatNumber(p.paidDays)}</Td>
-                    <Td className="text-right tabular-nums">{formatCurrency(p.grossEarnings)}</Td>
-                    <Td className="text-right tabular-nums">{formatCurrency(p.incomeTax)}</Td>
-                    <Td className="text-right font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay)}</Td>
-                    <Td className="text-right">
-                      <ChevronRight className="ml-auto size-4 text-zinc-400" />
+                    <Td className="text-end tabular-nums">{formatNumber(p.paidDays)}</Td>
+                    <Td className="text-end tabular-nums">{formatCurrency(p.grossEarnings)}</Td>
+                    <Td className="text-end tabular-nums">{formatCurrency(p.incomeTax)}</Td>
+                    <Td className="text-end font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay)}</Td>
+                    <Td className="text-end">
+                      <ChevronRight className="ms-auto size-4 text-zinc-500 dark:text-zinc-400" />
                     </Td>
                   </Tr>
                 );

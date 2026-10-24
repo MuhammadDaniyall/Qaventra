@@ -82,12 +82,12 @@ export function MyExemptions() {
               <Td>{x.flag === 'Late' ? `Late${x.checkIn ? ` (in ${x.checkIn})` : ''}` : x.flag === 'HalfDay' ? 'Half day' : x.flag === 'ShortDay' ? 'Short day' : 'Early leave'}</Td>
               <Td className="text-sm">
                 {x.reason}
-                {x.decisionNote && <p className="text-xs text-zinc-500">“{x.decisionNote}”</p>}
+                {x.decisionNote && <p className="text-xs text-zinc-500 dark:text-zinc-400">“{x.decisionNote}”</p>}
               </Td>
               <Td>
                 <StatusBadge status={x.status} />
               </Td>
-              <Td className="text-right">
+              <Td className="text-end">
                 {x.status === 'Pending' && (
                   <Button size="sm" variant="ghost" loading={cancel.isPending && cancel.variables === x.id} onClick={() => cancel.mutate(x.id)}>
                     Cancel

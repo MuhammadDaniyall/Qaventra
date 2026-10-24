@@ -205,9 +205,9 @@ function ReviseTab({ onDone }: { onDone: () => void }) {
                 <Th className="w-36">Value</Th>
                 {preview && (
                   <>
-                    <Th className="text-right">Gross now</Th>
-                    <Th className="text-right">New gross</Th>
-                    <Th className="text-right">Change</Th>
+                    <Th className="text-end">Gross now</Th>
+                    <Th className="text-end">New gross</Th>
+                    <Th className="text-end">Change</Th>
                   </>
                 )}
                 <Th />
@@ -243,9 +243,9 @@ function ReviseTab({ onDone }: { onDone: () => void }) {
                     </Td>
                     {preview && (
                       <>
-                        <Td className="text-right tabular-nums">{p ? formatCurrency(p.oldGross) : ''}</Td>
-                        <Td className="text-right font-medium tabular-nums">{p ? formatCurrency(p.newGross) : ''}</Td>
-                        <Td className={cn('text-right tabular-nums', p && p.changePercent < 0 && 'text-red-600')}>{p ? `${p.changePercent}%` : ''}</Td>
+                        <Td className="text-end tabular-nums">{p ? formatCurrency(p.oldGross) : ''}</Td>
+                        <Td className="text-end font-medium tabular-nums">{p ? formatCurrency(p.newGross) : ''}</Td>
+                        <Td className={cn('text-end tabular-nums', p && p.changePercent < 0 && 'text-red-600')}>{p ? `${p.changePercent}%` : ''}</Td>
                       </>
                     )}
                     <Td>
@@ -261,9 +261,9 @@ function ReviseTab({ onDone }: { onDone: () => void }) {
         )}
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-zinc-100 px-5 py-3 dark:border-zinc-800">
           {preview && (
-            <p className="mr-auto text-sm text-zinc-600 dark:text-zinc-300">
+            <p className="me-auto text-sm text-zinc-600 dark:text-zinc-300">
               Monthly cost {formatCurrency(preview.reduce((a, p) => a + p.oldGross, 0))} → {formatCurrency(preview.reduce((a, p) => a + p.newGross, 0))}
-              {problems > 0 && <span className="ml-2 text-red-600">{problems} to fix</span>}
+              {problems > 0 && <span className="ms-2 text-red-600">{problems} to fix</span>}
             </p>
           )}
           <Button variant="secondary" icon={<Eye className="size-4" />} disabled={!ready} loading={look.isPending} onClick={() => look.mutate()}>
@@ -306,7 +306,7 @@ function RecurringTab() {
             <Tr>
               <Th>Employee</Th>
               <Th>Item</Th>
-              <Th className="text-right">Amount</Th>
+              <Th className="text-end">Amount</Th>
               <Th>Months</Th>
               <Th />
             </Tr>
@@ -315,13 +315,13 @@ function RecurringTab() {
             {items.data.map((r) => (
               <Tr key={r.id}>
                 <Td>
-                  {r.name} <span className="text-xs text-zinc-500">{r.code}</span>
+                  {r.name} <span className="text-xs text-zinc-500 dark:text-zinc-400">{r.code}</span>
                 </Td>
                 <Td>
                   {r.title} <Badge tone={r.isEarning ? 'green' : 'red'}>{r.isEarning ? (r.isTaxable ? 'Earning, taxable' : 'Earning') : 'Deduction'}</Badge>
-                  {!r.active && <Badge className="ml-1">Not this month</Badge>}
+                  {!r.active && <Badge className="ms-1">Not this month</Badge>}
                 </Td>
-                <Td className="text-right tabular-nums">{formatCurrency(r.amount)}</Td>
+                <Td className="text-end tabular-nums">{formatCurrency(r.amount)}</Td>
                 <Td className="text-sm">
                   {period(r.startYear, r.startMonth)} – {r.endYear && r.endMonth ? period(r.endYear, r.endMonth) : 'until stopped'}
                 </Td>
@@ -508,16 +508,16 @@ function HoldsTab() {
             {holds.data.map((h) => (
               <Tr key={h.id}>
                 <Td>
-                  {h.name} <span className="text-xs text-zinc-500">{h.code}</span>
+                  {h.name} <span className="text-xs text-zinc-500 dark:text-zinc-400">{h.code}</span>
                 </Td>
                 <Td>{monthLabel(h.year, h.month)}</Td>
                 <Td className="text-sm">
                   {h.reason}
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     by {h.heldByName}, {formatDateTimeUtc(h.createdAtUtc)}
                   </p>
                 </Td>
-                <Td className="text-right">
+                <Td className="text-end">
                   {h.releasedAtUtc ? (
                     <Badge tone="green">Released {formatDateTimeUtc(h.releasedAtUtc)}</Badge>
                   ) : (
@@ -631,8 +631,8 @@ function HistoryTab() {
               <Th>From</Th>
               <Th>Employee</Th>
               <Th>Kind</Th>
-              <Th className="text-right">Gross before</Th>
-              <Th className="text-right">Gross after</Th>
+              <Th className="text-end">Gross before</Th>
+              <Th className="text-end">Gross after</Th>
               <Th>Reason</Th>
             </Tr>
           </THead>
@@ -641,17 +641,17 @@ function HistoryTab() {
               <Tr key={r.id}>
                 <Td className="whitespace-nowrap">{formatDate(r.effectiveFrom)}</Td>
                 <Td>
-                  {r.name} <span className="text-xs text-zinc-500">{r.code}</span>
+                  {r.name} <span className="text-xs text-zinc-500 dark:text-zinc-400">{r.code}</span>
                 </Td>
                 <Td>{r.kind}</Td>
-                <Td className="text-right tabular-nums">{formatCurrency(r.oldGross)}</Td>
-                <Td className="text-right font-medium tabular-nums">
+                <Td className="text-end tabular-nums">{formatCurrency(r.oldGross)}</Td>
+                <Td className="text-end font-medium tabular-nums">
                   {formatCurrency(r.newGross)}
-                  {r.oldGross > 0 && <span className="ml-1 text-xs text-zinc-500">({(((r.newGross - r.oldGross) / r.oldGross) * 100).toFixed(1)}%)</span>}
+                  {r.oldGross > 0 && <span className="ms-1 text-xs text-zinc-500 dark:text-zinc-400">({(((r.newGross - r.oldGross) / r.oldGross) * 100).toFixed(1)}%)</span>}
                 </Td>
                 <Td className="text-sm">
                   {r.reason ?? '—'}
-                  <p className="text-xs text-zinc-500">{r.byName}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{r.byName}</p>
                 </Td>
               </Tr>
             ))}

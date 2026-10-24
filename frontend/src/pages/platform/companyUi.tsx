@@ -25,7 +25,7 @@ export function AccessBadge({ company }: { company: Pick<Company, 'access' | 'da
 }
 
 export function ExpiresCell({ company }: { company: Company }) {
-  if (!company.subscriptionEndsOn) return <span className="text-zinc-400">No expiry</span>;
+  if (!company.subscriptionEndsOn) return <span className="text-zinc-500 dark:text-zinc-400">No expiry</span>;
   const kind = accessKind(company);
   return (
     <div>

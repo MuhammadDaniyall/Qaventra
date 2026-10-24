@@ -109,7 +109,7 @@ export function MonthlyAttendancePage() {
             ) : (
               <Badge tone="amber">Open{m.canClose ? '' : ` · counted to ${formatDate(m.countedTo)}`}</Badge>
             ))}
-          <div className="ml-auto w-56">
+          <div className="ms-auto w-56">
             <Select value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} aria-label="Department">
               <option value="">All departments</option>
               {departments.data?.map((d) => (
@@ -136,14 +136,14 @@ export function MonthlyAttendancePage() {
             <THead>
               <tr>
                 <Th>Employee</Th>
-                <Th className="text-right">Working days</Th>
-                <Th className="text-right">Present</Th>
-                <Th className="text-right">Late</Th>
-                <Th className="text-right">Half day</Th>
-                <Th className="text-right">Leave</Th>
-                <Th className="text-right">Absent</Th>
-                <Th className="text-right">Hours</Th>
-                <Th className="text-right">Penalty days</Th>
+                <Th className="text-end">Working days</Th>
+                <Th className="text-end">Present</Th>
+                <Th className="text-end">Late</Th>
+                <Th className="text-end">Half day</Th>
+                <Th className="text-end">Leave</Th>
+                <Th className="text-end">Absent</Th>
+                <Th className="text-end">Hours</Th>
+                <Th className="text-end">Penalty days</Th>
               </tr>
             </THead>
             <TBody>
@@ -151,19 +151,19 @@ export function MonthlyAttendancePage() {
                 <Tr key={r.employeeId}>
                   <Td>
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">{r.name}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {r.employeeCode}
                       {r.department ? ` · ${r.department}` : ''}
                     </p>
                   </Td>
-                  <Td className="text-right tabular-nums">{r.workingDays}</Td>
-                  <Td className="text-right tabular-nums">{r.present}</Td>
-                  <Td className={cn('text-right tabular-nums', r.late > 0 && 'text-amber-700 dark:text-amber-300')}>{r.late}</Td>
-                  <Td className={cn('text-right tabular-nums', r.halfDay > 0 && 'text-amber-700 dark:text-amber-300')}>{r.halfDay}</Td>
-                  <Td className="text-right tabular-nums">{r.leave}</Td>
-                  <Td className={cn('text-right tabular-nums', r.absent > 0 && 'font-medium text-red-600 dark:text-red-400')}>{r.absent}</Td>
-                  <Td className="text-right tabular-nums">{formatMinutes(r.workedMinutes)}</Td>
-                  <Td className={cn('text-right tabular-nums', r.penaltyDays > 0 && 'font-medium text-red-600 dark:text-red-400')}>{r.penaltyDays || '—'}</Td>
+                  <Td className="text-end tabular-nums">{r.workingDays}</Td>
+                  <Td className="text-end tabular-nums">{r.present}</Td>
+                  <Td className={cn('text-end tabular-nums', r.late > 0 && 'text-amber-700 dark:text-amber-300')}>{r.late}</Td>
+                  <Td className={cn('text-end tabular-nums', r.halfDay > 0 && 'text-amber-700 dark:text-amber-300')}>{r.halfDay}</Td>
+                  <Td className="text-end tabular-nums">{r.leave}</Td>
+                  <Td className={cn('text-end tabular-nums', r.absent > 0 && 'font-medium text-red-600 dark:text-red-400')}>{r.absent}</Td>
+                  <Td className="text-end tabular-nums">{formatMinutes(r.workedMinutes)}</Td>
+                  <Td className={cn('text-end tabular-nums', r.penaltyDays > 0 && 'font-medium text-red-600 dark:text-red-400')}>{r.penaltyDays || '—'}</Td>
                 </Tr>
               ))}
             </TBody>

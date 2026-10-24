@@ -29,6 +29,7 @@ import {
   THead,
   Tr,
 } from '../../components/ui';
+import { cn } from '../../lib/cn';
 import { formatDate } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import { EMPLOYMENT_STATUSES, type EmploymentStatus } from '../../types';
@@ -83,11 +84,11 @@ export function EmployeesPage() {
       <Card>
         <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row sm:items-center dark:border-zinc-800">
           <div className="relative flex-1 sm:max-w-sm">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
+            <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
             <Input
               aria-label="Search employees"
               placeholder="Search name, code, email or CNIC"
-              className="pl-9"
+              className="ps-9"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -164,7 +165,28 @@ export function EmployeesPage() {
           />
         ) : (
           <>
-            <Table className={list.isFetching ? 'opacity-70 transition-opacity' : undefined}>
+            {/* Phones get a card list; the wide table starts at sm. */}
+            <ul className={cn('divide-y divide-zinc-100 sm:hidden dark:divide-zinc-800', list.isFetching && 'opacity-70')}>
+              {list.data.items.map((e) => (
+                <li key={e.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/employees/${e.id}`)}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-start active:bg-zinc-50 dark:active:bg-zinc-800/50"
+                  >
+                    <Avatar name={e.fullName} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-zinc-900 dark:text-zinc-100">{e.fullName}</span>
+                      <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        {[e.designation, e.department].filter(Boolean).join(' · ') || e.employeeCode}
+                      </span>
+                    </span>
+                    <StatusBadge status={e.status} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <Table className={cn('hidden sm:table', list.isFetching && 'opacity-70 transition-opacity')}>
               <THead>
                 <tr>
                   <Th>Employee</Th>
@@ -199,7 +221,7 @@ export function EmployeesPage() {
                       {e.hasLogin ? (
                         <KeyRound className="size-4 text-emerald-500" aria-label="Has login" />
                       ) : (
-                        <span className="text-zinc-400">—</span>
+                        <span className="text-zinc-500 dark:text-zinc-400">—</span>
                       )}
                     </Td>
                   </Tr>

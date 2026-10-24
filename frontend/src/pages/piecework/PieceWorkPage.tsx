@@ -101,8 +101,8 @@ function EntriesTable({ rows, showPerson, select }: { rows: PieceEntry[]; showPe
             <Th>Date</Th>
             {showPerson && <Th>Employee</Th>}
             <Th>Work</Th>
-            <Th className="text-right">Qty</Th>
-            <Th className="text-right">Amount</Th>
+            <Th className="text-end">Qty</Th>
+            <Th className="text-end">Amount</Th>
             <Th>Status</Th>
             <Th />
           </Tr>
@@ -127,24 +127,24 @@ function EntriesTable({ rows, showPerson, select }: { rows: PieceEntry[]; showPe
               {showPerson && (
                 <Td>
                   <p className="font-medium">{e.employeeName}</p>
-                  <p className="text-xs text-zinc-500">{e.employeeCode}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{e.employeeCode}</p>
                 </Td>
               )}
               <Td>
                 {e.item}
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   @ {formatCurrency(e.rate)} / {e.unit}
                   {e.efficiency != null && ` · ${e.efficiency}% of target`}
                   {e.notes ? ` · ${e.notes}` : ''}
                 </p>
               </Td>
-              <Td className="text-right tabular-nums">{e.quantity}</Td>
-              <Td className="text-right tabular-nums">{formatCurrency(e.amount)}</Td>
+              <Td className="text-end tabular-nums">{e.quantity}</Td>
+              <Td className="text-end tabular-nums">{formatCurrency(e.amount)}</Td>
               <Td>
                 {e.paid ? <Badge tone="green">Paid</Badge> : <StatusBadge status={e.status} />}
-                {e.decisionNote && <p className="text-xs text-zinc-500">“{e.decisionNote}”</p>}
+                {e.decisionNote && <p className="text-xs text-zinc-500 dark:text-zinc-400">“{e.decisionNote}”</p>}
               </Td>
-              <Td className="text-right">
+              <Td className="text-end">
                 {e.canDelete && (
                   <IconButton label="Remove" onClick={() => setDeleting(e)}>
                     <Trash2 className="size-4" />
@@ -315,7 +315,7 @@ function SheetTab() {
             <Tr>
               <Th>Employee</Th>
               <Th className="w-40">{item ? `Quantity (${item.unit})` : 'Quantity'}</Th>
-              <Th className="text-right">Amount</Th>
+              <Th className="text-end">Amount</Th>
             </Tr>
           </THead>
           <TBody>
@@ -332,7 +332,7 @@ function SheetTab() {
                     onChange={(e) => setQty((q) => ({ ...q, [p.id]: e.target.value }))}
                   />
                 </Td>
-                <Td className="text-right text-sm text-zinc-500 tabular-nums">
+                <Td className="text-end text-sm text-zinc-500 dark:text-zinc-400 tabular-nums">
                   {item && Number(qty[p.id]) > 0 ? `≈ ${formatCurrency(Number(qty[p.id]) * item.rate)}` : ''}
                 </Td>
               </Tr>
@@ -340,7 +340,7 @@ function SheetTab() {
           </TBody>
         </Table>
       )}
-      <p className="px-5 py-2 text-xs text-zinc-500">Amounts use the standard rate; people with their own rate are paid at that rate.</p>
+      <p className="px-5 py-2 text-xs text-zinc-500 dark:text-zinc-400">Amounts use the standard rate; people with their own rate are paid at that rate.</p>
     </Card>
   );
 }
@@ -429,26 +429,26 @@ function ReportTab({ period, picker }: { period: { year: number; month: number }
     <Card>
       <CardHeader title={title} />
       {!rows.length ? (
-        <p className="px-5 py-6 text-sm text-zinc-500">No approved work.</p>
+        <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">No approved work.</p>
       ) : (
         <Table>
           <THead>
             <Tr>
               <Th />
-              <Th className="text-right">Quantity</Th>
-              <Th className="text-right">Days</Th>
-              <Th className="text-right">Of target</Th>
-              <Th className="text-right">Amount</Th>
+              <Th className="text-end">Quantity</Th>
+              <Th className="text-end">Days</Th>
+              <Th className="text-end">Of target</Th>
+              <Th className="text-end">Amount</Th>
             </Tr>
           </THead>
           <TBody>
             {rows.map((x) => (
               <Tr key={x.name}>
                 <Td>{x.name}</Td>
-                <Td className="text-right tabular-nums">{x.quantity}</Td>
-                <Td className="text-right tabular-nums">{x.days}</Td>
-                <Td className="text-right tabular-nums">{x.efficiency != null ? `${x.efficiency}%` : '—'}</Td>
-                <Td className="text-right tabular-nums">{formatCurrency(x.amount)}</Td>
+                <Td className="text-end tabular-nums">{x.quantity}</Td>
+                <Td className="text-end tabular-nums">{x.days}</Td>
+                <Td className="text-end tabular-nums">{x.efficiency != null ? `${x.efficiency}%` : '—'}</Td>
+                <Td className="text-end tabular-nums">{formatCurrency(x.amount)}</Td>
               </Tr>
             ))}
           </TBody>
@@ -472,7 +472,7 @@ function ReportTab({ period, picker }: { period: { year: number; month: number }
             ].map(([k, v]) => (
               <Card key={k as string} className="p-4">
                 <p className="text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{v}</p>
-                <p className="text-xs text-zinc-500">{k}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{k}</p>
               </Card>
             ))}
           </div>
@@ -520,8 +520,8 @@ function SetupTab() {
             <THead>
               <Tr>
                 <Th>Item</Th>
-                <Th className="text-right">Rate</Th>
-                <Th className="text-right">Daily target</Th>
+                <Th className="text-end">Rate</Th>
+                <Th className="text-end">Daily target</Th>
                 <Th>Own rates</Th>
                 <Th />
               </Tr>
@@ -533,12 +533,12 @@ function SetupTab() {
                     <p className="font-medium">
                       {i.name} {!i.isActive && <Badge>Off</Badge>}
                     </p>
-                    {i.category && <p className="text-xs text-zinc-500">{i.category}</p>}
+                    {i.category && <p className="text-xs text-zinc-500 dark:text-zinc-400">{i.category}</p>}
                   </Td>
-                  <Td className="text-right tabular-nums">
+                  <Td className="text-end tabular-nums">
                     {formatCurrency(i.rate)} / {i.unit}
                   </Td>
-                  <Td className="text-right tabular-nums">{i.dailyTarget ?? '—'}</Td>
+                  <Td className="text-end tabular-nums">{i.dailyTarget ?? '—'}</Td>
                   <Td>
                     <Button size="sm" variant="ghost" onClick={() => setRates(i)}>
                       {i.specialRates ? `${i.specialRates} people` : 'Set'}
@@ -686,7 +686,7 @@ function RatesModal({ item, onClose }: { item: PieceItem; onClose: () => void })
             </span>
           </li>
         ))}
-        {!rates.data?.length && <li className="px-3 py-3 text-sm text-zinc-500">Everyone is paid the standard rate.</li>}
+        {!rates.data?.length && <li className="px-3 py-3 text-sm text-zinc-500 dark:text-zinc-400">Everyone is paid the standard rate.</li>}
       </ul>
       <div className="flex gap-2">
         <Select value={who} onChange={(e) => setWho(e.target.value)}>

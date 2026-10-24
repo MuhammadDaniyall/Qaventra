@@ -140,9 +140,9 @@ function ExitStatus({ s }: { s: Separation }) {
         <CardBody className="space-y-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-sm text-zinc-500">{status === 'Requested' ? 'Proposed last working day' : 'Last working day'}</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">{status === 'Requested' ? 'Proposed last working day' : 'Last working day'}</p>
               <p className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">{formatDate(lastDay)}</p>
-              <p className="mt-1 text-xs text-zinc-500">Notice given {formatDate(s.summary.noticeDate)}</p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Notice given {formatDate(s.summary.noticeDate)}</p>
             </div>
             <div className="flex items-center gap-3">
               <StatusBadge status={status} label={status === 'Requested' ? 'Waiting for HR' : undefined} />
@@ -181,7 +181,7 @@ function ExitStatus({ s }: { s: Separation }) {
                   )}
                   <div className="min-w-0">
                     <p className="text-sm text-zinc-900 dark:text-zinc-100">{c.title}</p>
-                    <p className="text-xs text-zinc-500">{c.department}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.department}</p>
                   </div>
                 </li>
               ))}
@@ -283,12 +283,12 @@ function FinalSummary({ s }: { s: Separation }) {
         {st ? (
           <>
             <p className="text-3xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{formatCurrency(st.net)}</p>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
               {st.net >= 0 ? 'Payable to you' : 'Recoverable from you'}, in addition to your last month's salary through payroll.
             </p>
           </>
         ) : (
-          <p className="text-sm text-zinc-500">Contact HR for your settlement details.</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">Contact HR for your settlement details.</p>
         )}
         <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">
           Ask HR for your experience certificate; it will appear under My documents. Best of luck ahead!

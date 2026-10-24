@@ -142,7 +142,7 @@ function AnnouncementList({ hr }: { hr: boolean }) {
                   <Badge tone={KIND_TONES[a.kind]}>{KIND_LABELS[a.kind]}</Badge>
                   {s && <Badge tone={s.tone}>{s.label}</Badge>}
                   {!a.isRead && !s && !hr && <Badge tone="amber">New</Badge>}
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     {formatDate(a.publishFrom)}
                     {a.createdByName ? ` · ${a.createdByName}` : ''}
                     {a.departments.length ? ` · ${a.departments.join(', ')}` : hr ? ' · Everyone' : ''}
@@ -153,7 +153,7 @@ function AnnouncementList({ hr }: { hr: boolean }) {
               {hr && (
                 <div className="flex items-center gap-1">
                   {a.audienceCount !== null && (
-                    <span className="mr-2 flex items-center gap-1 text-xs text-zinc-500" title="Read by / sent to">
+                    <span className="me-2 flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400" title="Read by / sent to">
                       <Users className="size-3.5" /> {a.readCount} / {a.audienceCount} read
                     </span>
                   )}
@@ -364,7 +364,7 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
           <div className="mb-1.5 flex flex-wrap items-center gap-2">
             {upcoming ? <Badge tone="amber">Opens {formatDate(poll.opensOn)}</Badge> : poll.isOpen ? <Badge tone="green" >Open until {formatDate(poll.closesOn)}</Badge> : <Badge tone="gray">Closed {formatDate(poll.closesOn)}</Badge>}
             {poll.isAnonymous && <Badge tone="violet">Anonymous</Badge>}
-            {hr && <span className="text-xs text-zinc-500">{poll.departments.length ? poll.departments.join(', ') : 'Everyone'}</span>}
+            {hr && <span className="text-xs text-zinc-500 dark:text-zinc-400">{poll.departments.length ? poll.departments.join(', ') : 'Everyone'}</span>}
           </div>
           <h2 className="font-semibold text-zinc-900 dark:text-white">{poll.question}</h2>
           {poll.description && <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{poll.description}</p>}
@@ -387,14 +387,14 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
                 onClick={() => vote.mutate(o.id)}
                 aria-pressed={mine}
                 className={cn(
-                  'relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-lg border px-3 py-2.5 text-left text-sm transition',
+                  'relative flex w-full items-center justify-between gap-3 overflow-hidden rounded-lg border px-3 py-2.5 text-start text-sm transition',
                   mine ? 'border-accent-500 ring-2 ring-accent-500/25' : 'border-zinc-200 dark:border-zinc-700',
                   canVote && 'hover:border-accent-400',
                 )}
               >
                 {poll.resultsShown && (
                   <span
-                    className={cn('absolute inset-y-0 left-0 transition-[width] duration-500', (o.votes ?? 0) === lead && lead > 0 ? 'bg-accent-100 dark:bg-accent-500/20' : 'bg-zinc-100 dark:bg-zinc-800')}
+                    className={cn('absolute inset-y-0 start-0 transition-[width] duration-500', (o.votes ?? 0) === lead && lead > 0 ? 'bg-accent-100 dark:bg-accent-500/20' : 'bg-zinc-100 dark:bg-zinc-800')}
                     style={{ width: `${pct}%` }}
                     aria-hidden="true"
                   />
@@ -409,12 +409,12 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
                   </span>
                 )}
               </button>
-              {showVoters && o.voters && o.voters.length > 0 && <p className="mt-1 px-1 text-xs text-zinc-500">{o.voters.join(', ')}</p>}
+              {showVoters && o.voters && o.voters.length > 0 && <p className="mt-1 px-1 text-xs text-zinc-500 dark:text-zinc-400">{o.voters.join(', ')}</p>}
             </li>
           );
         })}
       </ul>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
         <span>
           {poll.resultsShown
             ? `${total} vote${total === 1 ? '' : 's'}${poll.audienceCount !== null ? ` of ${poll.audienceCount} people` : ''}.`

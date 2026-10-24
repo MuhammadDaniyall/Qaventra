@@ -67,14 +67,14 @@ export function AssetsPage() {
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 text-left transition enabled:hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
+      className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 text-start transition enabled:hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
     >
       <span className={cn('flex size-9 items-center justify-center rounded-lg', tone)}>
         <Icon className="size-4" />
       </span>
       <span>
         <span className="block text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{value ?? '–'}</span>
-        <span className="block text-xs text-zinc-500">{label}</span>
+        <span className="block text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
       </span>
     </button>
   );
@@ -134,7 +134,7 @@ export function AssetsPage() {
       {tab === 'types' && <Types />}
       {tab === 'kits' && <Kits />}
       {adding && <AssetModal item={null} onClose={() => setAdding(false)} />}
-      {s && s.value > 0 && <p className="mt-4 text-right text-xs text-zinc-500">Value of assets in use or in stock: {formatCurrency(s.value)}</p>}
+      {s && s.value > 0 && <p className="mt-4 text-end text-xs text-zinc-500 dark:text-zinc-400">Value of assets in use or in stock: {formatCurrency(s.value)}</p>}
     </>
   );
 }
@@ -152,8 +152,8 @@ function Inventory() {
     <Card>
       <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row sm:items-center dark:border-zinc-800">
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-          <Input className="pl-9" placeholder="Tag, name, serial or holder" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search assets" />
+          <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+          <Input className="ps-9" placeholder="Tag, name, serial or holder" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search assets" />
         </div>
         <Select className="sm:w-44" value={typeId} onChange={(e) => setTypeId(e.target.value)} aria-label="Type">
           <option value="">All types</option>
@@ -187,7 +187,7 @@ function Inventory() {
               <Th>Status</Th>
               <Th>With</Th>
               <Th>Condition</Th>
-              <Th className="text-right">Cost</Th>
+              <Th className="text-end">Cost</Th>
             </tr>
           </THead>
           <TBody>
@@ -195,7 +195,7 @@ function Inventory() {
               <Tr key={a.id} onClick={() => setOpen(a.id)}>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{a.name}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     <span className="font-mono">{a.tag}</span> · {a.type}
                     {a.serialNumber ? ` · SN ${a.serialNumber}` : ''}
                   </p>
@@ -207,17 +207,17 @@ function Inventory() {
                   {a.holder ? (
                     <>
                       <p className="text-zinc-900 dark:text-zinc-100">{a.holder}</p>
-                      <p className={cn('text-xs', a.isOverdue ? 'font-medium text-red-600 dark:text-red-400' : 'text-zinc-500')}>
+                      <p className={cn('text-xs', a.isOverdue ? 'font-medium text-red-600 dark:text-red-400' : 'text-zinc-500 dark:text-zinc-400')}>
                         since {formatDate(a.assignedOn)}
                         {a.dueBack ? ` · back by ${formatDate(a.dueBack)}` : ''}
                       </p>
                     </>
                   ) : (
-                    <span className="text-zinc-400">—</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">—</span>
                   )}
                 </Td>
                 <Td className="text-sm">{a.condition}</Td>
-                <Td className="text-right text-sm tabular-nums">{a.cost ? formatCurrency(a.cost) : '—'}</Td>
+                <Td className="text-end text-sm tabular-nums">{a.cost ? formatCurrency(a.cost) : '—'}</Td>
               </Tr>
             ))}
           </TBody>
@@ -300,7 +300,7 @@ function AssetDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               ['Due back', a.dueBack ? formatDate(a.dueBack) : '—'],
             ].map(([k, v]) => (
               <div key={k}>
-                <dt className="text-xs text-zinc-500">{k}</dt>
+                <dt className="text-xs text-zinc-500 dark:text-zinc-400">{k}</dt>
                 <dd className="text-zinc-900 dark:text-zinc-100">{v}</dd>
               </div>
             ))}
@@ -309,13 +309,13 @@ function AssetDrawer({ id, onClose }: { id: string; onClose: () => void }) {
           <div>
             <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">History</h3>
             {!detail.data!.history.length ? (
-              <p className="text-sm text-zinc-500">Never handed out.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Never handed out.</p>
             ) : (
               <ol className="space-y-3">
                 {detail.data!.history.map((h) => (
                   <li key={h.id} className="rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-800">
                     <p className="font-medium text-zinc-900 dark:text-zinc-100">{h.employeeName}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {formatDate(h.assignedOn)} ({h.conditionOut.toLowerCase()}) → {h.returnedOn ? `${formatDate(h.returnedOn)} (${h.conditionIn?.toLowerCase() ?? '—'})` : 'still with them'}
                     </p>
                     {h.notes && <p className="mt-1 text-xs whitespace-pre-line text-zinc-600 dark:text-zinc-400">{h.notes}</p>}
@@ -467,7 +467,7 @@ function Requests() {
               <Th>For</Th>
               <Th>What</Th>
               <Th>Asked</Th>
-              <Th className="text-right">
+              <Th className="text-end">
                 <span className="sr-only">Action</span>
               </Th>
             </tr>
@@ -477,21 +477,21 @@ function Requests() {
               <Tr key={r.id}>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{r.employeeName}</p>
-                  <p className="text-xs text-zinc-500">{r.employeeCode}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{r.employeeCode}</p>
                 </Td>
                 <Td>
                   <p className="text-sm text-zinc-900 dark:text-zinc-100">
                     {r.kind === 'Return' ? <Badge tone="amber">Return</Badge> : <Badge tone="blue">New</Badge>}{' '}
                     {r.kind === 'Return' ? r.assetLabel : r.type}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {r.reason}
                     {r.neededBy ? ` · needed by ${formatDate(r.neededBy)}` : ''}
                     {r.returnBy ? ` · until ${formatDate(r.returnBy)}` : ''}
                   </p>
                 </Td>
-                <Td className="text-xs text-zinc-500">{formatDateTimeUtc(r.createdAtUtc)}</Td>
-                <Td className="text-right">
+                <Td className="text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(r.createdAtUtc)}</Td>
+                <Td className="text-end">
                   {r.canFulfill && (
                     <Button size="sm" onClick={() => setHanding(r)}>
                       {r.kind === 'Return' ? 'Take back' : 'Hand over'}
@@ -534,8 +534,8 @@ function Types() {
               <Th>Type</Th>
               <Th>Handled by</Th>
               <Th>Rules</Th>
-              <Th className="text-right">Stock</Th>
-              <Th className="text-right">
+              <Th className="text-end">Stock</Th>
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -546,14 +546,14 @@ function Types() {
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">
                   {t.name} {!t.isActive && <Badge>Off</Badge>}
                 </Td>
-                <Td className="text-sm">{t.handlers.length ? t.handlers.join(', ') : <span className="text-zinc-400">HR</span>}</Td>
+                <Td className="text-sm">{t.handlers.length ? t.handlers.join(', ') : <span className="text-zinc-500 dark:text-zinc-400">HR</span>}</Td>
                 <Td>
                   <div className="flex flex-wrap gap-1">
                     {t.allowMultiple && <Badge tone="blue">More than one each</Badge>}
                     {t.returnOnExit && <Badge tone="amber">Return on exit</Badge>}
                   </div>
                 </Td>
-                <Td className="text-right text-sm tabular-nums">
+                <Td className="text-end text-sm tabular-nums">
                   {t.available} free / {t.total}
                 </Td>
                 <Td>

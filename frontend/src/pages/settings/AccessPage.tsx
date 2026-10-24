@@ -71,8 +71,8 @@ export function AccessPage() {
               <tr>
                 <Th>Template</Th>
                 <Th>Modules</Th>
-                <Th className="text-right">Users</Th>
-                <Th className="text-right">
+                <Th className="text-end">Users</Th>
+                <Th className="text-end">
                   <span className="sr-only">Actions</span>
                 </Th>
               </tr>
@@ -82,7 +82,7 @@ export function AccessPage() {
                 <Tr key={t.id}>
                   <Td className="font-medium">
                     {t.name}
-                    {t.description && <p className="text-xs font-normal text-zinc-500">{t.description}</p>}
+                    {t.description && <p className="text-xs font-normal text-zinc-500 dark:text-zinc-400">{t.description}</p>}
                   </Td>
                   <Td>
                     <div className="flex flex-wrap gap-1">
@@ -91,7 +91,7 @@ export function AccessPage() {
                       ))}
                     </div>
                   </Td>
-                  <Td className="text-right tabular-nums">{t.users}</Td>
+                  <Td className="text-end tabular-nums">{t.users}</Td>
                   <Td>
                     <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
                   </Td>
@@ -119,8 +119,8 @@ export function AccessPage() {
               {(users.data ?? []).map((u) => (
                 <Tr key={u.userId}>
                   <Td>
-                    {u.name} <span className="text-xs text-zinc-500">{u.email}</span>
-                    {!u.isActive && <Badge className="ml-2">Off</Badge>}
+                    {u.name} <span className="text-xs text-zinc-500 dark:text-zinc-400">{u.email}</span>
+                    {!u.isActive && <Badge className="ms-2">Off</Badge>}
                   </Td>
                   <Td>{roleLabel(u.role)}</Td>
                   <Td>

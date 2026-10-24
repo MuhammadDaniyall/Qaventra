@@ -63,8 +63,8 @@ function HistoryModal({ entityType, entityId, onClose }: { entityType: string; e
       ) : (
         <ol className="space-y-4">
           {history.data.map((h, i) => (
-            <li key={i} className="border-l-2 border-zinc-200 pl-3 dark:border-zinc-700">
-              <p className="text-xs text-zinc-500">
+            <li key={i} className="border-s-2 border-zinc-200 ps-3 dark:border-zinc-700">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {formatDateTimeUtc(h.timestampUtc)} · {h.userEmail ?? 'System'} · {humanize(h.action)}
               </p>
               <ul className="mt-1 space-y-0.5 text-sm">
@@ -72,7 +72,7 @@ function HistoryModal({ entityType, entityId, onClose }: { entityType: string; e
                   .filter(([k]) => !['UpdatedAtUtc', 'CreatedAtUtc', 'TenantId', 'Id'].includes(k))
                   .map(([k, v]) => (
                     <li key={k}>
-                      <span className="font-medium">{humanize(k)}</span>: <span className="text-zinc-500 line-through">{show(v.old)}</span> → {show(v.new)}
+                      <span className="font-medium">{humanize(k)}</span>: <span className="text-zinc-500 dark:text-zinc-400 line-through">{show(v.old)}</span> → {show(v.new)}
                     </li>
                   ))}
               </ul>

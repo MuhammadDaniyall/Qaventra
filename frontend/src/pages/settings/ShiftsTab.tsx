@@ -62,9 +62,9 @@ export function ShiftsTab() {
             <tr>
               <Th>Name</Th>
               <Th>Hours</Th>
-              <Th className="text-right">Grace</Th>
+              <Th className="text-end">Grace</Th>
               <Th>Weekly off</Th>
-              <Th className="text-right">
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -81,7 +81,7 @@ export function ShiftsTab() {
                 <Td className="tabular-nums">
                   {formatTime(s.startTime)} – {formatTime(s.endTime)}
                 </Td>
-                <Td className="text-right tabular-nums">{s.graceMinutes} min</Td>
+                <Td className="text-end tabular-nums">{s.graceMinutes} min</Td>
                 <Td>{s.weeklyOffDays.length ? s.weeklyOffDays.map((d) => d.slice(0, 3)).join(', ') : 'None'}</Td>
                 <Td>
                   <RowActions history={{ type: 'Shift', id: s.id }} label={s.name} onEdit={() => setEditing(s)} onDelete={s.isDefault ? undefined : () => setDeleting(s)} />

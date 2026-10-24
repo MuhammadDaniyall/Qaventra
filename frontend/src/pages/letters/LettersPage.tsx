@@ -82,12 +82,12 @@ function IssuedList() {
     <Card>
       <div className="flex flex-wrap gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
         <div className="relative min-w-56 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" aria-hidden="true" />
+          <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by employee, reference or subject"
-            className="pl-9"
+            className="ps-9"
             aria-label="Search letters"
           />
         </div>
@@ -127,15 +127,15 @@ function IssuedList() {
                 <Td className="font-mono text-xs">{l.referenceNo}</Td>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{l.employeeName}</p>
-                  <p className="font-mono text-xs text-zinc-500">{l.employeeCode}</p>
+                  <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{l.employeeCode}</p>
                 </Td>
                 <Td>
                   <p className="max-w-xs truncate text-zinc-900 dark:text-zinc-100">{l.subject}</p>
-                  <p className="text-xs text-zinc-500">{categoryLabel(l.category)}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{categoryLabel(l.category)}</p>
                 </Td>
                 <Td>
                   {formatDate(l.issuedOn)}
-                  {l.issuedByName && <p className="text-xs text-zinc-500">by {l.issuedByName}</p>}
+                  {l.issuedByName && <p className="text-xs text-zinc-500 dark:text-zinc-400">by {l.issuedByName}</p>}
                 </Td>
                 <Td>{l.sharedWithEmployee ? <Badge tone="green">Shared</Badge> : <Badge>HR only</Badge>}</Td>
               </Tr>
@@ -473,7 +473,7 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
           <BodyEditor value={body} onChange={setBody} rows={14} />
           <section aria-label="Preview" className="rounded-xl border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-950/40">
             <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Preview</p>
+              <p className="text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Preview</p>
               {preview.isFetching && <Spinner className="size-3.5" />}
             </div>
             {unknown.length > 0 && (
@@ -488,7 +488,7 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
                 {preview.data.body}
               </article>
             ) : (
-              <p className="text-sm text-zinc-500">Choose an employee and write the letter to see it filled in.</p>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">Choose an employee and write the letter to see it filled in.</p>
             )}
           </section>
         </div>

@@ -3,6 +3,7 @@ import { Menu } from 'lucide-react';
 import { useUser } from '../../auth/AuthContext';
 import { isApprover } from '../../auth/roles';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 import { MOBILE_TABS } from './nav';
 
 const tabCls = 'flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium transition-colors';
@@ -28,12 +29,12 @@ export function MobileTabBar({ onMore }: { onMore: () => void }) {
           }
         >
           <t.icon className="size-5" aria-hidden="true" />
-          {t.label}
+          {tx(t.label)}
         </NavLink>
       ))}
       <button type="button" onClick={onMore} className={cn(tabCls, 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white')}>
         <Menu className="size-5" aria-hidden="true" />
-        More
+        {tx('More')}
       </button>
     </nav>
   );

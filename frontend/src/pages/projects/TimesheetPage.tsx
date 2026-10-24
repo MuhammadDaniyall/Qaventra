@@ -135,7 +135,7 @@ function MyWeek() {
           <ChevronRight className="size-4" />
         </IconButton>
         {week.data && <StatusBadge status={week.data.status} label={week.data.status === 'Rejected' ? 'Sent back' : undefined} />}
-        <span className="ml-auto text-sm tabular-nums text-zinc-500">{Math.round(total * 100) / 100} h this week</span>
+        <span className="ms-auto text-sm tabular-nums text-zinc-500 dark:text-zinc-400">{Math.round(total * 100) / 100} h this week</span>
         {locked ? (
           week.data?.status === 'Submitted' && (
             <Button size="sm" variant="secondary" loading={withdraw.isPending} onClick={() => withdraw.mutate()}>
@@ -165,12 +165,12 @@ function MyWeek() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[56rem] text-sm">
             <thead>
-              <tr className="text-left text-xs text-zinc-500">
+              <tr className="text-start text-xs text-zinc-500 dark:text-zinc-400">
                 <th className="px-4 py-2 font-medium">Project and task</th>
                 {days.map((d) => (
                   <th key={d} className="w-20 px-1 py-2 text-center font-medium">
                     {new Date(d + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}
-                    {!!week.data?.attendanceMinutes[d] && <div className="font-normal text-zinc-400">at work {hours(week.data.attendanceMinutes[d])}h</div>}
+                    {!!week.data?.attendanceMinutes[d] && <div className="font-normal text-zinc-500 dark:text-zinc-400">at work {hours(week.data.attendanceMinutes[d])}h</div>}
                   </th>
                 ))}
                 <th className="w-10" />
@@ -236,7 +236,7 @@ function MyWeek() {
                   </tr>
                 );
               })}
-              <tr className="border-t border-zinc-200 text-xs text-zinc-500 dark:border-zinc-700">
+              <tr className="border-t border-zinc-200 text-xs text-zinc-500 dark:text-zinc-400 dark:border-zinc-700">
                 <td className="px-4 py-2">
                   {!locked && (
                     <Button

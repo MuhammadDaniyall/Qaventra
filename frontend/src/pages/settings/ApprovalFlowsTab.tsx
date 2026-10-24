@@ -117,7 +117,7 @@ function FlowCard({ flow }: { flow: ApprovalFlow }) {
                   ))}
                 </Select>
               ) : (
-                <span className="min-w-40 flex-1 text-xs text-zinc-500">{HINTS[step.kind]}</span>
+                <span className="min-w-40 flex-1 text-xs text-zinc-500 dark:text-zinc-400">{HINTS[step.kind]}</span>
               )}
               <div className="flex">
                 <IconButton label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>

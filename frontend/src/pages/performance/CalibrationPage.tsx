@@ -78,13 +78,13 @@ export function CalibrationPage() {
                     <div className="w-1/3 rounded-t bg-accent-500" style={{ height: `${(d.bellActual[i] / max) * 100}%` }} title={`Actual ${d.bellActual[i]}%`} />
                   </div>
                   <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{i + 1}</span>
-                  <span className="text-center text-[11px] text-zinc-500">
+                  <span className="text-center text-[11px] text-zinc-500 dark:text-zinc-400">
                     {d.bellActual[i]}% / {d.bellTarget[i]}%
                   </span>
                 </div>
               ))}
             </div>
-            <p className="mt-2 flex gap-4 text-xs text-zinc-500">
+            <p className="mt-2 flex gap-4 text-xs text-zinc-500 dark:text-zinc-400">
               <span className="flex items-center gap-1">
                 <span className="size-2.5 rounded-sm bg-accent-500" /> Actual
               </span>
@@ -101,11 +101,11 @@ export function CalibrationPage() {
             <tr>
               <Th>Employee</Th>
               <Th>Stage</Th>
-              <Th className="text-right">Self</Th>
-              <Th className="text-right">Manager</Th>
-              <Th className="text-right">Final</Th>
+              <Th className="text-end">Self</Th>
+              <Th className="text-end">Manager</Th>
+              <Th className="text-end">Final</Th>
               <Th>Potential</Th>
-              <Th className="text-right">Raise</Th>
+              <Th className="text-end">Raise</Th>
             </tr>
           </THead>
           <TBody>
@@ -113,17 +113,17 @@ export function CalibrationPage() {
               <Tr key={r.id} onClick={() => navigate(`/performance/reviews/${r.id}`)}>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{r.employeeName}</p>
-                  <p className="text-xs text-zinc-500">{[r.department, r.reviewer && `by ${r.reviewer}`].filter(Boolean).join(' · ')}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{[r.department, r.reviewer && `by ${r.reviewer}`].filter(Boolean).join(' · ')}</p>
                 </Td>
                 <Td>
                   <Badge tone={r.stage === 'Done' ? 'green' : r.stage === 'Calibration' ? 'violet' : 'amber'}>{STAGE_LABELS[r.stage]}</Badge>
                   {r.employeeAgrees === false && <Badge tone="red">Disagrees</Badge>}
                 </Td>
-                <Td className="text-right tabular-nums">{r.selfScore ?? '—'}</Td>
-                <Td className="text-right tabular-nums">{r.managerScore ?? '—'}</Td>
-                <Td className="text-right font-semibold tabular-nums">{r.finalRating ?? '—'}</Td>
+                <Td className="text-end tabular-nums">{r.selfScore ?? '—'}</Td>
+                <Td className="text-end tabular-nums">{r.managerScore ?? '—'}</Td>
+                <Td className="text-end font-semibold tabular-nums">{r.finalRating ?? '—'}</Td>
                 <Td className="text-sm">{r.potential ? POTENTIAL_LABELS[r.potential] : '—'}</Td>
-                <Td className="text-right tabular-nums">{r.suggestedRaise !== null ? `${r.suggestedRaise}%` : '—'}</Td>
+                <Td className="text-end tabular-nums">{r.suggestedRaise !== null ? `${r.suggestedRaise}%` : '—'}</Td>
               </Tr>
             ))}
           </TBody>

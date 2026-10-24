@@ -34,8 +34,8 @@ export function TaskList({ tasks, showFor, onDelete }: { tasks: OnboardingTask[]
               {done ? <CheckCircle2 className="size-5 text-emerald-500" /> : <Circle className="size-5 text-zinc-300 dark:text-zinc-600" />}
             </button>
             <div className="min-w-0 flex-1">
-              <p className={cn('text-sm font-medium', done ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-100')}>{t.title}</p>
-              <p className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-500">
+              <p className={cn('text-sm font-medium', done ? 'text-zinc-500 dark:text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-100')}>{t.title}</p>
+              <p className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-500 dark:text-zinc-400">
                 {showFor && t.forEmployee && <span className="font-medium text-zinc-700 dark:text-zinc-300">For {t.forEmployee}</span>}
                 <span>{TASK_CATEGORY_LABELS[t.category]}</span>
                 <span>· {t.assignee ?? 'Not assigned'}</span>

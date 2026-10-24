@@ -80,8 +80,8 @@ export function CustomFieldsTab() {
               <Th>Field</Th>
               <Th>Type</Th>
               <Th>Rules</Th>
-              <Th className="text-right">Filled</Th>
-              <Th className="text-right">
+              <Th className="text-end">Filled</Th>
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -92,7 +92,7 @@ export function CustomFieldsTab() {
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{f.label}</Td>
                 <Td>
                   {TYPE_LABELS[f.type]}
-                  {f.type === 'Dropdown' && <p className="text-xs text-zinc-500">{f.options.join(', ')}</p>}
+                  {f.type === 'Dropdown' && <p className="text-xs text-zinc-500 dark:text-zinc-400">{f.options.join(', ')}</p>}
                 </Td>
                 <Td>
                   <div className="flex flex-wrap gap-1">
@@ -101,7 +101,7 @@ export function CustomFieldsTab() {
                     {!f.isActive && <Badge tone="red">Hidden</Badge>}
                   </div>
                 </Td>
-                <Td className="text-right tabular-nums">{f.filled}</Td>
+                <Td className="text-end tabular-nums">{f.filled}</Td>
                 <Td>
                   <RowActions label={f.label} onEdit={() => setEditing(f)} onDelete={() => setDeleting(f)} />
                 </Td>
@@ -201,7 +201,7 @@ function FieldModal({ item, onClose }: { item: CustomField | null; onClose: () =
 }
 
 function showValue(v: CustomValue) {
-  if (!v.value) return <span className="text-zinc-400">—</span>;
+  if (!v.value) return <span className="text-zinc-500 dark:text-zinc-400">—</span>;
   return v.type === 'Date' ? formatDate(v.value) : v.value;
 }
 

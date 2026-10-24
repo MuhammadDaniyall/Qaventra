@@ -10,7 +10,7 @@ import { formatDateTimeUtc } from '../../lib/format';
 import { BLOOD_GROUPS, MARITAL_STATUSES, type Employee, type FieldChange, type ProfileChange } from '../../types';
 
 function show(v: string | null) {
-  return v ?? <span className="text-zinc-400">empty</span>;
+  return v ?? <span className="text-zinc-500 dark:text-zinc-400">empty</span>;
 }
 
 export function ChangeList({ changes }: { changes: FieldChange[] }) {
@@ -18,10 +18,10 @@ export function ChangeList({ changes }: { changes: FieldChange[] }) {
     <dl className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 bg-white text-sm dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
       {changes.map((c) => (
         <div key={c.field} className="grid gap-1 px-3 py-2 sm:grid-cols-[150px_1fr]">
-          <dt className="text-zinc-500">{c.label}</dt>
+          <dt className="text-zinc-500 dark:text-zinc-400">{c.label}</dt>
           <dd className="flex flex-wrap items-center gap-1.5">
-            <span className="text-zinc-500 line-through decoration-zinc-300 dark:decoration-zinc-600">{show(c.from)}</span>
-            <ArrowRight className="size-3.5 text-zinc-400" aria-hidden="true" />
+            <span className="text-zinc-500 dark:text-zinc-400 line-through decoration-zinc-300 dark:decoration-zinc-600">{show(c.from)}</span>
+            <ArrowRight className="size-3.5 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
             <span className="font-medium text-zinc-900 dark:text-zinc-100">{show(c.to)}</span>
           </dd>
         </div>
@@ -181,7 +181,7 @@ export function MyProfileChanges() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-sm">
                 <StatusBadge status={r.status} />
-                <span className="text-zinc-500">sent {formatDateTimeUtc(r.createdAtUtc)}</span>
+                <span className="text-zinc-500 dark:text-zinc-400">sent {formatDateTimeUtc(r.createdAtUtc)}</span>
               </div>
               {r.status === 'Pending' && (
                 <Button variant="ghost" size="sm" onClick={() => setCancelling(r)}>

@@ -70,7 +70,7 @@ export function ExpenseApprovalsPage() {
               <>
                 Pending
                 {!!pending.data?.length && (
-                  <span className="ml-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                  <span className="ms-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
                     {pending.data.length}
                   </span>
                 )}
@@ -100,7 +100,7 @@ export function ExpenseApprovalsPage() {
                 <Th>Employee</Th>
                 <Th>Claim</Th>
                 <Th>Submitted</Th>
-                <Th className="text-right">Amount</Th>
+                <Th className="text-end">Amount</Th>
                 <Th>{status === 'Paid' ? 'Paid via' : 'Status'}</Th>
               </tr>
             </THead>
@@ -112,18 +112,18 @@ export function ExpenseApprovalsPage() {
                       <Avatar name={c.employeeName} size="sm" />
                       <div>
                         <p className="font-medium text-zinc-900 dark:text-zinc-100">{c.employeeName}</p>
-                        <p className="font-mono text-xs text-zinc-500">{c.employeeCode}</p>
+                        <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{c.employeeCode}</p>
                       </div>
                     </div>
                   </Td>
                   <Td>
                     <p className="text-zinc-900 dark:text-zinc-100">{c.title}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {c.itemCount} item{c.itemCount === 1 ? '' : 's'} · {c.receiptCount} receipt{c.receiptCount === 1 ? '' : 's'}
                     </p>
                   </Td>
                   <Td>{formatDateTimeUtc(c.createdAtUtc)}</Td>
-                  <Td className="text-right font-medium tabular-nums">{formatCurrency(c.total)}</Td>
+                  <Td className="text-end font-medium tabular-nums">{formatCurrency(c.total)}</Td>
                   <Td>{status === 'Paid' ? c.paidVia : <StatusBadge status={c.status} />}</Td>
                 </Tr>
               ))}

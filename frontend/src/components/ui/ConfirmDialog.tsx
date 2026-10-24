@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { tx } from '../../lib/i18n';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -34,16 +35,16 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            Cancel
+            {tx('Cancel')}
           </Button>
           <Button variant={tone === 'danger' ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>
-            {confirmLabel}
+            {tx(confirmLabel)}
           </Button>
         </>
       }
     >
       <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-300">
-        <div>{message}</div>
+        <div>{tx(message)}</div>
         {children}
       </div>
     </Modal>

@@ -89,7 +89,7 @@ export function HolidaysTab() {
               <Th>Date</Th>
               <Th>Day</Th>
               <Th>Name</Th>
-              <Th className="text-right">
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -101,9 +101,9 @@ export function HolidaysTab() {
                 <Td>{weekday(h.date)}</Td>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">
                   {h.name}
-                  {h.kind === 'Special' && <Badge className="ml-2">Special</Badge>}
+                  {h.kind === 'Special' && <Badge className="ms-2">Special</Badge>}
                   {(h.regionIds.length > 0 || h.religion || h.exemptEmployeeIds.length > 0) && (
-                    <span className="ml-2 text-xs font-normal text-zinc-500">
+                    <span className="ms-2 text-xs font-normal text-zinc-500 dark:text-zinc-400">
                       {[
                         h.regionIds.length ? h.regionIds.map((id) => regionName(id)).join(', ') : '',
                         h.religion ? `${h.religion} only` : '',
@@ -197,7 +197,7 @@ function HolidayModal({ year, item, onClose }: { year: number; item?: Holiday; o
             {v.exemptEmployeeIds.map((id) => (
               <Badge key={id}>
                 {people.data?.find((p) => p.id === id)?.name ?? '…'}
-                <button type="button" className="ml-1" aria-label="Remove" onClick={() => toggle('exemptEmployeeIds', id)}>
+                <button type="button" className="ms-1" aria-label="Remove" onClick={() => toggle('exemptEmployeeIds', id)}>
                   ×
                 </button>
               </Badge>

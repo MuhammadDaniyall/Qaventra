@@ -155,12 +155,12 @@ export function MyShiftRequests() {
           return (
             <li key={r.id} className="space-y-2 px-5 py-3">
               <div className="flex flex-wrap items-center gap-3">
-                {r.kind === 'Swap' ? <ArrowLeftRight className="size-4 text-zinc-400" /> : <Repeat className="size-4 text-zinc-400" />}
+                {r.kind === 'Swap' ? <ArrowLeftRight className="size-4 text-zinc-500 dark:text-zinc-400" /> : <Repeat className="size-4 text-zinc-500 dark:text-zinc-400" />}
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-zinc-900 dark:text-white">
                     {describe(r, mine)} · {rangeLabel(r.fromDate, r.toDate)}
                   </p>
-                  <p className="truncate text-xs text-zinc-500">
+                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                     {r.reason}
                     {r.decisionNote ? ` · Note: ${r.decisionNote}` : ''}
                   </p>

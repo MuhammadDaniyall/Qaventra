@@ -5,6 +5,7 @@ import { useUser } from '../../auth/AuthContext';
 import { cn } from '../../lib/cn';
 import { useFavourites } from '../../lib/favourites';
 import { roleLabel } from '../../lib/format';
+import { tx } from '../../lib/i18n';
 import { Avatar, IconButton } from '../ui';
 import { Logo } from './Logo';
 import { navFor, type NavItem, type NavSection } from './nav';
@@ -60,13 +61,13 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
         to={item.to}
         end={item.end}
         onClick={onNavigate}
-        title={isCollapsed ? item.label : undefined}
+        title={isCollapsed ? tx(item.label) : undefined}
         className={({ isActive }) =>
           cn(
             'flex items-center gap-3 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors',
             'focus-visible:outline-2 focus-visible:outline-accent-500',
             isCollapsed && 'justify-center px-0 py-2',
-            nested && !isCollapsed && 'pl-9 font-normal',
+            nested && !isCollapsed && 'ps-9 font-normal',
             isActive
               ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300'
               : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100',
@@ -74,7 +75,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
         }
       >
         {(!nested || isCollapsed) && <item.icon className="size-[18px] shrink-0" aria-hidden="true" />}
-        {isCollapsed ? <span className="sr-only">{item.label}</span> : <span className="truncate pr-5">{item.label}</span>}
+        {isCollapsed ? <span className="sr-only">{tx(item.label)}</span> : <span className="truncate pe-5">{tx(item.label)}</span>}
       </NavLink>
       {!isCollapsed && (
         <button
@@ -82,7 +83,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
           aria-label={favs.includes(item.to) ? `Unpin ${item.label}` : `Pin ${item.label}`}
           onClick={() => toggle(item.to)}
           className={cn(
-            'absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-0.5 text-zinc-300 hover:text-amber-500 focus-visible:opacity-100 dark:text-zinc-600',
+            'absolute top-1/2 end-1.5 -translate-y-1/2 rounded p-0.5 text-zinc-300 hover:text-amber-500 focus-visible:opacity-100 dark:text-zinc-600',
             favs.includes(item.to) ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100',
           )}
         >
@@ -117,8 +118,8 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
           )}
         >
           {Icon && <Icon className="size-[18px] shrink-0" aria-hidden="true" />}
-          <span className="flex-1 truncate text-left">{title}</span>
-          <ChevronRight className={cn('size-4 text-zinc-400 transition-transform', expanded && 'rotate-90')} aria-hidden="true" />
+          <span className="flex-1 truncate text-start">{tx(title)}</span>
+          <ChevronRight className={cn('size-4 text-zinc-500 dark:text-zinc-400 transition-transform', expanded && 'rotate-90')} aria-hidden="true" />
         </button>
         {expanded && <ul className="mt-0.5 space-y-0.5">{section.items.map((i) => link(i, true))}</ul>}
       </div>
@@ -150,7 +151,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
             {isCollapsed ? (
               <div className="mx-auto mb-2 h-px w-6 bg-zinc-200 dark:bg-zinc-800" />
             ) : (
-              <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">Pinned</p>
+              <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase dark:text-zinc-400">{tx('Pinned')}</p>
             )}
             <ul className="space-y-0.5">{pinned.map((i) => link(i))}</ul>
           </div>
@@ -158,7 +159,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
 
         <div className="space-y-0.5 pt-3">
           {!isCollapsed && (
-            <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-zinc-400 uppercase dark:text-zinc-500">Workspace</p>
+            <p className="mb-1 px-2.5 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase dark:text-zinc-400">{tx('Workspace')}</p>
           )}
           {sections.filter((s) => s.title).map(group)}
         </div>
@@ -173,7 +174,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.fullName}</p>
             <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-              {roleLabel(user.role)}
+              {tx(roleLabel(user.role))}
               {user.isActingAsOwner && user.companyName ? ` · in ${user.companyName}` : ''}
             </p>
           </div>

@@ -81,17 +81,17 @@ export function BudgetPage() {
                     type="button"
                     onClick={() => setParams({ plan: p.id })}
                     className={cn(
-                      'w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/40',
+                      'w-full px-4 py-3 text-start hover:bg-zinc-50 dark:hover:bg-zinc-800/40',
                       selected === p.id && 'bg-accent-50 dark:bg-accent-500/10',
                     )}
                   >
                     <p className="font-medium text-zinc-900 dark:text-white">{p.name}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {formatDate(p.fromDate)} – {formatDate(p.toDate)}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
                       <BudgetStatusBadge status={p.status} />
-                      <span className="text-xs text-zinc-500">{p.headcount} people</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">{p.headcount} people</span>
                     </div>
                   </button>
                 </li>
@@ -250,7 +250,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
   const tile = (label: string, value: string | number, tone?: string) => (
     <Card className="p-4">
       <p className={cn('text-xl font-semibold tabular-nums', tone ?? 'text-zinc-900 dark:text-white')}>{value}</p>
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
     </Card>
   );
   return (
@@ -260,7 +260,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
           <p className="flex flex-wrap items-center gap-2 text-lg font-semibold text-zinc-900 dark:text-white">
             {p.name} <BudgetStatusBadge status={p.status} />
           </p>
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {formatDate(p.fromDate)} – {formatDate(p.toDate)}
             {p.decidedByName && ` · ${p.status === 'Rejected' ? 'sent back' : 'approved'} by ${p.decidedByName}, ${formatDateTimeUtc(p.decidedAtUtc)}`}
           </p>
@@ -321,14 +321,14 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
               <Tr>
                 <Th>Department</Th>
                 <Th>Designation</Th>
-                <Th className="w-24 text-right">Approved</Th>
-                <Th className="w-36 text-right">Monthly cost</Th>
+                <Th className="w-24 text-end">Approved</Th>
+                <Th className="w-36 text-end">Monthly cost</Th>
                 {p.canEdit && <Th className="w-40">New from</Th>}
-                <Th className="text-right">On roll</Th>
-                <Th className="text-right">Hiring</Th>
-                <Th className="text-right">Vacant</Th>
-                <Th className="text-right">Budget</Th>
-                <Th className="text-right">Variance</Th>
+                <Th className="text-end">On roll</Th>
+                <Th className="text-end">Hiring</Th>
+                <Th className="text-end">Vacant</Th>
+                <Th className="text-end">Budget</Th>
+                <Th className="text-end">Variance</Th>
                 {p.canEdit && <Th />}
               </Tr>
             </THead>
@@ -365,7 +365,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                         line?.designation
                       )}
                     </Td>
-                    <Td className="text-right tabular-nums">
+                    <Td className="text-end tabular-nums">
                       {p.canEdit ? (
                         <Input
                           aria-label="Approved headcount"
@@ -378,7 +378,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                         line?.headcount
                       )}
                     </Td>
-                    <Td className="text-right tabular-nums">
+                    <Td className="text-end tabular-nums">
                       {p.canEdit ? (
                         <Input
                           aria-label="Monthly cost"
@@ -403,11 +403,11 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                         />
                       </Td>
                     )}
-                    <Td className="text-right tabular-nums">{line?.onRoll ?? '—'}</Td>
-                    <Td className="text-right tabular-nums">{line?.hiring ?? '—'}</Td>
-                    <Td className={cn('text-right tabular-nums', !!line?.vacant && 'text-amber-600')}>{line?.vacant ?? '—'}</Td>
-                    <Td className="text-right tabular-nums">{line ? formatCurrency(line.budgetCost) : '—'}</Td>
-                    <Td className={cn('text-right tabular-nums', line && line.variance < 0 && 'text-red-600')}>{line ? formatCurrency(line.variance) : '—'}</Td>
+                    <Td className="text-end tabular-nums">{line?.onRoll ?? '—'}</Td>
+                    <Td className="text-end tabular-nums">{line?.hiring ?? '—'}</Td>
+                    <Td className={cn('text-end tabular-nums', !!line?.vacant && 'text-amber-600')}>{line?.vacant ?? '—'}</Td>
+                    <Td className="text-end tabular-nums">{line ? formatCurrency(line.budgetCost) : '—'}</Td>
+                    <Td className={cn('text-end tabular-nums', line && line.variance < 0 && 'text-red-600')}>{line ? formatCurrency(line.variance) : '—'}</Td>
                     {p.canEdit && (
                       <Td>
                         <IconButton
@@ -463,8 +463,8 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                 <Tr key={i}>
                   <Td>{u.department}</Td>
                   <Td>{u.designation}</Td>
-                  <Td className="text-right tabular-nums">{u.onRoll} people</Td>
-                  <Td className="text-right tabular-nums">{formatCurrency(u.monthlyCost)} average</Td>
+                  <Td className="text-end tabular-nums">{u.onRoll} people</Td>
+                  <Td className="text-end tabular-nums">{formatCurrency(u.monthlyCost)} average</Td>
                 </Tr>
               ))}
             </TBody>

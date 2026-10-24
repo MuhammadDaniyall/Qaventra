@@ -138,7 +138,7 @@ export function EmergencyContactsCard({ employeeId, editable }: { employeeId?: s
                 </p>
                 <p className="text-xs text-zinc-500">{c.relation}</p>
               </div>
-              <div className="text-right text-sm text-zinc-700 tabular-nums dark:text-zinc-300">
+              <div className="text-end text-sm text-zinc-700 tabular-nums dark:text-zinc-300">
                 <a href={`tel:${c.phone}`} className="hover:underline">
                   {c.phone}
                 </a>
@@ -178,9 +178,9 @@ function Move({ label, from, to }: { label: string; from: string | null; to: str
   if ((from ?? '') === (to ?? '')) return null;
   return (
     <p className="flex flex-wrap items-center gap-1.5 text-sm">
-      <span className="w-24 shrink-0 text-xs text-zinc-500">{label}</span>
+      <span className="w-24 shrink-0 text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
       <span className="text-zinc-500 line-through decoration-zinc-300 dark:decoration-zinc-600">{from ?? 'None'}</span>
-      <ArrowRight className="size-3.5 text-zinc-400" aria-hidden="true" />
+      <ArrowRight className="size-3.5 text-zinc-500" aria-hidden="true" />
       <span className="font-medium text-zinc-900 dark:text-zinc-100">{to ?? 'None'}</span>
     </p>
   );
@@ -204,8 +204,8 @@ export function JobHistory({ employeeId, joiningDate, actions }: { employeeId?: 
       ) : (
         <ol className="relative space-y-5 px-5 py-5">
           {history.data!.map((h: JobChange) => (
-            <li key={h.id} className="relative border-l-2 border-zinc-200 pl-5 dark:border-zinc-800">
-              <span className="absolute top-1 -left-[7px] size-3 rounded-full border-2 border-white bg-accent-500 dark:border-zinc-900" aria-hidden="true" />
+            <li key={h.id} className="relative border-s-2 border-zinc-200 ps-5 dark:border-zinc-800">
+              <span className="absolute top-1 -start-[7px] size-3 rounded-full border-2 border-white bg-accent-500 dark:border-zinc-900" aria-hidden="true" />
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={KIND_TONES[h.kind]}>{JOB_CHANGE_LABELS[h.kind]}</Badge>
                 <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDate(h.effectiveDate)}</span>
@@ -219,8 +219,8 @@ export function JobHistory({ employeeId, joiningDate, actions }: { employeeId?: 
               {h.note && <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">{h.note}</p>}
             </li>
           ))}
-          <li className="relative border-l-2 border-transparent pl-5">
-            <span className="absolute top-1 -left-[5px] size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" aria-hidden="true" />
+          <li className="relative border-s-2 border-transparent ps-5">
+            <span className="absolute top-1 -start-[5px] size-3 rounded-full bg-zinc-300 dark:bg-zinc-600" aria-hidden="true" />
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               <span className="font-medium text-zinc-900 dark:text-zinc-100">Joined</span> on {formatDate(joiningDate)}
               {!history.data!.length && ' · no changes since'}
@@ -340,7 +340,7 @@ export function JobChangeModal({ employee, onClose }: { employee: Employee; onCl
         <Field label="Note" className="sm:col-span-2">
           <Textarea rows={2} maxLength={1000} value={note} placeholder="e.g. Annual review 2026" onChange={(e) => setNote(e.target.value)} />
         </Field>
-        {kind === 'Promotion' && <p className="text-xs text-zinc-500 sm:col-span-2">Raising the salary too? Add the new salary on the Salary tab with the same date.</p>}
+        {kind === 'Promotion' && <p className="text-xs text-zinc-500 dark:text-zinc-400 sm:col-span-2">Raising the salary too? Add the new salary on the Salary tab with the same date.</p>}
       </div>
     </Modal>
   );
@@ -412,7 +412,7 @@ export function RehireModal({ employee, onClose }: { employee: Employee; onClose
         <Field label="Note" className="sm:col-span-2">
           <Textarea rows={2} maxLength={1000} value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
-        <p className="text-xs text-zinc-500 sm:col-span-2">Check the salary on the Salary tab after re-hiring.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 sm:col-span-2">Check the salary on the Salary tab after re-hiring.</p>
       </div>
     </Modal>
   );
@@ -441,7 +441,7 @@ export function FindFormerModal({ onClose }: { onClose: () => void }) {
               <li key={e.id}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+                  className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-start hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
                   onClick={() => navigate(`/employees/${e.id}?rehire=1`)}
                 >
                   <span>
@@ -450,7 +450,7 @@ export function FindFormerModal({ onClose }: { onClose: () => void }) {
                       {e.employeeCode} · {e.designation ?? 'No designation'} · {e.status}
                     </span>
                   </span>
-                  <ArrowRight className="size-4 text-zinc-400" />
+                  <ArrowRight className="size-4 text-zinc-500" />
                 </button>
               </li>
             ))}

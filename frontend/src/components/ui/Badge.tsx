@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { humanize } from '../../lib/format';
+import { tx } from '../../lib/i18n';
 
 export type Tone = 'green' | 'amber' | 'red' | 'gray' | 'blue' | 'accent' | 'violet';
 
@@ -44,7 +45,7 @@ export function Badge({
       )}
     >
       {dot && <span className={cn('size-1.5 rounded-full', dots[tone])} aria-hidden="true" />}
-      {children}
+      {tx(children)}
     </span>
   );
 }
@@ -89,7 +90,7 @@ const STATUS_TONES: Record<string, Tone> = {
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
   return (
     <Badge tone={STATUS_TONES[status] ?? 'gray'} dot>
-      {label ?? humanize(status)}
+      {tx(label ?? humanize(status))}
     </Badge>
   );
 }

@@ -11,6 +11,7 @@ import {
 } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 
 const control =
   // text-base below sm stops iOS Safari from zooming into a focused field.
@@ -46,8 +47,8 @@ export function Field({ label, hint, error, required, className, children }: Fie
   return (
     <div className={cn('space-y-1.5', className)}>
       <label htmlFor={id} className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {label}
-        {required && <span className="ml-0.5 text-red-500">*</span>}
+        {tx(label)}
+        {required && <span className="ms-0.5 text-red-500">*</span>}
       </label>
       {child}
       {error ? (
@@ -56,7 +57,7 @@ export function Field({ label, hint, error, required, className, children }: Fie
         </p>
       ) : hint ? (
         <p id={descId} className="text-xs text-zinc-500 dark:text-zinc-400">
-          {hint}
+          {tx(hint)}
         </p>
       ) : null}
     </div>
@@ -97,13 +98,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
     <div className="relative">
       <select
         ref={ref}
-        className={cn(control, 'h-10 appearance-none pr-9 sm:h-9', borderFor(rest['aria-invalid'] === true), className)}
+        className={cn(control, 'h-10 appearance-none pe-9 sm:h-9', borderFor(rest['aria-invalid'] === true), className)}
         {...rest}
       >
         {children}
       </select>
       <ChevronDown
-        className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-zinc-400"
+        className="pointer-events-none absolute top-1/2 end-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400"
         aria-hidden="true"
       />
     </div>
@@ -126,8 +127,8 @@ export function Checkbox({
         {...rest}
       />
       <label htmlFor={id} className="text-sm leading-5 select-none">
-        <span className="font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
-        {description && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{description}</span>}
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">{tx(label)}</span>
+        {description && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{tx(description)}</span>}
       </label>
     </div>
   );
@@ -151,9 +152,9 @@ export function Switch({
     <div className="flex items-start justify-between gap-4">
       <div>
         <label htmlFor={id} className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-          {label}
+          {tx(label)}
         </label>
-        {description && <p className="text-xs text-zinc-500 dark:text-zinc-400">{description}</p>}
+        {description && <p className="text-xs text-zinc-500 dark:text-zinc-400">{tx(description)}</p>}
       </div>
       <button
         id={id}
@@ -171,7 +172,7 @@ export function Switch({
         <span
           className={cn(
             'inline-block size-5 rounded-full bg-white shadow transition-transform',
-            checked ? 'translate-x-5.5' : 'translate-x-0.5',
+            checked ? 'translate-x-5.5 rtl:-translate-x-5.5' : 'translate-x-0.5 rtl:-translate-x-0.5',
           )}
         />
       </button>

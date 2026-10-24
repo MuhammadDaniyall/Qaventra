@@ -71,8 +71,8 @@ export function ScreeningCard({ jobId }: { jobId: string }) {
             <Link to={`/recruitment/applications/${s.applicationId}`} className="font-medium hover:underline">
               {s.candidate}
             </Link>
-            <span className="flex-1 truncate text-xs text-zinc-500">{s.reasons.join(' · ')}</span>
-            <span className="text-xs text-zinc-500">{s.stage}</span>
+            <span className="flex-1 truncate text-xs text-zinc-500 dark:text-zinc-400">{s.reasons.join(' · ')}</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{s.stage}</span>
           </li>
         ))}
       </ul>

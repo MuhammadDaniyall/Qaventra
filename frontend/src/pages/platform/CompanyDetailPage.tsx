@@ -33,7 +33,7 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-1 gap-1 px-5 py-3 sm:grid-cols-[180px_1fr] sm:gap-4">
       <dt className="text-sm text-zinc-500 dark:text-zinc-400">{label}</dt>
-      <dd className="text-sm break-words text-zinc-900 dark:text-zinc-100">{value ?? <span className="text-zinc-400">—</span>}</dd>
+      <dd className="text-sm break-words text-zinc-900 dark:text-zinc-100">{value ?? <span className="text-zinc-500 dark:text-zinc-400">—</span>}</dd>
     </div>
   );
 }
@@ -115,7 +115,7 @@ export function CompanyDetailPage() {
             <THead>
               <tr>
                 <Th>Paid on</Th>
-                <Th className="text-right">Amount</Th>
+                <Th className="text-end">Amount</Th>
                 <Th>Period</Th>
                 <Th>Method</Th>
                 <Th>Reference</Th>
@@ -126,7 +126,7 @@ export function CompanyDetailPage() {
               {payments.data.map((p) => (
                 <Tr key={p.id}>
                   <Td>{formatDate(p.paidOn)}</Td>
-                  <Td className="text-right font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(p.amount)}</Td>
+                  <Td className="text-end font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(p.amount)}</Td>
                   <Td>
                     {formatDate(p.periodFrom)} – {formatDate(p.periodTo)}
                   </Td>
@@ -207,7 +207,7 @@ function SubscriptionCard({ company: c, onRecordPayment, onEdit }: { company: Co
         <div>
           <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Licensed seats</p>
           <p className="mt-1 text-lg font-semibold text-zinc-900 tabular-nums dark:text-white">
-            {c.employees} <span className="text-sm font-normal text-zinc-500">of {c.maxEmployees ?? 'unlimited'} active employees</span>
+            {c.employees} <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">of {c.maxEmployees ?? 'unlimited'} active employees</span>
           </p>
           {c.maxEmployees != null && (
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" role="progressbar" aria-valuenow={c.employees} aria-valuemin={0} aria-valuemax={c.maxEmployees}>
@@ -246,7 +246,7 @@ function SubscriptionCard({ company: c, onRecordPayment, onEdit }: { company: Co
           >
             {c.subscriptionEndsOn ? daysLeftLabel(c) : 'Users can sign in indefinitely.'}
           </p>
-          {kind === 'inactive' && <p className="mt-1 text-sm text-zinc-500">Inactive — no one at this company can sign in.</p>}
+          {kind === 'inactive' && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Inactive — no one at this company can sign in.</p>}
         </div>
       </CardBody>
     </Card>

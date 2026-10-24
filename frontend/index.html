@@ -17,6 +17,7 @@
           var t = localStorage.getItem('hrms.theme');
           var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
           if (dark) document.documentElement.classList.add('dark');
+          if (localStorage.getItem('hrms.lang') === 'ur') { document.documentElement.lang = 'ur'; document.documentElement.dir = 'rtl'; }
         } catch (e) {}
       })();
     </script>

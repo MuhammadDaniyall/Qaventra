@@ -115,17 +115,17 @@ function MineTab() {
           {my.isLoading ? (
             <SkeletonRows rows={2} cols={3} />
           ) : !upcoming.length ? (
-            <p className="px-5 py-6 text-sm text-zinc-500">You are not booked on any session.</p>
+            <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">You are not booked on any session.</p>
           ) : (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {upcoming.map((x) => (
                 <li key={x.enrollmentId} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                  <CalendarClock className="size-4 text-zinc-400" />
+                  <CalendarClock className="size-4 text-zinc-500 dark:text-zinc-400" />
                   <div className="min-w-0 flex-1">
                     <Link to={`/training/sessions/${x.sessionId}`} className="font-medium text-zinc-900 hover:text-accent-600 dark:text-white">
                       {x.program}
                     </Link>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {formatDateTimeUtc(x.startsAtUtc)} · {MODE_LABELS[x.mode]}
                       {x.venue ? ` · ${x.venue}` : ''}
                       {x.trainer ? ` · ${x.trainer}` : ''}
@@ -149,7 +149,7 @@ function MineTab() {
         <Card>
           <CardHeader title="History" />
           {!past.length ? (
-            <p className="px-5 py-6 text-sm text-zinc-500">No training yet.</p>
+            <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">No training yet.</p>
           ) : (
             <Table>
               <THead>
@@ -167,12 +167,12 @@ function MineTab() {
                     <Td className="text-sm">{formatDate(x.completedOn ?? x.startsAtUtc.slice(0, 10))}</Td>
                     <Td>
                       <StatusBadge status={x.status} label={ENROLLMENT_LABELS[x.status]} />
-                      {x.score != null && <span className="ml-2 text-xs text-zinc-500">{x.score}%</span>}
+                      {x.score != null && <span className="ms-2 text-xs text-zinc-500 dark:text-zinc-400">{x.score}%</span>}
                     </Td>
-                    <Td className="text-right">
+                    <Td className="text-end">
                       {(x.status === 'Attended' || x.status === 'Completed' || x.status === 'Failed') &&
                         (x.feedbackGiven ? (
-                          <span className="text-xs text-zinc-500">Feedback given</span>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">Feedback given</span>
                         ) : (
                           <Button size="sm" variant="secondary" icon={<Star className="size-3.5" />} onClick={() => setRating(x)}>
                             Give feedback
@@ -190,7 +190,7 @@ function MineTab() {
       <Card className="self-start">
         <CardHeader title="Required for me" description="Courses the company asks everyone in your role to complete" />
         {!required.length ? (
-          <p className="px-5 py-6 text-sm text-zinc-500">Nothing required.</p>
+          <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">Nothing required.</p>
         ) : (
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {required.map((c) => (
@@ -199,7 +199,7 @@ function MineTab() {
                   <span className="font-medium">{compliance.data!.programs.find((p) => p.id === c.programId)?.title}</span>
                   <ComplianceBadge state={c.state} />
                 </div>
-                <p className="text-xs text-zinc-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {c.lastDone ? `Done ${formatDate(c.lastDone)}` : 'Not done yet'}
                   {c.dueOn ? ` · ${c.lastDone ? 'renew' : 'due'} by ${formatDate(c.dueOn)}` : ''}
                   {c.scheduled ? ' · booked' : ''}
@@ -330,7 +330,7 @@ function SessionsTab({ me }: { me: TrainingMe }) {
               <Tr key={s.id} className="cursor-pointer" onClick={() => navigate(`/training/sessions/${s.id}`)}>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-white">{s.program}</p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {MODE_LABELS[s.mode]}
                     {s.venue ? ` · ${s.venue}` : ''}
                   </p>
@@ -343,7 +343,7 @@ function SessionsTab({ me }: { me: TrainingMe }) {
                 </Td>
                 <Td>
                   <StatusBadge status={s.status} />
-                  {s.averageRating != null && <span className="ml-2 text-xs text-zinc-500">★ {s.averageRating}</span>}
+                  {s.averageRating != null && <span className="ms-2 text-xs text-zinc-500 dark:text-zinc-400">★ {s.averageRating}</span>}
                 </Td>
               </Tr>
             ))}
@@ -519,7 +519,7 @@ function CatalogTab({ me, onAsk }: { me: TrainingMe; onAsk: (p: TrainingProgram)
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {programs.data.map((p) => (
               <li key={p.id} className="flex flex-wrap items-start gap-3 px-5 py-3.5">
-                <GraduationCap className="mt-0.5 size-4 text-zinc-400" />
+                <GraduationCap className="mt-0.5 size-4 text-zinc-500 dark:text-zinc-400" />
                 <div className="min-w-0 flex-1">
                   <p className="flex flex-wrap items-center gap-2 font-medium text-zinc-900 dark:text-white">
                     {p.title}
@@ -530,7 +530,7 @@ function CatalogTab({ me, onAsk }: { me: TrainingMe; onAsk: (p: TrainingProgram)
                     )}
                     {!p.isActive && <Badge>Off</Badge>}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {[p.category, MODE_LABELS[p.mode], p.durationHours ? `${p.durationHours} h` : null, me.isHr ? `${p.completed} completed` : null]
                       .filter(Boolean)
                       .join(' · ')}
@@ -740,7 +740,7 @@ function ComplianceTab({ me }: { me: TrainingMe }) {
           </div>
         )}
         {me.isHr && (
-          <Select className="ml-auto w-56" value={dept} onChange={(e) => setDept(e.target.value)}>
+          <Select className="ms-auto w-56" value={dept} onChange={(e) => setDept(e.target.value)}>
             <option value="">All departments</option>
             {departments.data?.map((d) => (
               <option key={d.id} value={d.id}>
@@ -780,7 +780,7 @@ function ComplianceMatrix({ data }: { data: Compliance }) {
             <Tr key={r.employeeId}>
               <Td>
                 <p className="font-medium">{r.name}</p>
-                <p className="text-xs text-zinc-500">{[r.code, r.department].filter(Boolean).join(' · ')}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{[r.code, r.department].filter(Boolean).join(' · ')}</p>
               </Td>
               {data.programs.map((p) => {
                 const cell = r.cells.find((x) => x.programId === p.id);
@@ -789,13 +789,13 @@ function ComplianceMatrix({ data }: { data: Compliance }) {
                     {cell ? (
                       <div title={cell.lastDone ? `Done ${formatDate(cell.lastDone)}` : undefined}>
                         <ComplianceBadge state={cell.state} />
-                        <p className="mt-0.5 text-[11px] text-zinc-500">
+                        <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
                           {cell.dueOn ? formatDate(cell.dueOn) : cell.lastDone ? formatDate(cell.lastDone) : ''}
                           {cell.scheduled ? ' · booked' : ''}
                         </p>
                       </div>
                     ) : (
-                      <span className="text-xs text-zinc-400">—</span>
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">—</span>
                     )}
                   </Td>
                 );
@@ -848,9 +848,9 @@ function RequestsTab({ all }: { all: boolean }) {
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-zinc-900 dark:text-white">
                     {r.course}
-                    {r.provider && <span className="font-normal text-zinc-500"> · {r.provider}</span>}
+                    {r.provider && <span className="font-normal text-zinc-500 dark:text-zinc-400"> · {r.provider}</span>}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {[
                       all ? r.employeeName : null,
                       r.cost ? formatCurrency(r.cost) : null,
@@ -861,7 +861,7 @@ function RequestsTab({ all }: { all: boolean }) {
                       .join(' · ')}
                   </p>
                   <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-300">{r.reason}</p>
-                  {r.decisionNote && <p className="text-xs text-zinc-500">“{r.decisionNote}”</p>}
+                  {r.decisionNote && <p className="text-xs text-zinc-500 dark:text-zinc-400">“{r.decisionNote}”</p>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {r.completedOn ? <Badge tone="green">Completed {formatDate(r.completedOn)}</Badge> : <StatusBadge status={r.status} />}
@@ -968,35 +968,35 @@ function ReportTab() {
   const tile = (label: string, value: string | number) => (
     <Card className="p-4">
       <p className="text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{value}</p>
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
     </Card>
   );
   const table = (title: string, rows: typeof d.byProgram, showCost: boolean) => (
     <Card>
       <CardHeader title={title} />
       {!rows.length ? (
-        <p className="px-5 py-6 text-sm text-zinc-500">No training this year.</p>
+        <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">No training this year.</p>
       ) : (
         <Table>
           <THead>
             <Tr>
               <Th />
-              <Th className="text-right">Sessions</Th>
-              <Th className="text-right">People</Th>
-              <Th className="text-right">Hours</Th>
-              {showCost && <Th className="text-right">Cost</Th>}
-              <Th className="text-right">Rating</Th>
+              <Th className="text-end">Sessions</Th>
+              <Th className="text-end">People</Th>
+              <Th className="text-end">Hours</Th>
+              {showCost && <Th className="text-end">Cost</Th>}
+              <Th className="text-end">Rating</Th>
             </Tr>
           </THead>
           <TBody>
             {rows.map((x) => (
               <Tr key={x.name}>
                 <Td>{x.name}</Td>
-                <Td className="text-right tabular-nums">{x.sessions}</Td>
-                <Td className="text-right tabular-nums">{x.people}</Td>
-                <Td className="text-right tabular-nums">{x.hours}</Td>
-                {showCost && <Td className="text-right tabular-nums">{formatCurrency(x.cost)}</Td>}
-                <Td className="text-right tabular-nums">{x.rating ?? '—'}</Td>
+                <Td className="text-end tabular-nums">{x.sessions}</Td>
+                <Td className="text-end tabular-nums">{x.people}</Td>
+                <Td className="text-end tabular-nums">{x.hours}</Td>
+                {showCost && <Td className="text-end tabular-nums">{formatCurrency(x.cost)}</Td>}
+                <Td className="text-end tabular-nums">{x.rating ?? '—'}</Td>
               </Tr>
             ))}
           </TBody>

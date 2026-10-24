@@ -38,8 +38,8 @@ export function DesignationsTab() {
           <THead>
             <tr>
               <Th>Title</Th>
-              <Th className="text-right">Employees</Th>
-              <Th className="text-right">
+              <Th className="text-end">Employees</Th>
+              <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
             </tr>
@@ -48,7 +48,7 @@ export function DesignationsTab() {
             {list.data.map((d) => (
               <Tr key={d.id}>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{d.title}</Td>
-                <Td className="text-right tabular-nums">{d.employees}</Td>
+                <Td className="text-end tabular-nums">{d.employees}</Td>
                 <Td>
                   <RowActions history={{ type: 'Designation', id: d.id }} label={d.title} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
                 </Td>

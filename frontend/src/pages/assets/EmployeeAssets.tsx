@@ -30,7 +30,7 @@ export function EmployeeAssetsTab({ employeeId, hr }: { employeeId: string; hr: 
       {hr && !!kits.data?.length && (
         <Card>
           <CardBody className="flex flex-wrap items-center gap-3">
-            <Layers className="size-4 text-zinc-400" />
+            <Layers className="size-4 text-zinc-500" />
             <span className="text-sm text-zinc-700 dark:text-zinc-300">Give a starter kit</span>
             <Select className="w-52" value={kitId} onChange={(e) => setKitId(e.target.value)} aria-label="Kit">
               <option value="">Choose a kit…</option>

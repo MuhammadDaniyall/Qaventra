@@ -95,7 +95,7 @@ function TripTable({ trips, showPerson }: { trips: TripListItem[]; showPerson: b
           <Th>Trip</Th>
           <Th>Dates</Th>
           <Th>Status</Th>
-          <Th className="text-right">Cost</Th>
+          <Th className="text-end">Cost</Th>
         </Tr>
       </THead>
       <TBody>
@@ -104,14 +104,14 @@ function TripTable({ trips, showPerson }: { trips: TripListItem[]; showPerson: b
             {showPerson && (
               <Td>
                 <p className="font-medium text-zinc-900 dark:text-white">{t.employeeName}</p>
-                <p className="text-xs text-zinc-500">{[t.employeeCode, t.department].filter(Boolean).join(' · ')}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{[t.employeeCode, t.department].filter(Boolean).join(' · ')}</p>
               </Td>
             )}
             <Td>
               <Link to={`/travel/${t.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-zinc-900 hover:text-accent-600 dark:text-white">
                 {t.route}
               </Link>
-              <p className="line-clamp-1 text-xs text-zinc-500">
+              <p className="line-clamp-1 text-xs text-zinc-500 dark:text-zinc-400">
                 {[TRIP_LABELS[t.tripType], t.isInternational ? 'International' : null, t.reason, t.purpose].filter(Boolean).join(' · ')}
               </p>
               <div className="mt-1 flex flex-wrap gap-1">
@@ -126,7 +126,7 @@ function TripTable({ trips, showPerson }: { trips: TripListItem[]; showPerson: b
             </Td>
             <Td className="text-sm whitespace-nowrap">
               {formatDate(t.departOn)}
-              {t.returnOn !== t.departOn && <span className="text-zinc-500"> – {formatDate(t.returnOn)}</span>}
+              {t.returnOn !== t.departOn && <span className="text-zinc-500 dark:text-zinc-400"> – {formatDate(t.returnOn)}</span>}
             </Td>
             <Td>
               <TripStatusBadge status={t.status} settlement={t.settlement} />
@@ -136,7 +136,7 @@ function TripTable({ trips, showPerson }: { trips: TripListItem[]; showPerson: b
                 </p>
               )}
             </Td>
-            <Td className="text-right tabular-nums">{t.bookedCost ? formatCurrency(t.bookedCost) : '—'}</Td>
+            <Td className="text-end tabular-nums">{t.bookedCost ? formatCurrency(t.bookedCost) : '—'}</Td>
           </Tr>
         ))}
       </TBody>
@@ -200,9 +200,9 @@ function DeskTab() {
             {label}
           </button>
         ))}
-        <div className="relative ml-auto w-full sm:w-64">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-zinc-400" />
-          <Input className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, city, purpose…" />
+        <div className="relative ms-auto w-full sm:w-64">
+          <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" />
+          <Input className="ps-9" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, city, purpose…" />
         </div>
       </div>
       {trips.isLoading ? (
@@ -451,18 +451,18 @@ function ReportTab() {
           <THead>
             <Tr>
               <Th />
-              <Th className="text-right">Trips</Th>
-              <Th className="text-right">Booked</Th>
-              <Th className="text-right">Claimed</Th>
+              <Th className="text-end">Trips</Th>
+              <Th className="text-end">Booked</Th>
+              <Th className="text-end">Claimed</Th>
             </Tr>
           </THead>
           <TBody>
             {rows.map((x) => (
               <Tr key={x.name}>
                 <Td>{x.name}</Td>
-                <Td className="text-right tabular-nums">{x.trips}</Td>
-                <Td className="text-right tabular-nums">{formatCurrency(x.booked)}</Td>
-                <Td className="text-right tabular-nums">{formatCurrency(x.claimed)}</Td>
+                <Td className="text-end tabular-nums">{x.trips}</Td>
+                <Td className="text-end tabular-nums">{formatCurrency(x.booked)}</Td>
+                <Td className="text-end tabular-nums">{formatCurrency(x.claimed)}</Td>
               </Tr>
             ))}
           </TBody>
@@ -587,14 +587,14 @@ function SettingsTab() {
               <li key={r.id} className="flex items-center justify-between gap-2 px-5 py-2.5 text-sm">
                 <span>
                   {r.name} {!r.isActive && <Badge>Off</Badge>}
-                  <span className="ml-2 text-xs text-zinc-500">{r.trips} trips</span>
+                  <span className="ms-2 text-xs text-zinc-500 dark:text-zinc-400">{r.trips} trips</span>
                 </span>
                 <RowActions label={r.name} onEdit={() => setEditing(r)} onDelete={r.trips ? undefined : () => setDeleting(r)} />
               </li>
             ))}
           </ul>
         ) : (
-          <p className="px-5 py-6 text-sm text-zinc-500">No reasons yet.</p>
+          <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">No reasons yet.</p>
         )}
       </Card>
       {editing && <ReasonModal item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}

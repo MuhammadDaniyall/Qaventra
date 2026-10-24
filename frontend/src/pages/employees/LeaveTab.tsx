@@ -57,14 +57,14 @@ export function LeaveTab({ employeeId }: { employeeId: string }) {
           <THead>
             <tr>
               <Th>Leave type</Th>
-              <Th className="text-right">Quota</Th>
-              <Th className="text-right">Earned</Th>
-              <Th className="text-right">Carried</Th>
-              <Th className="text-right">Comp-off</Th>
-              <Th className="text-right">Adjusted</Th>
-              <Th className="text-right">Used</Th>
-              <Th className="text-right">Pending</Th>
-              <Th className="text-right">Available</Th>
+              <Th className="text-end">Quota</Th>
+              <Th className="text-end">Earned</Th>
+              <Th className="text-end">Carried</Th>
+              <Th className="text-end">Comp-off</Th>
+              <Th className="text-end">Adjusted</Th>
+              <Th className="text-end">Used</Th>
+              <Th className="text-end">Pending</Th>
+              <Th className="text-end">Available</Th>
               <Th>
                 <span className="sr-only">Actions</span>
               </Th>
@@ -75,20 +75,20 @@ export function LeaveTab({ employeeId }: { employeeId: string }) {
               <Tr key={b.leaveTypeId}>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">
                   {b.leaveType}
-                  {b.accrual === 'Monthly' && <span className="ml-1.5 text-xs text-zinc-500">monthly</span>}
+                  {b.accrual === 'Monthly' && <span className="ms-1.5 text-xs text-zinc-500 dark:text-zinc-400">monthly</span>}
                 </Td>
-                <Td className="text-right tabular-nums">{b.isCompensatory ? '—' : formatNumber(b.entitled)}</Td>
-                <Td className="text-right tabular-nums">{b.isCompensatory ? '—' : formatNumber(b.earned)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(b.carriedForward)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(b.credited)}</Td>
-                <Td className="text-right tabular-nums" title={b.adjustmentNote ?? undefined}>
+                <Td className="text-end tabular-nums">{b.isCompensatory ? '—' : formatNumber(b.entitled)}</Td>
+                <Td className="text-end tabular-nums">{b.isCompensatory ? '—' : formatNumber(b.earned)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(b.carriedForward)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(b.credited)}</Td>
+                <Td className="text-end tabular-nums" title={b.adjustmentNote ?? undefined}>
                   {b.adjustment > 0 ? '+' : ''}
                   {formatNumber(b.adjustment)}
                 </Td>
-                <Td className="text-right tabular-nums">{formatNumber(b.used)}</Td>
-                <Td className="text-right tabular-nums">{formatNumber(b.pending)}</Td>
-                <Td className="text-right font-semibold tabular-nums">{formatNumber(b.available)}</Td>
-                <Td className="text-right">
+                <Td className="text-end tabular-nums">{formatNumber(b.used)}</Td>
+                <Td className="text-end tabular-nums">{formatNumber(b.pending)}</Td>
+                <Td className="text-end font-semibold tabular-nums">{formatNumber(b.available)}</Td>
+                <Td className="text-end">
                   <IconButton label={`Adjust ${b.leaveType}`} onClick={() => setEditing(b)}>
                     <Pencil className="size-4" />
                   </IconButton>

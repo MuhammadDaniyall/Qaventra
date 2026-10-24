@@ -168,7 +168,7 @@ export function CandidateFields({
       )}
       <Field label="CV" required={cvRequired} hint="PDF or Word, up to 5 MB" className={withSource ? '' : 'sm:col-span-2'}>
         <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 py-2.5 text-sm text-zinc-600 hover:border-accent-400 dark:border-zinc-700 dark:text-zinc-300">
-          <FileUp className="size-4 shrink-0 text-zinc-400" />
+          <FileUp className="size-4 shrink-0 text-zinc-500" />
           <span className="truncate">{value.cv ? value.cv.name : 'Choose a file'}</span>
           <input type="file" accept={CV_ACCEPT} className="sr-only" onChange={(e) => set('cv', e.target.files?.[0] ?? null)} />
         </label>

@@ -86,7 +86,7 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
             <span className="text-zinc-500 sm:inline-block sm:w-32 dark:text-zinc-400">Paid days</span>
             <span className="font-medium text-zinc-900 dark:text-zinc-100">
               {formatNumber(p.paidDays)} of {p.daysInMonth}
-              {p.unpaidDays > 0 && <span className="text-zinc-500"> ({formatNumber(p.unpaidDays)} unpaid)</span>}
+              {p.unpaidDays > 0 && <span className="text-zinc-500 dark:text-zinc-400"> ({formatNumber(p.unpaidDays)} unpaid)</span>}
             </span>
           </div>
         </section>
@@ -101,13 +101,13 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
             <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">Net pay</p>
             <p className="mt-1 text-4xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay)}</p>
           </div>
-          <div className="text-right text-xs text-zinc-500 dark:text-zinc-400">
+          <div className="text-end text-xs text-zinc-500 dark:text-zinc-400">
             <p>Taxable income: {formatCurrency(p.taxableIncome)}</p>
             {p.eobiEmployer > 0 && <p>Employer EOBI contribution: {formatCurrency(p.eobiEmployer)}</p>}
           </div>
         </section>
 
-        <p className="mt-8 text-center text-xs text-zinc-400">This is a computer-generated payslip and does not require a signature.</p>
+        <p className="mt-8 text-center text-xs text-zinc-500 dark:text-zinc-400">This is a computer-generated payslip and does not require a signature.</p>
       </article>
     </>
   );
@@ -121,7 +121,7 @@ function LineTable({ title, lines, total, totalLabel }: { title: string; lines: 
         <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {lines.length === 0 && (
             <tr>
-              <td className="py-2 text-zinc-400" colSpan={2}>
+              <td className="py-2 text-zinc-500 dark:text-zinc-400" colSpan={2}>
                 None
               </td>
             </tr>
@@ -129,14 +129,14 @@ function LineTable({ title, lines, total, totalLabel }: { title: string; lines: 
           {lines.map((l, i) => (
             <tr key={`${l.name}-${i}`}>
               <td className="py-2 text-zinc-700 dark:text-zinc-300">{l.name}</td>
-              <td className="py-2 text-right text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(l.amount)}</td>
+              <td className="py-2 text-end text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(l.amount)}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-zinc-200 dark:border-zinc-700">
             <td className="pt-2 font-semibold text-zinc-900 dark:text-white">{totalLabel}</td>
-            <td className="pt-2 text-right font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(total)}</td>
+            <td className="pt-2 text-end font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(total)}</td>
           </tr>
         </tfoot>
       </table>

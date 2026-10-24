@@ -80,7 +80,7 @@ export function SeparationsPage() {
               <>
                 In progress
                 {!!all.filter(isOpen).length && (
-                  <span className="ml-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+                  <span className="ms-1 rounded-full bg-amber-100 px-1.5 text-xs text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
                     {all.filter(isOpen).length}
                   </span>
                 )}
@@ -120,7 +120,7 @@ export function SeparationsPage() {
                         <Avatar name={s.employeeName} size="sm" />
                         <div>
                           <p className="font-medium text-zinc-900 dark:text-zinc-100">{s.employeeName}</p>
-                          <p className="text-xs text-zinc-500">{[s.designation, s.department].filter(Boolean).join(' · ') || s.employeeCode}</p>
+                          <p className="text-xs text-zinc-500 dark:text-zinc-400">{[s.designation, s.department].filter(Boolean).join(' · ') || s.employeeCode}</p>
                         </div>
                       </div>
                     </Td>
@@ -128,7 +128,7 @@ export function SeparationsPage() {
                     <Td>{formatDate(s.noticeDate)}</Td>
                     <Td>
                       {formatDate(s.lastWorkingDay ?? s.proposedLastDay)}
-                      {!s.lastWorkingDay && <span className="ml-1 text-xs text-zinc-500">(proposed)</span>}
+                      {!s.lastWorkingDay && <span className="ms-1 text-xs text-zinc-500 dark:text-zinc-400">(proposed)</span>}
                     </Td>
                     <Td>
                       {s.clearanceTotal ? (
@@ -136,7 +136,7 @@ export function SeparationsPage() {
                           <div className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden="true">
                             <div className="h-full rounded-full bg-accent-500" style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="text-xs text-zinc-500 tabular-nums">
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
                             {s.clearanceDone}/{s.clearanceTotal}
                           </span>
                         </div>

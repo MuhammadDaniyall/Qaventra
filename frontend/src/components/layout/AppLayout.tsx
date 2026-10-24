@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { OwnerBanner } from './OwnerBanner';
 import { SubscriptionBanner } from './SubscriptionBanner';
+import { OfflineBanner } from './OfflineBanner';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 import { isPlatformOwner } from '../../auth/roles';
 import { Building2, Menu, Moon, ShieldCheck, Sun } from 'lucide-react';
@@ -56,7 +57,7 @@ export function AppLayout() {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'no-print sticky top-0 hidden h-screen shrink-0 border-r border-zinc-200 bg-white transition-[width] duration-200 lg:block',
+          'no-print sticky top-0 hidden h-screen shrink-0 border-e border-zinc-200 bg-white transition-[width] duration-200 lg:block',
           'dark:border-zinc-800 dark:bg-zinc-900/60',
           collapsed ? 'w-[68px]' : 'w-64',
         )}
@@ -68,7 +69,7 @@ export function AppLayout() {
       {mobileOpen && (
         <div className="no-print fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="absolute inset-0 animate-fade-in bg-zinc-950/40" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] animate-slide-in-left border-r border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+          <aside className="absolute inset-y-0 start-0 w-72 max-w-[85vw] animate-slide-in-left rtl:animate-slide-in-right border-e border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
             <Sidebar collapsed={false} onToggleCollapsed={toggleCollapsed} mobile onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
@@ -89,12 +90,12 @@ export function AppLayout() {
               </>
             ) : (
               <>
-                <Building2 className="size-4 shrink-0 text-zinc-400" />
+                <Building2 className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
                 <span className="truncate font-medium text-zinc-800 dark:text-zinc-200">{user.companyName}</span>
               </>
             )}
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ms-auto flex items-center gap-1.5">
             {!isPlatformOwner(user) && <QuickSearch />}
             <IconButton label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>
               {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
@@ -104,6 +105,7 @@ export function AppLayout() {
           </div>
         </header>
         <SubscriptionBanner user={user} />
+        <OfflineBanner />
         </div>
         <main
           className={cn(

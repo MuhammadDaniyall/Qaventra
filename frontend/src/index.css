@@ -44,6 +44,10 @@
   html.dark {
     color-scheme: dark;
   }
+  html[lang='ur'] body {
+    font-family: 'Noto Sans Arabic', var(--font-sans);
+    line-height: 1.7;
+  }
   body {
     @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
     font-feature-settings: 'cv11', 'ss01';
@@ -52,6 +56,11 @@
   [role='button']:not(:disabled) {
     cursor: pointer;
   }
+}
+
+/* Arrows that mean "forward" or "back" point the other way in Urdu (right-to-left). */
+[dir='rtl'] :is(.lucide-chevron-right, .lucide-chevron-left, .lucide-arrow-right, .lucide-arrow-left, .lucide-arrow-up-right, .lucide-chevrons-right, .lucide-chevrons-left) {
+  scale: -1 1;
 }
 
 @utility no-scrollbar {

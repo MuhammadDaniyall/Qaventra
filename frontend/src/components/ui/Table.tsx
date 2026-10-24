@@ -2,6 +2,7 @@ import type { HTMLAttributes, ReactNode, TdHTMLAttributes, ThHTMLAttributes } fr
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Button } from './Button';
+import { tx } from '../../lib/i18n';
 
 /** Horizontally scrollable table wrapper; lives inside a Card. */
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
@@ -54,8 +55,12 @@ export function Tr({
   );
 }
 
-export function Th({ className, ...rest }: ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th scope="col" className={cn('px-4 py-2.5 font-medium whitespace-nowrap', className)} {...rest} />;
+export function Th({ className, children, ...rest }: ThHTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <th scope="col" className={cn('px-4 py-2.5 font-medium whitespace-nowrap', className)} {...rest}>
+      {tx(children)}
+    </th>
+  );
 }
 
 export function Td({ className, ...rest }: TdHTMLAttributes<HTMLTableCellElement>) {

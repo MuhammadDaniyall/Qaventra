@@ -125,7 +125,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
 
   const show = (f: FieldDef) => {
     const val = v[f.key] as string | null;
-    if (!draft) return <span>{val ? f.type === 'date' ? formatDate(val) : val : <span className="text-zinc-400">—</span>}</span>;
+    if (!draft) return <span>{val ? f.type === 'date' ? formatDate(val) : val : <span className="text-zinc-500 dark:text-zinc-400">—</span>}</span>;
     return <Input type={f.type ?? 'text'} value={val ?? ''} maxLength={f.max} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)} />;
   };
 
@@ -170,7 +170,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
                     ))}
                   </Select>
                 ) : (
-                  name(val) || <span className="text-zinc-400">—</span>
+                  name(val) || <span className="text-zinc-500 dark:text-zinc-400">—</span>
                 )}
               </Item>
             );
@@ -205,7 +205,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
             ) : v.providentFundMember ? (
               'Member'
             ) : (
-              <span className="text-zinc-400">Not a member</span>
+              <span className="text-zinc-500 dark:text-zinc-400">Not a member</span>
             )}
           </Item>
         </Section>
@@ -225,7 +225,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
             {draft ? (
               <Input placeholder="203.0.113.10, 10.0.0." value={v.allowedIps ?? ''} maxLength={500} onChange={(e) => set('allowedIps', e.target.value)} />
             ) : (
-              v.allowedIps || <span className="text-zinc-400">Any network</span>
+              v.allowedIps || <span className="text-zinc-500 dark:text-zinc-400">Any network</span>
             )}
           </Item>
           <Item label="Personal location (e.g. home)">
@@ -259,7 +259,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
             ) : v.ownLatitude != null ? (
               `${v.ownLatitude.toFixed(5)}, ${v.ownLongitude?.toFixed(5)} (${v.ownRadiusMeters ?? 200} m)`
             ) : (
-              <span className="text-zinc-400">—</span>
+              <span className="text-zinc-500 dark:text-zinc-400">—</span>
             )}
           </Item>
         </Section>
@@ -276,14 +276,14 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
                   ))}
                 </Select>
               ) : (
-                name(v.exitTypeId) || <span className="text-zinc-400">—</span>
+                name(v.exitTypeId) || <span className="text-zinc-500 dark:text-zinc-400">—</span>
               )}
             </Item>
             <Item label="Exit reason">
               {draft ? (
                 <Input value={v.exitReason ?? ''} maxLength={500} onChange={(e) => set('exitReason', e.target.value)} />
               ) : (
-                v.exitReason || <span className="text-zinc-400">—</span>
+                v.exitReason || <span className="text-zinc-500 dark:text-zinc-400">—</span>
               )}
             </Item>
             <Item label="Do not re-hire">
@@ -305,7 +305,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
                   <Badge tone="red">Do not re-hire</Badge> {v.blacklistReason}
                 </span>
               ) : (
-                <span className="text-zinc-400">No</span>
+                <span className="text-zinc-500 dark:text-zinc-400">No</span>
               )}
             </Item>
           </Section>
@@ -318,7 +318,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
-      <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">{title}</h3>
+      <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">{title}</h3>
       <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">{children}</dl>
     </section>
   );
@@ -381,7 +381,7 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
     setDraft((d) => ({ ...d!, [list]: (d![list] as EmployeeRecords[K][number][]).filter((_, j) => j !== i) }));
   }
   const grid = 'grid gap-3 rounded-lg border border-zinc-200 p-3 dark:border-zinc-800';
-  const empty = (s: string) => <p className="text-sm text-zinc-500">{s}</p>;
+  const empty = (s: string) => <p className="text-sm text-zinc-500 dark:text-zinc-400">{s}</p>;
 
   return (
     <Card>
@@ -409,7 +409,7 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
       <div className="space-y-6 p-5">
         <FormError message={error} />
         <section>
-          <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">Dependants and nominees</h3>
+          <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Dependants and nominees</h3>
           <div className="space-y-2">
             {!v.dependants.length && !edit && empty('No family members on file.')}
             {v.dependants.map((d, i) =>
@@ -456,9 +456,9 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
               ) : (
                 <div key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                   <span className="font-medium">{d.name}</span>
-                  <span className="text-zinc-500">{d.relation}</span>
-                  {d.dateOfBirth && <span className="text-zinc-500">born {formatDate(d.dateOfBirth)}</span>}
-                  {d.cnic && <span className="font-mono text-xs text-zinc-500">{d.cnic}</span>}
+                  <span className="text-zinc-500 dark:text-zinc-400">{d.relation}</span>
+                  {d.dateOfBirth && <span className="text-zinc-500 dark:text-zinc-400">born {formatDate(d.dateOfBirth)}</span>}
+                  {d.cnic && <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{d.cnic}</span>}
                   {d.isNominee && <Badge tone="accent">Nominee{d.nomineeShare != null ? ` ${d.nomineeShare}%` : ''}</Badge>}
                   {d.coveredByInsurance && <Badge>Insured</Badge>}
                 </div>
@@ -478,7 +478,7 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
         </section>
 
         <section>
-          <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">Qualifications</h3>
+          <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Qualifications</h3>
           <div className="space-y-2">
             {!v.qualifications.length && !edit && empty('No qualifications on file.')}
             {v.qualifications.map((q, i) =>
@@ -538,13 +538,13 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
                     {q.degree}
                     {q.field ? ` in ${q.field}` : ''}
                   </span>
-                  <span className="text-zinc-500">{q.institute}</span>
+                  <span className="text-zinc-500 dark:text-zinc-400">{q.institute}</span>
                   {(q.fromYear || q.toYear) && (
-                    <span className="text-zinc-500">
+                    <span className="text-zinc-500 dark:text-zinc-400">
                       {q.fromYear ?? ''}–{q.toYear ?? ''}
                     </span>
                   )}
-                  {q.grade && <span className="text-zinc-500">{q.grade}</span>}
+                  {q.grade && <span className="text-zinc-500 dark:text-zinc-400">{q.grade}</span>}
                   {q.isHighest && <Badge tone="accent">Highest</Badge>}
                 </div>
               ),
@@ -558,7 +558,7 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
         </section>
 
         <section>
-          <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 uppercase">Previous jobs</h3>
+          <h3 className="mb-3 text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">Previous jobs</h3>
           <div className="space-y-2">
             {!v.experience.length && !edit && empty('No previous jobs on file.')}
             {v.experience.map((j, i) =>
@@ -597,13 +597,13 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
               ) : (
                 <div key={i} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                   <span className="font-medium">{j.designation}</span>
-                  <span className="text-zinc-500">at {j.organization}</span>
+                  <span className="text-zinc-500 dark:text-zinc-400">at {j.organization}</span>
                   {(j.fromDate || j.toDate) && (
-                    <span className="text-zinc-500">
+                    <span className="text-zinc-500 dark:text-zinc-400">
                       {j.fromDate ? formatDate(j.fromDate) : '?'} – {j.toDate ? formatDate(j.toDate) : '?'}
                     </span>
                   )}
-                  {j.reasonForLeaving && <span className="text-xs text-zinc-500">· {j.reasonForLeaving}</span>}
+                  {j.reasonForLeaving && <span className="text-xs text-zinc-500 dark:text-zinc-400">· {j.reasonForLeaving}</span>}
                 </div>
               ),
             )}

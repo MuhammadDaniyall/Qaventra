@@ -4,8 +4,8 @@ import { ArrowRight } from 'lucide-react';
 type Change = { old?: unknown; new?: unknown };
 
 function render(value: unknown) {
-  if (value === undefined) return <span className="text-zinc-400">—</span>;
-  if (value === null) return <span className="text-zinc-400 italic">null</span>;
+  if (value === undefined) return <span className="text-zinc-500 dark:text-zinc-400">—</span>;
+  if (value === null) return <span className="text-zinc-500 dark:text-zinc-400 italic">null</span>;
   if (typeof value === 'object') return <code className="text-xs break-all">{JSON.stringify(value)}</code>;
   return <span className="break-all">{String(value)}</span>;
 }
@@ -26,11 +26,11 @@ export function ChangesDiff({ changes }: { changes: string }) {
       <pre className="overflow-x-auto rounded-lg bg-zinc-50 p-3 text-xs dark:bg-zinc-950">{changes}</pre>
     );
   }
-  if (parsed.length === 0) return <p className="text-sm text-zinc-500">No field changes recorded.</p>;
+  if (parsed.length === 0) return <p className="text-sm text-zinc-500 dark:text-zinc-400">No field changes recorded.</p>;
 
   return (
     <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-start text-sm">
         <thead className="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
           <tr>
             <th className="px-3 py-2 font-medium">Field</th>
@@ -50,7 +50,7 @@ export function ChangesDiff({ changes }: { changes: string }) {
                   {hasOld ? (
                     <span className="rounded bg-red-50 px-1 text-red-700 dark:bg-red-500/10 dark:text-red-300">{render(c.old)}</span>
                   ) : (
-                    <span className="text-zinc-400">—</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">—</span>
                   )}
                 </td>
                 <td className="py-2 text-zinc-300 dark:text-zinc-600">
@@ -62,7 +62,7 @@ export function ChangesDiff({ changes }: { changes: string }) {
                       {render(c.new)}
                     </span>
                   ) : (
-                    <span className="text-zinc-400">—</span>
+                    <span className="text-zinc-500 dark:text-zinc-400">—</span>
                   )}
                 </td>
               </tr>

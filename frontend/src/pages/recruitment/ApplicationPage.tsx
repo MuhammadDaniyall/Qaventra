@@ -152,7 +152,7 @@ function ApplicationView({ a }: { a: Application }) {
           {a.canRun && !closed && (
             <Card className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-3">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-xs font-medium text-zinc-500">Stage</span>
+                <span className="me-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">Stage</span>
                 {MOVABLE.map((s) => (
                   <button
                     key={s}
@@ -170,7 +170,7 @@ function ApplicationView({ a }: { a: Application }) {
                 {a.stage === 'Offer' && <span className="rounded-full bg-accent-600 px-3 py-1 text-xs font-medium text-white">Offer</span>}
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-medium text-zinc-500">Screening</span>
+                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Screening</span>
                 <Stars value={a.rating} onChange={(r) => rate.mutate(r)} />
               </div>
             </Card>
@@ -205,16 +205,16 @@ function ApplicationView({ a }: { a: Application }) {
               />
               <dl className="grid grid-cols-2 gap-3 px-5 py-4 text-sm sm:grid-cols-3">
                 <div>
-                  <dt className="text-xs text-zinc-500">Salary</dt>
+                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">Salary</dt>
                   <dd className="font-medium">{formatCurrency(a.offeredSalary)} a month</dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-zinc-500">Joining</dt>
+                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">Joining</dt>
                   <dd className="font-medium">{formatDate(a.offeredJoiningDate)}</dd>
                 </div>
                 {a.offerNote && (
                   <div className="col-span-2 sm:col-span-3">
-                    <dt className="text-xs text-zinc-500">Note</dt>
+                    <dt className="text-xs text-zinc-500 dark:text-zinc-400">Note</dt>
                     <dd className="whitespace-pre-line">{a.offerNote}</dd>
                   </div>
                 )}
@@ -265,8 +265,8 @@ function ApplicationView({ a }: { a: Application }) {
                 ] as Array<[string, string | null]>
               ).map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-3">
-                  <dt className="shrink-0 text-zinc-500">{k}</dt>
-                  <dd className="text-right break-words text-zinc-900 dark:text-zinc-100">{v ?? '—'}</dd>
+                  <dt className="shrink-0 text-zinc-500 dark:text-zinc-400">{k}</dt>
+                  <dd className="text-end break-words text-zinc-900 dark:text-zinc-100">{v ?? '—'}</dd>
                 </div>
               ))}
               {c.linkedInUrl && (
@@ -277,7 +277,7 @@ function ApplicationView({ a }: { a: Application }) {
             </dl>
             {a.canRun && c.applications.length > 1 && (
               <div className="border-t border-zinc-100 px-5 py-3 text-sm dark:border-zinc-800">
-                <p className="mb-1 text-xs font-medium text-zinc-500">Also considered for</p>
+                <p className="mb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">Also considered for</p>
                 {c.applications
                   .filter((x) => x.id !== a.id)
                   .map((x) => (
@@ -326,9 +326,9 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-medium text-zinc-900 dark:text-white">
-            {i.title} <span className="text-xs font-normal text-zinc-500">round {i.round}</span>
+            {i.title} <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">round {i.round}</span>
           </p>
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
             {formatDateTimeUtc(i.startsAtUtc)} · {i.durationMinutes} min · {MODE_LABELS[i.mode]}
             {i.where && (
               <>
@@ -343,7 +343,7 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
               </>
             )}
           </p>
-          <p className="text-xs text-zinc-500">With {i.interviewers.join(', ')}</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">With {i.interviewers.join(', ')}</p>
           {i.notes && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{i.notes}</p>}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -374,12 +374,12 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
               </div>
               {f.strengths && (
                 <p className="mt-1 text-xs">
-                  <span className="text-zinc-500">Strengths:</span> {f.strengths}
+                  <span className="text-zinc-500 dark:text-zinc-400">Strengths:</span> {f.strengths}
                 </p>
               )}
               {f.concerns && (
                 <p className="text-xs">
-                  <span className="text-zinc-500">Concerns:</span> {f.concerns}
+                  <span className="text-zinc-500 dark:text-zinc-400">Concerns:</span> {f.concerns}
                 </p>
               )}
             </li>
@@ -387,7 +387,7 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
         </ul>
       )}
       {i.feedbackHidden > 0 && (
-        <p className="mt-2 inline-flex items-center gap-1 text-xs text-zinc-500">
+        <p className="mt-2 inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
           <Lock className="size-3" />
           {i.feedbackHidden} other {i.feedbackHidden === 1 ? 'verdict is' : 'verdicts are'} hidden until you give yours.
         </p>
@@ -673,11 +673,11 @@ function HireModal({ a, name, onClose }: { a: Application; name: string; onClose
     >
       <dl className="mb-4 grid grid-cols-2 gap-3 text-sm">
         <div>
-          <dt className="text-xs text-zinc-500">Salary</dt>
+          <dt className="text-xs text-zinc-500 dark:text-zinc-400">Salary</dt>
           <dd className="font-medium">{formatCurrency(a.offeredSalary)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-zinc-500">Joining</dt>
+          <dt className="text-xs text-zinc-500 dark:text-zinc-400">Joining</dt>
           <dd className="font-medium">{formatDate(a.offeredJoiningDate)}</dd>
         </div>
       </dl>
@@ -718,14 +718,14 @@ function Notes({ a }: { a: Application }) {
             <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', e.isNote ? 'bg-accent-500' : 'bg-zinc-300 dark:bg-zinc-600')} />
             <div className="min-w-0">
               <p className={cn('whitespace-pre-line', e.isNote ? 'text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400')}>{e.text}</p>
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 {e.byName ? `${e.byName} · ` : ''}
                 {formatDateTimeUtc(e.createdAtUtc)}
               </p>
             </div>
           </li>
         ))}
-        {!a.events.length && <p className="text-sm text-zinc-500">Nothing yet.</p>}
+        {!a.events.length && <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing yet.</p>}
       </ol>
     </Card>
   );

@@ -82,10 +82,10 @@ export function PayrollRunsPage() {
                 <Th>Month</Th>
                 <Th>Status</Th>
                 <Th>Tax year</Th>
-                <Th className="text-right">Employees</Th>
-                <Th className="text-right">Gross</Th>
-                <Th className="text-right">Deductions</Th>
-                <Th className="text-right">Net pay</Th>
+                <Th className="text-end">Employees</Th>
+                <Th className="text-end">Gross</Th>
+                <Th className="text-end">Deductions</Th>
+                <Th className="text-end">Net pay</Th>
                 <Th>Processed</Th>
               </tr>
             </THead>
@@ -97,10 +97,10 @@ export function PayrollRunsPage() {
                     <StatusBadge status={r.status} />
                   </Td>
                   <Td>{r.taxYearCode}</Td>
-                  <Td className="text-right tabular-nums">{r.employees}</Td>
-                  <Td className="text-right tabular-nums">{formatCurrency(r.totalGross)}</Td>
-                  <Td className="text-right tabular-nums">{formatCurrency(r.totalDeductions)}</Td>
-                  <Td className="text-right font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(r.totalNet)}</Td>
+                  <Td className="text-end tabular-nums">{r.employees}</Td>
+                  <Td className="text-end tabular-nums">{formatCurrency(r.totalGross)}</Td>
+                  <Td className="text-end tabular-nums">{formatCurrency(r.totalDeductions)}</Td>
+                  <Td className="text-end font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(r.totalNet)}</Td>
                   <Td>{formatDateTimeUtc(r.processedAtUtc)}</Td>
                 </Tr>
               ))}

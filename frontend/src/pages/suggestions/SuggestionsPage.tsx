@@ -89,7 +89,7 @@ function SuggestionCard({ s, children }: { s: Suggestion; children?: React.React
             status={s.status === 'Implemented' || s.status === 'Accepted' ? 'Approved' : s.status === 'Declined' ? 'Rejected' : 'Pending'}
             label={statusLabel(s.status)}
           />
-          <span className="ml-auto text-xs text-zinc-500">
+          <span className="ms-auto text-xs text-zinc-500 dark:text-zinc-400">
             {s.isAnonymous ? (s.mine ? 'Anonymous (only you see it is yours)' : 'Anonymous') : s.from} · {formatDateTimeUtc(s.createdAtUtc)}
           </span>
         </div>
@@ -249,11 +249,11 @@ function Categories() {
           <li key={c.id} className="flex items-center gap-3 px-5 py-3 text-sm">
             <span className="font-medium">{c.name}</span>
             {!c.isActive && <Badge>Off</Badge>}
-            <span className="flex-1 text-xs text-zinc-500">{c.reviewerIds.length ? c.reviewerIds.map(name).join(', ') : 'HR'}</span>
+            <span className="flex-1 text-xs text-zinc-500 dark:text-zinc-400">{c.reviewerIds.length ? c.reviewerIds.map(name).join(', ') : 'HR'}</span>
             <RowActions label={c.name} onEdit={() => setEditing(c)} onDelete={() => setDeleting(c)} />
           </li>
         ))}
-        {!list.data?.length && <li className="px-5 py-3 text-sm text-zinc-500">No categories: everything goes to HR.</li>}
+        {!list.data?.length && <li className="px-5 py-3 text-sm text-zinc-500 dark:text-zinc-400">No categories: everything goes to HR.</li>}
       </ul>
       {editing && <CategoryModal item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       <DeleteConfirm item={deleting} name="Category" remove={suggestionsApi.deleteCategory} invalidate={[KEY]} onClose={() => setDeleting(null)} />
@@ -288,7 +288,7 @@ function CategoryModal({ item, onClose }: { item: SuggestionCategory | null; onC
             {v.reviewerIds.map((id) => (
               <Badge key={id}>
                 {people.data?.find((p) => p.id === id)?.name}
-                <button type="button" className="ml-1" aria-label="Remove" onClick={() => setV({ ...v, reviewerIds: v.reviewerIds.filter((x) => x !== id) })}>
+                <button type="button" className="ms-1" aria-label="Remove" onClick={() => setV({ ...v, reviewerIds: v.reviewerIds.filter((x) => x !== id) })}>
                   ×
                 </button>
               </Badge>

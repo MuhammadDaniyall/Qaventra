@@ -6,6 +6,7 @@ import { errorMessage, isAccessBlocked } from '../../api/client';
 import { ShieldOff } from 'lucide-react';
 import { Button, Field, FormError, Input } from '../../components/ui';
 import { AuthLayout } from './AuthLayout';
+import { tx } from '../../lib/i18n';
 
 export function LoginPage() {
   const { login, notice, clearNotice } = useAuth();
@@ -78,10 +79,10 @@ export function LoginPage() {
           />
         </Field>
         <Button type="submit" size="lg" className="w-full" loading={loading}>
-          Sign in
+          {tx('Sign in')}
         </Button>
         <p className="text-center text-xs text-zinc-500 dark:text-zinc-400">
-          Accounts are created by your HR provider.
+          {tx('Accounts are created by your HR provider.')}
         </p>
       </form>
     </AuthLayout>

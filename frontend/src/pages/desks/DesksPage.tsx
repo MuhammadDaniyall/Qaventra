@@ -106,7 +106,7 @@ function BookTab({ hr }: { hr: boolean }) {
           <Input type="date" min={todayIso()} max={max} value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
         {d && (
-          <p className="pb-2 text-sm text-zinc-500">
+          <p className="pb-2 text-sm text-zinc-500 dark:text-zinc-400">
             {d.desksFree} of {d.desksTotal} desks free
           </p>
         )}
@@ -121,7 +121,7 @@ function BookTab({ hr }: { hr: boolean }) {
             <CardHeader
               title="Desks"
               actions={
-                <div className="flex gap-3 text-xs text-zinc-500">
+                <div className="flex gap-3 text-xs text-zinc-500 dark:text-zinc-400">
                   <Legend className="border-emerald-300 bg-emerald-50 dark:bg-emerald-500/10" label="Free" />
                   <Legend className="border-accent-400 bg-accent-100 dark:bg-accent-500/20" label="Yours" />
                   <Legend className="border-zinc-200 bg-zinc-100 dark:bg-zinc-800" label="Taken" />
@@ -129,7 +129,7 @@ function BookTab({ hr }: { hr: boolean }) {
               }
             />
             {!desks.length ? (
-              <p className="px-5 py-6 text-sm text-zinc-500">No desks on this floor.</p>
+              <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">No desks on this floor.</p>
             ) : (
               <div className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-4 lg:grid-cols-6">
                 {desks.map((s) => {
@@ -143,17 +143,17 @@ function BookTab({ hr }: { hr: boolean }) {
                       onClick={() => setBooking(s)}
                       title={s.features ?? undefined}
                       className={cn(
-                        'rounded-lg border p-3 text-left text-sm transition',
+                        'rounded-lg border p-3 text-start text-sm transition',
                         s.free && 'border-emerald-300 bg-emerald-50 hover:border-emerald-500 dark:bg-emerald-500/10',
                         mine && 'border-accent-400 bg-accent-100 dark:bg-accent-500/20',
                         !s.free && !mine && 'cursor-default border-zinc-200 bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800',
                       )}
                     >
                       <span className="flex items-center gap-1.5 font-medium text-zinc-900 dark:text-white">
-                        <Monitor className="size-3.5 text-zinc-400" />
+                        <Monitor className="size-3.5 text-zinc-500 dark:text-zinc-400" />
                         {s.name}
                       </span>
-                      <span className="mt-0.5 block truncate text-xs text-zinc-500">
+                      <span className="mt-0.5 block truncate text-xs text-zinc-500 dark:text-zinc-400">
                         {s.assignedTo ? `${s.assignedTo} (permanent)` : b ? (mine ? 'You' : b.employeeName) : (s.features ?? 'Free')}
                       </span>
                     </button>
@@ -165,16 +165,16 @@ function BookTab({ hr }: { hr: boolean }) {
           <Card>
             <CardHeader title="Rooms" />
             {!rooms.length ? (
-              <p className="px-5 py-6 text-sm text-zinc-500">No rooms on this floor.</p>
+              <p className="px-5 py-6 text-sm text-zinc-500 dark:text-zinc-400">No rooms on this floor.</p>
             ) : (
               <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {rooms.map((s) => (
                   <li key={s.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                    <DoorOpen className="size-4 text-zinc-400" />
+                    <DoorOpen className="size-4 text-zinc-500 dark:text-zinc-400" />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-zinc-900 dark:text-white">
                         {s.name}{' '}
-                        <span className="text-xs font-normal text-zinc-500">
+                        <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
                           · {KIND_LABELS[s.kind]}, {s.seats} seats{s.features ? ` · ${s.features}` : ''}
                         </span>
                       </p>
@@ -304,9 +304,9 @@ function MineTab() {
       <Td className="whitespace-nowrap">{formatDate(b.date)}</Td>
       <Td>
         <p className="font-medium">
-          {b.space} <span className="text-xs font-normal text-zinc-500">{KIND_LABELS[b.kind]}</span>
+          {b.space} <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">{KIND_LABELS[b.kind]}</span>
         </p>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
           {b.office} · {b.floor}
           {b.title ? ` · ${b.title}` : ''}
         </p>
@@ -315,7 +315,7 @@ function MineTab() {
       <Td>
         <StatusBadge status={b.status} label={b.status === 'CheckedIn' ? 'Checked in' : b.status === 'Released' ? 'Released (no check-in)' : undefined} />
       </Td>
-      <Td className="text-right">
+      <Td className="text-end">
         {actions && (
           <div className="flex justify-end gap-2">
             {b.canCheckIn && (
@@ -384,7 +384,7 @@ function WhoTab() {
                 <Td className="font-medium">{p.name}</Td>
                 <Td className="text-sm">{p.department ?? '—'}</Td>
                 <Td className="text-sm">
-                  {p.space} <span className="text-xs text-zinc-500">· {p.floor}</span>
+                  {p.space} <span className="text-xs text-zinc-500 dark:text-zinc-400">· {p.floor}</span>
                 </Td>
               </Tr>
             ))}
@@ -452,16 +452,16 @@ function SetupTab() {
             }
           />
           {!offices.data?.length ? (
-            <p className="px-5 py-4 text-sm text-zinc-500">Add an office location under Organization first.</p>
+            <p className="px-5 py-4 text-sm text-zinc-500 dark:text-zinc-400">Add an office location under Organization first.</p>
           ) : !floors.data?.length ? (
-            <p className="px-5 py-4 text-sm text-zinc-500">No floors yet.</p>
+            <p className="px-5 py-4 text-sm text-zinc-500 dark:text-zinc-400">No floors yet.</p>
           ) : (
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {floors.data.map((x) => (
                 <li key={x.id} className={cn('flex items-center gap-2 px-5 py-2.5', current?.id === x.id && 'bg-accent-50 dark:bg-accent-500/10')}>
-                  <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setFloor(x)}>
+                  <button type="button" className="min-w-0 flex-1 text-start" onClick={() => setFloor(x)}>
                     <p className="font-medium">{x.name}</p>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {x.office} · {x.desks} desks, {x.rooms} rooms
                     </p>
                   </button>
@@ -653,7 +653,7 @@ function SpacesCard({ floor }: { floor: Floor }) {
                 </Td>
                 <Td className="text-sm">
                   {KIND_LABELS[s.kind]}
-                  {s.kind !== 'Desk' && <span className="text-zinc-500"> · {s.seats} seats</span>}
+                  {s.kind !== 'Desk' && <span className="text-zinc-500 dark:text-zinc-400"> · {s.seats} seats</span>}
                 </Td>
                 <Td className="text-sm">{s.features ?? '—'}</Td>
                 <Td className="text-sm">{s.assignedTo ?? '—'}</Td>
@@ -772,7 +772,7 @@ function UsageTab() {
   const tile = (label: string, value: string | number) => (
     <Card className="p-4">
       <p className="text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{value}</p>
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">{label}</p>
     </Card>
   );
   return (
@@ -789,10 +789,10 @@ function UsageTab() {
           <THead>
             <Tr>
               <Th>Space</Th>
-              <Th className="text-right">Bookings</Th>
-              <Th className="text-right">Checked in</Th>
-              <Th className="text-right">No-shows</Th>
-              <Th className="text-right">Days used</Th>
+              <Th className="text-end">Bookings</Th>
+              <Th className="text-end">Checked in</Th>
+              <Th className="text-end">No-shows</Th>
+              <Th className="text-end">Days used</Th>
             </Tr>
           </THead>
           <TBody>
@@ -800,14 +800,14 @@ function UsageTab() {
               <Tr key={`${s.floor}-${s.name}`}>
                 <Td>
                   {s.name}{' '}
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
                     · {s.floor} · {KIND_LABELS[s.kind]}
                   </span>
                 </Td>
-                <Td className="text-right tabular-nums">{s.bookings}</Td>
-                <Td className="text-right tabular-nums">{s.checkedIn}</Td>
-                <Td className="text-right tabular-nums">{s.released}</Td>
-                <Td className="text-right tabular-nums">{s.usedPercent}%</Td>
+                <Td className="text-end tabular-nums">{s.bookings}</Td>
+                <Td className="text-end tabular-nums">{s.checkedIn}</Td>
+                <Td className="text-end tabular-nums">{s.released}</Td>
+                <Td className="text-end tabular-nums">{s.usedPercent}%</Td>
               </Tr>
             ))}
           </TBody>

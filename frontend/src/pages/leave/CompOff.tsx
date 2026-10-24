@@ -96,12 +96,12 @@ export function MyCompOffClaims() {
         {list.data.map((c) => (
           <li key={c.id} className="px-5 py-3">
             <div className="flex flex-wrap items-center gap-3">
-              <CalendarPlus className="size-4 text-zinc-400" aria-hidden="true" />
-              <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setOpen(open === c.id ? null : c.id)} aria-expanded={open === c.id}>
+              <CalendarPlus className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
+              <button type="button" className="min-w-0 flex-1 text-start" onClick={() => setOpen(open === c.id ? null : c.id)} aria-expanded={open === c.id}>
                 <span className="block text-sm font-medium text-zinc-900 dark:text-white">
                   {c.days === 1 ? 'Full day' : 'Half day'} for {formatDate(c.workedOn)}
                 </span>
-                <span className="block truncate text-xs text-zinc-500">
+                <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
                   {c.workedMinutes ? `Worked ${formatMinutes(c.workedMinutes)} · ` : ''}
                   {c.reason}
                 </span>
@@ -114,7 +114,7 @@ export function MyCompOffClaims() {
               )}
             </div>
             {open === c.id && (
-              <div className="mt-3 ml-7">
+              <div className="mt-3 ms-7">
                 <ApprovalTimeline type="CompOff" subjectId={c.id} />
               </div>
             )}

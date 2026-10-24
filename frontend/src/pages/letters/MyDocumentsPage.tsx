@@ -53,7 +53,7 @@ export function MyDocumentsPage() {
                       {categoryLabel(l.category)} · {formatDate(l.issuedOn)} · <span className="font-mono">{l.referenceNo}</span>
                     </span>
                   </span>
-                  <ChevronRight className="size-4 text-zinc-400" aria-hidden="true" />
+                  <ChevronRight className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
                 </Link>
               </li>
             ))}

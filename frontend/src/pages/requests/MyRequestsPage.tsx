@@ -24,6 +24,7 @@ import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
 import { Button, Card, EmptyState, PageHeader, SkeletonRows, StatusBadge } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatDateTimeUtc, humanize } from '../../lib/format';
+import { tx } from '../../lib/i18n';
 
 /** Where each kind of request is made. */
 const NEW_REQUESTS: { label: string; hint: string; icon: LucideIcon; to: string }[] = [
@@ -109,9 +110,9 @@ export function MyRequestsPage() {
       <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Filter requests">
         {(
           [
-            ['open', `Waiting${openCount ? ` · ${openCount}` : ''}`],
-            ['closed', 'Decided'],
-            ['all', 'All'],
+            ['open', `${tx('Waiting')}${openCount ? ` · ${openCount}` : ''}`],
+            ['closed', tx('Decided')],
+            ['all', tx('All')],
           ] as [Status, string][]
         ).map(([v, label]) => (
           <button
@@ -151,18 +152,18 @@ export function MyRequestsPage() {
                     type="button"
                     aria-expanded={expanded}
                     onClick={() => setOpen(expanded ? null : r.key)}
-                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-accent-500 sm:px-5 dark:hover:bg-zinc-800/50"
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-accent-500 sm:px-5 dark:hover:bg-zinc-800/50"
                   >
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
                       <r.icon className="size-4" aria-hidden="true" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{r.title}</span>
+                      <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{tx(r.title)}</span>
                       <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{r.detail}</span>
                     </span>
-                    <span className="hidden text-xs text-zinc-400 sm:block">{r.type === 'Letter' ? formatDate(r.at) : formatDateTimeUtc(r.at)}</span>
+                    <span className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:block">{r.type === 'Letter' ? formatDate(r.at) : formatDateTimeUtc(r.at)}</span>
                     <StatusBadge status={r.status} />
-                    <ChevronDown className={cn('size-4 shrink-0 text-zinc-400 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
+                    <ChevronDown className={cn('size-4 shrink-0 text-zinc-500 dark:text-zinc-400 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
                   </button>
                   {expanded && (
                     <div className="border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
@@ -205,7 +206,7 @@ export function NewRequestMenu({ variant = 'primary' }: { variant?: 'primary' | 
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-40 mt-2 w-72 animate-pop-in overflow-hidden rounded-xl border border-zinc-200 bg-white py-1.5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+          className="absolute end-0 z-40 mt-2 w-72 animate-pop-in overflow-hidden rounded-xl border border-zinc-200 bg-white py-1.5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
         >
           {NEW_REQUESTS.map((r) => (
             <button
@@ -213,12 +214,12 @@ export function NewRequestMenu({ variant = 'primary' }: { variant?: 'primary' | 
               type="button"
               role="menuitem"
               onClick={() => (setOpen(false), navigate(r.to))}
-              className="flex w-full items-start gap-3 px-3.5 py-2 text-left hover:bg-zinc-50 focus-visible:bg-zinc-50 focus-visible:outline-none dark:hover:bg-zinc-800 dark:focus-visible:bg-zinc-800"
+              className="flex w-full items-start gap-3 px-3.5 py-2 text-start hover:bg-zinc-50 focus-visible:bg-zinc-50 focus-visible:outline-none dark:hover:bg-zinc-800 dark:focus-visible:bg-zinc-800"
             >
-              <r.icon className="mt-0.5 size-4 shrink-0 text-zinc-400" aria-hidden="true" />
+              <r.icon className="mt-0.5 size-4 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
               <span>
-                <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">{r.label}</span>
-                <span className="block text-xs text-zinc-500 dark:text-zinc-400">{r.hint}</span>
+                <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">{tx(r.label)}</span>
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">{tx(r.hint)}</span>
               </span>
             </button>
           ))}

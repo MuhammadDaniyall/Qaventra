@@ -80,7 +80,7 @@ export function MyLetterRequests() {
           {open.map((l) => (
             <Tr key={l.id}>
               <Td>{l.subject}</Td>
-              <Td className="text-sm text-zinc-500">{l.requestReason}</Td>
+              <Td className="text-sm text-zinc-500 dark:text-zinc-400">{l.requestReason}</Td>
               <Td className="text-sm">{formatDate(l.issuedOn)}</Td>
               <Td>
                 <StatusBadge status={l.status === 'Pending' ? 'Pending' : 'Rejected'} />

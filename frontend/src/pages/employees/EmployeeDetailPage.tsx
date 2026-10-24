@@ -61,7 +61,7 @@ export function EmployeeDetailPage() {
             </h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
               {e.designation && <span className="text-zinc-600 dark:text-zinc-300">{e.designation}</span>}
-              <span className="font-mono text-xs text-zinc-500">{e.employeeCode}</span>
+              <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{e.employeeCode}</span>
               <StatusBadge status={e.status} />
               {e.loginRole && <Badge tone="accent">{roleLabel(e.loginRole)}</Badge>}
             </div>

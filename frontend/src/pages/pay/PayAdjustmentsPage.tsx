@@ -102,7 +102,7 @@ function MonthItems() {
             <ChevronRight className="size-4" />
           </IconButton>
         </div>
-        <p className="text-sm text-zinc-500">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
           <span className="text-emerald-700 dark:text-emerald-300">+{formatCurrency(earnings)}</span> earnings ·{' '}
           <span className="text-zinc-900 dark:text-white">−{formatCurrency(deductions)}</span> deductions (approved)
         </p>
@@ -123,7 +123,7 @@ function MonthItems() {
             <tr>
               <Th>Employee</Th>
               <Th>Item</Th>
-              <Th className="text-right">Amount</Th>
+              <Th className="text-end">Amount</Th>
               <Th>Status</Th>
               <Th>
                 <span className="sr-only">Actions</span>
@@ -135,20 +135,20 @@ function MonthItems() {
               <Tr key={r.id}>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{r.employeeName}</p>
-                  <p className="font-mono text-xs text-zinc-500">{r.employeeCode}</p>
+                  <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{r.employeeCode}</p>
                 </Td>
                 <Td>
                   <p className="text-zinc-900 dark:text-zinc-100">
                     {PAY_KIND_LABELS[r.kind]}
                     {r.kind === 'Overtime' ? ` · ${r.hours} h on ${formatDate(r.workDate)}` : r.title !== PAY_KIND_LABELS[r.kind] ? ` · ${r.title}` : ''}
                   </p>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     {r.isEarning ? (r.isTaxable ? 'Taxable' : 'Not taxable') : 'Deduction'}
                     {r.reason ? ` · ${r.reason}` : ''}
                   </p>
                 </Td>
                 <Td
-                  className={r.isEarning ? 'text-right font-medium text-emerald-700 tabular-nums dark:text-emerald-300' : 'text-right font-medium tabular-nums'}
+                  className={r.isEarning ? 'text-end font-medium text-emerald-700 tabular-nums dark:text-emerald-300' : 'text-end font-medium tabular-nums'}
                 >
                   {r.isEarning ? '+' : '−'}
                   {formatCurrency(r.amount)}
@@ -162,7 +162,7 @@ function MonthItems() {
                     <StatusBadge status={r.status} />
                   )}
                 </Td>
-                <Td className="text-right">
+                <Td className="text-end">
                   {!r.paidAtUtc && (r.status === 'Approved' || r.status === 'Pending') && (
                     <Button variant="ghost" size="sm" onClick={() => setRemoving(r)}>
                       Remove
@@ -211,10 +211,10 @@ function Loans() {
             <tr>
               <Th>Employee</Th>
               <Th>Loan</Th>
-              <Th className="text-right">Amount</Th>
-              <Th className="text-right">Installment</Th>
+              <Th className="text-end">Amount</Th>
+              <Th className="text-end">Installment</Th>
               <Th>Repaid</Th>
-              <Th className="text-right">Left</Th>
+              <Th className="text-end">Left</Th>
               <Th>Status</Th>
             </tr>
           </THead>
@@ -223,25 +223,25 @@ function Loans() {
               <Tr key={l.id}>
                 <Td>
                   <p className="font-medium text-zinc-900 dark:text-zinc-100">{l.employeeName}</p>
-                  <p className="font-mono text-xs text-zinc-500">{l.employeeCode}</p>
+                  <p className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{l.employeeCode}</p>
                 </Td>
                 <Td>
                   {l.title}
-                  <p className="text-xs text-zinc-500">from {monthLabel(l.startYear, l.startMonth)}</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">from {monthLabel(l.startYear, l.startMonth)}</p>
                 </Td>
-                <Td className="text-right tabular-nums">{formatCurrency(l.amount)}</Td>
-                <Td className="text-right tabular-nums">{formatCurrency(l.installmentAmount)}</Td>
+                <Td className="text-end tabular-nums">{formatCurrency(l.amount)}</Td>
+                <Td className="text-end tabular-nums">{formatCurrency(l.installmentAmount)}</Td>
                 <Td>
                   <div className="flex items-center gap-2">
                     <div className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden="true">
                       <div className="h-full rounded-full bg-emerald-500" style={{ width: `${l.amount ? Math.min(100, (l.repaid / l.amount) * 100) : 0}%` }} />
                     </div>
-                    <span className="text-xs text-zinc-500 tabular-nums">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
                       {l.installmentsTaken}/{l.installments}
                     </span>
                   </div>
                 </Td>
-                <Td className="text-right font-medium tabular-nums">{formatCurrency(l.remaining)}</Td>
+                <Td className="text-end font-medium tabular-nums">{formatCurrency(l.remaining)}</Td>
                 <Td>
                   <StatusBadge status={l.status} label={l.status === 'Approved' && l.remaining <= 0 ? 'Repaid' : undefined} />
                 </Td>
