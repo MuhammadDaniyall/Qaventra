@@ -13,6 +13,7 @@ import { Sidebar } from './Sidebar';
 import { NotificationBell } from './NotificationBell';
 import { UserMenu } from './UserMenu';
 import { QuickSearch } from './QuickSearch';
+import { MobileTabBar } from './MobileTabBar';
 
 const COLLAPSE_KEY = 'hrms.sidebar.collapsed';
 
@@ -104,9 +105,15 @@ export function AppLayout() {
         </header>
         <SubscriptionBanner user={user} />
         </div>
-        <main className="print-reset mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main
+          className={cn(
+            'print-reset mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8',
+            !isPlatformOwner(user) && 'pb-24 lg:pb-8',
+          )}
+        >
           <Outlet />
         </main>
+        {!isPlatformOwner(user) && <MobileTabBar onMore={() => setMobileOpen(true)} />}
         {user.mustChangePassword && <ChangePasswordDialog open forced onClose={() => undefined} />}
       </div>
     </div>

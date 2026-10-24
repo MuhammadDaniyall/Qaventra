@@ -33,8 +33,10 @@ import {
   ShieldCheck,
   FolderKanban,
   FileText,
+  House,
   LayoutDashboard,
   ScrollText,
+  Send,
   Settings2,
   UserCircle,
   Users,
@@ -59,6 +61,8 @@ export interface NavItem {
 
 export interface NavSection {
   title?: string;
+  /** Shown on the collapsible group header. */
+  icon?: LucideIcon;
   items: NavItem[];
 }
 
@@ -70,50 +74,78 @@ export const NAV: NavSection[] = [
       { to: '/platform', label: 'Platform overview', icon: LayoutDashboard, roles: SA, end: true },
       { to: '/platform/companies', label: 'Companies', icon: Building2, roles: SA },
       { to: '/platform/audit-logs', label: 'Audit logs', icon: ScrollText, roles: SA },
-      { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: COMPANY_ROLES },
+      { to: '/dashboard', label: 'Home', icon: House, roles: COMPANY_ROLES },
+      { to: '/me/requests', label: 'Requests', icon: Send, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/approvals', label: 'Approvals', icon: Inbox, roles: APPROVER_ROLES },
+      { to: '/announcements', label: 'Announcements', icon: Megaphone, roles: COMPANY_ROLES },
     ],
   },
   {
-    title: 'My workspace',
+    title: 'Time',
+    icon: CalendarClock,
     items: [
-      { to: '/announcements', label: 'Announcements', icon: Megaphone, roles: COMPANY_ROLES },
       { to: '/me/attendance', label: 'My attendance', icon: CalendarClock, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/leave', label: 'My leave', icon: CalendarDays, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/payslips', label: 'My payslips', icon: FileText, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/expenses', label: 'My expenses', icon: Receipt, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/pay', label: 'Pay requests', icon: Banknote, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/documents', label: 'My documents', icon: FolderOpen, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/profile', label: 'My profile', icon: UserCircle, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/suggestions', label: 'Suggestions', icon: Lightbulb, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/performance', label: 'Performance', icon: Target, roles: COMPANY_ROLES },
       { to: '/timesheets', label: 'Timesheet', icon: ClipboardList, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/projects', label: 'Projects', icon: FolderKanban, roles: COMPANY_ROLES },
       { to: '/piece-work', label: 'Piece work', icon: Factory, roles: COMPANY_ROLES },
-      { to: '/desks', label: 'Desks and rooms', icon: Armchair, roles: COMPANY_ROLES },
+    ],
+  },
+  {
+    title: 'Pay',
+    icon: Wallet,
+    items: [
+      { to: '/me/payslips', label: 'My payslips', icon: FileText, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/expenses', label: 'My expenses', icon: Receipt, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/pay', label: 'Pay requests', icon: Banknote, roles: COMPANY_ROLES, needsEmployee: true },
+    ],
+  },
+  {
+    title: 'Growth',
+    icon: Target,
+    items: [
+      { to: '/performance', label: 'Performance', icon: Target, roles: COMPANY_ROLES },
       { to: '/training', label: 'Training', icon: GraduationCap, roles: COMPANY_ROLES },
-      { to: '/travel', label: 'Travel', icon: Plane, roles: COMPANY_ROLES },
       { to: '/recruitment', label: 'Recruitment', icon: BriefcaseBusiness, roles: COMPANY_ROLES },
-      { to: '/me/assets', label: 'My assets', icon: Laptop, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/suggestions', label: 'Suggestions', icon: Lightbulb, roles: COMPANY_ROLES, needsEmployee: true },
+    ],
+  },
+  {
+    title: 'Workplace',
+    icon: Building2,
+    items: [
+      { to: '/desks', label: 'Desks and rooms', icon: Armchair, roles: COMPANY_ROLES },
+      { to: '/travel', label: 'Travel', icon: Plane, roles: COMPANY_ROLES },
       { to: '/helpdesk', label: 'Help desk', icon: LifeBuoy, roles: COMPANY_ROLES, needsEmployee: true, end: true },
+    ],
+  },
+  {
+    title: 'Me',
+    icon: UserCircle,
+    items: [
+      { to: '/me/profile', label: 'My profile', icon: UserCircle, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/documents', label: 'My documents', icon: FolderOpen, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/assets', label: 'My assets', icon: Laptop, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/clearances', label: 'Exit clearances', icon: ClipboardCheck, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/resignation', label: 'Resignation', icon: DoorOpen, roles: COMPANY_ROLES, needsEmployee: true },
     ],
   },
   {
     title: 'Team',
+    icon: Users,
     items: [
-      { to: '/approvals', label: 'Approvals', icon: Inbox, roles: APPROVER_ROLES },
-      { to: '/reports', label: 'Reports', icon: FileBarChart, roles: APPROVER_ROLES, module: 'reports' },
       { to: '/employees', label: 'Employees', icon: Users, roles: APPROVER_ROLES, module: 'employees' },
       { to: '/attendance/daily', label: 'Daily attendance', icon: CalendarCheck, roles: APPROVER_ROLES, module: 'attendance' },
       { to: '/attendance/roster', label: 'Roster', icon: CalendarRange, roles: APPROVER_ROLES, module: 'attendance' },
       { to: '/attendance/monthly', label: 'Monthly attendance', icon: CalendarDays, roles: APPROVER_ROLES, module: 'attendance' },
       { to: '/leave/approvals', label: 'Leave approvals', icon: ClipboardCheck, roles: APPROVER_ROLES, module: 'leave' },
       { to: '/expenses/approvals', label: 'Expense approvals', icon: ReceiptText, roles: APPROVER_ROLES, module: 'expenses' },
+      { to: '/reports', label: 'Reports', icon: FileBarChart, roles: APPROVER_ROLES, module: 'reports' },
     ],
   },
   {
     title: 'Administration',
+    icon: Settings2,
     items: [
       { to: '/payroll', label: 'Payroll', icon: Wallet, roles: HR_ROLES, module: 'payroll' },
       { to: '/helpdesk/queue', label: 'Help desk queue', icon: Headset, roles: HR_ROLES, module: 'helpdesk' },
@@ -128,6 +160,15 @@ export const NAV: NavSection[] = [
       { to: '/audit-logs', label: 'Audit logs', icon: ScrollText, roles: ['CompanyAdmin'] },
     ],
   },
+];
+
+/** Bottom tab bar on phones: the screens people open every day. */
+export const MOBILE_TABS: { to: string; label: string; icon: LucideIcon; needsEmployee?: boolean; approver?: boolean; end?: boolean }[] = [
+  { to: '/dashboard', label: 'Home', icon: House },
+  { to: '/me/attendance', label: 'Attendance', icon: CalendarClock, needsEmployee: true },
+  { to: '/me/requests', label: 'Requests', icon: Send, needsEmployee: true },
+  { to: '/approvals', label: 'Approvals', icon: Inbox, approver: true },
+  { to: '/me/payslips', label: 'Pay', icon: Wallet, needsEmployee: true },
 ];
 
 export function navFor(user: Me): NavSection[] {

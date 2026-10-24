@@ -36,13 +36,13 @@ export function StatCard({
           {loading ? (
             <Skeleton className="mt-2 h-7 w-16" />
           ) : (
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
+            <p className="mt-1 text-lg font-semibold tracking-tight whitespace-nowrap text-zinc-900 tabular-nums sm:text-2xl dark:text-white">
               {value}
             </p>
           )}
           {hint && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>}
         </div>
-        <div className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', iconTones[tone])}>
+        <div className={cn('hidden size-9 shrink-0 items-center justify-center rounded-lg sm:flex', iconTones[tone])}>
           <Icon className="size-4.5" aria-hidden="true" />
         </div>
       </div>

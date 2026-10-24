@@ -50,28 +50,39 @@ export function EmployeeDetailPage() {
 
   return (
     <>
-      <PageHeader
-        back={{ to: '/employees', label: 'Employees' }}
-        title={
-          <span className="flex items-center gap-3">
-            <Avatar name={`${e.firstName} ${e.lastName}`} size="lg" />
-            <span className="min-w-0">
-              <span className="block truncate">
-                {e.firstName} {e.lastName}
-              </span>
-              <span className="mt-1 flex flex-wrap items-center gap-2 text-sm font-normal tracking-normal">
-                <span className="font-mono text-xs text-zinc-500">{e.employeeCode}</span>
-                <StatusBadge status={e.status} />
-                {e.designation && <span className="text-zinc-500 dark:text-zinc-400">{e.designation}</span>}
-                {e.loginRole && <Badge tone="accent">{roleLabel(e.loginRole)}</Badge>}
-              </span>
-            </span>
-          </span>
-        }
-        description={`Joined ${formatDate(e.joiningDate)}${e.department ? ` · ${e.department}` : ''}${e.manager ? ` · Reports to ${e.manager}` : ''}`}
-        actions={
-          hr && (
-            <>
+      <PageHeader back={{ to: '/employees', label: 'Employees' }} title={<span className="sr-only">{e.firstName} {e.lastName}</span>} />
+
+      <Card className="-mt-4 mb-6 overflow-hidden">
+        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-start sm:p-6">
+          <Avatar name={`${e.firstName} ${e.lastName}`} size="lg" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
+              {e.firstName} {e.lastName}
+            </h2>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+              {e.designation && <span className="text-zinc-600 dark:text-zinc-300">{e.designation}</span>}
+              <span className="font-mono text-xs text-zinc-500">{e.employeeCode}</span>
+              <StatusBadge status={e.status} />
+              {e.loginRole && <Badge tone="accent">{roleLabel(e.loginRole)}</Badge>}
+            </div>
+            <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm lg:grid-cols-4">
+              {[
+                ['Department', e.department ?? '—'],
+                ['Reports to', e.manager ?? '—'],
+                ['Joined', `${formatDate(e.joiningDate)} · ${tenure(e.joiningDate)}`],
+                ['Contact', e.phone ?? e.email ?? '—'],
+              ].map(([k, v]) => (
+                <div key={k} className="min-w-0">
+                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">{k}</dt>
+                  <dd className="truncate font-medium text-zinc-900 dark:text-zinc-100" title={v}>
+                    {v}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+          {hr && (
+            <div className="flex flex-wrap gap-2 sm:justify-end">
               <HistoryButton entityType="Employee" entityId={e.id} label="Profile change history" />
               {current ? (
                 <Button variant="secondary" icon={<ArrowUpRight className="size-4" />} onClick={() => setDialog('change')}>
@@ -82,10 +93,10 @@ export function EmployeeDetailPage() {
                   Re-hire
                 </Button>
               )}
-            </>
-          )
-        }
-      />
+            </div>
+          )}
+        </div>
+      </Card>
 
       <Tabs<Tab>
         className="mb-6"
@@ -148,6 +159,17 @@ export function EmployeeDetailPage() {
       )}
     </>
   );
+}
+
+/** "2 yrs 3 mos" since the joining date. */
+function tenure(joining: string): string {
+  const [y, m] = joining.split('-').map(Number);
+  const now = new Date();
+  const months = Math.max(0, (now.getFullYear() - y) * 12 + now.getMonth() + 1 - m);
+  const yrs = Math.floor(months / 12);
+  const mos = months % 12;
+  if (!yrs) return `${mos} ${mos === 1 ? 'mo' : 'mos'}`;
+  return mos ? `${yrs} ${yrs === 1 ? 'yr' : 'yrs'} ${mos} ${mos === 1 ? 'mo' : 'mos'}` : `${yrs} ${yrs === 1 ? 'yr' : 'yrs'}`;
 }
 
 function ProfileTab({ employee, readOnly }: { employee: Employee; readOnly: boolean }) {
