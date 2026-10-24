@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { OfferLetterButton } from './OfferLetter';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Ban, CalendarPlus, Check, Handshake, Lock, MessageSquare, UserCheck, X } from 'lucide-react';
+import { Ban, CalendarPlus, Check, Handshake, Lock, MessageSquare, UserCheck, X, ClipboardList } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import {
@@ -41,6 +41,7 @@ import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatDateTimeUtc, todayIso } from '../../lib/format';
 import { RejectModal } from './JobPage';
 import { StageBadge, Stars } from './shared';
+import { ScorecardModal } from './InterviewTemplates';
 
 const MOVABLE: ApplicationStage[] = ['Applied', 'Shortlisted', 'Test', 'Interview'];
 
@@ -314,6 +315,7 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
   const toast = useToast();
   const qc = useQueryClient();
   const [giving, setGiving] = useState(false);
+  const [scoring, setScoring] = useState(false);
   const started = new Date(/[zZ]$/.test(i.startsAtUtc) ? i.startsAtUtc : `${i.startsAtUtc}Z`).getTime() <= Date.now();
   const status = useMutation({
     mutationFn: (s: Interview['status']) => recruitmentApi.setInterviewStatus(i.id, s),
@@ -351,6 +353,11 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
           {i.iAmInterviewer && started && (i.status === 'Scheduled' || i.status === 'Completed') && (
             <Button size="sm" variant={i.iGaveFeedback ? 'ghost' : 'primary'} icon={<MessageSquare className="size-3.5" />} onClick={() => setGiving(true)}>
               {i.iGaveFeedback ? 'Edit my feedback' : 'Give feedback'}
+            </Button>
+          )}
+          {(canRun || (i.iAmInterviewer && started)) && i.status !== 'Cancelled' && (
+            <Button size="sm" variant="secondary" icon={<ClipboardList className="size-3.5" />} onClick={() => setScoring(true)}>
+              Scorecard
             </Button>
           )}
           {canRun && i.status === 'Scheduled' && (
@@ -393,6 +400,7 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
         </p>
       )}
       {giving && <FeedbackModal i={i} onClose={() => setGiving(false)} />}
+      {scoring && <ScorecardModal interviewId={i.id} canRun={canRun} iAmInterviewer={i.iAmInterviewer && started} onClose={() => setScoring(false)} />}
     </li>
   );
 }

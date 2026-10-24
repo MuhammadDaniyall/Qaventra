@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, ClipboardCheck, DoorOpen, FileText, Inbox, Wallet, type LucideIcon } from 'lucide-react';
+import { Bell, Cake, CheckCheck, ClipboardCheck, DoorOpen, FileText, Inbox, Wallet, type LucideIcon } from 'lucide-react';
 import { qk } from '../../api/keys';
 import { notificationsApi, type AppNotification, type NotificationKind } from '../../api/notifications';
 import { cn } from '../../lib/cn';
@@ -16,6 +16,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   Separation: DoorOpen,
   Letter: FileText,
   Payslip: Wallet,
+  Celebration: Cake,
 };
 
 /** "5 min ago", "3 h ago", then the date. */

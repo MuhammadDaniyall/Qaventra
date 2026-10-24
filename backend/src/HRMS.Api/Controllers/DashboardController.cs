@@ -1,6 +1,8 @@
 using HRMS.Api.Auth;
 using HRMS.Api.Services;
 using HRMS.Domain;
+using HRMS.Domain.Common;
+using HRMS.Domain.Entities;
 using HRMS.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,10 +24,18 @@ public record MonthTrendDto(
     int Year, int Month, int Headcount, int Joiners, int Leavers, decimal TurnoverPercent,
     decimal LeaveDays, int LateArrivals, decimal AverageWorkedHours);
 
+public enum CelebrationKind { Birthday, Anniversary }
+
+/// <summary>A birthday or work anniversary on <paramref name="Date"/> (this year). Birth years are never shown.</summary>
+public record CelebrationDto(Guid EmployeeId, string Name, string? Designation, string? Department, CelebrationKind Kind, DateOnly Date, int? Years,
+    bool IsToday, bool IsMe, bool WishedByMe);
+
+public record WishRequest(CelebrationKind Kind);
+
 [ApiController]
 [Route("api/dashboard")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUser me) : ControllerBase
+public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUser me, NotificationService notify) : ControllerBase
 {
     [HttpGet]
     public async Task<DashboardDto> Get()
@@ -120,5 +130,72 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
                 a is { Records: > 0 } ? Math.Round(a.Minutes / 60m / a.Records, 1) : 0));
         }
         return months;
+    }
+
+    /// <summary>Birthdays and work anniversaries today and in the next 7 days, for everyone in the company.</summary>
+    [HttpGet("celebrations")]
+    public async Task<List<CelebrationDto>> Celebrations()
+    {
+        var today = await clock.TodayAsync();
+        var people = await db.Employees.AsNoTracking()
+            .Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)
+            .Select(e => new
+            {
+                e.Id, Name = e.FirstName + " " + e.LastName, e.DateOfBirth, e.JoiningDate,
+                Designation = e.Designation != null ? e.Designation.Title : null,
+                Department = e.Department != null ? e.Department.Name : null,
+            })
+            .ToListAsync();
+        var wished = await WishedTodayAsync(today);
+
+        var list = new List<CelebrationDto>();
+        foreach (var p in people)
+        {
+            if (p.DateOfBirth is { } dob && Next(dob, today) is { } bday)
+                list.Add(new(p.Id, p.Name, p.Designation, p.Department, CelebrationKind.Birthday, bday, null, bday == today, p.Id == me.EmployeeId,
+                    wished.Contains((p.Id, CelebrationKind.Birthday))));
+            if (Next(p.JoiningDate, today) is { } anniversary && anniversary.Year - p.JoiningDate.Year >= 1)
+                list.Add(new(p.Id, p.Name, p.Designation, p.Department, CelebrationKind.Anniversary, anniversary, anniversary.Year - p.JoiningDate.Year,
+                    anniversary == today, p.Id == me.EmployeeId, wished.Contains((p.Id, CelebrationKind.Anniversary))));
+        }
+        return list.OrderBy(c => c.Date).ThenBy(c => c.Kind).ThenBy(c => c.Name).ToList();
+    }
+
+    /// <summary>Sends the person a notification (and push) with the wish. Once a day per person and occasion.</summary>
+    [HttpPost("celebrations/{employeeId:guid}/wish")]
+    public async Task<IActionResult> Wish(Guid employeeId, WishRequest req)
+    {
+        if (employeeId == me.EmployeeId)
+            throw new DomainException("You can't wish yourself.");
+        var today = await clock.TodayAsync();
+        var c = (await Celebrations()).FirstOrDefault(x => x.EmployeeId == employeeId && x.Kind == req.Kind && x.IsToday)
+            ?? throw new DomainException("There is nothing to celebrate for them today.");
+        if (c.WishedByMe)
+            return NoContent();
+        var from = await db.Users.IgnoreQueryFilters().Where(u => u.Id == me.UserId).Select(u => u.FullName).FirstAsync();
+        var title = req.Kind == CelebrationKind.Birthday
+            ? $"{from} wished you a happy birthday"
+            : $"{from} congratulated you on {c.Years} {(c.Years == 1 ? "year" : "years")} with the company";
+        await notify.ToEmployeesAsync([employeeId], NotificationKind.Celebration, title, null, "/dashboard");
+        db.CelebrationWishes.Add(new CelebrationWish { FromUserId = me.UserId!.Value, EmployeeId = employeeId, Kind = (int)req.Kind, Date = today });
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    private async Task<HashSet<(Guid, CelebrationKind)>> WishedTodayAsync(DateOnly today) =>
+        (await db.CelebrationWishes.Where(w => w.FromUserId == me.UserId && w.Date == today).Select(w => new { w.EmployeeId, w.Kind }).ToListAsync())
+        .Select(w => (w.EmployeeId, (CelebrationKind)w.Kind)).ToHashSet();
+
+    /// <summary>This year's (or next year's) date of a yearly occasion if it falls within the next 7 days. 29 Feb counts on 28 Feb.</summary>
+    private static DateOnly? Next(DateOnly original, DateOnly today)
+    {
+        foreach (var year in new[] { today.Year, today.Year + 1 })
+        {
+            var day = Math.Min(original.Day, DateTime.DaysInMonth(year, original.Month));
+            var date = new DateOnly(year, original.Month, day);
+            if (date >= today && date <= today.AddDays(7))
+                return date;
+        }
+        return null;
     }
 }

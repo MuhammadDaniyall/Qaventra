@@ -25,7 +25,7 @@ import { WelcomeBanner } from '../onboarding/WelcomePage';
 import { AttendanceTrendChart, DepartmentChart } from './Charts';
 import { NewRequestMenu } from '../requests/MyRequestsPage';
 import { SetupGuide } from './SetupGuide';
-import { ActionCenter, HolidaysCard, LeaveBalanceCard, MyRequestsCard } from './HomeCards';
+import { ActionCenter, CelebrationsCard, HolidaysCard, LeaveBalanceCard, MyRequestsCard } from './HomeCards';
 import { tx } from '../../lib/i18n';
 
 function greeting() {
@@ -69,6 +69,7 @@ export function DashboardPage() {
       {hr && <SetupGuide className="mb-6" />}
       {self && <WelcomeBanner className="mb-6" />}
       <DashboardNews className="mb-6" />
+      <CelebrationsCard className="mb-6" />
 
       {self && (
         <section aria-label="Your day" className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">

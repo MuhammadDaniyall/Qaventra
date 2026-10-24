@@ -144,4 +144,29 @@ public class LeavePolicyApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         if (Weekday(5).Year == sunday.Year)
             await Ok(await worker.PostAsJsonAsync("/api/leave", new { leaveTypeId = cpl.GetProperty("leaveTypeId").GetGuid(), fromDate = day, toDate = day }, ApiFactory.Json));
     }
+
+    [Fact]
+    public async Task Leave_in_a_closed_month_cannot_be_applied_approved_or_cancelled()
+    {
+        var (admin, worker, _, types) = await SetupAsync("Closed Month Leave");
+        var cl = types["CL"].GetProperty("id").GetGuid();
+        var lastMonth = new DateOnly(Today.Year, Today.Month, 1).AddMonths(-1);
+        var day = lastMonth.AddDays(9);
+        while (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) day = day.AddDays(1);
+        var date = day.ToString("yyyy-MM-dd");
+
+        var applied = await Ok(await worker.PostAsJsonAsync("/api/leave", new { leaveTypeId = cl, fromDate = date, toDate = date }, ApiFactory.Json));
+        var id = applied.GetProperty("id").GetGuid();
+        await Ok(await admin.PostAsync($"/api/attendance/periods/{lastMonth.Year}/{lastMonth.Month}/close", null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/api/leave/{id}/approve", new { note = "" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest,
+            (await worker.PostAsJsonAsync("/api/leave", new { leaveTypeId = cl, fromDate = date, toDate = date }, ApiFactory.Json)).StatusCode);
+
+        await Ok(await admin.PostAsync($"/api/attendance/periods/{lastMonth.Year}/{lastMonth.Month}/reopen", null));
+        Assert.True((await admin.PostAsJsonAsync($"/api/leave/{id}/approve", new { note = "" })).IsSuccessStatusCode);
+
+        await Ok(await admin.PostAsync($"/api/attendance/periods/{lastMonth.Year}/{lastMonth.Month}/close", null));
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/leave/{id}/cancel", null)).StatusCode);
+    }
 }

@@ -94,6 +94,35 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock, ScheduleServ
         return record;
     }
 
+    /// <summary>
+    /// Punches from an attendance machine for one person on one day (company-local times). The earliest punch of the
+    /// day is the check-in and the latest the check-out, merged with what the machine sent before. Days HR entered by
+    /// hand or from an approved request are left alone, and so are days in a closed month.
+    /// </summary>
+    /// <returns>Null when saved, otherwise why the punches were skipped.</returns>
+    public async Task<string?> RecordMachinePunchesAsync(Guid employeeId, DateOnly date, IReadOnlyCollection<TimeOnly> times, string device)
+    {
+        if (await schedule.IsClosedAsync(date))
+            return "month is closed";
+        var record = await db.AttendanceRecords.AsNoTracking().FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == date);
+        if (record is { Source: AttendanceSource.Manual or AttendanceSource.Request })
+            return "day was entered by HR";
+
+        var all = times.ToList();
+        if (record is not null)
+        {
+            all.Add(TimeOnly.FromDateTime(await clock.ToLocalAsync(record.CheckInUtc)));
+            if (record.CheckOutUtc is { } o)
+                all.Add(TimeOnly.FromDateTime(await clock.ToLocalAsync(o)));
+        }
+        var first = all.Min();
+        var last = all.Max();
+        // Punches a few minutes apart are one tap repeated, not a check-out.
+        TimeOnly? checkOut = (last - first).TotalMinutes >= 5 ? last : null;
+        await SaveManualAsync(employeeId, date, first, checkOut, AttendanceSource.Biometric, $"Attendance machine: {device}");
+        return null;
+    }
+
     /// <summary>Web or phone, and the allowed networks, as set on the employee's file.</summary>
     private static void CheckChannel(Employee employee, AttendanceSource source, string? ip)
     {

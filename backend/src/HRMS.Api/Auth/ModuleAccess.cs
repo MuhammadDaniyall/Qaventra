@@ -15,7 +15,7 @@ public static class AccessModules
     [
         new("employees", "Employees and their files", ["/api/employees", "/api/imports", "/api/exports"]),
         new("organization", "Organization settings", ["/api/setup", "/api/departments", "/api/designations", "/api/lookups"]),
-        new("attendance", "Attendance, roster and penalties", ["/api/attendance", "/api/attendance-rules", "/api/exemptions"]),
+        new("attendance", "Attendance, roster and penalties", ["/api/attendance", "/api/attendance-rules", "/api/exemptions", "/api/biometric"]),
         new("leave", "Leave", ["/api/leave", "/api/leave-rules"]),
         new("payroll", "Payroll and pay changes", ["/api/payroll", "/api/pay-changes", "/api/pay"]),
         new("expenses", "Expenses", ["/api/expenses", "/api/expense-setup"]),

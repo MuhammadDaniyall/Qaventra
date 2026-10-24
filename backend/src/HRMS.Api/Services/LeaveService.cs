@@ -87,6 +87,8 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             throw new DomainException("End date must be on or after the start date.");
         if (from.Year != to.Year)
             throw new DomainException("A leave request cannot span two calendar years; split it into two requests.");
+        // A closed month has its attendance, balances and payroll settled; leave inside it would change them.
+        await schedule.EnsureOpenAsync(from, to);
 
         var type = await db.LeaveTypes.FirstOrDefaultAsync(t => t.Id == a.LeaveTypeId && t.IsActive)
             ?? throw new NotFoundException("Leave type");
@@ -212,6 +214,8 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             ?? throw new NotFoundException("Leave request");
         if (request.Status != LeaveStatus.Pending)
             throw new DomainException($"This request is already {request.Status.ToString().ToLowerInvariant()}.");
+        if (approve)
+            await schedule.EnsureOpenAsync(request.FromDate, request.ToDate);
         if (approve && await NeedsDocumentAsync(request, request.LeaveType!)
             && !await db.Attachments.AnyAsync(x => x.OwnerType == AttachmentOwner.Leave && x.OwnerId == request.Id))
             throw new DomainException("This leave needs a supporting document. Ask for it to be attached before approving.");
@@ -254,6 +258,7 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         }
         else if (request.Status == LeaveStatus.Approved && isHr)
         {
+            await schedule.EnsureOpenAsync(request.FromDate, request.ToDate);
             request.Status = LeaveStatus.Cancelled;
             if (request.LeaveType!.IsPaid)
             {

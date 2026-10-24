@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import {
+  Award,
+  Cake,
   CalendarHeart,
   ChevronRight,
   CircleCheck,
@@ -16,11 +18,12 @@ import {
 import { expensesApi } from '../../api/expenses';
 import { leaveApi } from '../../api/leave';
 import { qk } from '../../api/keys';
-import { Card, CardHeader, EmptyState, Skeleton, StatusBadge } from '../../components/ui';
+import { Button, Card, CardHeader, EmptyState, Skeleton, StatusBadge, useToast } from '../../components/ui';
+import { dashboardApi, type Celebration } from '../../api/dashboard';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatNumber, monthLabel } from '../../lib/format';
 import type { Dashboard, Holiday } from '../../types';
-import { tx } from '../../lib/i18n';
+import { tx, txf } from '../../lib/i18n';
 
 const linkCls = 'text-sm font-medium text-accent-600 hover:underline dark:text-accent-400';
 
@@ -249,6 +252,65 @@ export function HolidaysCard({ holidays, loading, className }: { holidays: Holid
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/** Birthdays and work anniversaries this week, with a one-tap wish on the day. */
+export function CelebrationsCard({ className }: { className?: string }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const list = useQuery({ queryKey: ['dashboard', 'celebrations'], queryFn: dashboardApi.celebrations });
+  const wish = useMutation({
+    mutationFn: (c: Celebration) => dashboardApi.wish(c.employeeId, c.kind),
+    onSuccess: (_, c) => {
+      toast.success(txf('Wish sent to {name}', { name: c.name.split(' ')[0] }));
+      qc.invalidateQueries({ queryKey: ['dashboard', 'celebrations'] });
+    },
+    onError: (e) => toast.error(e),
+  });
+  const items = list.data ?? [];
+  if (!items.length) return null;
+
+  return (
+    <Card className={className}>
+      <CardHeader title="Celebrations" description="Birthdays and work anniversaries this week" />
+      <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        {items.slice(0, 6).map((c) => (
+          <li key={`${c.employeeId}-${c.kind}`} className="flex items-center gap-3 px-5 py-3">
+            <span
+              className={cn(
+                'flex size-9 shrink-0 items-center justify-center rounded-full',
+                c.kind === 'Birthday' ? 'bg-pink-50 text-pink-600 dark:bg-pink-500/10 dark:text-pink-300' : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300',
+              )}
+            >
+              {c.kind === 'Birthday' ? <Cake className="size-4" aria-hidden="true" /> : <Award className="size-4" aria-hidden="true" />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {c.name}
+                {c.isMe && <span className="text-zinc-500 dark:text-zinc-400"> ({tx('you')})</span>}
+              </span>
+              <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+                {c.kind === 'Birthday' ? tx('Birthday') : txf('{years} years with the company', { years: c.years ?? 0 })}
+                {' · '}
+                {c.isToday ? tx('Today') : formatDate(c.date)}
+              </span>
+            </span>
+            {c.isToday && !c.isMe && (
+              <Button
+                size="sm"
+                variant={c.wishedByMe ? 'ghost' : 'secondary'}
+                disabled={c.wishedByMe}
+                loading={wish.isPending && wish.variables?.employeeId === c.employeeId}
+                onClick={() => wish.mutate(c)}
+              >
+                {c.wishedByMe ? 'Wished' : 'Send wishes'}
+              </Button>
+            )}
+          </li>
+        ))}
+      </ul>
     </Card>
   );
 }

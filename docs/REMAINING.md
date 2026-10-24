@@ -41,18 +41,19 @@ tested and committed locally; one production deploy at the end. Tick items as th
 - [x] Separation: clearance templates (multi-level by department/person), exit interview templates, FnF approval
 - [x] Letters: approvals, candidate letters, auto-use (offer, transfer, salary change, exit), page margins
 - [x] Recruitment: candidate portal (status by email link), shortlisting score, offer letter print
-- [ ] Recruitment: interview templates with marks — API done (templates, scorecards, marks); screens still to build
+- [x] Recruitment: interview templates with marks (templates tab, scorecard on each interview)
 - [ ] Performance: KPI library, multiple reviewers, quarterly check-ins
 - [ ] Helpdesk: (done except email reply)
 
 ## G. Organization and system
-- [ ] Day/month close (lock attendance and payroll edits for a period)
+- [x] Day/month close (lock attendance and payroll edits for a period; leave can't be applied, approved or cancelled in a closed month)
 - [ ] ID card template and print
-- [ ] Biometric devices (device list + push endpoint with token)
+- [x] Biometric devices (device list + push endpoint with token)
 - [ ] Email templates (editable per event), email log, monthly quota
 - [ ] Allowed email domains; last-login report; exception log
 - [ ] Integrations: chart of accounts, GL mapping, payroll JV export (CSV), API tokens
 
 ## H. Dashboard and UX
-- [ ] Dashboard tabs (ESS, attendance, payroll, recruitment), organogram, birthday wishes, request from missing day
-- [ ] Urdu translation with RTL
+- [x] Role-based home, organogram, birthday and work-anniversary wishes
+- [ ] Request from a missing day
+- [x] Urdu translation with RTL

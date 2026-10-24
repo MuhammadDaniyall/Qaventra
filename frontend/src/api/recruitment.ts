@@ -494,3 +494,44 @@ export const recruitmentApi = {
   careersJob: (company: string, job: string) => http.get<CareersJob>(`/careers/${company}/${job}`),
   apply: (company: string, job: string, v: CandidateFormValues) => http.upload<void>(`/careers/${company}/${job}/apply`, candidateForm(v)),
 };
+
+// ---------- Interview templates and scorecards ----------
+
+export interface InterviewQuestion {
+  id: string | null;
+  text: string;
+  category: string | null;
+  maxMarks: number;
+}
+
+export interface InterviewTemplate {
+  id: string;
+  name: string;
+  questions: InterviewQuestion[];
+}
+
+export interface QuestionMark {
+  questionId: string;
+  marks: number;
+}
+
+export interface Scorecard {
+  interviewId: string;
+  templateId: string | null;
+  questions: InterviewQuestion[];
+  mine: QuestionMark[];
+  all: { interviewerEmployeeId: string; interviewer: string; marks: QuestionMark[]; total: number; max: number }[];
+  canSeeAll: boolean;
+}
+
+export const interviewTemplatesApi = {
+  list: () => http.get<InterviewTemplate[]>('/recruitment-extras/interview-templates'),
+  add: (b: { name: string; questions: InterviewQuestion[] }) => http.post('/recruitment-extras/interview-templates', b),
+  update: (id: string, b: { name: string; questions: InterviewQuestion[] }) => http.put(`/recruitment-extras/interview-templates/${id}`, b),
+  remove: (id: string) => http.del(`/recruitment-extras/interview-templates/${id}`),
+  setForInterview: (interviewId: string, templateId: string | null) =>
+    http.put(`/recruitment-extras/interviews/${interviewId}/template`, { templateId }),
+  scorecard: (interviewId: string) => http.get<Scorecard>(`/recruitment-extras/interviews/${interviewId}/scorecard`),
+  saveMarks: (interviewId: string, marks: QuestionMark[]) => http.put(`/recruitment-extras/interviews/${interviewId}/marks`, { marks }),
+};
+

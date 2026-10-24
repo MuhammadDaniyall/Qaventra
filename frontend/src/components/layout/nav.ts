@@ -35,6 +35,7 @@ import {
   ShieldCheck,
   FolderKanban,
   FileText,
+  Fingerprint,
   House,
   LayoutDashboard,
   ScrollText,
@@ -151,6 +152,7 @@ export const NAV: NavSection[] = [
     icon: Settings2,
     items: [
       { to: '/payroll', label: 'Payroll', icon: Wallet, roles: HR_ROLES, module: 'payroll' },
+      { to: '/attendance/machines', label: 'Attendance machines', icon: Fingerprint, roles: HR_ROLES, module: 'attendance' },
       { to: '/helpdesk/queue', label: 'Help desk queue', icon: Headset, roles: HR_ROLES, module: 'helpdesk' },
       { to: '/assets', label: 'Assets', icon: Boxes, roles: HR_ROLES, module: 'assets' },
       { to: '/onboarding', label: 'Onboarding', icon: Rocket, roles: HR_ROLES, module: 'onboarding' },

@@ -44,6 +44,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<AttachmentContent> AttachmentContents => Set<AttachmentContent>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
+    public DbSet<BiometricDevice> BiometricDevices => Set<BiometricDevice>();
+    public DbSet<CelebrationWish> CelebrationWishes => Set<CelebrationWish>();
     public DbSet<PushKeys> PushKeys => Set<PushKeys>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
     public DbSet<CompOffRequest> CompOffRequests => Set<CompOffRequest>();
@@ -684,6 +686,17 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.P256dh).HasMaxLength(200);
             e.Property(x => x.Auth).HasMaxLength(100);
             e.HasOne<User>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<CelebrationWish>(e => e.HasIndex(x => new { x.FromUserId, x.Date }));
+
+        b.Entity<BiometricDevice>(e =>
+        {
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.SerialNumber).HasMaxLength(100);
+            e.Property(x => x.TokenHash).HasMaxLength(64);
+            e.Property(x => x.TokenPrefix).HasMaxLength(12);
         });
 
         b.Entity<PushKeys>(e =>

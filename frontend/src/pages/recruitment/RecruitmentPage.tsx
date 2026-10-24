@@ -53,8 +53,9 @@ import {
 import { formatCurrency, formatDate, formatDateTimeUtc, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import { CandidateFields, careersUrl, cvProblem, JobPostModal, PostStatusBadge, StageBadge, useCopy } from './shared';
+import { InterviewTemplatesTab } from './InterviewTemplates';
 
-type Tab = 'jobs' | 'requests' | 'candidates' | 'interviews' | 'openings' | 'report';
+type Tab = 'jobs' | 'requests' | 'candidates' | 'interviews' | 'templates' | 'openings' | 'report';
 
 /** Hiring: jobs and pipelines for HR and hiring teams, requests for managers, interviews and the internal job board for everyone. */
 export function RecruitmentPage() {
@@ -72,6 +73,7 @@ export function RecruitmentPage() {
     ...(m.isHr || m.canRequest ? (['requests'] as Tab[]) : []),
     ...(team ? (['candidates'] as Tab[]) : []),
     'interviews',
+    ...(team ? (['templates'] as Tab[]) : []),
     'openings',
     ...(team ? (['report'] as Tab[]) : []),
   ];
@@ -83,6 +85,7 @@ export function RecruitmentPage() {
     requests: 'Hiring requests',
     candidates: 'Candidates',
     interviews: m.myInterviews ? `My interviews (${m.myInterviews})` : 'My interviews',
+    templates: 'Interview templates',
     openings: 'Open jobs',
     report: 'Reports',
   };
@@ -94,6 +97,7 @@ export function RecruitmentPage() {
       {tab === 'requests' && <RequestsTab me={m} />}
       {tab === 'candidates' && <CandidatesTab me={m} />}
       {tab === 'interviews' && <InterviewsTab />}
+      {tab === 'templates' && <InterviewTemplatesTab />}
       {tab === 'openings' && <OpeningsTab />}
       {tab === 'report' && <ReportTab />}
     </>

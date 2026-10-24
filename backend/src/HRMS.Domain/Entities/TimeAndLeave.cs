@@ -201,3 +201,20 @@ public class CompOffRequest : TenantEntity
     public DateTime? DecidedAtUtc { get; set; }
     public string? DecisionNote { get; set; }
 }
+
+/// <summary>
+/// A fingerprint or face attendance machine (or the bridge software in front of it) that pushes punches to
+/// /api/biometric/punches with its own token. Only a hash of the token is kept.
+/// </summary>
+public class BiometricDevice : TenantEntity
+{
+    public string Name { get; set; } = "";
+    public string? SerialNumber { get; set; }
+    public Guid? OfficeLocationId { get; set; }
+    public string TokenHash { get; set; } = "";
+    /// <summary>The first characters of the token, shown so HR can tell tokens apart.</summary>
+    public string TokenPrefix { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public DateTime? LastSeenAtUtc { get; set; }
+    public int PunchesReceived { get; set; }
+}

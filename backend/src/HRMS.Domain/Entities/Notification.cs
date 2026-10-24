@@ -13,3 +13,13 @@ public class Notification : TenantEntity
     public string? Link { get; set; }
     public DateTime? ReadAtUtc { get; set; }
 }
+
+/// <summary>Who wished whom on which day, so a wish is sent once a day per occasion.</summary>
+public class CelebrationWish : TenantEntity
+{
+    public Guid FromUserId { get; set; }
+    public Guid EmployeeId { get; set; }
+    /// <summary>0 = birthday, 1 = work anniversary.</summary>
+    public int Kind { get; set; }
+    public DateOnly Date { get; set; }
+}

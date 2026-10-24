@@ -71,6 +71,7 @@ const ExpenseApprovalsPage = lazy(() => import('./pages/expenses/ExpenseApproval
 const MyExpensesPage = lazy(() => import('./pages/expenses/MyExpensesPage').then((m) => ({ default: m.MyExpensesPage })));
 const LetterPage = lazy(() => import('./pages/letters/LetterPage').then((m) => ({ default: m.LetterPage })));
 const LettersPage = lazy(() => import('./pages/letters/LettersPage').then((m) => ({ default: m.LettersPage })));
+const MachinesPage = lazy(() => import('./pages/attendance/MachinesPage').then((m) => ({ default: m.MachinesPage })));
 const InsightsPage = lazy(() => import('./pages/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })));
 const OrgChartPage = lazy(() => import('./pages/orgchart/OrgChartPage').then((m) => ({ default: m.OrgChartPage })));
 const MyRequestsPage = lazy(() => import('./pages/requests/MyRequestsPage').then((m) => ({ default: m.MyRequestsPage })));
@@ -189,6 +190,7 @@ export default function App() {
                 <Route path="/leave/opening-balances" element={<OpeningBalancesPage />} />
                 <Route path="/settings" element={<OrganizationPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
+                <Route path="/attendance/machines" element={<MachinesPage />} />
                 <Route path="/alerts" element={<ScheduledPage />} />
                 <Route path="/budget" element={<BudgetPage />} />
                 <Route path="/letters" element={<LettersPage />} />

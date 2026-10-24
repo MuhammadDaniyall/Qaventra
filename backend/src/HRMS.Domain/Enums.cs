@@ -627,6 +627,8 @@ public enum NotificationKind
     Training = 14,
     Alert = 15,
     Report = 16,
+    /// <summary>A colleague's birthday or work anniversary wish.</summary>
+    Celebration = 17,
 }
 
 /// <summary>What an attachment belongs to. Expense receipts are stored with their claim items instead.</summary>

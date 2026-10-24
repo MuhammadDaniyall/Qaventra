@@ -1,6 +1,6 @@
 import { http } from './client';
 
-export type NotificationKind = 'ApprovalNeeded' | 'RequestDecided' | 'Separation' | 'Letter' | 'Payslip';
+export type NotificationKind = 'ApprovalNeeded' | 'RequestDecided' | 'Separation' | 'Letter' | 'Payslip' | 'Celebration';
 
 export interface AppNotification {
   id: string;
