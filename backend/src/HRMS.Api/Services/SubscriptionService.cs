@@ -3,7 +3,9 @@ using HRMS.Domain;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
 using HRMS.Infrastructure.Data;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace HRMS.Api.Services;
 
@@ -60,32 +62,96 @@ public class SubscriptionService(HrmsDbContext db, TenantAccessChecker access, I
 
         await using var tx = await db.Database.BeginTransactionAsync();
 
-        IQueryable<T> Of<T>() where T : class, ITenantEntity => db.Set<T>().IgnoreQueryFilters().Where(x => x.TenantId == tenantId);
+        // Built from the EF model so tables added later are covered without touching this method.
+        var tables = CompanyTables();
+        Task Run(string sql) => db.Database.ExecuteSqlRawAsync(sql, tenantId);
 
-        var payslipIds = Of<Payslip>().Select(p => p.Id);
-        await db.Set<PayslipLine>().Where(l => payslipIds.Contains(l.PayslipId)).ExecuteDeleteAsync();
-        await Of<Payslip>().ExecuteDeleteAsync();
-        await Of<PayrollRun>().ExecuteDeleteAsync();
-        var salaryIds = Of<EmployeeSalary>().Select(s => s.Id);
-        await db.Set<SalaryComponent>().Where(c => salaryIds.Contains(c.EmployeeSalaryId)).ExecuteDeleteAsync();
-        await Of<EmployeeSalary>().ExecuteDeleteAsync();
-        await Of<LeaveRequest>().ExecuteDeleteAsync();
-        await Of<LeaveBalance>().ExecuteDeleteAsync();
-        await Of<AttendanceRecord>().ExecuteDeleteAsync();
-        await Of<User>().ExecuteDeleteAsync();
-        await Of<Employee>().ExecuteUpdateAsync(s => s.SetProperty(e => e.ManagerId, (Guid?)null));
-        await Of<Employee>().ExecuteDeleteAsync();
-        await Of<Holiday>().ExecuteDeleteAsync();
-        await Of<LeaveType>().ExecuteDeleteAsync();
-        await Of<Shift>().ExecuteDeleteAsync();
-        await Of<OfficeLocation>().ExecuteDeleteAsync();
-        await Of<Designation>().ExecuteDeleteAsync();
-        await Of<Department>().ExecuteDeleteAsync();
-        await Of<PayrollSettings>().ExecuteDeleteAsync();
+        // 1. Clear optional links into company rows (department head <-> employee, managers, self references) so no cycle blocks the deletes.
+        foreach (var link in db.Model.GetEntityTypes().Where(t => !t.IsOwned() && t.GetTableName() != null)
+                     .SelectMany(t => t.GetForeignKeys()).Where(fk => tables.ContainsKey(fk.PrincipalEntityType) && fk.Properties.Any(p => p.IsNullable)))
+        {
+            var table = Table(link.DeclaringEntityType);
+            var set = string.Join(", ", link.Properties.Where(p => p.IsNullable).Select(p => $"a.{Column(p, table)} = NULL"));
+            await Run($"UPDATE a SET {set} FROM {Name(table)} a WHERE {Match(link, "a", 0, tables)}");
+        }
+
+        // 2. Delete the company's rows table by table; a table still referenced by another (SQL error 547) is retried in the next pass.
+        var left = tables.Keys.ToList();
+        while (left.Count > 0)
+        {
+            var before = left.Count;
+            SqlException? blocked = null;
+            foreach (var type in left.ToList())
+            {
+                try
+                {
+                    await Run($"DELETE a FROM {Name(Table(type))} a WHERE {tables[type]("a", 0)}");
+                    left.Remove(type);
+                }
+                catch (SqlException e) when (e.Number == 547)
+                {
+                    blocked = e;
+                }
+            }
+            if (blocked != null && left.Count == before)
+                throw blocked;
+        }
+
+        // 3. The subscription records and the company itself.
         await db.TenantPayments.Where(p => p.TenantId == tenantId).ExecuteDeleteAsync();
         await db.Tenants.Where(t => t.Id == tenantId).ExecuteDeleteAsync();
 
         await tx.CommitAsync();
         access.Invalidate(tenantId);
     }
+
+    /// <summary>
+    /// Every table holding company rows, with a SQL condition (for a table alias) that picks this company's rows: tenant tables by TenantId,
+    /// child tables without their own TenantId (payslip lines, salary components, template items) through a required link to a company row.
+    /// The condition takes the company id as parameter {0}.
+    /// </summary>
+    private Dictionary<IEntityType, Func<string, int, string>> CompanyTables()
+    {
+        var types = db.Model.GetEntityTypes().Where(t => !t.IsOwned() && t.GetTableName() != null).ToList();
+        var tables = new Dictionary<IEntityType, Func<string, int, string>>();
+        foreach (var type in types.Where(t => typeof(ITenantEntity).IsAssignableFrom(t.ClrType)))
+        {
+            var column = Column(type.FindProperty(nameof(ITenantEntity.TenantId))!, Table(type));
+            tables[type] = (alias, _) => $"{alias}.{column} = {{0}}";
+        }
+
+        bool added;
+        do
+        {
+            added = false;
+            foreach (var type in types.Where(t => !tables.ContainsKey(t)))
+            {
+                var links = type.GetForeignKeys().Where(fk => fk.IsRequired && tables.ContainsKey(fk.PrincipalEntityType)).ToList();
+                if (links.Count == 0)
+                    continue;
+                tables[type] = (alias, depth) => "(" + string.Join(" OR ", links.Select(fk => Match(fk, alias, depth, tables))) + ")";
+                added = true;
+            }
+        } while (added);
+        return tables;
+    }
+
+    /// <summary>SQL condition: the row <paramref name="alias"/> points through <paramref name="fk"/> at a row of this company.</summary>
+    private static string Match(IForeignKey fk, string alias, int depth, Dictionary<IEntityType, Func<string, int, string>> tables)
+    {
+        var parent = $"p{depth}";
+        var parentTable = Table(fk.PrincipalEntityType);
+        var childTable = Table(fk.DeclaringEntityType);
+        var join = string.Join(" AND ", fk.Properties.Zip(fk.PrincipalKey.Properties,
+            (child, key) => $"{parent}.{Column(key, parentTable)} = {alias}.{Column(child, childTable)}"));
+        return $"EXISTS (SELECT 1 FROM {Name(parentTable)} {parent} WHERE {join} AND {tables[fk.PrincipalEntityType](parent, depth + 1)})";
+    }
+
+    private static StoreObjectIdentifier Table(IEntityType type) => StoreObjectIdentifier.Table(type.GetTableName()!, type.GetSchema());
+
+    private static string Name(StoreObjectIdentifier table) => table.Schema is null ? Quote(table.Name) : $"{Quote(table.Schema)}.{Quote(table.Name)}";
+
+    private static string Column(IProperty property, StoreObjectIdentifier table) => Quote(property.GetColumnName(table)!);
+
+    private static string Quote(string name) => $"[{name.Replace("]", "]]")}]";
 }
