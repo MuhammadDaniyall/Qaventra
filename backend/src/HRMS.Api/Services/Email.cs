@@ -10,7 +10,9 @@ namespace HRMS.Api.Services;
 public record EmailAttachment(string FileName, string ContentType, byte[] Data);
 
 /// <param name="TenantId">The company it is sent for; set to log it and count it against the company's monthly quota.</param>
-public record EmailMessage(string To, string Subject, string HtmlBody, IReadOnlyList<EmailAttachment>? Attachments = null, Guid? TenantId = null, string? Kind = null);
+/// <param name="ReplyTo">Where replies go, when not the From address (ticket emails point it at the helpdesk inbox).</param>
+public record EmailMessage(string To, string Subject, string HtmlBody, IReadOnlyList<EmailAttachment>? Attachments = null, Guid? TenantId = null, string? Kind = null,
+    string? ReplyTo = null);
 
 /// <summary>SMTP settings ("Smtp" section). Leave Host empty to switch email off; in-app notifications still work.</summary>
 public class SmtpOptions
@@ -48,6 +50,8 @@ public class SmtpEmailSender(SmtpOptions options) : IEmailSender
             IsBodyHtml = true,
         };
         mail.To.Add(message.To);
+        if (!string.IsNullOrWhiteSpace(message.ReplyTo))
+            mail.ReplyToList.Add(message.ReplyTo);
         foreach (var a in message.Attachments ?? [])
             mail.Attachments.Add(new System.Net.Mail.Attachment(new MemoryStream(a.Data), a.FileName, a.ContentType));
         await client.SendMailAsync(mail, ct);

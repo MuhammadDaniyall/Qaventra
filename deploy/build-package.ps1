@@ -37,13 +37,18 @@ if ($LASTEXITCODE) { throw 'dotnet publish failed' }
 Remove-Item (Join-Path $site 'appsettings.Development*.json') -ErrorAction SilentlyContinue
 Copy-Item (Join-Path $root 'frontend\dist\*') (New-Item -ItemType Directory -Force (Join-Path $site 'wwwroot')) -Recurse
 
-[ordered]@{
+$settings = [ordered]@{
     ConnectionStrings = @{ Hrms = $secrets.ConnectionString }
     Jwt = @{ Issuer = 'qaventra'; Audience = 'qaventra'; Key = $secrets.JwtKey; ExpiryMinutes = 480 }
     Database = @{ MigrateOnStartup = $true }
     SuperAdmin = @{ Email = $secrets.OwnerEmail; Password = $secrets.OwnerPassword }
     Logging = @{ LogLevel = @{ Default = 'Warning'; 'Microsoft.Hosting.Lifetime' = 'Information' } }
-} | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $site 'appsettings.Production.json') -Encoding utf8
+}
+# Optional: outgoing email and the helpdesk reply inbox, copied as written in production.json.
+foreach ($section in 'Smtp', 'HelpdeskInbox') {
+    if ($secrets.PSObject.Properties[$section]) { $settings[$section] = $secrets.$section }
+}
+$settings | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $site 'appsettings.Production.json') -Encoding utf8
 
 Compress-Archive -Path (Join-Path $site '*') -DestinationPath (Join-Path $out 'qaventra-site.zip')
 $size = [math]::Round((Get-Item (Join-Path $out 'qaventra-site.zip')).Length / 1MB, 1)

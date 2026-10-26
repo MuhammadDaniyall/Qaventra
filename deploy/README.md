@@ -41,6 +41,23 @@ export HRMS_TEST_SQL="Server=localhost,14333;User Id=sa;Password=<that password>
 - Database password: update the `Password=` part of `ConnectionString` in `secrets\monsterasp.txt`, then deploy.
 - Site/FTP password: update `SitePassword=` in `secrets\monsterasp.txt`.
 
+## Email and helpdesk replies (optional)
+
+Email stays off until `deploy/secrets/production.json` has an `Smtp` section. Add `HelpdeskInbox` too and people can
+answer ticket emails by replying: Qaventra reads the inbox every two minutes, finds the ticket by its code in the
+subject (HD-0042) and adds the reply as the sender. Only someone who may reply on that ticket gets in; other mail is
+marked read and skipped.
+
+A free Gmail account works for both. Turn on 2-step verification, create an app password
+(Google Account → Security → App passwords) and add, with your own address and app password:
+
+```json
+"Smtp": { "Host": "smtp.gmail.com", "Port": 587, "User": "you@gmail.com", "Password": "<app password>", "From": "you@gmail.com", "FromName": "Qaventra" },
+"HelpdeskInbox": { "Host": "imap.gmail.com", "Port": 993, "User": "you@gmail.com", "Password": "<app password>" }
+```
+
+Then deploy again. Use a mailbox only for Qaventra: every unread email in it is read.
+
 ## Notes
 
 - Database tables are created or updated automatically when the site starts (`Database:MigrateOnStartup`).

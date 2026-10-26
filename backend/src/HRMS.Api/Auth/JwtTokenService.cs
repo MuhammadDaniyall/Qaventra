@@ -20,6 +20,18 @@ public class JwtTokenService(JwtOptions options)
     /// <param name="actingTenantId">For SuperAdmin only: the company they have opened. Its data becomes visible to them.</param>
     public (string Token, DateTime ExpiresAtUtc) Create(User user, Guid? actingTenantId = null)
     {
+        var claims = ClaimsFor(user, actingTenantId);
+
+        var expires = DateTime.UtcNow.AddMinutes(options.ExpiryMinutes);
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.Key)), SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(options.Issuer, options.Audience, claims, expires: expires, signingCredentials: credentials);
+        return (new JwtSecurityTokenHandler().WriteToken(token), expires);
+    }
+
+    public static List<Claim> ClaimsFor(User user, Guid? actingTenantId = null)
+    {
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
@@ -33,12 +45,6 @@ public class JwtTokenService(JwtOptions options)
             claims.Add(new(HrmsClaims.TenantId, acting.ToString()));
         if (user.EmployeeId is { } employeeId)
             claims.Add(new(HrmsClaims.EmployeeId, employeeId.ToString()));
-
-        var expires = DateTime.UtcNow.AddMinutes(options.ExpiryMinutes);
-        var credentials = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(options.Key)), SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(options.Issuer, options.Audience, claims, expires: expires, signingCredentials: credentials);
-        return (new JwtSecurityTokenHandler().WriteToken(token), expires);
+        return claims;
     }
 }

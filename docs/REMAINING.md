@@ -43,7 +43,7 @@ tested and committed locally; one production deploy at the end. Tick items as th
 - [x] Recruitment: candidate portal (status by email link), shortlisting score, offer letter print
 - [x] Recruitment: interview templates with marks (templates tab, scorecard on each interview)
 - [x] Performance: KPI library, multiple reviewers (feedback from others), quarterly check-ins
-- [ ] Helpdesk: (done except email reply)
+- [x] Helpdesk: email reply (replies to ticket emails are read from an IMAP inbox and added to the ticket)
 
 ## G. Organization and system
 - [x] Day/month close (lock attendance and payroll edits for a period; leave can't be applied, approved or cancelled in a closed month)

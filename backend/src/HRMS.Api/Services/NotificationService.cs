@@ -15,14 +15,16 @@ public class NotificationService
 {
     private readonly HrmsDbContext _db;
     private readonly ICurrentUser _me;
+    private readonly HelpdeskInboxOptions _inbox;
     private readonly EmailQueue _queue;
     private readonly PushQueue _push;
     private readonly string? _baseUrl;
     private readonly List<EmailMessage> _pending = [];
     private readonly List<PushMessage> _pendingPush = [];
 
-    public NotificationService(HrmsDbContext db, ICurrentUser me, EmailQueue queue, PushQueue push, IHttpContextAccessor http)
+    public NotificationService(HrmsDbContext db, ICurrentUser me, EmailQueue queue, PushQueue push, IHttpContextAccessor http, HelpdeskInboxOptions inbox)
     {
+        _inbox = inbox;
         _db = db;
         _me = me;
         _queue = queue;
@@ -64,8 +66,15 @@ public class NotificationService
                 .Replace("{title}", title).Replace("{body}", body ?? "");
             var subject = template is null ? title : Trim(Fill(template.Subject), 200)!;
             var intro = template?.Intro is { Length: > 0 } i ? Fill(i) : null;
-            _pending.Add(new EmailMessage(r.Email, subject, Html(title, body, link, intro: intro),
-                TenantId: tenant == Guid.Empty ? null : tenant, Kind: kind.ToString()));
+            // Ticket emails can be answered by email: the reply finds its ticket by the code in the subject.
+            var replyable = kind == NotificationKind.Ticket && _inbox.IsConfigured && HelpdeskInbox.TicketCode(title) is not null;
+            if (replyable && HelpdeskInbox.TicketCode(subject) is null)
+                subject = $"{subject} [{HelpdeskInbox.TicketCode(title)}]";
+            var html = replyable
+                ? Html(title, body, link, intro: intro, footer: "Reply to this email to answer on the ticket. Write above the quoted text; attachments are not added.")
+                : Html(title, body, link, intro: intro);
+            _pending.Add(new EmailMessage(r.Email, subject, html,
+                TenantId: tenant == Guid.Empty ? null : tenant, Kind: kind.ToString(), ReplyTo: replyable ? _inbox.Address : null));
         }
     }
 

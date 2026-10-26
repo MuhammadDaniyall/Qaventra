@@ -12,7 +12,12 @@ public static class HrmsClaims
 
 public class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser
 {
-    private ClaimsPrincipal? Principal => accessor.HttpContext?.User;
+    private ClaimsPrincipal? _actingAs;
+
+    private ClaimsPrincipal? Principal => _actingAs ?? accessor.HttpContext?.User;
+
+    /// <summary>Background work done on someone's behalf (such as a reply by email) runs with their rights.</summary>
+    public void ActAs(ClaimsPrincipal principal) => _actingAs = principal;
 
     public Guid? UserId => ReadGuid(ClaimTypes.NameIdentifier);
     public Guid? TenantId => ReadGuid(HrmsClaims.TenantId);
