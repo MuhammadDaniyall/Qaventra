@@ -155,7 +155,7 @@ function dateOfBirth(index) {
 
 // Picks people for the demo roles by title, gives everyone a salary and punch code if missing, and puts two
 // birthdays on today so the dashboard has something to celebrate.
-async function useExisting(admin) {
+async function useExisting(admin, touch = true) {
   const list = [];
   for (let page = 1; ; page++) {
     const r = await admin.get(`/employees?page=${page}&pageSize=200`);
@@ -195,6 +195,8 @@ async function useExisting(admin) {
   keys.it2 = take(title('System Administrator')) ?? take(title('Network'));
   for (const k of Object.keys(keys)) keys[k] ??= take(() => true);
 
+  if (!touch) return { keys, punchers: [] };
+
   const level = (t = '') =>
     /chief|ceo|cfo|coo/i.test(t) ? 1200000 : /vp|director|head/i.test(t) ? 750000 : /manager|lead/i.test(t) ? 450000
       : /senior/i.test(t) ? 330000 : /associate|assistant|executive/i.test(t) ? 140000 : 220000;
@@ -227,6 +229,160 @@ async function useExisting(admin) {
   return { keys, punchers };
 }
 
+// ---------- Newer features ----------
+
+async function ensureCycle(admin, dept) {
+  const y = TODAY.getUTCFullYear();
+  const found = (await admin.get('/performance/cycles')).find((c) => c.name === `H2 ${y}`);
+  if (found) return found.id;
+  let template = (await admin.get('/performance/templates')).find((t) => t.name === 'Engineering half-year review');
+  if (!template) {
+    await admin.post('/performance/templates', {
+      name: 'Engineering half-year review', description: 'Goals plus the core competencies', selfReview: true,
+      sections: [
+        { name: 'Goals', weight: 70, kind: 'Goals', items: [] },
+        { name: 'Competencies', weight: 30, kind: 'Competencies', items: [{ title: 'Ownership' }, { title: 'Communication' }, { title: 'Technical depth' }] },
+      ],
+    });
+    template = (await admin.get('/performance/templates')).find((t) => t.name === 'Engineering half-year review');
+  }
+  await admin.post('/performance/cycles', {
+    name: `H2 ${y}`, periodFrom: `${y}-07-01`, periodTo: `${y}-12-31`, templateId: template.id, departmentIds: [dept.Engineering, dept['Quality Assurance']].filter(Boolean),
+    goalsDue: iso(addDays(TODAY, 7)), selfReviewDue: `${y}-12-15`, managerReviewDue: `${y}-12-24`,
+  });
+  const cycle = (await admin.get('/performance/cycles')).find((c) => c.name === `H2 ${y}`).id;
+  await admin.post(`/performance/cycles/${cycle}/launch`);
+  return cycle;
+}
+
+// Data for the features added most recently: machines, celebrations, KPIs, review feedback and check-ins, interview
+// scorecards and screening, email templates, API keys and attendance correction requests. `me` is the admin's own
+// employee record, used as interviewer and as the HR voice on reviews.
+async function newFeatures(admin, emp, dept, me) {
+  await step('Second biometric machine', () => admin.post('/biometric/devices', { name: 'Karachi Office Gate', serialNumber: 'ZK-K40-9912', location: 'Karachi branch, Shahrah-e-Faisal' }));
+
+  await step('Birthday and anniversary wishes', async () => {
+    for (const c of (await admin.get('/dashboard/celebrations')).filter((c) => c.isToday && !c.isMe && !c.wishedByMe))
+      await admin.post(`/dashboard/celebrations/${c.employeeId}/wish`, { kind: c.kind });
+  });
+
+  await step('KPI library', async () => {
+    const have = new Set((await admin.get('/performance/kpis')).map((k) => k.name));
+    for (const k of [
+      { name: 'Story points delivered', category: 'Engineering', unit: 'points', defaultTarget: '40 per sprint', defaultWeight: 30, description: 'Committed work finished within the sprint.' },
+      { name: 'Production defects', category: 'Engineering', unit: 'count', defaultTarget: 'Under 3 per quarter', defaultWeight: 20 },
+      { name: 'Code review turnaround', category: 'Engineering', unit: 'hours', defaultTarget: 'Within 24', defaultWeight: 15 },
+      { name: 'Deployment frequency', category: 'DevOps', unit: 'per week', defaultTarget: '5', defaultWeight: 20 },
+      { name: 'Uptime', category: 'DevOps', unit: '%', defaultTarget: '99.9', defaultWeight: 30 },
+      { name: 'Automated test coverage', category: 'Quality', unit: '%', defaultTarget: '80', defaultWeight: 20 },
+      { name: 'Defect leakage', category: 'Quality', unit: '%', defaultTarget: 'Under 5', defaultWeight: 25 },
+      { name: 'Revenue closed', category: 'Sales', unit: 'PKR', defaultTarget: '25,000,000', defaultWeight: 40 },
+      { name: 'New logos signed', category: 'Sales', unit: 'clients', defaultTarget: '3 per quarter', defaultWeight: 25 },
+      { name: 'Client satisfaction (CSAT)', category: 'Delivery', unit: 'score', defaultTarget: '4.5 / 5', defaultWeight: 25 },
+      { name: 'First response time', category: 'Support', unit: 'minutes', defaultTarget: 'Under 30', defaultWeight: 25 },
+      { name: 'Time to hire', category: 'HR', unit: 'days', defaultTarget: 'Under 35', defaultWeight: 20 },
+    ])
+      if (!have.has(k.name)) await admin.post('/performance/kpis', k);
+  });
+
+  await step('Review feedback requests and check-ins', async () => {
+    const cycle = await ensureCycle(admin, dept);
+    const reviews = (await admin.get(`/performance/cycles/${cycle}/calibration`)).reviews;
+    const picked = reviews.filter((r) => r.employeeId !== me).slice(0, 8);
+    for (const [i, r] of picked.entries()) {
+      const others = picked.filter((x) => x.employeeId !== r.employeeId).map((x) => x.employeeId);
+      const peers = [...new Set([others[i % others.length], others[(i + 1) % others.length]])].filter(Boolean);
+      if (me && peers.length) await admin.post(`/performance/reviews/${r.id}/feedback`, { employeeIds: peers });
+      if (!me) continue;
+      await admin.post(`/performance/reviews/${r.id}/check-ins`, {
+        period: `Q3 ${TODAY.getUTCFullYear()}`, progress: 40 + ((i * 13) % 45),
+        note: pick(['On track; sprint goals met for two months running.', 'Good progress on the client release; needs more code reviews.', 'Ramp-up done, now owning a module end to end.', 'Delivery slipped one sprint because of scope changes; agreed a plan.']),
+      });
+    }
+  });
+
+  await step('Interview templates, screening and scorecards', async () => {
+    const templates = [
+      ['Backend engineer technical round', [['Design a rate limiter for a public API', 'System design', 10], ['Explain database indexing trade-offs', 'Databases', 10], ['Live coding: parse and validate a CNIC', 'Coding', 10], ['Communication and attitude', 'Culture', 5]]],
+      ['Mobile engineer technical round', [['React Native vs native: when and why', 'Architecture', 10], ['Offline sync and conflict handling', 'Data', 10], ['Build a paginated list with pull to refresh', 'Coding', 10], ['App store release process', 'Delivery', 5]]],
+      ['HR and culture round', [['Why Systems?', 'Motivation', 5], ['A conflict you resolved in a team', 'Teamwork', 10], ['Salary expectations and notice period', 'Logistics', 5]]],
+    ];
+    const have = new Set((await admin.get('/recruitment-extras/interview-templates')).map((t) => t.name));
+    for (const [name, qs] of templates)
+      if (!have.has(name)) await admin.post('/recruitment-extras/interview-templates', { name, questions: qs.map(([text, category, maxMarks]) => ({ text, category, maxMarks })) });
+    const mobile = (await admin.get('/recruitment-extras/interview-templates')).find((t) => t.name === 'Mobile engineer technical round');
+
+    const post = await admin.post('/recruitment/jobs', {
+      title: 'React Native Developer', departmentId: dept.Engineering, location: 'Lahore or Islamabad', employmentType: 'FullTime',
+      description: 'Build mobile banking and wallet apps used by millions across Pakistan and the Gulf.',
+      requirements: '3+ years of React Native, TypeScript, Redux; published apps on both stores.', salaryMin: 250000, salaryMax: 400000, showSalary: true,
+      positions: 2, closesOn: iso(addDays(TODAY, 25)), hiringManagerEmployeeId: emp.em,
+    });
+    await admin.post(`/recruitment/jobs/${post.id}/status`, { status: 'Open' });
+    await admin.put(`/recruitment-extras/posts/${post.id}/criteria`, { minExperienceYears: 3, maxExpectedSalary: 400000, cities: 'Lahore, Islamabad', keywords: 'React Native, TypeScript, Redux' });
+    const people = [
+      ['Hamid', 'Raza', 'Lahore', 5, 330000, 'React Native, TypeScript, Redux, Jest', true],
+      ['Anam', 'Saleem', 'Islamabad', 4, 300000, 'React Native, TypeScript, GraphQL', true],
+      ['Waleed', 'Asghar', 'Karachi', 2, 220000, 'Flutter, Dart', false],
+      ['Rida', 'Fatima', 'Lahore', 6, 450000, 'React Native, Kotlin, Swift', false],
+    ];
+    for (const [first, last, city, years, salary, skills, interview] of people) {
+      const f = new FormData();
+      for (const [k, v] of Object.entries({ FirstName: first, LastName: last, Email: `${first}.${last}.rn@candidates.example`.toLowerCase(), City: city, ExperienceYears: years, ExpectedSalary: salary, NoticeDays: 30, Skills: skills, Source: 'CareersPage' }))
+        f.append(k, String(v));
+      const card = await admin.post(`/recruitment/jobs/${post.id}/candidates`, f);
+      if (!interview) continue;
+      const appId = card.applicationId ?? card.id;
+      await admin.post(`/recruitment/applications/${appId}/move`, { stage: 'Shortlisted', emailCandidate: false });
+      await admin.post(`/recruitment/applications/${appId}/move`, { stage: 'Interview', emailCandidate: false });
+      await admin.post(`/recruitment/applications/${appId}/interviews`, {
+        title: 'Technical interview', startsAtUtc: `${iso(addDays(TODAY, first === 'Hamid' ? 1 : 2))}T07:00:00Z`, durationMinutes: 60, mode: 'Onsite', where: 'Meeting room 3',
+        interviewerIds: [me, emp.em].filter(Boolean), emailCandidate: false,
+      });
+    }
+    if (!me || !mobile) return;
+    for (const i of (await admin.get('/recruitment/interviews/mine')).filter((x) => x.job === 'React Native Developer')) {
+      await admin.put(`/recruitment-extras/interviews/${i.id}/template`, { templateId: mobile.id });
+      const card = await admin.get(`/recruitment-extras/interviews/${i.id}/scorecard`);
+      await admin.put(`/recruitment-extras/interviews/${i.id}/marks`, { marks: card.questions.map((q, n) => ({ questionId: q.id, marks: Math.max(1, q.maxMarks - ((n + i.candidate.length) % 4)) })) });
+    }
+  });
+
+  await step('Email templates', async () => {
+    const kinds = new Set((await admin.get('/setup/email/templates')).map((t) => t.kind));
+    const custom = {
+      Announcement: ['[Systems] {title}', 'Dear {name}, here is an update from {company}.'],
+      ApprovalNeeded: ['Action needed: {title}', 'Hi {name}, a request is waiting for your approval in Qaventra.'],
+      RequestDecided: ['Update on your request: {title}', 'Hi {name}, your request has been decided. Details are below.'],
+      Payslip: ['Your payslip is ready', 'Dear {name}, your salary for the month has been processed by {company} Finance.'],
+      Celebration: ['🎉 {title}', 'Dear {name}, warm wishes from everyone at {company}!'],
+    };
+    for (const [kind, [subject, intro]] of Object.entries(custom)) if (kinds.has(kind)) await admin.put(`/setup/email/templates/${kind}`, { subject, intro, enabled: true });
+  });
+
+  await step('API keys', async () => {
+    const have = new Set((await admin.get('/setup/api-tokens')).map((t) => t.name));
+    for (const name of ['Power BI dashboard', 'Odoo accounting sync']) if (!have.has(name)) await admin.post('/setup/api-tokens', { name, expiresOn: name.startsWith('Odoo') ? `${TODAY.getUTCFullYear() + 1}-06-30` : null });
+    if (!have.has('Old Excel macro')) {
+      const old = await admin.post('/setup/api-tokens', { name: 'Old Excel macro' });
+      await admin.post(`/setup/api-tokens/${old.token.id}/revoke`);
+    }
+  });
+
+  await step('Attendance correction requests', async () => {
+    const days = [];
+    for (let d = addDays(TODAY, -2); days.length < 4; d = addDays(d, -1)) if (!isWeekend(d)) days.push(iso(d));
+    const plan = [
+      ['se3', days[0], 'MissedPunch', 'Forgot to check out, left at 6:10 pm after the release call.'],
+      ['se4', days[1], 'WorkFromHome', 'Worked from home due to a car breakdown; on Slack all day.'],
+      ['qa1', days[2], 'OfficialDuty', 'UAT session at the client office in Gulberg.'],
+      ['bd1', days[3], 'OfficialDuty', 'Client meeting at a bank head office in Karachi.'],
+    ];
+    for (const [key, date, kind, reason] of plan)
+      if (emp[key]) await admin.post('/attendance/requests', { employeeId: emp[key], date, kind, checkIn: '09:05:00', checkOut: '18:10:00', reason });
+  });
+}
+
 // ---------- Run ----------
 
 async function main() {
@@ -242,9 +398,19 @@ async function main() {
     admin = first;
     adminEmail = `${first.me.email} (your own password)`;
     console.log(`Signed in to "${first.me.companyName}" as ${first.me.email}\n`);
-    if ((await admin.get('/biometric/devices')).some((d) => d.name === 'Head Office Main Gate')) {
+    const devices = (await admin.get('/biometric/devices')).map((d) => d.name);
+    if (devices.includes('Karachi Office Gate')) {
       console.log('Demo data is already in this company. Nothing was changed.');
       process.exit(1);
+    }
+    if (devices.includes('Head Office Main Gate')) {
+      // The first version of this script ran here: add only the data for the newer features.
+      console.log('Base demo data is already here; adding data for the newer features.\n');
+      const dept = Object.fromEntries((await admin.get('/departments')).map((d) => [d.name, d.id]));
+      dept.Engineering ??= dept['Software Engineering'];
+      const roster = await step('People for the demo roles', () => useExisting(admin, false));
+      await newFeatures(admin, roster.keys, dept, first.me.employeeId);
+      return finish();
     }
   } else {
     const existing = (await first.get('/platform/companies')).find((c) => c.name.toLowerCase() === COMPANY.toLowerCase());
@@ -444,40 +610,10 @@ async function main() {
     await admin.post('/announcements/polls', { question: 'Which day suits the monthly town hall?', opensOn: iso(TODAY), closesOn: iso(addDays(TODAY, 5)), isAnonymous: false, resultsVisibility: 'AfterVoting', options: ['First Monday', 'Last Thursday', 'Mid-month Wednesday'] });
   });
 
-  await step('Birthday wish', async () => {
-    const today = (await admin.get('/dashboard/celebrations')).filter((c) => c.isToday ?? c.kind === 'Birthday');
-    if (today[0]) await hr.post(`/dashboard/celebrations/${today[0].employeeId}/wish`, { kind: today[0].kind ?? 'Birthday' });
-  });
-
-  // Performance: KPI library, a launched cycle, goals, feedback and check-ins.
-  await step('KPI library', async () => {
-    for (const k of [
-      { name: 'Story points delivered', category: 'Engineering', unit: 'points', defaultTarget: '40 per sprint', defaultWeight: 30 },
-      { name: 'Production defects', category: 'Engineering', unit: 'count', defaultTarget: 'Under 3 per quarter', defaultWeight: 20 },
-      { name: 'Code review turnaround', category: 'Engineering', unit: 'hours', defaultTarget: 'Within 24', defaultWeight: 15 },
-      { name: 'Test coverage', category: 'Quality', unit: '%', defaultTarget: '80', defaultWeight: 20 },
-      { name: 'Revenue closed', category: 'Sales', unit: 'PKR', defaultTarget: '25,000,000', defaultWeight: 40 },
-      { name: 'Client satisfaction (CSAT)', category: 'Delivery', unit: 'score', defaultTarget: '4.5 / 5', defaultWeight: 25 },
-    ])
-      await admin.post('/performance/kpis', k);
-  });
+  // Performance: a launched cycle, goals, feedback and check-ins.
   let reviewId;
   await step('Performance cycle launched', async () => {
-    await admin.post('/performance/templates', {
-      name: 'Engineering half-year review', description: 'Goals plus the core competencies', selfReview: true,
-      sections: [
-        { name: 'Goals', weight: 70, kind: 'Goals', items: [] },
-        { name: 'Competencies', weight: 30, kind: 'Competencies', items: [{ title: 'Ownership' }, { title: 'Communication' }, { title: 'Technical depth' }] },
-      ],
-    });
-    const template = (await admin.get('/performance/templates')).find((t) => t.name === 'Engineering half-year review').id;
-    const y = TODAY.getUTCFullYear();
-    await admin.post('/performance/cycles', {
-      name: `H2 ${y}`, periodFrom: `${y}-07-01`, periodTo: `${y}-12-31`, templateId: template, departmentIds: [dept.Engineering, dept['Quality Assurance']],
-      goalsDue: iso(addDays(TODAY, 7)), selfReviewDue: `${y}-12-15`, managerReviewDue: `${y}-12-24`,
-    });
-    const cycle = (await admin.get('/performance/cycles')).find((c) => c.name === `H2 ${y}`).id;
-    await admin.post(`/performance/cycles/${cycle}/launch`);
+    await ensureCycle(admin, dept);
     reviewId = ali ? (await ali.get('/performance/reviews/my'))[0].id : (await admin.get('/performance/reviews/team')).find((r) => r.employeeId === emp.se1)?.id;
     if (!ali) return;
     await ali.put(`/performance/reviews/${reviewId}/goals`, {
@@ -502,16 +638,7 @@ async function main() {
   }
 
   // Hiring
-  await step('Hiring: jobs, candidates, interview template', async () => {
-    await admin.post('/recruitment-extras/interview-templates', {
-      name: 'Backend engineer technical round',
-      questions: [
-        { text: 'Design a rate limiter for a public API', category: 'System design', maxMarks: 10 },
-        { text: 'Explain database indexing trade-offs', category: 'Databases', maxMarks: 10 },
-        { text: 'Live coding: parse and validate a CNIC', category: 'Coding', maxMarks: 10 },
-        { text: 'Communication and attitude', category: 'Culture', maxMarks: 5 },
-      ],
-    });
+  await step('Hiring: jobs and candidates', async () => {
     await admin.post('/recruitment/requests', { title: 'DevOps Engineer', departmentId: dept.Engineering, designationId: desig['Software Engineer'], positions: 1, reason: 'Cloud migration project for a banking client' });
     const jobs = [
       { title: 'Senior .NET Developer', department: 'Engineering', designation: 'Senior Software Engineer', min: 300000, max: 450000, positions: 2 },
@@ -607,12 +734,10 @@ async function main() {
   });
 
   // Company setup screens
-  await step('Email template and security', async () => {
-    await admin.put('/setup/email/templates/Announcement', { subject: '[Systems] {title}', intro: 'Dear {name}, here is an update from {company}.', enabled: true });
-    // Limiting sign-in to the demo domain would lock out an existing company's own people.
-    if (!ownCompany) await admin.put('/setup/security', { allowedEmailDomains: [DOMAIN] });
-    await admin.post('/setup/api-tokens', { name: 'Power BI dashboard' });
-  });
+  // Limiting sign-in to the demo domain would lock out an existing company's own people.
+  if (!ownCompany) await step('Sign-in domain', () => admin.put('/setup/security', { allowedEmailDomains: [DOMAIN] }));
+
+  await newFeatures(admin, emp, dept, admin.me.employeeId);
 
   if (ownCompany) return finish();
   // Write the logins down.
