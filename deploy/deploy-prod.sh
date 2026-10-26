@@ -146,8 +146,8 @@ ftp() { curl -s -S --ssl-reqd -K "$cfg" ${resolve[@]+"${resolve[@]}"} "$@"; }
 echo '<h1>Qaventra is being updated. Please try again in a minute.</h1>' > "$offline"
 offline_ok=0
 for attempt in 1 2 3 4 5; do
-  if ! ftp -T "$offline" "$base/app_offline.htm" >/dev/null 2>&1; then
-    echo "retry $attempt for app_offline.htm"; sleep 5; continue
+  if ! err="$(ftp -T "$offline" "$base/app_offline.htm" 2>&1 >/dev/null)"; then
+    echo "retry $attempt for app_offline.htm: ${err:-no details}"; sleep 5; continue
   fi
   for check in 1 2 3 4 5 6; do
     sleep 5
