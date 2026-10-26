@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2 } from 'lucide-react';
 import { errorMessage } from '../../api/client';
@@ -364,10 +364,15 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function Item({ label, children }: { label: string; children: ReactNode }) {
+  const id = useId();
+  // While editing, the term labels its input so screen readers (and search by label) find the field.
+  const control = isValidElement(children) && (children.type === Input || children.type === Select || children.type === Textarea);
   return (
     <div className="min-w-0">
-      <dt className="mb-1 text-xs text-zinc-500 dark:text-zinc-400">{label}</dt>
-      <dd className="text-sm text-zinc-900 dark:text-zinc-100">{children}</dd>
+      <dt className="mb-1 text-xs text-zinc-500 dark:text-zinc-400">{control ? <label htmlFor={id}>{label}</label> : label}</dt>
+      <dd className="text-sm text-zinc-900 dark:text-zinc-100">
+        {control ? cloneElement(children as ReactElement<{ id?: string }>, { id }) : children}
+      </dd>
     </div>
   );
 }
