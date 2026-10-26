@@ -451,6 +451,7 @@ async function moreModules(admin, emp, dept, me) {
 
   await step('Projects', async () => {
     const team = ['se1', 'se2', 'se3', 'se4', 'se5'].map((k) => emp[k]).filter(Boolean);
+    if (me && !team.includes(me)) team.push(me);
     const projects = [
       { name: 'Core banking API modernisation', client: 'A commercial bank', budgetHours: 2400, tasks: ['Account service', 'Payments gateway', 'Load testing'] },
       { name: 'Telecom self-care app', client: 'A mobile operator', budgetHours: 1600, tasks: ['Login and OTP', 'Bill payment', 'Store release'] },
@@ -534,6 +535,102 @@ async function moreModules(admin, emp, dept, me) {
     const people = [emp.se1, emp.se2, emp.se3, emp.se6].filter(Boolean);
     for (const [i, a] of laptops.entries())
       if (people[i]) await admin.post(`/assets/${a.id}/assign`, { employeeId: people[i], assignedOn: iso(addDays(TODAY, -60 + i)), condition: 'Good', notes: 'With charger and bag' });
+  });
+
+  await step('Organisation lists: regions, grades, cost centers', async () => {
+    const have = new Set((await admin.get('/lookups')).map((l) => `${l.kind}|${l.name}`));
+    const lists = {
+      Region: ['Lahore', 'Karachi', 'Islamabad'],
+      Grade: ['G1 Associate', 'G2 Engineer', 'G3 Senior', 'G4 Lead', 'G5 Manager', 'G6 Director'],
+      CostCenter: ['CC-100 Delivery', 'CC-200 Sales', 'CC-300 Support', 'CC-900 Corporate'],
+      Division: ['Banking & Financial Services', 'Telecom & Media', 'Corporate'],
+      EmployeeGroup: ['Permanent staff', 'Contract staff'],
+    };
+    for (const [kind, names] of Object.entries(lists)) for (const name of names) if (!have.has(`${kind}|${name}`)) await admin.post('/lookups', { kind, name });
+  });
+
+  await step('Approval flows and a delegation', async () => {
+    await admin.put('/approvals/flows/Leave', { steps: [{ kind: 'LineManager', employeeId: null }] });
+    await admin.put('/approvals/flows/Expense', { steps: [{ kind: 'LineManager', employeeId: null }, { kind: 'Hr', employeeId: null }] });
+    await admin.put('/approvals/flows/Travel', { steps: [{ kind: 'LineManager', employeeId: null }, { kind: 'Hr', employeeId: null }] });
+  });
+
+  // The person standing in must have a login, which a company's own HR manager normally has.
+  if (me && emp.hrm)
+    await step('Delegation while the CEO travels', () =>
+      admin.post('/approvals/delegations', { toEmployeeId: emp.hrm, fromDate: iso(addDays(TODAY, 14)), toDate: iso(addDays(TODAY, 21)), requestTypes: ['Travel', 'Expense'], reason: 'CEO travelling to the Dubai office' }));
+
+  await step('Access templates', async () => {
+    await admin.post('/access/templates', { name: 'Recruiter', description: 'Hiring and onboarding only', modules: ['recruitment', 'onboarding'] });
+    await admin.post('/access/templates', { name: 'Payroll officer', description: 'Payroll, pay changes and reports', modules: ['payroll', 'reports'] });
+  });
+
+  await step('Leave reasons, penalty rules and exemptions', async () => {
+    const types = await admin.get('/setup/leave-types');
+    const sick = types.find((t) => /sick/i.test(t.name));
+    if (sick)
+      for (const [name, maxDays, requiresDocument] of [['Fever or flu', 3, false], ['Hospital admission', 14, true], ['Medical procedure', 5, true]])
+        await admin.post('/leave-rules/reasons', { leaveTypeId: sick.id, name, maxDays, requiresDocument });
+    const casual = types.find((t) => /casual/i.test(t.name)) ?? types.find((t) => t.isPaid);
+    await admin.post('/attendance-rules/penalties', casual
+      ? { name: 'Late arrivals', flag: 'Late', everyCount: 3, freeCount: 2, minMinutes: 15, repeat: true, action: 'DeductLeave', leaveTypeId: casual.id, days: 0.5 }
+      : { name: 'Late arrivals', flag: 'Late', everyCount: 3, freeCount: 2, minMinutes: 15, repeat: true, action: 'DeductPay', days: 0.5 });
+    await admin.post('/attendance-rules/penalties', { name: 'Short days', flag: 'ShortDay', everyCount: 2, freeCount: 0, minMinutes: 0, repeat: true, action: 'DeductPay', days: 0.5 });
+    await admin.put('/exemptions/settings', { exemptionsPerMonth: 2, exemptionWithinDays: 7 });
+  });
+
+  await step('Evening shift and support roster', async () => {
+    const shifts = await admin.get('/setup/shifts');
+    const evening = shifts.find((x) => x.name === 'Evening support 2-11')
+      ?? await admin.post('/setup/shifts', { name: 'Evening support 2-11', startTime: '14:00:00', endTime: '23:00:00', graceMinutes: 15, weeklyOffDays: ['Saturday', 'Sunday'], isDefault: false, breakMinutes: 45 });
+    const monday = addDays(TODAY, 7 - ((TODAY.getUTCDay() + 6) % 7));
+    const people = [emp.it1, emp.it2, emp.qa2].filter(Boolean);
+    if (people.length)
+      await admin.put('/attendance/roster', { employeeIds: people, from: iso(monday), to: iso(addDays(monday, 13)), weekdays: ['Monday', 'Wednesday', 'Friday'], shiftId: evening.id });
+  });
+
+  await step('Expense setup', async () => {
+    for (const [fromCity, toCity, km] of [['Lahore', 'Islamabad', 380], ['Lahore', 'Faisalabad', 180], ['Karachi', 'Hyderabad', 165]])
+      await admin.post('/expense-setup/routes', { fromCity, toCity, km });
+    await admin.post('/expense-setup/types', { name: 'Mileage (own car)', category: 'Fuel', calculation: 'Distance', rate: 35, yearlyLimit: 60000, receiptRequired: false, isActive: true });
+    await admin.post('/expense-setup/types', { name: 'Mobile bill', category: 'Mobile', calculation: 'Amount', yearlyLimit: 36000, receiptRequired: true, isActive: true });
+  });
+
+  await step('Pay requests: overtime and advance', async () => {
+    const pay = new Date(Date.UTC(TODAY.getUTCFullYear(), TODAY.getUTCMonth() + 1, 1));
+    const year = pay.getUTCFullYear(), month = pay.getUTCMonth() + 1;
+    let day = addDays(TODAY, -3);
+    while (isWeekend(day)) day = addDays(day, -1);
+    if (emp.se2) await admin.post('/pay/requests', { employeeId: emp.se2, kind: 'Overtime', hours: 6, workDate: iso(day), isTaxable: true, year, month, reason: 'Production release support' });
+    if (emp.qa1) await admin.post('/pay/requests', { employeeId: emp.qa1, kind: 'AdvanceSalary', title: 'Salary advance', amount: 40000, isTaxable: false, year, month, reason: 'Family emergency' });
+    if (emp.bd1) await admin.post('/pay/requests', { employeeId: emp.bd1, kind: 'Commission', title: 'Q3 sales commission', amount: 120000, isTaxable: true, year, month, reason: 'Closed two bank deals' });
+  });
+
+  await step('Tax adjustment and emergency contacts', async () => {
+    const years = await admin.get('/funds/tax-years');
+    if (years[0] && emp.se8)
+      await admin.post('/funds/tax-adjustments', { employeeId: emp.se8, taxYearCode: years[0], kind: 'PreviousIncome', amount: 450000, note: 'Previous employer, July to August' });
+    const contacts = { se1: ['Sara Raza', 'Spouse', '+92 300 1112233'], qal: ['Tariq Qureshi', 'Father', '+92 321 4445566'], hrm: ['Usman Butt', 'Brother', '+92 333 7778899'] };
+    for (const [key, [name, relation, phone]] of Object.entries(contacts))
+      if (emp[key]) await admin.put(`/employees/${emp[key]}/emergency-contacts`, { contacts: [{ name, relation, phone }] });
+  });
+
+  await step('Careers page address', async () => {
+    // The address is shared across companies on the server; take another if it is gone.
+    try {
+      await admin.put('/recruitment/careers-slug', { slug: 'systems-demo' });
+    } catch {
+      await admin.put('/recruitment/careers-slug', { slug: `systems-demo-${Math.floor(1000 + rand() * 9000)}` });
+    }
+  });
+
+  if (me) await step('A timesheet for last week', async () => {
+    const projects = await admin.get('/projects');
+    const monday = addDays(TODAY, -((TODAY.getUTCDay() + 6) % 7) - 7);
+    const lines = [];
+    for (let d = 0; d < 5; d++)
+      for (const [n, p] of projects.slice(0, 2).entries()) lines.push({ date: iso(addDays(monday, d)), projectId: p.id, minutes: n === 0 ? 300 : 120 });
+    if (lines.length) await admin.put('/timesheets/week', { weekStart: iso(monday), lines });
   });
 
   // Last: the clearance template marks the whole script as run.
