@@ -67,6 +67,19 @@ public class AttendanceRecord : TenantEntity
     public int EarlyLeaveMinutes { get; set; }
     /// <summary>Why the record was entered or changed, e.g. "Work from home (approved request)".</summary>
     public string? Note { get; set; }
+    /// <summary>Total of the day's finished breaks.</summary>
+    public int BreakMinutes { get; set; }
+}
+
+/// <summary>A break during a working day (lunch, prayer, tea, personal). Open while EndUtc is empty.</summary>
+public class AttendanceBreak : TenantEntity
+{
+    public Guid AttendanceRecordId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public DateOnly Date { get; set; }
+    public BreakKind Kind { get; set; }
+    public DateTime StartUtc { get; set; }
+    public DateTime? EndUtc { get; set; }
 }
 
 /// <summary>An employee asks to add or fix a day's attendance; applied when the approval chain approves it.</summary>

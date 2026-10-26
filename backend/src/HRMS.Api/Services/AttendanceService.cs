@@ -54,6 +54,7 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock, ScheduleServ
         CheckChannel(employee, source, ip);
         await MatchOfficeAsync(employee, latitude, longitude);
         record.CheckOutUtc = clock.UtcNow;
+        await CloseBreakAsync(record);
         record.CheckOutLatitude = latitude;
         record.CheckOutLongitude = longitude;
         await schedule.EnsureOpenAsync(today);
@@ -61,6 +62,47 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock, ScheduleServ
         await db.SaveChangesAsync();
         return record;
     }
+
+    /// <summary>Starts a break between check-in and check-out. One break at a time.</summary>
+    public async Task<AttendanceBreak> StartBreakAsync(Guid employeeId, BreakKind kind)
+    {
+        var today = await clock.TodayAsync();
+        var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == today)
+            ?? throw new DomainException("Check in before starting a break.");
+        if (record.CheckOutUtc is not null)
+            throw new DomainException("You have already checked out today.");
+        if (await db.AttendanceBreaks.AnyAsync(x => x.AttendanceRecordId == record.Id && x.EndUtc == null))
+            throw new DomainException("You are already on a break.");
+        var b = new AttendanceBreak { AttendanceRecordId = record.Id, EmployeeId = employeeId, Date = today, Kind = kind, StartUtc = clock.UtcNow };
+        db.AttendanceBreaks.Add(b);
+        await db.SaveChangesAsync();
+        return b;
+    }
+
+    public async Task<AttendanceBreak> EndBreakAsync(Guid employeeId)
+    {
+        var today = await clock.TodayAsync();
+        var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == today)
+            ?? throw new DomainException("You have not checked in today.");
+        var b = await CloseBreakAsync(record) ?? throw new DomainException("You are not on a break.");
+        await db.SaveChangesAsync();
+        return b;
+    }
+
+    /// <summary>Ends the open break, if any, and updates the day's break total. Checking out ends it too.</summary>
+    private async Task<AttendanceBreak?> CloseBreakAsync(AttendanceRecord record)
+    {
+        var open = await db.AttendanceBreaks.FirstOrDefaultAsync(x => x.AttendanceRecordId == record.Id && x.EndUtc == null);
+        if (open is null)
+            return null;
+        open.EndUtc = clock.UtcNow;
+        var done = await db.AttendanceBreaks.Where(x => x.AttendanceRecordId == record.Id && x.EndUtc != null && x.Id != open.Id)
+            .Select(x => new { x.StartUtc, x.EndUtc }).ToListAsync();
+        record.BreakMinutes = done.Sum(x => Minutes(x.StartUtc, x.EndUtc!.Value)) + Minutes(open.StartUtc, open.EndUtc.Value);
+        return open;
+    }
+
+    public static int Minutes(DateTime from, DateTime to) => Math.Max(0, (int)Math.Round((to - from).TotalMinutes));
 
     /// <summary>HR correction or entry for a missed punch. Times are local to the company.</summary>
     public async Task<AttendanceRecord> SaveManualAsync(Guid employeeId, DateOnly date, TimeOnly checkIn, TimeOnly? checkOut,

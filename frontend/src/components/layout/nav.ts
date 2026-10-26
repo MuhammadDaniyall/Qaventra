@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarRange,
+  Coffee,
   CalendarClock,
   CalendarDays,
   DoorOpen,
@@ -140,6 +141,7 @@ export const NAV: NavSection[] = [
     items: [
       { to: '/employees', label: 'Employees', icon: Users, roles: APPROVER_ROLES, module: 'employees' },
       { to: '/attendance/daily', label: 'Daily attendance', icon: CalendarCheck, roles: APPROVER_ROLES, module: 'attendance' },
+      { to: '/attendance/breaks', label: 'Breaks', icon: Coffee, roles: APPROVER_ROLES, module: 'attendance' },
       { to: '/attendance/roster', label: 'Roster', icon: CalendarRange, roles: APPROVER_ROLES, module: 'attendance' },
       { to: '/attendance/monthly', label: 'Monthly attendance', icon: CalendarDays, roles: APPROVER_ROLES, module: 'attendance' },
       { to: '/leave/approvals', label: 'Leave approvals', icon: ClipboardCheck, roles: APPROVER_ROLES, module: 'leave' },

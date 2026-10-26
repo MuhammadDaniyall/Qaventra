@@ -73,6 +73,7 @@ const LetterPage = lazy(() => import('./pages/letters/LetterPage').then((m) => (
 const LettersPage = lazy(() => import('./pages/letters/LettersPage').then((m) => ({ default: m.LettersPage })));
 const IdCardsPage = lazy(() => import('./pages/employees/IdCardsPage').then((m) => ({ default: m.IdCardsPage })));
 const AccountingPage = lazy(() => import('./pages/payroll/AccountingPage').then((m) => ({ default: m.AccountingPage })));
+const BreaksPage = lazy(() => import('./pages/attendance/BreaksPage').then((m) => ({ default: m.BreaksPage })));
 const MachinesPage = lazy(() => import('./pages/attendance/MachinesPage').then((m) => ({ default: m.MachinesPage })));
 const InsightsPage = lazy(() => import('./pages/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })));
 const OrgChartPage = lazy(() => import('./pages/orgchart/OrgChartPage').then((m) => ({ default: m.OrgChartPage })));
@@ -173,6 +174,7 @@ export default function App() {
                 <Route path="/employees" element={<EmployeesPage />} />
                 <Route path="/employees/:id" element={<EmployeeDetailPage />} />
                 <Route path="/attendance/daily" element={<DailyAttendancePage />} />
+                <Route path="/attendance/breaks" element={<BreaksPage />} />
                 <Route path="/attendance/roster" element={<RosterPage />} />
                 <Route path="/attendance/monthly" element={<MonthlyAttendancePage />} />
                 <Route path="/leave/approvals" element={<LeaveApprovalsPage />} />

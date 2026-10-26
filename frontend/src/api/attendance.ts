@@ -1,4 +1,4 @@
-import type { Attendance, DailyRow, ManualAttendanceRequest, PunchRequest, Today } from '../types';
+import type { Attendance, AttendanceBreak, BreakDay, BreakKind, DailyRow, ManualAttendanceRequest, PunchRequest, Today } from '../types';
 import { http } from './client';
 
 export const attendanceApi = {
@@ -8,6 +8,9 @@ export const attendanceApi = {
   my: (year: number, month: number) => http.get<Attendance[]>('/attendance/my', { year, month }),
   daily: (date: string) => http.get<DailyRow[]>('/attendance/daily', { date }),
   manual: (b: ManualAttendanceRequest) => http.post<Attendance>('/attendance/manual', b),
+  startBreak: (kind: BreakKind) => http.post<AttendanceBreak>('/attendance/break/start', { kind }),
+  endBreak: () => http.post<AttendanceBreak>('/attendance/break/end'),
+  breaks: (from: string, to: string, departmentId?: string) => http.get<BreakDay[]>('/attendance/breaks', { from, to, departmentId: departmentId || undefined }),
 };
 
 export type AttendanceRequestKind = 'MissedPunch' | 'WorkFromHome' | 'OfficialDuty' | 'TimeCorrection';

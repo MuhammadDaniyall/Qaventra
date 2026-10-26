@@ -835,3 +835,11 @@ public enum LetterAutoUse
     /// <summary>Confirmed after probation.</summary>
     Confirmation = 6,
 }
+
+public enum BreakKind
+{
+    Lunch = 1,
+    Prayer = 2,
+    Tea = 3,
+    Personal = 4,
+}

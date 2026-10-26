@@ -495,6 +495,18 @@ export interface Attendance {
   note: string | null;
   lateMinutes: number;
   earlyLeaveMinutes: number;
+  breakMinutes: number;
+}
+
+export type BreakKind = 'Lunch' | 'Prayer' | 'Tea' | 'Personal';
+
+/** Company-local times; `end` is null while the break is on. */
+export interface AttendanceBreak {
+  id: string;
+  kind: BreakKind;
+  start: string;
+  end: string | null;
+  minutes: number;
 }
 
 export interface Today {
@@ -504,6 +516,22 @@ export interface Today {
   shiftStart: string | null;
   shiftEnd: string | null;
   locationRequired: boolean;
+  breaks: AttendanceBreak[] | null;
+  allowedBreakMinutes: number;
+}
+
+export interface BreakDay {
+  employeeId: string;
+  employeeCode: string;
+  fullName: string;
+  department: string | null;
+  date: string;
+  count: number;
+  minutes: number;
+  allowedMinutes: number;
+  extraMinutes: number;
+  onBreak: boolean;
+  breaks: AttendanceBreak[];
 }
 
 export interface DailyRow {

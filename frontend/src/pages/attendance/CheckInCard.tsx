@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, LogIn, LogOut, MapPin, MapPinOff } from 'lucide-react';
+import { CheckCircle2, Clock, Coffee, LogIn, LogOut, MapPin, MapPinOff, Play } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { Button, Card, Skeleton, StatusBadge, useToast } from '../../components/ui';
+import type { BreakKind } from '../../types';
+import { tx } from '../../lib/i18n';
 import { cn } from '../../lib/cn';
 import { formatDate, formatMinutes, formatTime, pad } from '../../lib/format';
 import { getCurrentPosition, type Coords } from '../../lib/geo';
@@ -62,6 +64,16 @@ export function CheckInCard({ className }: { className?: string }) {
     },
   });
 
+  const onBreak = today.data?.breaks?.find((b) => !b.end) ?? null;
+  const breakAction = useMutation({
+    mutationFn: (kind: BreakKind | null) => (kind ? attendanceApi.startBreak(kind) : attendanceApi.endBreak()),
+    onSuccess: (b) => {
+      toast.success(b.end ? `${tx('Break ended')} · ${formatMinutes(b.minutes)}` : `${tx(b.kind)} ${tx('break started')}`);
+      qc.invalidateQueries({ queryKey: qk.attendanceToday });
+    },
+    onError: (err) => toast.error(err),
+  });
+
   if (today.isLoading) {
     return (
       <Card className={cn('p-6', className)}>
@@ -81,6 +93,7 @@ export function CheckInCard({ className }: { className?: string }) {
 
   const t = today.data!;
   const worked = record ? (record.checkOut ? record.workedMinutes : minutesSince(record.checkIn, now)) : 0;
+  const breakTotal = (t.breaks ?? []).reduce((sum, b) => sum + (b.end ? b.minutes : minutesSince(b.start, now)), 0);
 
   return (
     <Card className={cn('relative overflow-hidden', className)}>
@@ -118,13 +131,34 @@ export function CheckInCard({ className }: { className?: string }) {
                 </span>
               )}
               <span className="text-zinc-500 dark:text-zinc-400">{formatMinutes(worked)} worked</span>
+              {breakTotal > 0 && (
+                <span className={cn('text-zinc-500 dark:text-zinc-400', t.allowedBreakMinutes > 0 && breakTotal > t.allowedBreakMinutes && 'font-medium text-amber-700 dark:text-amber-300')}>
+                  {formatMinutes(breakTotal)} {tx('break')}
+                  {t.allowedBreakMinutes > 0 && ` / ${formatMinutes(t.allowedBreakMinutes)}`}
+                </span>
+              )}
             </div>
           )}
           {mode === 'done' ? (
             <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
               <CheckCircle2 className="size-5" /> You're done for today
             </div>
+          ) : onBreak ? (
+            <Button
+              size="lg"
+              variant="primary"
+              className="h-14 min-w-52 rounded-xl text-base"
+              loading={breakAction.isPending}
+              icon={<Play className="size-5" />}
+              onClick={() => breakAction.mutate(null)}
+            >
+              {`${tx('End break')} · ${tx(onBreak.kind)} · ${minutesSince(onBreak.start, now) < 1 ? tx('just started') : formatMinutes(minutesSince(onBreak.start, now))}`}
+            </Button>
           ) : (
+            <div className="flex flex-wrap items-center gap-2 md:justify-end">
+            {mode === 'out' && (
+              <BreakMenu loading={breakAction.isPending} onPick={(k) => breakAction.mutate(k)} />
+            )}
             <Button
               size="lg"
               variant={mode === 'in' ? 'primary' : 'danger'}
@@ -135,6 +169,7 @@ export function CheckInCard({ className }: { className?: string }) {
             >
               {punch.isPending ? (mode === 'in' ? 'Checking in…' : 'Checking out…') : mode === 'in' ? 'Check in' : 'Check out'}
             </Button>
+            </div>
           )}
         </div>
       </div>
@@ -148,5 +183,60 @@ export function CheckInCard({ className }: { className?: string }) {
         </div>
       )}
     </Card>
+  );
+}
+
+const BREAKS: BreakKind[] = ['Lunch', 'Prayer', 'Tea', 'Personal'];
+
+function BreakMenu({ loading, onPick }: { loading: boolean; onPick: (kind: BreakKind) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={ref} className="relative">
+      <Button
+        size="lg"
+        variant="secondary"
+        className="h-14 rounded-xl text-base"
+        loading={loading}
+        icon={<Coffee className="size-5" />}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      >
+        Break
+      </Button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute end-0 z-40 mt-2 w-44 animate-pop-in overflow-hidden rounded-xl border border-zinc-200 bg-white py-1.5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+        >
+          {BREAKS.map((k) => (
+            <button
+              key={k}
+              type="button"
+              role="menuitem"
+              className="block w-full px-4 py-2 text-start text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              onClick={() => {
+                setOpen(false);
+                onPick(k);
+              }}
+            >
+              {tx(k)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

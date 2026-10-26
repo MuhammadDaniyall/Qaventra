@@ -45,6 +45,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
     public DbSet<BiometricDevice> BiometricDevices => Set<BiometricDevice>();
+    public DbSet<AttendanceBreak> AttendanceBreaks => Set<AttendanceBreak>();
     public DbSet<CelebrationWish> CelebrationWishes => Set<CelebrationWish>();
     public DbSet<GlAccount> GlAccounts => Set<GlAccount>();
     public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
@@ -760,6 +761,13 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             e.HasIndex(x => new { x.TenantId, x.Line }).IsUnique();
             e.HasOne<GlAccount>().WithMany().HasForeignKey(x => x.GlAccountId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        b.Entity<AttendanceBreak>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.EmployeeId, x.Date });
+            e.HasOne<AttendanceRecord>().WithMany().HasForeignKey(x => x.AttendanceRecordId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId).OnDelete(DeleteBehavior.Restrict);
         });
 
         b.Entity<BiometricDevice>(e =>
