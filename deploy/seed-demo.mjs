@@ -4,7 +4,8 @@
 //   node deploy/seed-demo.mjs                                  # production, owner login from deploy/secrets/production.json
 //   node deploy/seed-demo.mjs --base http://localhost:5199     # any other server; set QV_OWNER_EMAIL / QV_OWNER_PASSWORD
 //
-// Creates the company (stops if it already exists), then departments, people, logins, attendance from a biometric
+// Signed in as the platform owner it creates the company (stops if it already exists). Signed in as a company admin it
+// fills that admin's own company instead (stops if the demo people are already there). Then departments, people, logins, attendance from a biometric
 // machine, leave, a finalized payroll with its journal, performance reviews, hiring, training, helpdesk and more.
 // The demo logins are written to deploy/secrets/demo-logins.txt (git-ignored).
 
@@ -59,7 +60,9 @@ class Api {
 
 async function signIn(email, password) {
   const s = await new Api().post('/auth/login', { email, password });
-  return new Api(s.token);
+  const api = new Api(s.token);
+  api.me = s.user;
+  return api;
 }
 
 // ---------- Helpers ----------
@@ -148,34 +151,123 @@ function dateOfBirth(index) {
   return `${year}-${pad(1 + (index * 5) % 12)}-${pad(1 + (index * 11) % 28)}`;
 }
 
+// ---------- Existing company ----------
+
+// Picks people for the demo roles by title, gives everyone a salary and punch code if missing, and puts two
+// birthdays on today so the dashboard has something to celebrate.
+async function useExisting(admin) {
+  const list = [];
+  for (let page = 1; ; page++) {
+    const r = await admin.get(`/employees?page=${page}&pageSize=200`);
+    list.push(...r.items);
+    if (list.length >= r.total || !r.items.length) break;
+  }
+  const people = [];
+  for (const e of list) people.push(await admin.get(`/employees/${e.id}`));
+  const used = new Set();
+  const take = (test) => {
+    const p = people.find((x) => !used.has(x.id) && test(x));
+    if (p) used.add(p.id);
+    return p?.id;
+  };
+  const title = (t) => (x) => (x.designation ?? '').toLowerCase().includes(t.toLowerCase());
+  const reportsTo = (id) => (x) => x.managerId === id;
+  const keys = {};
+  keys.ceo = take(title('Chief Executive'));
+  keys.hoe = take(title('VP Engineering')) ?? take(title('Head'));
+  keys.em = take(title('Team Lead - Web')) ?? take(title('Team Lead'));
+  keys.em2 = take(title('Team Lead - Backend')) ?? take(title('Team Lead'));
+  for (const k of ['se1', 'se2', 'se3', 'se4', 'se5']) keys[k] = take(reportsTo(keys.em)) ?? take(title('Software Engineer'));
+  for (const k of ['se6', 'se7', 'se8']) keys[k] = take(reportsTo(keys.em2)) ?? take(title('Software Engineer'));
+  keys.qal = take(title('Head of Quality')) ?? take(title('QA Lead'));
+  keys.qa1 = take(title('SQA Engineer'));
+  keys.qa2 = take(title('SQA Engineer'));
+  keys.hrm = take(title('HR Manager'));
+  keys.hre = take(title('HR Executive')) ?? take(title('HR'));
+  keys.fm = take(title('Chief Financial')) ?? take(title('Finance'));
+  keys.acc = take(title('Accountant'));
+  keys.sm = take(title('Director Sales')) ?? take(title('Sales'));
+  keys.bd1 = take(title('Business Development'));
+  keys.bd2 = take(title('Business Development'));
+  keys.pm = take(title('Head of Product'));
+  keys.pm2 = take(title('Product Manager'));
+  keys.it1 = take(title('IT & Admin Manager')) ?? take(title('IT'));
+  keys.it2 = take(title('System Administrator')) ?? take(title('Network'));
+  for (const k of Object.keys(keys)) keys[k] ??= take(() => true);
+
+  const level = (t = '') =>
+    /chief|ceo|cfo|coo/i.test(t) ? 1200000 : /vp|director|head/i.test(t) ? 750000 : /manager|lead/i.test(t) ? 450000
+      : /senior/i.test(t) ? 330000 : /associate|assistant|executive/i.test(t) ? 140000 : 220000;
+  const punchers = [];
+  for (const [i, p] of people.entries()) {
+    if (!(await admin.call('GET', `/employees/${p.id}/salary`))) {
+      const basic = level(p.designation);
+      await admin.put(`/employees/${p.id}/salary`, {
+        effectiveFrom: p.joiningDate, basicSalary: Math.round(basic * 0.6), eobiApplicable: true,
+        components: [
+          { name: 'House rent', kind: 'Earning', amount: Math.round(basic * 0.3), isTaxable: true },
+          { name: 'Utilities', kind: 'Earning', amount: Math.round(basic * 0.1), isTaxable: true },
+        ],
+      });
+    }
+    const file = await admin.get(`/employees/${p.id}/file`);
+    let code = file?.punchCode;
+    if (!code) {
+      code = String(5000 + i);
+      await admin.put(`/employees/${p.id}/file`, { ...(file ?? {}), punchCode: code });
+    }
+    punchers.push([p.id, code]);
+  }
+  // Two birthdays today.
+  for (const id of [keys.se1, keys.qal]) {
+    const p = people.find((x) => x.id === id);
+    const dob = `${(p.dateOfBirth ?? '1992-01-01').slice(0, 4)}-${pad(TODAY.getUTCMonth() + 1)}-${pad(TODAY.getUTCDate())}`;
+    await admin.put(`/employees/${id}`, { ...p, dateOfBirth: dob });
+  }
+  return { keys, punchers };
+}
+
 // ---------- Run ----------
 
 async function main() {
-  console.log(`Seeding "${COMPANY}" on ${BASE}\n`);
+  console.log(`Seeding demo data on ${BASE}\n`);
   const owner = ownerLogin();
-  const platform = await signIn(owner.email, owner.password);
-
-  const existing = (await platform.get('/platform/companies')).find((c) => c.name.toLowerCase() === COMPANY.toLowerCase());
-  if (existing) {
-    console.log(`"${COMPANY}" already exists. Nothing was changed. Delete it from the platform screen first to seed again.`);
-    process.exit(1);
-  }
-
+  const first = await signIn(owner.email, owner.password);
   const password = `Demo-${randomBytes(6).toString('base64url')}-26`;
-  const adminEmail = `admin@${DOMAIN}`;
-  const created = await step('Company and its admin', () =>
-    platform.post('/platform/companies', {
-      name: COMPANY, adminFirstName: 'Demo', adminLastName: 'Admin', adminEmail, adminPassword: password,
-      phone: '+92 42 111 797 836', city: 'Lahore', address: 'E-1, Sehjpal Road, Near DHA Phase VIII, Lahore Cantt', maxEmployees: 200,
-    }),
-  );
-  if (!created) throw new Error('Could not create the company.');
-  const admin = await signIn(adminEmail, password);
+  const ownCompany = first.me.role !== 'SuperAdmin' && first.me.role !== 0;
+  let admin, adminEmail;
+
+  if (ownCompany) {
+    // A company admin's login: fill that company.
+    admin = first;
+    adminEmail = `${first.me.email} (your own password)`;
+    console.log(`Signed in to "${first.me.companyName}" as ${first.me.email}\n`);
+    if ((await admin.get('/biometric/devices')).some((d) => d.name === 'Head Office Main Gate')) {
+      console.log('Demo data is already in this company. Nothing was changed.');
+      process.exit(1);
+    }
+  } else {
+    const existing = (await first.get('/platform/companies')).find((c) => c.name.toLowerCase() === COMPANY.toLowerCase());
+    if (existing) {
+      console.log(`"${COMPANY}" already exists. Nothing was changed. Delete it from the platform screen first to seed again.`);
+      process.exit(1);
+    }
+    adminEmail = `admin@${DOMAIN}`;
+    const created = await step('Company and its admin', () =>
+      first.post('/platform/companies', {
+        name: COMPANY, adminFirstName: 'Demo', adminLastName: 'Admin', adminEmail, adminPassword: password,
+        phone: '+92 42 111 797 836', city: 'Lahore', address: 'E-1, Sehjpal Road, Near DHA Phase VIII, Lahore Cantt', maxEmployees: 200,
+      }),
+    );
+    if (!created) throw new Error('Could not create the company.');
+    admin = await signIn(adminEmail, password);
+  }
 
   // Organization
   const dept = {};
   await step('Departments', async () => {
-    for (const name of DEPARTMENTS) dept[name] = (await admin.post('/departments', { name })).id;
+    for (const d of await admin.get('/departments')) dept[d.name] = d.id;
+    for (const name of DEPARTMENTS) dept[name] ??= (await admin.post('/departments', { name })).id;
   });
   const desig = {};
   await step('Designations', async () => {
@@ -183,14 +275,23 @@ async function main() {
     for (const d of await admin.get('/designations')) desig[d.title] = d.id;
     for (const title of DESIGNATIONS) desig[title] ??= (await admin.post('/designations', { title })).id;
   });
-  const shift = await step('Office shift (9 to 6, Sat/Sun off)', () =>
+  const shift = await step('Office shift (9 to 6, Sat/Sun off)', async () =>
+    (await admin.get('/setup/shifts')).find((x) => x.isDefault) ??
     admin.post('/setup/shifts', { name: 'General 9-6', startTime: '09:00:00', endTime: '18:00:00', graceMinutes: 15, weeklyOffDays: ['Saturday', 'Sunday'], isDefault: true, breakMinutes: 60 }),
   );
-  await step('Office location', () => admin.post('/setup/office-locations', { name: 'Head Office Lahore', latitude: 31.4697, longitude: 74.4091, radiusMeters: 300 }));
+  if (!ownCompany) await step('Office location', () => admin.post('/setup/office-locations', { name: 'Head Office Lahore', latitude: 31.4697, longitude: 74.4091, radiusMeters: 300 }));
 
   // People
   const emp = {};
-  await step(`${PEOPLE.length} employees with salaries`, async () => {
+  dept.Engineering ??= dept['Software Engineering'];
+  // Everyone whose attendance the machine records: [employeeId, punch code].
+  let punchers = PEOPLE.map((_, i) => [null, String(1001 + i)]);
+  if (ownCompany) {
+    const roster = await step('Existing people: salaries, punch codes, birthdays', () => useExisting(admin));
+    if (!roster) throw new Error('Could not read the people in this company.');
+    Object.assign(emp, roster.keys);
+    punchers = roster.punchers;
+  } else await step(`${PEOPLE.length} employees with salaries`, async () => {
     for (const [i, [key, first, last, gender, d, title, mgr, basic, joined, blood]] of PEOPLE.entries()) {
       const e = await admin.post('/employees', {
         firstName: first, lastName: last, joiningDate: joined, status: i % 9 === 8 ? 'Probation' : 'Active',
@@ -202,6 +303,7 @@ async function main() {
         maritalStatus: i % 3 ? 'Married' : 'Single',
       });
       emp[key] = e.id;
+      punchers[i][0] = e.id;
       await admin.put(`/employees/${e.id}/salary`, {
         effectiveFrom: joined, basicSalary: Math.round(basic * 0.6), eobiApplicable: true,
         components: [
@@ -213,7 +315,7 @@ async function main() {
       await admin.put(`/employees/${e.id}/file`, { punchCode: String(1001 + i) });
     }
   });
-  await step('Department heads', async () => {
+  if (!ownCompany) await step('Department heads', async () => {
     const heads = { Management: 'ceo', Engineering: 'hoe', 'Quality Assurance': 'qal', 'Human Resources': 'hrm', Finance: 'fm', 'Sales & Marketing': 'sm', 'Project Delivery': 'pm', 'IT Support': 'it1' };
     for (const [name, key] of Object.entries(heads)) await admin.put(`/departments/${dept[name]}`, { name, headEmployeeId: emp[key] });
   });
@@ -224,13 +326,17 @@ async function main() {
     const p = PEOPLE.find((x) => x[0] === key);
     return `${p[1]}.${p[2]}@${DOMAIN}`.toLowerCase();
   };
-  await step('Logins (HR, manager, two employees)', async () => {
-    for (const [key, role] of LOGINS) await admin.post(`/employees/${emp[key]}/login`, { email: loginEmail(key), password, role });
-  });
-  const hr = await signIn(loginEmail('hrm'), password);
-  const manager = await signIn(loginEmail('em'), password);
-  const ali = await signIn(loginEmail('se1'), password);
-  const hamza = await signIn(loginEmail('se2'), password);
+  // An existing company keeps its own logins; the admin then acts for people where the API allows it.
+  let hr = admin, manager = admin, ali = null, hamza = null;
+  if (!ownCompany) {
+    await step('Logins (HR, manager, two employees)', async () => {
+      for (const [key, role] of LOGINS) await admin.post(`/employees/${emp[key]}/login`, { email: loginEmail(key), password, role });
+    });
+    hr = await signIn(loginEmail('hrm'), password);
+    manager = await signIn(loginEmail('em'), password);
+    ali = await signIn(loginEmail('se1'), password);
+    hamza = await signIn(loginEmail('se2'), password);
+  }
 
   // Calendar
   await step('Public holidays', async () => {
@@ -240,18 +346,20 @@ async function main() {
       ['11-09', 'Iqbal Day'], ['12-25', 'Quaid-e-Azam Day'], ['03-20', 'Eid ul Fitr'], ['03-21', 'Eid ul Fitr'], ['05-27', 'Eid ul Adha'],
       ['05-28', 'Eid ul Adha'], ['06-25', 'Ashura'], ['08-26', 'Eid Milad un Nabi'],
     ];
-    for (const [md, name] of days) await admin.post('/setup/holidays', { date: `${y}-${md}`, name, kind: 'Public' });
+    const have = new Set((await admin.get(`/setup/holidays?year=${y}`)).map((h) => h.date));
+    for (const [md, name] of days) if (!have.has(`${y}-${md}`)) await admin.post('/setup/holidays', { date: `${y}-${md}`, name, kind: 'Public' });
   });
   const holidays = new Set((await admin.get(`/setup/holidays?year=${TODAY.getUTCFullYear()}`)).map((h) => h.date));
 
   const leaveTypes = {};
   await step('Leave types', async () => {
+    for (const t of await admin.get('/setup/leave-types')) leaveTypes[t.code] = t.id;
     for (const t of [
       { name: 'Annual Leave', code: 'AL', annualQuota: 14, isPaid: true, isActive: true, carryForwardMax: 7, minNoticeDays: 0 },
       { name: 'Casual Leave', code: 'CL', annualQuota: 10, isPaid: true, isActive: true, allowShortLeave: true },
       { name: 'Sick Leave', code: 'SL', annualQuota: 8, isPaid: true, isActive: true, documentAfterDays: 3 },
     ])
-      leaveTypes[t.code] = (await admin.post('/setup/leave-types', t)).id;
+      leaveTypes[t.code] ??= (await admin.post('/setup/leave-types', t)).id;
   });
 
   // Leave: approved last month, some pending and one rejected this month and next.
@@ -277,7 +385,7 @@ async function main() {
       const l = await admin.post('/leave', { leaveTypeId: leaveTypes[code], fromDate: iso(days[0]), toDate: iso(days.at(-1)), reason, employeeId: emp[key] });
       if (decision === 'approve') {
         await admin.post(`/leave/${l.id}/approve`, { note: 'Enjoy' });
-        for (const d of days) onLeave.add(`${key}|${iso(d)}`);
+        for (const d of days) onLeave.add(`${emp[key]}|${iso(d)}`);
       } else if (decision === 'reject') await admin.post(`/leave/${l.id}/reject`, { note: 'Release week, please move it' });
     }
   });
@@ -288,14 +396,14 @@ async function main() {
     const punches = [];
     for (let d = PAY.first; d < TODAY; d = addDays(d, 1)) {
       if (isWeekend(d) || holidays.has(iso(d))) continue;
-      PEOPLE.forEach(([key], i) => {
-        if (onLeave.has(`${key}|${iso(d)}`) || rand() < 0.03) return; // leave or absent
+      punchers.forEach(([id, code]) => {
+        if (onLeave.has(`${id}|${iso(d)}`) || rand() < 0.03) return; // leave or absent
         const late = rand() < 0.12;
         const inMin = late ? 20 + Math.floor(rand() * 50) : Math.floor(rand() * 18) - 10;
         const outMin = Math.floor(rand() * 75) - (rand() < 0.05 ? 120 : 0);
         const at = (h, m) => `${iso(d)}T${pad(h + Math.floor(m / 60))}:${pad(((m % 60) + 60) % 60)}:00`;
-        punches.push({ punchCode: String(1001 + i), time: inMin < 0 ? at(8, 60 + inMin) : at(9, inMin) });
-        punches.push({ punchCode: String(1001 + i), time: at(18, outMin < 0 ? 0 : outMin) });
+        punches.push({ punchCode: code, time: inMin < 0 ? at(8, 60 + inMin) : at(9, inMin) });
+        punches.push({ punchCode: code, time: at(18, outMin < 0 ? 0 : outMin) });
       });
     }
     for (let i = 0; i < punches.length; i += 4000) await new Api().post('/biometric/punches', { punches: punches.slice(i, i + 4000) }, { 'X-Device-Token': device.token });
@@ -304,8 +412,9 @@ async function main() {
   // Payroll for last month, finalized, with a chart of accounts mapped for the journal.
   await step('Payroll settings and chart of accounts', async () => {
     const accounts = {};
+    for (const a of await admin.get('/payroll/gl/accounts')) accounts[a.code] = a.id;
     for (const [code, name] of [['5100', 'Salaries & Wages'], ['5110', 'Allowances'], ['5120', 'Employer EOBI'], ['2100', 'Salaries Payable'], ['2110', 'Income Tax Payable'], ['2120', 'EOBI Payable'], ['2130', 'Other Deductions Payable']])
-      accounts[code] = (await admin.post('/payroll/gl/accounts', { code, name })).id;
+      accounts[code] ??= (await admin.post('/payroll/gl/accounts', { code, name })).id;
     const mapping = await admin.get('/payroll/gl/mapping');
     const accountFor = (line) => {
       const l = line.toLowerCase();
@@ -361,15 +470,16 @@ async function main() {
         { name: 'Competencies', weight: 30, kind: 'Competencies', items: [{ title: 'Ownership' }, { title: 'Communication' }, { title: 'Technical depth' }] },
       ],
     });
-    const template = (await admin.get('/performance/templates'))[0].id;
+    const template = (await admin.get('/performance/templates')).find((t) => t.name === 'Engineering half-year review').id;
     const y = TODAY.getUTCFullYear();
     await admin.post('/performance/cycles', {
       name: `H2 ${y}`, periodFrom: `${y}-07-01`, periodTo: `${y}-12-31`, templateId: template, departmentIds: [dept.Engineering, dept['Quality Assurance']],
       goalsDue: iso(addDays(TODAY, 7)), selfReviewDue: `${y}-12-15`, managerReviewDue: `${y}-12-24`,
     });
-    const cycle = (await admin.get('/performance/cycles'))[0].id;
+    const cycle = (await admin.get('/performance/cycles')).find((c) => c.name === `H2 ${y}`).id;
     await admin.post(`/performance/cycles/${cycle}/launch`);
-    reviewId = (await ali.get('/performance/reviews/my'))[0].id;
+    reviewId = ali ? (await ali.get('/performance/reviews/my'))[0].id : (await admin.get('/performance/reviews/team')).find((r) => r.employeeId === emp.se1)?.id;
+    if (!ali) return;
     await ali.put(`/performance/reviews/${reviewId}/goals`, {
       goals: [
         { sectionIndex: 0, title: 'Ship the payments microservice', target: 'Live by 30 Nov', weight: 40 },
@@ -382,9 +492,11 @@ async function main() {
   if (reviewId) {
     await step('Peer feedback and check-ins', async () => {
       await manager.post(`/performance/reviews/${reviewId}/feedback`, { employeeIds: [emp.se2, emp.se3] });
-      const req = (await hamza.get('/performance/feedback/mine'))[0];
-      await hamza.put(`/performance/feedback/${req.id}`, { rating: 5, comment: 'Unblocked the team twice during the release and reviews code quickly.' });
-      await ali.post(`/performance/reviews/${reviewId}/check-ins`, { period: `Q3 ${TODAY.getUTCFullYear()}`, progress: 55, note: 'Payments service API done; integration tests in progress.' });
+      if (hamza) {
+        const req = (await hamza.get('/performance/feedback/mine'))[0];
+        await hamza.put(`/performance/feedback/${req.id}`, { rating: 5, comment: 'Unblocked the team twice during the release and reviews code quickly.' });
+      }
+      if (ali) await ali.post(`/performance/reviews/${reviewId}/check-ins`, { period: `Q3 ${TODAY.getUTCFullYear()}`, progress: 55, note: 'Payments service API done; integration tests in progress.' });
       await manager.post(`/performance/reviews/${reviewId}/check-ins`, { period: `Q3 ${TODAY.getUTCFullYear()}`, note: 'Good pace. Keep an eye on the load-test results.' });
     });
   }
@@ -447,7 +559,7 @@ async function main() {
     await admin.post('/training/programs', { title: 'Information Security Awareness', categoryId: catId('Compliance'), mode: 'Online', durationHours: 2, isMandatory: true, completeWithinDays: 30, repeatEveryMonths: 12, link: 'https://example.com/infosec' });
     const program = (await admin.get('/training/programs')).find((p) => p.title.startsWith('Azure'));
     const s = await admin.post('/training/sessions', { programId: program.id, startsAtUtc: `${iso(addDays(TODAY, 9))}T05:00:00Z`, endsAtUtc: `${iso(addDays(TODAY, 9))}T13:00:00Z`, venue: 'Training Room 2, Head Office', trainerEmployeeId: emp.hoe, capacity: 20 });
-    await admin.post(`/training/sessions/${s.id}/enroll`, { employeeIds: [emp.se1, emp.se3, emp.se4, emp.se5, emp.se7, emp.se8, emp.qa1] });
+    await admin.post(`/training/sessions/${s.id}/enroll`, { employeeIds: [emp.se1, emp.se3, emp.se4, emp.se5, emp.se7, emp.se8, emp.qa1].filter(Boolean) });
   });
 
   // Helpdesk
@@ -457,9 +569,14 @@ async function main() {
     const cats = await admin.get('/helpdesk/categories');
     const it = cats.find((c) => c.name === 'IT support').id;
     const hrq = cats.find((c) => c.name.startsWith('HR')).id;
-    await ali.post('/helpdesk/tickets', { categoryId: it, subject: 'VPN disconnects every 10 minutes', description: 'Since Monday the FortiClient VPN drops every 10 minutes when working from home.', priority: 'High' });
-    await hamza.post('/helpdesk/tickets', { categoryId: it, subject: 'Need a second monitor', description: 'Requesting a 24 inch monitor for my desk on the 3rd floor.', priority: 'Low' });
-    await ali.post('/helpdesk/tickets', { categoryId: hrq, subject: 'Tax certificate for last year', description: 'Please share my salary tax certificate for the previous tax year for my return.', priority: 'Medium' });
+    const asPerson = (key) => (ali && key === 'se1' ? [ali, {}] : hamza && key === 'se2' ? [hamza, {}] : [admin, { forEmployeeId: emp[key] }]);
+    const ticket = (key, body) => {
+      const [api, extra] = asPerson(key);
+      return api.post('/helpdesk/tickets', { ...body, ...extra });
+    };
+    await ticket('se1', { categoryId: it, subject: 'VPN disconnects every 10 minutes', description: 'Since Monday the FortiClient VPN drops every 10 minutes when working from home.', priority: 'High' });
+    await ticket('se2', { categoryId: it, subject: 'Need a second monitor', description: 'Requesting a 24 inch monitor for my desk on the 3rd floor.', priority: 'Low' });
+    await ticket('se1', { categoryId: hrq, subject: 'Tax certificate for last year', description: 'Please share my salary tax certificate for the previous tax year for my return.', priority: 'Medium' });
   });
 
   // Assets
@@ -472,36 +589,39 @@ async function main() {
     for (let i = 1; i <= 3; i++) await admin.post('/assets', { typeId: phone, tag: `PH-${pad(i)}`, name: 'Samsung Galaxy A55', serialNumber: `SN-PH-${300 + i}`, purchasedOn: '2025-06-01', cost: 120000, condition: 'New' });
     for (let i = 1; i <= 10; i++) await admin.post('/assets', { typeId: card, tag: `AC-${pad(i)}`, name: 'HID access card', condition: 'New' });
     await admin.post('/assets/kits', { name: 'New engineer', typeIds: [laptop, card] });
-    await ali.post('/assets/requests/new', { typeId: phone, reason: 'On-call support for the banking client', returnBy: iso(addDays(TODAY, 60)) });
+    if (ali) await ali.post('/assets/requests/new', { typeId: phone, reason: 'On-call support for the banking client', returnBy: iso(addDays(TODAY, 60)) });
   });
 
   // Expenses
   await step('Expense claims', async () => {
-    await ali.post('/expenses', {
+    await (ali ?? admin).post('/expenses', {
       title: 'Client visit to Karachi',
+      ...(ali ? {} : { employeeId: emp.se1 }),
       items: [
         { date: iso(addDays(TODAY, -9)), category: 'Travel', description: 'PIA return ticket LHE-KHI', amount: 48500 },
         { date: iso(addDays(TODAY, -9)), category: 'Accommodation', description: 'Hotel, 2 nights', amount: 36000 },
         { date: iso(addDays(TODAY, -8)), category: 'Meals', description: 'Team dinner with client', amount: 12500 },
       ],
     });
-    await hamza.post('/expenses', { title: 'Fuel, October', items: [{ date: iso(addDays(TODAY, -4)), category: 'Fuel', description: 'Office commute top-up', amount: 9000 }] });
+    await (hamza ?? admin).post('/expenses', { title: 'Fuel, October', ...(hamza ? {} : { employeeId: emp.se2 }), items: [{ date: iso(addDays(TODAY, -4)), category: 'Fuel', description: 'Office commute top-up', amount: 9000 }] });
   });
 
   // Company setup screens
   await step('Email template and security', async () => {
     await admin.put('/setup/email/templates/Announcement', { subject: '[Systems] {title}', intro: 'Dear {name}, here is an update from {company}.', enabled: true });
-    await admin.put('/setup/security', { allowedEmailDomains: [DOMAIN] });
+    // Limiting sign-in to the demo domain would lock out an existing company's own people.
+    if (!ownCompany) await admin.put('/setup/security', { allowedEmailDomains: [DOMAIN] });
     await admin.post('/setup/api-tokens', { name: 'Power BI dashboard' });
   });
 
+  if (ownCompany) return finish();
   // Write the logins down.
   const out = join(here, 'secrets', 'demo-logins.txt');
   const lines = [
-    `${COMPANY} on ${BASE}`,
+    `${ownCompany ? first.me.companyName : COMPANY} on ${BASE}`,
     `Created ${new Date().toISOString()}`,
     '',
-    `Password for every login below: ${password}`,
+    `Password for the logins below (except the company admin): ${password}`,
     '',
     `Company admin   ${adminEmail}`,
     `HR manager      ${loginEmail('hrm')}`,
@@ -512,6 +632,10 @@ async function main() {
   ];
   writeFileSync(out, lines.join('\n'));
   console.log(`\nLogins saved to ${out}`);
+  finish();
+}
+
+function finish() {
   if (failures.length) {
     console.log(`\n${failures.length} step(s) failed: ${failures.join(', ')}`);
     process.exit(2);
