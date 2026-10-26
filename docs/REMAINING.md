@@ -47,11 +47,11 @@ tested and committed locally; one production deploy at the end. Tick items as th
 
 ## G. Organization and system
 - [x] Day/month close (lock attendance and payroll edits for a period; leave can't be applied, approved or cancelled in a closed month)
-- [ ] ID card template and print
+- [x] ID card template and print
 - [x] Biometric devices (device list + push endpoint with token)
-- [ ] Email templates (editable per event), email log, monthly quota
-- [ ] Allowed email domains; last-login report; exception log
-- [ ] Integrations: chart of accounts, GL mapping, payroll JV export (CSV), API tokens
+- [x] Email templates (editable per event), email log, monthly quota
+- [x] Allowed email domains; last-login report; exception log
+- [x] Integrations: chart of accounts, GL mapping, payroll JV export (CSV), read-only API keys
 
 ## H. Dashboard and UX
 - [x] Role-based home, organogram, birthday and work-anniversary wishes

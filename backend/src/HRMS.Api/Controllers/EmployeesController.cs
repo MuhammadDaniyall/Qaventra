@@ -16,6 +16,9 @@ public record EmployeeListItemDto(
     Guid Id, string EmployeeCode, string FullName, string? Email, string? Phone,
     string? Department, string? Designation, EmploymentStatus Status, DateOnly JoiningDate, bool HasLogin);
 
+/// <summary>What goes on an employee ID card.</summary>
+public record IdCardDto(Guid Id, string EmployeeCode, string Name, string? Designation, string? Department, string? BloodGroup, DateOnly JoiningDate, string? Phone);
+
 /// <summary>One box on the org chart: who the person is and who they report to.</summary>
 public record OrgChartNodeDto(Guid Id, string Name, string? Designation, string? Department, Guid? ManagerId);
 
@@ -109,6 +112,18 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
             .OrderBy(e => e.FirstName)
             .Select(e => new LookupDto(e.Id, e.EmployeeCode + " · " + e.FirstName + " " + e.LastName
                 + (e.Status == EmploymentStatus.Resigned || e.Status == EmploymentStatus.Terminated ? " (left)" : "")))
+            .ToListAsync();
+
+    /// <summary>Current employees' ID card details, optionally for one department.</summary>
+    [HttpGet("id-cards"), Authorize(Policy = Policies.Hr)]
+    public Task<List<IdCardDto>> IdCards([FromQuery] Guid? departmentId) =>
+        db.Employees.AsNoTracking()
+            .Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)
+            .Where(e => departmentId == null || e.DepartmentId == departmentId)
+            .OrderBy(e => e.EmployeeCode)
+            .Select(e => new IdCardDto(e.Id, e.EmployeeCode, e.FirstName + " " + e.LastName,
+                e.Designation != null ? e.Designation.Title : null, e.Department != null ? e.Department.Name : null,
+                e.BloodGroup, e.JoiningDate, e.Phone))
             .ToListAsync();
 
     /// <summary>Current employees with their manager, for the org chart. Everyone in the company may see it.</summary>

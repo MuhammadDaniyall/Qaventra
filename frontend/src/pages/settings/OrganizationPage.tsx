@@ -1,5 +1,9 @@
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, ListPlus, MapPin, Palmtree, Tags } from 'lucide-react';
+import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, ListPlus, Mail, MapPin, Palmtree, ShieldCheck, Tags } from 'lucide-react';
+import { useUser } from '../../auth/AuthContext';
+import { isCompanyAdmin } from '../../auth/roles';
+import { EmailTab } from './EmailTab';
+import { SecurityTab } from './SecurityTab';
 import { PageHeader, Tabs } from '../../components/ui';
 import { ApprovalFlowsTab } from './ApprovalFlowsTab';
 import { CustomFieldsTab } from './CustomFieldsTab';
@@ -13,13 +17,14 @@ import { ShiftsTab } from './ShiftsTab';
 import { ExemptionSettingsCard } from '../attendance/Exemptions';
 import { PenaltyRulesCard } from '../attendance/PenaltyRules';
 
-type Tab = 'departments' | 'designations' | 'lists' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields';
-const TABS: Tab[] = ['departments', 'designations', 'lists', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields'];
+type Tab = 'departments' | 'designations' | 'lists' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields' | 'email' | 'security';
+const TABS: Tab[] = ['departments', 'designations', 'lists', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields', 'email', 'security'];
 
 export function OrganizationPage() {
   const [params, setParams] = useSearchParams();
+  const admin = isCompanyAdmin(useUser());
   const raw = params.get('tab') as Tab | null;
-  const tab: Tab = raw && TABS.includes(raw) ? raw : 'departments';
+  const tab: Tab = raw && TABS.includes(raw) && (raw !== 'security' || admin) ? raw : 'departments';
 
   return (
     <>
@@ -38,6 +43,8 @@ export function OrganizationPage() {
           { value: 'leave-types', label: 'Leave types', icon: <Palmtree className="size-4" /> },
           { value: 'approvals', label: 'Approval chains', icon: <GitBranch className="size-4" /> },
           { value: 'custom-fields', label: 'Custom fields', icon: <ListPlus className="size-4" /> },
+          { value: 'email', label: 'Email', icon: <Mail className="size-4" /> },
+          ...(admin ? [{ value: 'security' as const, label: 'Security', icon: <ShieldCheck className="size-4" /> }] : []),
         ]}
       />
       {tab === 'departments' && <DepartmentsTab />}
@@ -55,6 +62,8 @@ export function OrganizationPage() {
       {tab === 'leave-types' && <LeaveTypesTab />}
       {tab === 'approvals' && <ApprovalFlowsTab />}
       {tab === 'custom-fields' && <CustomFieldsTab />}
+      {tab === 'email' && <EmailTab />}
+      {tab === 'security' && <SecurityTab />}
     </>
   );
 }

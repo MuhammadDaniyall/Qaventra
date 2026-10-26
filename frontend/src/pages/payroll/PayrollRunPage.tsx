@@ -145,6 +145,7 @@ export function PayrollRunPage() {
               fileName={`payroll-${run.year}-${String(run.month).padStart(2, '0')}${draft ? '-draft' : ''}.xlsx`}
               label="Export to Excel"
             />
+            <ExportButton path={`/payroll/runs/${run.id}/journal.csv`} fileName={`payroll-journal-${run.year}-${String(run.month).padStart(2, '0')}.csv`} label="Journal (CSV)" />
             {run.status !== 'Finalized' && (
               <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={() => setReprocessOpen(true)}>
                 Reprocess

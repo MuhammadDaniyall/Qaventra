@@ -85,6 +85,7 @@ export interface Company {
   address: string | null;
   /** Licensed seats; null = unlimited. */
   maxEmployees: number | null;
+  emailQuotaPerMonth?: number | null;
   billingCycle: BillingCycle | null;
   /** Fixed base fee per cycle. */
   planPrice: number | null;
@@ -107,6 +108,8 @@ export interface Company {
 
 export interface CompanyPlan {
   maxEmployees: number | null;
+  /** Emails a month; null = unlimited. */
+  emailQuotaPerMonth?: number | null;
   billingCycle: BillingCycle | null;
   planPrice: number | null;
   pricePerEmployee: number | null;

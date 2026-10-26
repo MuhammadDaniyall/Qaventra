@@ -52,7 +52,11 @@ public class PayRequestTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Forbidden, (await worker.PostAsJsonAsync("/api/pay/requests", new { kind = "Bonus", amount = 99999, isTaxable = false, year = y, month = m }, ApiFactory.Json)).StatusCode);
 
         // Overtime: basic 120,000 / 30 / 8 x 1.5 x 4 h = 3,000.
-        var day = Today.AddDays(-2).ToString("yyyy-MM-dd");
+        // A working day in this month two or more days back, so the weekday overtime rate applies whatever today is.
+        var worked = Today.AddDays(-2);
+        while (worked.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) worked = worked.AddDays(-1);
+        if (worked.Month != Today.Month) { worked = Today; while (worked.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) worked = worked.AddDays(1); }
+        var day = worked.ToString("yyyy-MM-dd");
         var quote = await Ok(await worker.GetAsync($"/api/pay/overtime-quote?date={day}&hours=4"));
         Assert.Equal(3000m, quote.GetProperty("amount").GetDecimal());
         var ot = await Ok(await worker.PostAsJsonAsync("/api/pay/requests", new { kind = "Overtime", workDate = day, hours = 4, year = y, month = m, reason = "Release night" }, ApiFactory.Json));

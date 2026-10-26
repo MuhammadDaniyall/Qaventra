@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { GroupFilter } from './EmployeeFile';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, Plus, Search, UserRoundCheck, Users } from 'lucide-react';
+import { KeyRound, Plus, Search, UserRoundCheck, Users, IdCard } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { useDepartments } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -73,6 +73,9 @@ export function EmployeesPage() {
               </Button>
               <Button variant="secondary" icon={<UserRoundCheck className="size-4" />} onClick={() => setDialog('rehire')}>
                 Re-hire
+              </Button>
+              <Button variant="secondary" icon={<IdCard className="size-4" />} onClick={() => navigate('/employees/id-cards')}>
+                ID cards
               </Button>
               <Button icon={<Plus className="size-4" />} onClick={() => navigate('/employees/new')}>
                 Add employee

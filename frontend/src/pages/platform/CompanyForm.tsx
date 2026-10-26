@@ -11,6 +11,7 @@ export interface CompanyFields {
   city: string;
   address: string;
   maxEmployees: string;
+  emailQuota: string;
   billingCycle: BillingCycle | '';
   pricePerEmployee: string;
   planPrice: string;
@@ -23,6 +24,7 @@ export const emptyCompanyFields: CompanyFields = {
   city: '',
   address: '',
   maxEmployees: '',
+  emailQuota: '',
   billingCycle: '',
   pricePerEmployee: '',
   planPrice: '',
@@ -37,6 +39,7 @@ export function fieldsFromCompany(c: Company): CompanyFields {
     city: c.city ?? '',
     address: c.address ?? '',
     maxEmployees: str(c.maxEmployees),
+    emailQuota: str(c.emailQuotaPerMonth ?? null),
     billingCycle: c.billingCycle ?? '',
     pricePerEmployee: str(c.pricePerEmployee),
     planPrice: str(c.planPrice),
@@ -62,6 +65,7 @@ export function validateCompany(v: CompanyFields): Record<string, string> {
   const fe: Record<string, string> = {};
   if (v.name.trim().length < 2) fe.name = 'Enter the company name (at least 2 characters).';
   if (parseInt1(v.maxEmployees) === 'invalid') fe.maxEmployees = 'Enter a whole number of 1 or more, or leave blank for unlimited.';
+  if (parseInt1(v.emailQuota) === 'invalid') fe.emailQuota = 'Enter a whole number of 1 or more, or leave blank for unlimited.';
   if (parseMoney(v.pricePerEmployee, 1_000_000) === 'invalid') fe.pricePerEmployee = 'Enter an amount of 0 or more.';
   if (parseMoney(v.planPrice, 100_000_000) === 'invalid') fe.planPrice = 'Enter an amount of 0 or more.';
   return fe;
@@ -71,6 +75,7 @@ export function validateCompany(v: CompanyFields): Record<string, string> {
 export function planFromFields(v: CompanyFields): CompanyPlan {
   return {
     maxEmployees: parseInt1(v.maxEmployees) as number | null,
+    emailQuotaPerMonth: parseInt1(v.emailQuota) as number | null,
     billingCycle: v.billingCycle || null,
     pricePerEmployee: parseMoney(v.pricePerEmployee, 1_000_000) as number | null,
     planPrice: parseMoney(v.planPrice, 100_000_000) as number | null,
@@ -141,6 +146,9 @@ export function PlanFields({
         </Field>
         <Field label="Licensed employees" hint="Active-employee limit. Blank = unlimited (billed on headcount)." error={errors.maxEmployees}>
           <Input type="number" min={1} inputMode="numeric" value={v.maxEmployees} onChange={(e) => set({ maxEmployees: e.target.value })} placeholder="Unlimited" />
+        </Field>
+        <Field label="Emails a month" hint="Notifications, payslips and letters. Blank = unlimited." error={errors.emailQuota}>
+          <Input type="number" min={1} inputMode="numeric" value={v.emailQuota} onChange={(e) => set({ emailQuota: e.target.value })} placeholder="Unlimited" />
         </Field>
         <Field label="Price per employee per month (PKR)" error={errors.pricePerEmployee}>
           <Input type="number" min={0} inputMode="decimal" value={v.pricePerEmployee} onChange={(e) => set({ pricePerEmployee: e.target.value })} placeholder="0" />

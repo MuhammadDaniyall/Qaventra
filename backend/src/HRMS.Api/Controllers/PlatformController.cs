@@ -18,7 +18,7 @@ public record CompanyDto(
     Guid Id, string Name, bool IsActive, TenantAccess Access, DateTime CreatedAtUtc,
     string? Phone, string? City, string? Address, int? MaxEmployees,
     BillingCycle? BillingCycle, decimal? PlanPrice, decimal? PricePerEmployee, decimal? AmountPerCycle, DateOnly? SubscriptionEndsOn, int? DaysLeft,
-    int Employees, int Users, string? AdminName, string? AdminEmail, DateTime? LastActivityUtc, DateOnly? LastPaymentOn);
+    int Employees, int Users, string? AdminName, string? AdminEmail, DateTime? LastActivityUtc, DateOnly? LastPaymentOn, int? EmailQuotaPerMonth = null);
 
 public record PlatformStatsDto(
     int Companies, int ActiveCompanies, int InactiveCompanies, int ExpiredCompanies, int ExpiringSoon,
@@ -53,7 +53,8 @@ public record UpdateCompanyRequest(
     BillingCycle? BillingCycle,
     [Range(0, 100_000_000)] decimal? PlanPrice,
     [Range(0, 1_000_000)] decimal? PricePerEmployee,
-    DateOnly? SubscriptionEndsOn);
+    DateOnly? SubscriptionEndsOn,
+    [Range(1, 10_000_000)] int? EmailQuotaPerMonth = null);
 
 /// <summary>GeneratedPassword is returned only when the system created it; show it once and never store it.</summary>
 public record CompanyAdminCredentialsDto(CompanyDto Company, string AdminEmail, string? GeneratedPassword);
@@ -163,6 +164,7 @@ public class PlatformController(
         tenant.PlanPrice = req.PlanPrice;
         tenant.PricePerEmployee = req.PricePerEmployee;
         tenant.SubscriptionEndsOn = req.SubscriptionEndsOn;
+        tenant.EmailQuotaPerMonth = req.EmailQuotaPerMonth;
         await db.SaveChangesAsync();
         access.Invalidate(id);
         return await Company(id);
@@ -281,7 +283,7 @@ public class PlatformController(
                 t.Id, t.Name, t.IsActive, t.AccessOn(today), t.CreatedAtUtc, t.Phone, t.City, t.Address, t.MaxEmployees,
                 t.BillingCycle, t.PlanPrice, t.PricePerEmployee, t.AmountPerCycle(r.Employees), t.SubscriptionEndsOn,
                 t.SubscriptionEndsOn is { } end ? end.DayNumber - today.DayNumber : null,
-                r.Employees, r.Users, r.Admin?.FullName, r.Admin?.Email, r.LastActivity, r.LastPayment);
+                r.Employees, r.Users, r.Admin?.FullName, r.Admin?.Email, r.LastActivity, r.LastPayment, t.EmailQuotaPerMonth);
         }).ToList();
     }
 }

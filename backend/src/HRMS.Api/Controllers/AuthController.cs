@@ -62,6 +62,12 @@ public class AuthController(
                 ((ProblemDetails)((ObjectResult)problem).Value!).Extensions["code"] = code;
                 return problem;
             }
+            // Company admins are never locked out by the domain list, so they can always fix it.
+            if (user.Role != UserRole.CompanyAdmin && !await SecurityController.DomainAllowedAsync(db, user.TenantId, email))
+            {
+                await audit.AuthAsync("LoginBlocked:EmailDomain", user);
+                return Problem(statusCode: 403, title: "Your company only allows sign-in with its own email addresses. Ask HR to change your login email.");
+            }
         }
 
         await audit.AuthAsync("LoginSucceeded", user);

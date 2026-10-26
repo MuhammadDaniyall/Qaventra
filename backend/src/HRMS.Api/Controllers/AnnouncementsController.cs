@@ -141,7 +141,9 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
             reads = await db.AnnouncementReads.Where(r => ids.Contains(r.AnnouncementId)).GroupBy(r => r.AnnouncementId)
                 .Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
             var current = db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
-            perDept = await current.GroupBy(e => e.DepartmentId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
+            // People without a department count towards "everyone" only; a null key can't go in the dictionary.
+            perDept = (await current.GroupBy(e => e.DepartmentId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync())
+                .ToDictionary(x => (Guid?)(x.Key ?? Guid.Empty), x => x.Count);
             everyone = perDept.Values.Sum();
         }
         return list.Select(a =>

@@ -4,6 +4,7 @@ using System.Text;
 using HRMS.Api.Auth;
 using HRMS.Api.Infrastructure;
 using HRMS.Api.Services;
+using HRMS.Domain;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
 using HRMS.Infrastructure.Data;
@@ -41,7 +42,7 @@ public record MachinePunchResult(int Accepted, List<SkippedPunch> Skipped);
 /// </summary>
 [ApiController]
 [Route("api/biometric")]
-public class BiometricController(HrmsDbContext db, AttendanceService attendance, TenantClock clock) : ControllerBase
+public class BiometricController(HrmsDbContext db, AttendanceService attendance, TenantClock clock, TenantAccessChecker access) : ControllerBase
 {
     public const string TokenHeader = "X-Device-Token";
 
@@ -100,7 +101,8 @@ public class BiometricController(HrmsDbContext db, AttendanceService attendance,
             return Unauthorized();
         var hash = Hash(token);
         var device = await db.BiometricDevices.IgnoreQueryFilters().FirstOrDefaultAsync(d => d.TokenHash == hash && d.IsActive);
-        if (device is null)
+        // A suspended or expired company's machines stop, like its logins.
+        if (device is null || await access.TenantAsync(device.TenantId) != TenantAccess.Allowed)
             return Unauthorized();
         // A device belongs to one company; everything after this runs inside it.
         db.UseTenant(device.TenantId);

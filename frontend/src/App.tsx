@@ -71,6 +71,8 @@ const ExpenseApprovalsPage = lazy(() => import('./pages/expenses/ExpenseApproval
 const MyExpensesPage = lazy(() => import('./pages/expenses/MyExpensesPage').then((m) => ({ default: m.MyExpensesPage })));
 const LetterPage = lazy(() => import('./pages/letters/LetterPage').then((m) => ({ default: m.LetterPage })));
 const LettersPage = lazy(() => import('./pages/letters/LettersPage').then((m) => ({ default: m.LettersPage })));
+const IdCardsPage = lazy(() => import('./pages/employees/IdCardsPage').then((m) => ({ default: m.IdCardsPage })));
+const AccountingPage = lazy(() => import('./pages/payroll/AccountingPage').then((m) => ({ default: m.AccountingPage })));
 const MachinesPage = lazy(() => import('./pages/attendance/MachinesPage').then((m) => ({ default: m.MachinesPage })));
 const InsightsPage = lazy(() => import('./pages/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })));
 const OrgChartPage = lazy(() => import('./pages/orgchart/OrgChartPage').then((m) => ({ default: m.OrgChartPage })));
@@ -179,9 +181,11 @@ export default function App() {
 
               <Route element={<RequireRole roles={HR_ROLES} />}>
                 <Route path="/employees/new" element={<NewEmployeePage />} />
+                <Route path="/employees/id-cards" element={<IdCardsPage />} />
                 <Route path="/payroll" element={<PayrollRunsPage />} />
                 <Route path="/payroll/runs/:id" element={<PayrollRunPage />} />
                 <Route path="/payroll/settings" element={<PayrollSettingsPage />} />
+                <Route path="/payroll/accounting" element={<AccountingPage />} />
                 <Route path="/payroll/adjustments" element={<PayAdjustmentsPage />} />
                 <Route path="/payroll/changes" element={<PayChangesPage />} />
               <Route path="/payroll/funds" element={<FundsPage />} />

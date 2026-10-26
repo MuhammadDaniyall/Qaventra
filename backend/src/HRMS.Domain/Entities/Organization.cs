@@ -15,6 +15,10 @@ public class Tenant : BaseEntity
     public string? CareersSlug { get; set; }
     /// <summary>Licensed employee limit set by the platform owner; null means unlimited.</summary>
     public int? MaxEmployees { get; set; }
+    /// <summary>Emails the company may send a month (notifications, payslips, letters). Null = unlimited.</summary>
+    public int? EmailQuotaPerMonth { get; set; }
+    /// <summary>Comma-separated email domains people may sign in with (company admins always can). Null = any.</summary>
+    public string? AllowedEmailDomains { get; set; }
 
     public BillingCycle? BillingCycle { get; set; }
     /// <summary>Fixed base fee per billing cycle, in PKR (optional).</summary>

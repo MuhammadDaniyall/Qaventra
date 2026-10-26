@@ -46,6 +46,11 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
     public DbSet<BiometricDevice> BiometricDevices => Set<BiometricDevice>();
     public DbSet<CelebrationWish> CelebrationWishes => Set<CelebrationWish>();
+    public DbSet<GlAccount> GlAccounts => Set<GlAccount>();
+    public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<PayrollGlMapping> PayrollGlMappings => Set<PayrollGlMapping>();
     public DbSet<PushKeys> PushKeys => Set<PushKeys>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
     public DbSet<CompOffRequest> CompOffRequests => Set<CompOffRequest>();
@@ -689,6 +694,44 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         });
 
         b.Entity<CelebrationWish>(e => e.HasIndex(x => new { x.FromUserId, x.Date }));
+
+        b.Entity<EmailTemplate>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Kind }).IsUnique();
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.Intro).HasMaxLength(2000);
+        });
+
+        b.Entity<EmailLog>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.CreatedAtUtc });
+            e.Property(x => x.To).HasMaxLength(256);
+            e.Property(x => x.Subject).HasMaxLength(300);
+            e.Property(x => x.Kind).HasMaxLength(50);
+            e.Property(x => x.Error).HasMaxLength(500);
+        });
+
+        b.Entity<ApiToken>(e =>
+        {
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.TokenHash).HasMaxLength(64);
+            e.Property(x => x.TokenPrefix).HasMaxLength(12);
+            e.Property(x => x.CreatedByName).HasMaxLength(200);
+        });
+
+        b.Entity<GlAccount>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Code }).IsUnique();
+            e.Property(x => x.Code).HasMaxLength(50);
+            e.Property(x => x.Name).HasMaxLength(150);
+        });
+
+        b.Entity<PayrollGlMapping>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Line }).IsUnique();
+            e.HasOne<GlAccount>().WithMany().HasForeignKey(x => x.GlAccountId).OnDelete(DeleteBehavior.Restrict);
+        });
 
         b.Entity<BiometricDevice>(e =>
         {
@@ -1474,7 +1517,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         var logs = new List<AuditLog>();
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or Notification or PushSubscription or HRMS.Domain.Entities.PushKeys || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            if (entry.Entity is AuditLog or Notification or PushSubscription or HRMS.Domain.Entities.PushKeys or EmailLog || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
                 continue;
 
             var changes = new Dictionary<string, object?>();
