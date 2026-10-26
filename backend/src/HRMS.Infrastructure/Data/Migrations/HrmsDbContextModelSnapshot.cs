@@ -2212,6 +2212,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("VpsAccountNo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("VpsEmployeePercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("VpsEmployerPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("VpsMember")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("VpsProvider")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CostCenterId");
@@ -4494,6 +4511,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal>("VpsCreditCapPercent")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("VpsEnabled")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId")
@@ -4570,6 +4594,18 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<decimal>("UnpaidDays")
                         .HasPrecision(6, 2)
                         .HasColumnType("decimal(6,2)");
+
+                    b.Property<decimal>("VpsEmployee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("VpsEmployer")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("VpsTaxCredit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 

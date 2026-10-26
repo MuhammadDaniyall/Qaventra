@@ -30,6 +30,8 @@ public enum PayrollGlLine
     OtherDeductionsPayable = 7,
     /// <summary>Credit: net pay owed to employees.</summary>
     SalaryPayable = 8,
+    /// <summary>Voluntary pension scheme contributions owed to the pension funds.</summary>
+    PensionPayable = 9,
 }
 
 /// <summary>

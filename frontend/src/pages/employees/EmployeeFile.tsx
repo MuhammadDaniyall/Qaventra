@@ -32,6 +32,7 @@ import {
 } from '../../components/ui';
 import { formatDate } from '../../lib/format';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 
 type Key = keyof EmployeeFile;
 type FieldDef = { key: Key; label: string; type?: 'date' | 'text'; max?: number; placeholder?: string };
@@ -116,7 +117,7 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
   if (file.isLoading) return <Skeleton className="h-64" />;
   if (file.isError || !file.data) return <ErrorState error={file.error} onRetry={() => file.refetch()} />;
   const v = draft ?? file.data;
-  const set = (k: Key, value: string | boolean | null) => setDraft({ ...v, [k]: value === '' ? null : value });
+  const set = (k: Key, value: string | number | boolean | null) => setDraft({ ...v, [k]: value === '' ? null : value });
   const name = (id: string | null) => (id ? (lookups.data?.find((l) => l.id === id)?.name ?? '') : '');
   const options = (kind: LookupKind, current: string | null) =>
     (lookups.data ?? []).filter(
@@ -204,6 +205,32 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
               <Checkbox label="Member" checked={v.providentFundMember} onChange={(e) => set('providentFundMember', e.target.checked)} />
             ) : v.providentFundMember ? (
               'Member'
+            ) : (
+              <span className="text-zinc-500 dark:text-zinc-400">Not a member</span>
+            )}
+          </Item>
+          <Item label="Voluntary pension (VPS)">
+            {draft ? (
+              <div className="space-y-3">
+                <Checkbox label="Member" checked={v.vpsMember} onChange={(e) => set('vpsMember', e.target.checked)} />
+                {v.vpsMember && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Input aria-label={tx('Pension fund')} placeholder={tx('Pension fund')} value={v.vpsProvider ?? ''} maxLength={150} onChange={(e) => set('vpsProvider', e.target.value)} />
+                    <Input aria-label={tx('Account number')} placeholder={tx('Account number')} value={v.vpsAccountNo ?? ''} maxLength={50} dir="ltr" onChange={(e) => set('vpsAccountNo', e.target.value)} />
+                    <Field label="Member share (% of basic)">
+                      <Input type="number" min={0} max={50} step="0.5" value={v.vpsEmployeePercent} onChange={(e) => set('vpsEmployeePercent', Number(e.target.value) || 0)} />
+                    </Field>
+                    <Field label="Company share (% of basic)">
+                      <Input type="number" min={0} max={50} step="0.5" value={v.vpsEmployerPercent} onChange={(e) => set('vpsEmployerPercent', Number(e.target.value) || 0)} />
+                    </Field>
+                  </div>
+                )}
+              </div>
+            ) : v.vpsMember ? (
+              <span>
+                {v.vpsProvider ?? tx('Member')}
+                {v.vpsAccountNo ? ` · ${v.vpsAccountNo}` : ''} · {v.vpsEmployeePercent}% + {v.vpsEmployerPercent}% {tx('of basic')}
+              </span>
             ) : (
               <span className="text-zinc-500 dark:text-zinc-400">Not a member</span>
             )}

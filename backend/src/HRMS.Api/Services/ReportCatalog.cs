@@ -50,6 +50,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("payroll.cash", "Payroll", "Cash and cheque payments", "Net pay for people paid in cash or by cheque, with a signature column", ["month", "department"], true),
         new("payroll.costcenters", "Payroll", "Salary cost by cost center", "Gross pay and employer costs split across cost centers", ["month"], true),
         new("payroll.taxcertificate", "Payroll", "Tax certificate", "Taxable income and tax deducted month by month in a tax year (July to June); choose the year it ends", ["year", "employee"], true),
+        new("payroll.vps", "Payroll", "Voluntary pension (VPS)", "Member and company contributions for a month, with the tax credit, to send to the pension funds", ["month", "department"], true),
         new("payroll.pf", "Payroll", "Provident fund balances", "Employee and employer shares, profit, withdrawals and vested balance", ["department", "includeLeft"], true),
         new("payroll.gratuity", "Payroll", "Gratuity liability", "Years of service and gratuity due today", ["department"], true),
         new("payroll.commission", "Payroll", "Commission and bonuses", "Approved commission, bonus and allowance requests in a period", ["period", "department", "employee"], true),
@@ -403,6 +404,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             case "payroll.eobi":
             case "payroll.cash":
             case "payroll.socialsecurity":
+            case "payroll.vps":
             {
                 var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month);
                 if (run is null)
@@ -414,6 +416,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                         p.EmployeeId, p.Employee!.EmployeeCode, Name = p.Employee.FirstName + " " + p.Employee.LastName, Department = p.Employee.Department != null ? p.Employee.Department.Name : "",
                         p.Employee.Cnic, p.Employee.BankName, p.Employee.BankAccount, p.PaidDays, p.GrossEarnings, p.TaxableIncome, p.IncomeTax, p.EobiEmployee, p.EobiEmployer, p.OtherDeductions, p.NetPay,
                         p.Employee.PaymentMethod, p.Employee.SocialSecurityNo, p.SocialSecurityEmployer,
+                        p.Employee.VpsProvider, p.Employee.VpsAccountNo, p.VpsEmployee, p.VpsEmployer, p.VpsTaxCredit,
                     }).ToListAsync();
                 var sub = $"{month:MMMM yyyy} · {(run.Status == PayrollRunStatus.Finalized ? "finalized" : "draft")}";
                 // Held salaries are not transferred until released.
@@ -428,6 +431,9 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     "payroll.cash" => T(def, sub, ["Code", "Name", "Department", "Paid by", "Net pay", "Signature"], [4],
                         slips.Where(s => !held.Contains(s.EmployeeId) && s.PaymentMethod != PaymentMethod.BankTransfer)
                             .Select(s => L(s.EmployeeCode, s.Name, s.Department, s.PaymentMethod == PaymentMethod.Cash ? "Cash" : "Cheque", M(s.NetPay), "")), totals: true),
+                    "payroll.vps" => T(def, sub, ["Code", "Name", "CNIC", "Pension fund", "Account", "Member share", "Company share", "Total", "Tax credit"], [5, 6, 7, 8],
+                        slips.Where(s => s.VpsEmployee + s.VpsEmployer > 0).OrderBy(s => s.VpsProvider).Select(s => L(s.EmployeeCode, s.Name, s.Cnic ?? "", s.VpsProvider ?? "",
+                            s.VpsAccountNo ?? "", M(s.VpsEmployee), M(s.VpsEmployer), M(s.VpsEmployee + s.VpsEmployer), M(s.VpsTaxCredit))), totals: true),
                     "payroll.socialsecurity" => T(def, sub, ["Code", "Name", "CNIC", "Social security no.", "Wages", "Employer contribution"], [4, 5],
                         slips.Where(s => s.SocialSecurityEmployer > 0).Select(s => L(s.EmployeeCode, s.Name, s.Cnic ?? "", s.SocialSecurityNo ?? "", M(s.GrossEarnings), M(s.SocialSecurityEmployer))), totals: true),
                     "payroll.tax" => T(def, sub, ["Code", "Name", "CNIC", "Taxable income", "Tax deducted"], [3, 4],

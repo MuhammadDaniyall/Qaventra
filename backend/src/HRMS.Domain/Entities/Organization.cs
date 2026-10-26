@@ -165,6 +165,12 @@ public class Employee : TenantEntity
     // ---------- Pay ----------
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.BankTransfer;
     public bool ProvidentFundMember { get; set; }
+    /// <summary>Voluntary pension scheme: the pension fund, the member's account and the monthly shares as a percent of basic.</summary>
+    public bool VpsMember { get; set; }
+    public string? VpsProvider { get; set; }
+    public string? VpsAccountNo { get; set; }
+    public decimal VpsEmployeePercent { get; set; }
+    public decimal VpsEmployerPercent { get; set; }
 
     // ---------- Where they may mark attendance ----------
     public bool AllowWebCheckIn { get; set; } = true;

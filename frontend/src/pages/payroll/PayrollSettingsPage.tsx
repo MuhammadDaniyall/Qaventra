@@ -44,6 +44,8 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
     pfEmployerPercent: String(initial.pfEmployerPercent ?? 8.33),
     pfOnGross: initial.pfOnGross ?? false,
     pfVestingYears: String(initial.pfVestingYears ?? 0),
+    vpsEnabled: initial.vpsEnabled ?? false,
+    vpsCreditCapPercent: String(initial.vpsCreditCapPercent ?? 20),
     gratuityEnabled: initial.gratuityEnabled ?? false,
     gratuityDaysPerYear: String(initial.gratuityDaysPerYear ?? 30),
     gratuityMinYears: String(initial.gratuityMinYears ?? 1),
@@ -100,6 +102,8 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
       pfEmployerPercent: Number(x.pfEmployerPercent) || 0,
       pfOnGross: x.pfOnGross,
       pfVestingYears: Number(x.pfVestingYears) || 0,
+      vpsEnabled: x.vpsEnabled,
+      vpsCreditCapPercent: Number(x.vpsCreditCapPercent) || 0,
       gratuityEnabled: x.gratuityEnabled,
       gratuityDaysPerYear: Number(x.gratuityDaysPerYear) || 0,
       gratuityMinYears: Number(x.gratuityMinYears) || 0,
@@ -227,6 +231,20 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
                 <Switch checked={x.pfOnGross} onChange={(v) => setXv({ pfOnGross: v })} label="On gross salary" description="Off: on basic salary." />
               </div>
             </div>
+          )}
+        </CardBody>
+      </Card>
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader
+          title="Voluntary pension (VPS)"
+          description="Members and their shares are set on each person's file. The member's share is deducted and lowers their income tax (section 63); the company's share is a cost."
+        />
+        <CardBody className="space-y-4">
+          <Switch checked={x.vpsEnabled} onChange={(v) => setXv({ vpsEnabled: v })} label="Deduct voluntary pension" />
+          {x.vpsEnabled && (
+            <Field label="Tax credit on up to (% of taxable pay)" hint="The law allows 20%" className="max-w-xs">
+              <Input type="number" min={0} max={100} step="0.5" value={x.vpsCreditCapPercent} onChange={(e) => setXv({ vpsCreditCapPercent: e.target.value })} />
+            </Field>
           )}
         </CardBody>
       </Card>

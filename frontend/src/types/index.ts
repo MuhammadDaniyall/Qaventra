@@ -710,6 +710,8 @@ export interface PayrollSettings {
   pfEmployerPercent?: number;
   pfOnGross?: boolean;
   pfVestingYears?: number;
+  vpsEnabled?: boolean;
+  vpsCreditCapPercent?: number;
   gratuityEnabled?: boolean;
   gratuityDaysPerYear?: number;
   gratuityMinYears?: number;

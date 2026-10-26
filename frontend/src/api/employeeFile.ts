@@ -74,6 +74,11 @@ export interface EmployeeFile {
   ownRadiusMeters: number | null;
   paymentMethod: 'BankTransfer' | 'Cash' | 'Cheque';
   providentFundMember: boolean;
+  vpsMember: boolean;
+  vpsProvider: string | null;
+  vpsAccountNo: string | null;
+  vpsEmployeePercent: number;
+  vpsEmployerPercent: number;
 }
 
 export interface Dependant {

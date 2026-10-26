@@ -30,7 +30,9 @@ public record EmployeeFileDto(
     Guid? ExitTypeId, [StringLength(500)] string? ExitReason, bool IsBlacklisted, [StringLength(500)] string? BlacklistReason,
     bool AllowWebCheckIn = true, bool AllowMobileCheckIn = true, bool CheckInAnywhere = false, [StringLength(500)] string? AllowedIps = null,
     [Range(-90, 90)] double? OwnLatitude = null, [Range(-180, 180)] double? OwnLongitude = null, [Range(20, 100_000)] int? OwnRadiusMeters = null,
-    PaymentMethod PaymentMethod = PaymentMethod.BankTransfer, bool ProvidentFundMember = false);
+    PaymentMethod PaymentMethod = PaymentMethod.BankTransfer, bool ProvidentFundMember = false,
+    bool VpsMember = false, [StringLength(150)] string? VpsProvider = null, [StringLength(50)] string? VpsAccountNo = null,
+    [Range(0, 50)] decimal VpsEmployeePercent = 0, [Range(0, 50)] decimal VpsEmployerPercent = 0);
 
 public record DependantDto(
     [Required, StringLength(150)] string Name, [Required, StringLength(50)] string Relation,
@@ -144,7 +146,7 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
             e.DivisionId, e.SubDepartmentId, e.GradeId, e.CostCenterId, e.RegionId, e.EmployeeGroupId, e.ConfirmationDate, e.ContractEndDate,
             e.PunchCode, e.ExitTypeId, e.ExitReason, e.IsBlacklisted, e.BlacklistReason,
             e.AllowWebCheckIn, e.AllowMobileCheckIn, e.CheckInAnywhere, e.AllowedIps, e.OwnLatitude, e.OwnLongitude, e.OwnRadiusMeters,
-            e.PaymentMethod, e.ProvidentFundMember);
+            e.PaymentMethod, e.ProvidentFundMember, e.VpsMember, e.VpsProvider, e.VpsAccountNo, e.VpsEmployeePercent, e.VpsEmployerPercent);
     }
 
     [HttpPut("employees/{id:guid}/file"), Authorize(Policy = Policies.Hr)]
@@ -188,6 +190,10 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
         e.OwnRadiusMeters = f.OwnLatitude is null ? null : f.OwnRadiusMeters ?? 200;
         e.PaymentMethod = Enum.IsDefined(f.PaymentMethod) ? f.PaymentMethod : PaymentMethod.BankTransfer;
         e.ProvidentFundMember = f.ProvidentFundMember;
+        if (f.VpsMember && f.VpsEmployeePercent + f.VpsEmployerPercent <= 0)
+            throw new DomainException("Give the pension contribution as a percent of basic salary.");
+        e.VpsMember = f.VpsMember; e.VpsProvider = T(f.VpsProvider); e.VpsAccountNo = T(f.VpsAccountNo);
+        e.VpsEmployeePercent = f.VpsEmployeePercent; e.VpsEmployerPercent = f.VpsEmployerPercent;
         await db.SaveChangesAsync();
         return await File(id);
     }

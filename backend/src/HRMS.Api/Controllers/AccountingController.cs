@@ -32,13 +32,14 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
     public static readonly Dictionary<PayrollGlLine, string> Labels = new()
     {
         [PayrollGlLine.SalaryExpense] = "Salaries expense",
-        [PayrollGlLine.EmployerContributionExpense] = "Employer contributions expense (EOBI, provident fund, social security)",
+        [PayrollGlLine.EmployerContributionExpense] = "Employer contributions expense (EOBI, provident fund, pension, social security)",
         [PayrollGlLine.IncomeTaxPayable] = "Income tax payable",
         [PayrollGlLine.EobiPayable] = "EOBI payable",
         [PayrollGlLine.ProvidentFundPayable] = "Provident fund payable",
         [PayrollGlLine.SocialSecurityPayable] = "Social security payable",
         [PayrollGlLine.OtherDeductionsPayable] = "Loans, advances and other deductions",
         [PayrollGlLine.SalaryPayable] = "Salaries payable (net pay)",
+        [PayrollGlLine.PensionPayable] = "Voluntary pension payable (VPS)",
     };
 
     [HttpGet("gl/accounts")]
@@ -137,13 +138,15 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
             .Select(p => new
             {
                 Department = p.Employee!.Department != null ? p.Employee.Department.Name : "Unassigned",
-                p.GrossEarnings, p.IncomeTax, p.EobiEmployee, p.EobiEmployer, p.PfEmployee, p.PfEmployer, p.SocialSecurityEmployer,
+                p.GrossEarnings, p.IncomeTax, p.EobiEmployee, p.EobiEmployer, p.PfEmployee, p.PfEmployer, p.VpsEmployee, p.VpsEmployer, p.SocialSecurityEmployer,
                 p.OtherDeductions, p.NetPay,
             })
             .ToListAsync();
         var accounts = await db.GlAccounts.ToDictionaryAsync(a => a.Id);
         var map = await db.PayrollGlMappings.ToDictionaryAsync(m => m.Line, m => accounts.GetValueOrDefault(m.GlAccountId));
-        var unmapped = Labels.Where(l => map.GetValueOrDefault(l.Key) is null).Select(l => l.Value).ToList();
+        // The pension line only matters to companies that use the voluntary pension scheme.
+        var usesPension = slips.Any(s => s.VpsEmployee + s.VpsEmployer > 0);
+        var unmapped = Labels.Where(l => map.GetValueOrDefault(l.Key) is null && (l.Key != PayrollGlLine.PensionPayable || usesPension)).Select(l => l.Value).ToList();
         var period = new DateOnly(run.Year, run.Month, 1);
         var date = period.AddMonths(1).AddDays(-1);
         var month = period.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
@@ -160,14 +163,15 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
         {
             Add(PayrollGlLine.SalaryExpense, $"Salaries {month}", d.Key, d.Sum(s => s.GrossEarnings), 0);
             Add(PayrollGlLine.EmployerContributionExpense, $"Employer contributions {month}", d.Key,
-                d.Sum(s => s.EobiEmployer + s.PfEmployer + s.SocialSecurityEmployer), 0);
+                d.Sum(s => s.EobiEmployer + s.PfEmployer + s.VpsEmployer + s.SocialSecurityEmployer), 0);
         }
         Add(PayrollGlLine.IncomeTaxPayable, $"Income tax withheld {month}", null, 0, slips.Sum(s => s.IncomeTax));
         Add(PayrollGlLine.EobiPayable, $"EOBI {month}", null, 0, slips.Sum(s => s.EobiEmployee + s.EobiEmployer));
         Add(PayrollGlLine.ProvidentFundPayable, $"Provident fund {month}", null, 0, slips.Sum(s => s.PfEmployee + s.PfEmployer));
         Add(PayrollGlLine.SocialSecurityPayable, $"Social security {month}", null, 0, slips.Sum(s => s.SocialSecurityEmployer));
-        // Provident fund is inside "other deductions" on the payslip; it already has its own line above.
-        Add(PayrollGlLine.OtherDeductionsPayable, $"Other deductions {month}", null, 0, slips.Sum(s => s.OtherDeductions - s.PfEmployee));
+        Add(PayrollGlLine.PensionPayable, $"Voluntary pension {month}", null, 0, slips.Sum(s => s.VpsEmployee + s.VpsEmployer));
+        // Provident fund and pension are inside "other deductions" on the payslip; they already have their own lines above.
+        Add(PayrollGlLine.OtherDeductionsPayable, $"Other deductions {month}", null, 0, slips.Sum(s => s.OtherDeductions - s.PfEmployee - s.VpsEmployee));
         Add(PayrollGlLine.SalaryPayable, $"Net salaries payable {month}", null, 0, slips.Sum(s => s.NetPay));
 
         // Rounding on individual payslips can leave the voucher a rupee out; show it rather than hide it.

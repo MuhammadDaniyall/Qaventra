@@ -240,6 +240,14 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             if (pfEmployee > 0)
                 extras.Add(new PayItem("Provident fund", SalaryComponentKind.Deduction, pfEmployee, false));
 
+            // Voluntary pension: shares of the earned basic; the member's own share is deducted and earns a tax credit.
+            var vps = settings.VpsEnabled && employee.VpsMember;
+            var vpsBase = salary.BasicSalary * paidFactor;
+            var vpsEmployee = vps ? Math.Round(vpsBase * employee.VpsEmployeePercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
+            var vpsEmployer = vps ? Math.Round(vpsBase * employee.VpsEmployerPercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
+            if (vpsEmployee > 0)
+                extras.Add(new PayItem($"Voluntary pension ({employee.VpsProvider ?? "VPS"})", SalaryComponentKind.Deduction, vpsEmployee, false));
+
             Func<decimal, decimal>? taxFor = null;
             if (adjustments[employee.Id].Any())
             {
@@ -251,6 +259,22 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                     var income = Sum(TaxAdjustmentKind.PreviousIncome) + Sum(TaxAdjustmentKind.OtherIncome) + ytd.Taxable + monthTaxable * monthsLeft;
                     var due = TaxCalculator.AnnualTax(taxYear, income) - Sum(TaxAdjustmentKind.TaxCredit) - Sum(TaxAdjustmentKind.PreviousTax) - ytd.Tax;
                     return Math.Max(0, Math.Round(due / monthsLeft, 0, MidpointRounding.AwayFromZero));
+                };
+            }
+
+            // Section 63: the tax saved is the average tax rate times the contribution, up to the cap's share of taxable pay.
+            var vpsCredit = 0m;
+            if (vpsEmployee > 0)
+            {
+                var plainTax = taxFor ?? (t => TaxCalculator.MonthlyTax(taxYear, t));
+                taxFor = monthTaxable =>
+                {
+                    var tax = plainTax(monthTaxable);
+                    if (tax <= 0 || monthTaxable <= 0)
+                        return tax;
+                    var eligible = Math.Min(vpsEmployee, monthTaxable * settings.VpsCreditCapPercent / 100m);
+                    vpsCredit = Math.Min(tax, Math.Round(tax / monthTaxable * eligible, 0, MidpointRounding.AwayFromZero));
+                    return tax - vpsCredit;
                 };
             }
 
@@ -276,6 +300,9 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 EobiEmployer = result.EobiEmployer,
                 PfEmployee = pfEmployee,
                 PfEmployer = pfEmployer,
+                VpsEmployee = vpsEmployee,
+                VpsEmployer = vpsEmployer,
+                VpsTaxCredit = vpsCredit,
                 SocialSecurityEmployer = socialSecurity,
                 OtherDeductions = result.OtherDeductions,
                 NetPay = result.NetPay,

@@ -45,7 +45,7 @@ public record PayrollSettingsDto(
     [Range(0, 30)] int PfVestingYears = 0, bool GratuityEnabled = false, [Range(0, 90)] decimal GratuityDaysPerYear = 30, [Range(0, 30)] decimal GratuityMinYears = 1,
     bool GratuityOnGross = false, [Range(0, 50)] decimal SocialSecurityPercent = 0, [Range(0, 10_000_000)] decimal? SocialSecurityWageCeiling = null,
     [Range(0, 5)] decimal HolidayOvertimeMultiplier = 2m, [Range(0, 5)] decimal OffDayOvertimeMultiplier = 2m, [Range(0, 480)] int OvertimeMinMinutes = 0,
-    [Range(0, 120)] int OvertimeRoundMinutes = 0);
+    [Range(0, 120)] int OvertimeRoundMinutes = 0, bool VpsEnabled = false, [Range(0, 100)] decimal VpsCreditCapPercent = 20m);
 
 [ApiController]
 [Route("api/payroll")]
@@ -139,7 +139,7 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
             s.LatesPerPenalty, s.LatePenaltyDays, s.DeductHalfDays, s.RequireApproval, s.EncashOnGross,
             s.ProvidentFundEnabled, s.PfEmployeePercent, s.PfEmployerPercent, s.PfOnGross, s.PfVestingYears, s.GratuityEnabled, s.GratuityDaysPerYear,
             s.GratuityMinYears, s.GratuityOnGross, s.SocialSecurityPercent, s.SocialSecurityWageCeiling, s.HolidayOvertimeMultiplier, s.OffDayOvertimeMultiplier,
-            s.OvertimeMinMinutes, s.OvertimeRoundMinutes);
+            s.OvertimeMinMinutes, s.OvertimeRoundMinutes, s.VpsEnabled, s.VpsCreditCapPercent);
     }
 
     [HttpPut("settings"), Authorize(Policy = Policies.Hr)]
@@ -175,6 +175,8 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         s.OffDayOvertimeMultiplier = req.OffDayOvertimeMultiplier;
         s.OvertimeMinMinutes = req.OvertimeMinMinutes;
         s.OvertimeRoundMinutes = req.OvertimeRoundMinutes;
+        s.VpsEnabled = req.VpsEnabled;
+        s.VpsCreditCapPercent = req.VpsCreditCapPercent;
         await db.SaveChangesAsync();
         return NoContent();
     }

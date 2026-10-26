@@ -34,6 +34,12 @@ public class PayrollSettings : TenantEntity
     /// <summary>Years of service before the employer share belongs to the person (0 = at once).</summary>
     public int PfVestingYears { get; set; }
 
+    // ---------- Voluntary pension scheme (VPS) ----------
+    /// <summary>Members' own contributions are deducted and earn the section 63 tax credit; the company may add a share.</summary>
+    public bool VpsEnabled { get; set; }
+    /// <summary>Contributions above this percent of taxable pay get no tax credit (the law's limit is 20%).</summary>
+    public decimal VpsCreditCapPercent { get; set; } = 20m;
+
     // ---------- Gratuity ----------
     public bool GratuityEnabled { get; set; }
     /// <summary>Days of salary per year of service (e.g. 30).</summary>
@@ -139,6 +145,10 @@ public class Payslip : TenantEntity
     /// <summary>Provident fund: member's share (also a deduction line) and the company's share.</summary>
     public decimal PfEmployee { get; set; }
     public decimal PfEmployer { get; set; }
+    /// <summary>Voluntary pension: member's share (a deduction line), the company's share, and the tax it saved the member.</summary>
+    public decimal VpsEmployee { get; set; }
+    public decimal VpsEmployer { get; set; }
+    public decimal VpsTaxCredit { get; set; }
     public decimal SocialSecurityEmployer { get; set; }
     public decimal OtherDeductions { get; set; }
     public decimal NetPay { get; set; }
