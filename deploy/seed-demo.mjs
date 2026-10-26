@@ -383,6 +383,179 @@ async function newFeatures(admin, emp, dept, me) {
   });
 }
 
+// ---------- Remaining modules ----------
+
+/** The clearance template this section makes last; its presence means the whole script has run. */
+const MORE_MARKER = 'Standard exit clearance';
+
+// Letters, onboarding, exit, travel, desks, projects, piece work, scheduled alerts and reports, budget, custom
+// fields, suggestions, pay changes, the voluntary pension scheme and weekly pay, so every module has something in it.
+async function moreModules(admin, emp, dept, me) {
+  const y = TODAY.getUTCFullYear();
+
+  await step('HR letters', async () => {
+    const templates = [
+      { name: 'Experience letter', category: 'Experience', subject: 'Experience certificate', isActive: true, selfService: true,
+        body: 'This is to certify that {{EmployeeName}} worked with us as {{Designation}} in {{Department}} from {{JoiningDate}}. We wish them every success.' },
+      { name: 'Salary certificate', category: 'SalaryCertificate', subject: 'Salary certificate', isActive: true, selfService: true,
+        body: 'This is to certify that {{EmployeeName}} ({{EmployeeCode}}) is employed with us as {{Designation}} and draws a gross monthly salary of {{GrossSalary}}.' },
+      { name: 'Increment letter', category: 'Increment', subject: 'Salary revision', isActive: true, autoUse: 'SalaryRevision',
+        body: 'Dear {{EmployeeName}}, in recognition of your performance your gross salary is revised to {{GrossSalary}} from {{EffectiveDate}}.' },
+    ];
+    const have = new Set((await admin.get('/letters/templates')).map((t) => t.name));
+    for (const t of templates) if (!have.has(t.name)) await admin.post('/letters/templates', t);
+    if (emp.acc)
+      await admin.post('/letters', { employeeId: emp.acc, category: 'SalaryCertificate', subject: 'Salary certificate',
+        body: 'This is to certify that the employee draws a regular monthly salary from Systems Limited. Issued on request for a bank loan.', shareWithEmployee: true });
+  });
+
+  await step('Onboarding', async () => {
+    const t = await admin.post('/onboarding/templates', {
+      name: 'Standard joiner', isDefault: true, welcomeMessage: 'Welcome aboard! Please bring your CNIC and two photographs on day one.',
+      tasks: [
+        { title: 'Prepare offer pack and contract', category: 'Paperwork', assigneeKind: 'Hr', dueOffsetDays: -3 },
+        { title: 'Laptop, email and VPN ready', category: 'ItSetup', assigneeKind: 'Hr', dueOffsetDays: -1 },
+        { title: 'Plan the first week', category: 'Training', assigneeKind: 'LineManager', dueOffsetDays: 0 },
+        { title: 'Office tour and team lunch', category: 'Introduction', assigneeKind: 'Buddy', dueOffsetDays: 0 },
+        { title: 'Upload CNIC and degree copies', category: 'Paperwork', assigneeKind: 'NewJoiner', dueOffsetDays: 2 },
+      ],
+    });
+    const joiner = emp.se8 ?? emp.se5;
+    if (joiner) await admin.post('/onboarding', { employeeId: joiner, templateId: t.id, reportingTime: '09:00:00', reportingPlace: 'Reception, Head Office', buddyEmployeeId: emp.se1 ?? null });
+  });
+
+  await step('Travel', async () => {
+    await admin.put('/travel/settings', { minNoticeDays: 3, perDiemDomestic: 6000, perDiemInternational: 75, settleWithinDays: 15, deskIds: [emp.hre].filter(Boolean) });
+    for (const name of ['Client meeting', 'Training', 'Conference']) await admin.post('/travel/reasons', { name });
+    if (me)
+      await admin.post('/travel', {
+        purpose: 'Quarterly business review with a banking client in Karachi', tripType: 'Return', isInternational: false, returnOn: iso(addDays(TODAY, 12)),
+        legs: [{ from: 'Lahore', to: 'Karachi', date: iso(addDays(TODAY, 10)), mode: 'Air' }, { from: 'Karachi', to: 'Lahore', date: iso(addDays(TODAY, 12)), mode: 'Air' }],
+        needsHotel: true, hotelCity: 'Karachi', checkIn: iso(addDays(TODAY, 10)), checkOut: iso(addDays(TODAY, 12)), needsPickDrop: true, estimatedCost: 95000, advanceRequested: 20000,
+      });
+  });
+
+  await step('Desk booking', async () => {
+    // Only where an office is already set up: adding one would switch on the location check for everyone's check-in.
+    const office = (await admin.get('/setup/office-locations'))[0];
+    if (!office) return;
+    await admin.post('/desks/floors', { officeLocationId: office.id, name: '3rd floor, Engineering', order: 3 });
+    const floor = (await admin.get('/desks/floors')).find((f) => f.name === '3rd floor, Engineering');
+    await admin.post('/desks/spaces/bulk', { floorId: floor.id, prefix: 'E-', from: 1, to: 16, features: 'Dual monitors' });
+    await admin.post('/desks/spaces', { floorId: floor.id, name: 'Board room', kind: 'MeetingRoom', seats: 12, features: 'Projector, video calls' });
+    await admin.put('/desks/settings', { maxDaysAhead: 14, requireCheckIn: false, releaseAfterMinutes: 60, dayStartsAt: 9 });
+  });
+
+  await step('Projects', async () => {
+    const team = ['se1', 'se2', 'se3', 'se4', 'se5'].map((k) => emp[k]).filter(Boolean);
+    const projects = [
+      { name: 'Core banking API modernisation', client: 'A commercial bank', budgetHours: 2400, tasks: ['Account service', 'Payments gateway', 'Load testing'] },
+      { name: 'Telecom self-care app', client: 'A mobile operator', budgetHours: 1600, tasks: ['Login and OTP', 'Bill payment', 'Store release'] },
+    ];
+    for (const [i, p] of projects.entries()) {
+      const made = await admin.post('/projects', {
+        name: p.name, client: p.client, budgetHours: p.budgetHours, billable: true, openToAll: false, status: 'Active',
+        members: team.map((employeeId, n) => ({ employeeId, hourlyRate: 3500 - n * 300 })),
+      });
+      for (const [n, name] of p.tasks.entries())
+        await admin.post(`/projects/${made.id}/tasks`, { name, assigneeEmployeeId: team[(n + i) % team.length], estimatedHours: 80, isDone: n === 0 });
+    }
+  });
+
+  await step('Piece work', async () => {
+    await admin.post('/piece-work/items', { name: 'Documents scanned and indexed', unit: 'page', rate: 4, dailyTarget: 400 });
+    const item = (await admin.get('/piece-work/items')).find((i) => i.name === 'Documents scanned and indexed');
+    const people = [emp.it2, emp.hre].filter(Boolean);
+    const days = [];
+    for (let d = addDays(TODAY, -1); days.length < 3; d = addDays(d, -1)) if (!isWeekend(d)) days.push(iso(d));
+    for (const date of days)
+      await admin.post('/piece-work/entries', { itemId: item.id, date, lines: people.map((employeeId, n) => ({ employeeId, quantity: 350 + n * 40 + Math.floor(rand() * 60) })) });
+    // HR approves the older ones; the latest day waits in the queue.
+    const pending = (await admin.get(`/piece-work/entries?team=true&status=Pending`)).filter((e) => e.date !== days[0]).map((e) => e.id);
+    if (pending.length) await admin.post('/piece-work/entries/decide', { ids: pending, approve: true });
+  });
+
+  await step('Scheduled alerts and reports', async () => {
+    await admin.post('/scheduled/alerts', { name: 'Birthday wishes', kind: 'Birthday', daysBefore: 0, probationMonths: 3, sendHour: 9, toEmployee: true, toManager: false, toHr: false, toEveryone: true,
+      titleTemplate: 'Happy birthday, {firstname}!', bodyTemplate: 'Wishing {name} a wonderful year ahead.' });
+    await admin.post('/scheduled/alerts', { name: 'Probation ending', kind: 'ProbationEnd', daysBefore: 7, probationMonths: 3, sendHour: 10, toEmployee: false, toManager: true, toHr: true, toEveryone: false,
+      titleTemplate: "{name}'s probation ends on {date}", bodyTemplate: 'Please complete the confirmation review.' });
+    await admin.post('/scheduled/reports', { name: 'Monthly headcount', kind: 'Headcount', frequency: 'Monthly', day: 1, sendHour: 9, recipientIds: [me, emp.hrm, emp.ceo].filter(Boolean) });
+    await admin.post('/scheduled/reports', { name: 'Joiners and leavers', kind: 'JoinersAndLeavers', frequency: 'Weekly', day: 1, sendHour: 9, recipientIds: [emp.hrm].filter(Boolean) });
+  });
+
+  await step('Manpower budget', () =>
+    admin.post('/budget/plans?fromStaff=true', { name: `FY ${y}-${String(y + 1).slice(2)}`, fromDate: `${y}-07-01`, toDate: `${y + 1}-06-30` }));
+
+  await step('Custom fields and suggestions', async () => {
+    await admin.post('/setup/custom-fields', { label: 'T-shirt size', type: 'Dropdown', options: ['S', 'M', 'L', 'XL'], visibleToEmployee: true });
+    await admin.post('/setup/custom-fields', { label: 'Laptop preference', type: 'Dropdown', options: ['Windows', 'macOS', 'Linux'], visibleToEmployee: true });
+    const cat = await admin.post('/suggestions/categories', { name: 'Workplace', reviewerIds: [emp.hrm].filter(Boolean) });
+    await admin.post('/suggestions/categories', { name: 'Engineering practices', reviewerIds: [emp.hoe].filter(Boolean) });
+    if (me) await admin.post('/suggestions', { title: 'Standing desks for the 3rd floor', details: 'Several engineers have asked for standing desks; a pilot of 10 would help.', categoryId: cat?.id ?? null, isAnonymous: false });
+  });
+
+  await step('Pay changes', async () => {
+    const next = addDays(new Date(Date.UTC(TODAY.getUTCFullYear(), TODAY.getUTCMonth() + 1, 1)), 0);
+    if (emp.hoe)
+      await admin.post('/pay-changes/recurring', { employeeId: emp.hoe, title: 'Car allowance', isEarning: true, amount: 45000, isTaxable: true, startYear: next.getUTCFullYear(), startMonth: next.getUTCMonth() + 1 });
+    const lines = [emp.se3, emp.se4, emp.qa1].filter(Boolean).map((employeeId, n) => ({ employeeId, percent: 8 + n * 2 }));
+    if (lines.length) await admin.post('/pay-changes/revisions', { effectiveFrom: iso(next), kind: 'Increment', includeAllowances: true, reason: 'Annual performance review', lines });
+    if (emp.se1)
+      await admin.post('/pay/requests', { employeeId: emp.se1, kind: 'Bonus', title: 'Spot award: payments go-live', amount: 50000, isTaxable: true, year: next.getUTCFullYear(), month: next.getUTCMonth() + 1 });
+  });
+
+  await step('Voluntary pension members', async () => {
+    const s = await admin.get('/payroll/settings');
+    await admin.put('/payroll/settings', { ...s, vpsEnabled: true, vpsCreditCapPercent: 20 });
+    const members = [[emp.se1, 'Meezan Tahaffuz Pension Fund', 10, 5], [emp.em, 'Al Meezan VPS', 8, 4], [emp.fm, 'HBL Pension Fund', 15, 5]];
+    for (const [id, provider, mine, theirs] of members) {
+      if (!id) continue;
+      const file = await admin.get(`/employees/${id}/file`);
+      await admin.put(`/employees/${id}/file`, { ...file, vpsMember: true, vpsProvider: provider, vpsAccountNo: `VPS-${String(id).slice(0, 6).toUpperCase()}`, vpsEmployeePercent: mine, vpsEmployerPercent: theirs });
+    }
+  });
+
+  await step('Weekly pay for support staff', async () => {
+    const weekly = [emp.it2].filter(Boolean);
+    for (const id of weekly) {
+      const file = await admin.get(`/employees/${id}/file`);
+      await admin.put(`/employees/${id}/file`, { ...file, payFrequency: 'Weekly' });
+    }
+    // The last finished week, processed as a draft for HR to look at.
+    if (weekly.length) await admin.post('/payroll/runs/period', { frequency: 'Weekly', date: iso(addDays(TODAY, -7)) });
+  });
+
+  await step('Laptops handed over', async () => {
+    const laptops = (await admin.get('/assets')).filter((a) => a.tag?.startsWith('LT-')).slice(0, 4);
+    const people = [emp.se1, emp.se2, emp.se3, emp.se6].filter(Boolean);
+    for (const [i, a] of laptops.entries())
+      if (people[i]) await admin.post(`/assets/${a.id}/assign`, { employeeId: people[i], assignedOn: iso(addDays(TODAY, -60 + i)), condition: 'Good', notes: 'With charger and bag' });
+  });
+
+  // Last: the clearance template marks the whole script as run.
+  await step('Exit clearance, interview and a resignation', async () => {
+    await admin.post('/separation-setup/exit-templates', {
+      name: 'Standard exit interview', isDefault: true,
+      questions: [
+        { text: 'How would you rate your manager?', kind: 'Rating' },
+        { text: 'What could we have done to keep you?', kind: 'Text' },
+        { text: 'Would you work with us again?', kind: 'YesNo' },
+      ],
+    });
+    await admin.post('/separation-setup/clearance-templates', {
+      name: MORE_MARKER, isDefault: true,
+      items: [
+        { department: 'IT', title: 'Laptop, access card and accounts returned', level: 1, responsibleEmployeeId: emp.it1 ?? null },
+        { department: 'Finance', title: 'Loans and advances settled', level: 2, responsibleEmployeeId: emp.acc ?? null },
+        { department: 'HR', title: 'Exit interview done', level: 3, responsibleEmployeeId: emp.hrm ?? null },
+      ],
+    });
+    if (emp.bd2)
+      await admin.post('/separations', { employeeId: emp.bd2, type: 'Resignation', noticeDate: iso(addDays(TODAY, -10)), lastWorkingDay: iso(addDays(TODAY, 20)), noticePeriodDays: 30, reason: 'Moving to Dubai' });
+  });
+}
+
 // ---------- Run ----------
 
 async function main() {
@@ -399,17 +572,20 @@ async function main() {
     adminEmail = `${first.me.email} (your own password)`;
     console.log(`Signed in to "${first.me.companyName}" as ${first.me.email}\n`);
     const devices = (await admin.get('/biometric/devices')).map((d) => d.name);
-    if (devices.includes('Karachi Office Gate')) {
+    const moreDone = (await admin.get('/separation-setup/clearance-templates')).some((t) => t.name === MORE_MARKER);
+    if (moreDone) {
       console.log('Demo data is already in this company. Nothing was changed.');
       process.exit(1);
     }
     if (devices.includes('Head Office Main Gate')) {
-      // The first version of this script ran here: add only the data for the newer features.
-      console.log('Base demo data is already here; adding data for the newer features.\n');
+      // An earlier version of this script ran here: add only what it did not.
+      const newDone = devices.includes('Karachi Office Gate');
+      console.log(`Base demo data is already here; adding ${newDone ? 'the remaining modules' : 'the newer features and remaining modules'}.\n`);
       const dept = Object.fromEntries((await admin.get('/departments')).map((d) => [d.name, d.id]));
       dept.Engineering ??= dept['Software Engineering'];
       const roster = await step('People for the demo roles', () => useExisting(admin, false));
-      await newFeatures(admin, roster.keys, dept, first.me.employeeId);
+      if (!newDone) await newFeatures(admin, roster.keys, dept, first.me.employeeId);
+      await moreModules(admin, roster.keys, dept, first.me.employeeId);
       return finish();
     }
   } else {
@@ -738,6 +914,7 @@ async function main() {
   if (!ownCompany) await step('Sign-in domain', () => admin.put('/setup/security', { allowedEmailDomains: [DOMAIN] }));
 
   await newFeatures(admin, emp, dept, admin.me.employeeId);
+  await moreModules(admin, emp, dept, admin.me.employeeId);
 
   if (ownCompany) return finish();
   // Write the logins down.
