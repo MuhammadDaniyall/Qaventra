@@ -338,7 +338,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             }
             case "payroll.costcenters":
             {
-                var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month);
+                var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month && r.Frequency == PayFrequency.Monthly);
                 if (run is null)
                     return T(def, $"{month:MMMM yyyy}: payroll not processed", ["Note"], [], [L("Process this month's payroll first.")]);
                 var slips = await db.Payslips.Where(p => p.PayrollRunId == run.Id)
@@ -406,7 +406,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             case "payroll.socialsecurity":
             case "payroll.vps":
             {
-                var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month);
+                var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month && r.Frequency == PayFrequency.Monthly);
                 if (run is null)
                     return T(def, $"{month:MMMM yyyy}: payroll not processed", ["Note"], [], [L("Process this month's payroll first.")]);
                 var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);

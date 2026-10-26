@@ -45,7 +45,7 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         var period = new DateOnly(r.Year, r.Month, 1);
         if (period < new DateOnly(today.Year, today.Month, 1).AddMonths(-1))
             throw new DomainException("The payroll month is too far in the past.");
-        if (await db.PayrollRuns.AnyAsync(p => p.Year == r.Year && p.Month == r.Month && p.Status == PayrollRunStatus.Finalized))
+        if (await db.PayrollRuns.AnyAsync(p => p.Year == r.Year && p.Month == r.Month && p.Frequency == PayFrequency.Monthly && p.Status == PayrollRunStatus.Finalized))
             throw new DomainException($"Payroll for {period:MMMM yyyy} is finalized. Choose the next month.");
         var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == r.EmployeeId) ?? throw new NotFoundException("Employee");
         if (!employee.IsCurrent)

@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text;
 using HRMS.Api.Auth;
 using HRMS.Api.Infrastructure;
+using HRMS.Api.Services;
 using HRMS.Domain;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
@@ -147,9 +148,8 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
         // The pension line only matters to companies that use the voluntary pension scheme.
         var usesPension = slips.Any(s => s.VpsEmployee + s.VpsEmployer > 0);
         var unmapped = Labels.Where(l => map.GetValueOrDefault(l.Key) is null && (l.Key != PayrollGlLine.PensionPayable || usesPension)).Select(l => l.Value).ToList();
-        var period = new DateOnly(run.Year, run.Month, 1);
-        var date = period.AddMonths(1).AddDays(-1);
-        var month = period.ToString("MMMM yyyy", CultureInfo.InvariantCulture);
+        var date = run.PeriodEnd;
+        var month = PayrollService.Label(run);
         var lines = new List<JournalLineDto>();
 
         void Add(PayrollGlLine line, string description, string? department, decimal debit, decimal credit)

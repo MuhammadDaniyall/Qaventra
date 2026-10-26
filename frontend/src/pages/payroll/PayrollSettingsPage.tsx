@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { payrollApi } from '../../api/payroll';
 import { ApiError, errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
-import { Button, Card, CardBody, CardHeader, ErrorState, Field, FormError, Input, PageHeader, PageSpinner, Switch, useToast } from '../../components/ui';
+import { Button, Card, CardBody, CardHeader, ErrorState, Field, FormError, Input, PageHeader, PageSpinner, Select, Switch, useToast } from '../../components/ui';
+import { tx } from '../../lib/i18n';
 import type { PayrollSettings } from '../../types';
 
 export function PayrollSettingsPage() {
@@ -45,6 +46,8 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
     pfOnGross: initial.pfOnGross ?? false,
     pfVestingYears: String(initial.pfVestingYears ?? 0),
     vpsEnabled: initial.vpsEnabled ?? false,
+    payWeekStartsOn: initial.payWeekStartsOn ?? 'Monday',
+    biWeeklyAnchor: initial.biWeeklyAnchor ?? '',
     vpsCreditCapPercent: String(initial.vpsCreditCapPercent ?? 20),
     gratuityEnabled: initial.gratuityEnabled ?? false,
     gratuityDaysPerYear: String(initial.gratuityDaysPerYear ?? 30),
@@ -103,6 +106,8 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
       pfOnGross: x.pfOnGross,
       pfVestingYears: Number(x.pfVestingYears) || 0,
       vpsEnabled: x.vpsEnabled,
+      payWeekStartsOn: x.payWeekStartsOn,
+      biWeeklyAnchor: x.biWeeklyAnchor || null,
       vpsCreditCapPercent: Number(x.vpsCreditCapPercent) || 0,
       gratuityEnabled: x.gratuityEnabled,
       gratuityDaysPerYear: Number(x.gratuityDaysPerYear) || 0,
@@ -232,6 +237,26 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
               </div>
             </div>
           )}
+        </CardBody>
+      </Card>
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader
+          title="Weekly and bi-weekly pay"
+          description="For people whose file says they are paid weekly, every two weeks or twice a month. Salaries stay monthly; each period pays its share, and EOBI, loans and recurring items go in the first period ending in each month."
+        />
+        <CardBody className="grid gap-4 sm:grid-cols-2">
+          <Field label="Pay week starts on">
+            <Select value={x.payWeekStartsOn} onChange={(e) => setXv({ payWeekStartsOn: e.target.value as NonNullable<PayrollSettings['payWeekStartsOn']> })}>
+              {(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const).map((d) => (
+                <option key={d} value={d}>
+                  {tx(d)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="First day of a two-week period" hint="Leave empty to count from Monday 5 January 2026">
+            <Input type="date" value={x.biWeeklyAnchor} onChange={(e) => setXv({ biWeeklyAnchor: e.target.value })} />
+          </Field>
         </CardBody>
       </Card>
       <Card className="mt-6 max-w-2xl">

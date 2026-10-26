@@ -2156,6 +2156,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<int>("PayFrequency")
+                        .HasColumnType("int");
+
                     b.Property<int>("PaymentMethod")
                         .HasColumnType("int");
 
@@ -4372,8 +4375,17 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime?>("FinalizedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Frequency")
+                        .HasColumnType("int");
+
                     b.Property<int>("Month")
                         .HasColumnType("int");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date");
 
                     b.Property<DateTime>("ProcessedAtUtc")
                         .HasColumnType("datetime2");
@@ -4409,8 +4421,10 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "Year", "Month")
+                    b.HasIndex("TenantId", "Frequency", "PeriodStart")
                         .IsUnique();
+
+                    b.HasIndex("TenantId", "Year", "Month");
 
                     b.ToTable("PayrollRuns");
                 });
@@ -4420,6 +4434,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly?>("BiWeeklyAnchor")
+                        .HasColumnType("date");
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
@@ -4478,6 +4495,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<int>("OvertimeRoundMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PayWeekStartsOn")
                         .HasColumnType("int");
 
                     b.Property<decimal>("PfEmployeePercent")

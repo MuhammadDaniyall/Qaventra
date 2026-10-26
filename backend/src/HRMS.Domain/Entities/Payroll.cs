@@ -34,6 +34,12 @@ public class PayrollSettings : TenantEntity
     /// <summary>Years of service before the employer share belongs to the person (0 = at once).</summary>
     public int PfVestingYears { get; set; }
 
+    // ---------- Weekly and bi-weekly pay ----------
+    /// <summary>First day of a weekly or bi-weekly pay period.</summary>
+    public DayOfWeek PayWeekStartsOn { get; set; } = DayOfWeek.Monday;
+    /// <summary>A day on which a bi-weekly period starts; the count of fortnights runs from here.</summary>
+    public DateOnly? BiWeeklyAnchor { get; set; }
+
     // ---------- Voluntary pension scheme (VPS) ----------
     /// <summary>Members' own contributions are deducted and earn the section 63 tax credit; the company may add a share.</summary>
     public bool VpsEnabled { get; set; }
@@ -109,8 +115,12 @@ public class SalaryComponent : BaseEntity
 
 public class PayrollRun : TenantEntity
 {
+    /// <summary>The month of the period's last day; for monthly runs, the month paid.</summary>
     public int Year { get; set; }
     public int Month { get; set; }
+    public PayFrequency Frequency { get; set; } = PayFrequency.Monthly;
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public PayrollRunStatus Status { get; set; } = PayrollRunStatus.Draft;
     public string TaxYearCode { get; set; } = "";
     public DateTime ProcessedAtUtc { get; set; }

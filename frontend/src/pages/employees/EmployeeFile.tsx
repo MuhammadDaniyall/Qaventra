@@ -200,6 +200,18 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
               v.paymentMethod
             )}
           </Item>
+          <Item label="Paid">
+            {draft ? (
+              <Select value={v.payFrequency} onChange={(e) => setDraft({ ...v, payFrequency: e.target.value as EmployeeFile['payFrequency'] })}>
+                <option value="Monthly">{tx('Monthly')}</option>
+                <option value="SemiMonthly">{tx('Twice a month')}</option>
+                <option value="BiWeekly">{tx('Every two weeks')}</option>
+                <option value="Weekly">{tx('Weekly')}</option>
+              </Select>
+            ) : (
+              tx({ Monthly: 'Monthly', SemiMonthly: 'Twice a month', BiWeekly: 'Every two weeks', Weekly: 'Weekly' }[v.payFrequency ?? 'Monthly'])
+            )}
+          </Item>
           <Item label="Provident fund">
             {draft ? (
               <Checkbox label="Member" checked={v.providentFundMember} onChange={(e) => set('providentFundMember', e.target.checked)} />

@@ -117,7 +117,7 @@ public class ExportsController(HrmsDbContext db, TenantClock clock) : Controller
         var deductions = slips.SelectMany(s => s.Lines).Where(l => l.Kind == SalaryComponentKind.Deduction).Select(l => l.Name).Distinct().ToList();
 
         using var wb = new XLWorkbook();
-        var ws = wb.Worksheets.Add($"Payroll {run.Year}-{run.Month:D2}");
+        var ws = wb.Worksheets.Add(run.Frequency == PayFrequency.Monthly ? $"Payroll {run.Year}-{run.Month:D2}" : $"Payroll {run.PeriodStart:yyyy-MM-dd}");
         var headers = new List<string> { "Employee code", "Name", "Department", "Designation", "CNIC", "Bank", "Account", "Paid days" };
         headers.AddRange(earnings);
         headers.Add("Gross");
@@ -155,7 +155,7 @@ public class ExportsController(HrmsDbContext db, TenantClock clock) : Controller
             }
         }
         Excel.StyleTable(ws, headers.Count, r);
-        return Xlsx($"payroll-{run.Year}-{run.Month:D2}{(run.Status == PayrollRunStatus.Draft ? "-draft" : "")}.xlsx", Excel.Save(wb));
+        return Xlsx($"payroll-{(run.Frequency == PayFrequency.Monthly ? $"{run.Year}-{run.Month:D2}" : run.PeriodStart.ToString("yyyy-MM-dd"))}{(run.Status == PayrollRunStatus.Draft ? "-draft" : "")}.xlsx", Excel.Save(wb));
     }
 
     private static void Money(IXLCell cell, decimal value)

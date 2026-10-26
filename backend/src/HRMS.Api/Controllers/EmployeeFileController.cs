@@ -32,7 +32,7 @@ public record EmployeeFileDto(
     [Range(-90, 90)] double? OwnLatitude = null, [Range(-180, 180)] double? OwnLongitude = null, [Range(20, 100_000)] int? OwnRadiusMeters = null,
     PaymentMethod PaymentMethod = PaymentMethod.BankTransfer, bool ProvidentFundMember = false,
     bool VpsMember = false, [StringLength(150)] string? VpsProvider = null, [StringLength(50)] string? VpsAccountNo = null,
-    [Range(0, 50)] decimal VpsEmployeePercent = 0, [Range(0, 50)] decimal VpsEmployerPercent = 0);
+    [Range(0, 50)] decimal VpsEmployeePercent = 0, [Range(0, 50)] decimal VpsEmployerPercent = 0, PayFrequency PayFrequency = PayFrequency.Monthly);
 
 public record DependantDto(
     [Required, StringLength(150)] string Name, [Required, StringLength(50)] string Relation,
@@ -146,7 +146,7 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
             e.DivisionId, e.SubDepartmentId, e.GradeId, e.CostCenterId, e.RegionId, e.EmployeeGroupId, e.ConfirmationDate, e.ContractEndDate,
             e.PunchCode, e.ExitTypeId, e.ExitReason, e.IsBlacklisted, e.BlacklistReason,
             e.AllowWebCheckIn, e.AllowMobileCheckIn, e.CheckInAnywhere, e.AllowedIps, e.OwnLatitude, e.OwnLongitude, e.OwnRadiusMeters,
-            e.PaymentMethod, e.ProvidentFundMember, e.VpsMember, e.VpsProvider, e.VpsAccountNo, e.VpsEmployeePercent, e.VpsEmployerPercent);
+            e.PaymentMethod, e.ProvidentFundMember, e.VpsMember, e.VpsProvider, e.VpsAccountNo, e.VpsEmployeePercent, e.VpsEmployerPercent, e.PayFrequency);
     }
 
     [HttpPut("employees/{id:guid}/file"), Authorize(Policy = Policies.Hr)]
@@ -189,6 +189,7 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
         e.AllowedIps = T(f.AllowedIps); e.OwnLatitude = f.OwnLatitude; e.OwnLongitude = f.OwnLongitude;
         e.OwnRadiusMeters = f.OwnLatitude is null ? null : f.OwnRadiusMeters ?? 200;
         e.PaymentMethod = Enum.IsDefined(f.PaymentMethod) ? f.PaymentMethod : PaymentMethod.BankTransfer;
+        e.PayFrequency = Enum.IsDefined(f.PayFrequency) ? f.PayFrequency : PayFrequency.Monthly;
         e.ProvidentFundMember = f.ProvidentFundMember;
         if (f.VpsMember && f.VpsEmployeePercent + f.VpsEmployerPercent <= 0)
             throw new DomainException("Give the pension contribution as a percent of basic salary.");

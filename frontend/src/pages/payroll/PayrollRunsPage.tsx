@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { tx } from '../../lib/i18n';
 import { useNavigate } from 'react-router-dom';
 import { Play, BookOpen, Coins, Settings2, TrendingUp, PiggyBank, Wallet } from 'lucide-react';
 import { payrollApi } from '../../api/payroll';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -26,7 +28,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { formatCurrency, formatDateTimeUtc, monthLabel, monthName } from '../../lib/format';
-import type { PayrollRunDetail } from '../../types';
+import type { PayFrequency, PayPeriod, PayrollRunDetail } from '../../types';
 import { WarningsPanel } from './WarningsPanel';
 
 export function PayrollRunsPage() {
@@ -38,7 +40,7 @@ export function PayrollRunsPage() {
     <>
       <PageHeader
         title="Payroll"
-        description="Process monthly payroll with income tax and EOBI, then finalize to release payslips."
+        description="Process payroll (monthly, or weekly and bi-weekly for people paid that way) with income tax and EOBI, then finalize to release payslips."
         actions={
           <>
             <Button variant="secondary" icon={<Settings2 className="size-4" />} onClick={() => navigate('/payroll/settings')}>
@@ -82,7 +84,7 @@ export function PayrollRunsPage() {
           <Table>
             <THead>
               <tr>
-                <Th>Month</Th>
+                <Th>Period</Th>
                 <Th>Status</Th>
                 <Th>Tax year</Th>
                 <Th className="text-end">Employees</Th>
@@ -95,7 +97,14 @@ export function PayrollRunsPage() {
             <TBody>
               {runs.data.map((r) => (
                 <Tr key={r.id} onClick={() => navigate(`/payroll/runs/${r.id}`)}>
-                  <Td className="font-medium text-zinc-900 dark:text-zinc-100">{monthLabel(r.year, r.month)}</Td>
+                  <Td className="font-medium text-zinc-900 dark:text-zinc-100">
+                    {r.label || monthLabel(r.year, r.month)}
+                    {r.frequency !== 'Monthly' && (
+                      <Badge tone="blue" className="ms-2">
+                        {tx(FREQUENCY_LABELS[r.frequency])}
+                      </Badge>
+                    )}
+                  </Td>
                   <Td>
                     <StatusBadge status={r.status} />
                   </Td>
@@ -116,13 +125,21 @@ export function PayrollRunsPage() {
   );
 }
 
+export const FREQUENCY_LABELS: Record<PayFrequency, string> = {
+  Monthly: 'Monthly',
+  SemiMonthly: 'Twice a month',
+  BiWeekly: 'Every two weeks',
+  Weekly: 'Weekly',
+};
+
 export function RunPayrollModal({
   onClose,
   initial,
   onDone,
 }: {
   onClose: () => void;
-  initial?: { year: number; month: number };
+  /** Reprocess one existing run; frequency and periodStart pick a shorter period. */
+  initial?: { year: number; month: number; frequency?: PayFrequency; periodStart?: string };
   onDone?: (d: PayrollRunDetail) => void;
 }) {
   const toast = useToast();
@@ -134,13 +151,20 @@ export function RunPayrollModal({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PayrollRunDetail | null>(null);
 
+  const periods = useQuery({ queryKey: ['payroll', 'periods', year, month], queryFn: () => payrollApi.periods(year, month), enabled: !initial });
+  const shorter = (periods.data ?? []).filter((p) => p.frequency !== 'Monthly');
+  const [picked, setPicked] = useState<PayPeriod | null>(null);
+
   const process = useMutation({
-    mutationFn: () => payrollApi.process(year, month),
+    mutationFn: (period: PayPeriod | null) => {
+      if (initial?.frequency && initial.frequency !== 'Monthly' && initial.periodStart) return payrollApi.processPeriod(initial.frequency, initial.periodStart);
+      return period && period.frequency !== 'Monthly' ? payrollApi.processPeriod(period.frequency, period.start) : payrollApi.process(year, month);
+    },
     onSuccess: (d) => {
       qc.invalidateQueries({ queryKey: qk.payroll });
       qc.invalidateQueries({ queryKey: qk.dashboard });
       qc.setQueryData(qk.payrollRun(d.run.id), d);
-      toast.success(`Payroll processed for ${monthLabel(d.run.year, d.run.month)}`, `${d.payslips.length} payslips`);
+      toast.success(`Payroll processed for ${d.run.label || monthLabel(d.run.year, d.run.month)}`, `${d.payslips.length} payslips`);
       if (onDone) onDone(d);
       if (d.warnings.length) setResult(d);
       else {
@@ -157,7 +181,7 @@ export function RunPayrollModal({
         open
         onClose={onClose}
         title="Processed with warnings"
-        description={`${monthLabel(result.run.year, result.run.month)} · ${result.payslips.length} payslips`}
+        description={`${result.run.label || monthLabel(result.run.year, result.run.month)} · ${result.payslips.length} payslips`}
         footer={
           <Button
             onClick={() => {
@@ -187,8 +211,8 @@ export function RunPayrollModal({
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button loading={process.isPending} icon={<Play className="size-4" />} onClick={() => (setError(null), process.mutate())}>
-            {initial ? 'Reprocess' : 'Process payroll'}
+          <Button loading={process.isPending && !picked} icon={<Play className="size-4" />} onClick={() => (setError(null), setPicked(null), process.mutate(null))}>
+            {initial ? 'Reprocess' : shorter.length ? 'Process monthly payroll' : 'Process payroll'}
           </Button>
         </>
       }
@@ -215,6 +239,38 @@ export function RunPayrollModal({
             </Select>
           </Field>
         </div>
+        {shorter.length > 0 && (
+          <div>
+            <p className="mb-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">{tx('Shorter pay periods ending this month')}</p>
+            <ul className="divide-y divide-zinc-100 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-700">
+              {shorter.map((p) => (
+                <li key={`${p.frequency}-${p.start}`} className="flex items-center gap-3 px-3 py-2.5">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-zinc-900 dark:text-zinc-100">{p.label}</span>
+                    <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                      {tx(FREQUENCY_LABELS[p.frequency])} · {p.people} {tx(p.people === 1 ? 'person' : 'people')}
+                    </span>
+                  </span>
+                  {p.status && <StatusBadge status={p.status} />}
+                  {p.status === 'Finalized' ? (
+                    <Button size="sm" variant="ghost" onClick={() => (onClose(), navigate(`/payroll/runs/${p.runId}`))}>
+                      Open
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      loading={process.isPending && picked === p}
+                      onClick={() => (setError(null), setPicked(p), process.mutate(p))}
+                    >
+                      {p.runId ? 'Reprocess' : 'Process'}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </Modal>
   );

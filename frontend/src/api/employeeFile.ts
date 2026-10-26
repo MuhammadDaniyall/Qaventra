@@ -79,6 +79,7 @@ export interface EmployeeFile {
   vpsAccountNo: string | null;
   vpsEmployeePercent: number;
   vpsEmployerPercent: number;
+  payFrequency: 'Monthly' | 'SemiMonthly' | 'BiWeekly' | 'Weekly';
 }
 
 export interface Dependant {

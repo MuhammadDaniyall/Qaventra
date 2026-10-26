@@ -843,3 +843,14 @@ public enum BreakKind
     Tea = 3,
     Personal = 4,
 }
+
+/// <summary>How often a person is paid. Salaries are always set per month; shorter periods pay their share of it.</summary>
+public enum PayFrequency
+{
+    Monthly = 1,
+    /// <summary>Twice a month: the 1st to the 15th, and the 16th to the month's end.</summary>
+    SemiMonthly = 2,
+    /// <summary>Every two weeks, counted from the company's first pay week.</summary>
+    BiWeekly = 3,
+    Weekly = 4,
+}

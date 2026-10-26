@@ -554,7 +554,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
         b.Entity<PayrollRun>(e =>
         {
-            e.HasIndex(x => new { x.TenantId, x.Year, x.Month }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Frequency, x.PeriodStart }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Year, x.Month });
             e.Property(x => x.TaxYearCode).HasMaxLength(10);
             e.Property(x => x.ApprovedByName).HasMaxLength(200);
             e.Property(x => x.ApprovalNote).HasMaxLength(1000);

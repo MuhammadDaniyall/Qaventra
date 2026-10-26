@@ -130,7 +130,7 @@ export function PayrollRunPage() {
         back={{ to: '/payroll', label: 'Payroll' }}
         title={
           <span className="flex flex-wrap items-center gap-3">
-            {monthLabel(run.year, run.month)} <StatusBadge status={run.status} />
+            {run.label || monthLabel(run.year, run.month)} <StatusBadge status={run.status} />
           </span>
         }
         description={`Tax year ${run.taxYearCode} · processed ${formatDateTimeUtc(run.processedAtUtc)}${
@@ -266,7 +266,7 @@ export function PayrollRunPage() {
       </Card>
 
       {reprocessOpen && (
-        <RunPayrollModal initial={{ year: run.year, month: run.month }} onClose={() => setReprocessOpen(false)} onDone={(d) => setWarnings(d.warnings)} />
+        <RunPayrollModal initial={{ year: run.year, month: run.month, frequency: run.frequency, periodStart: run.periodStart }} onClose={() => setReprocessOpen(false)} onDone={(d) => setWarnings(d.warnings)} />
       )}
       {sendingBack && (
         <Modal
@@ -287,7 +287,7 @@ export function PayrollRunPage() {
       )}
       <ConfirmDialog
         open={finalizeOpen}
-        title={`Finalize ${monthLabel(run.year, run.month)}?`}
+        title={`Finalize ${run.label || monthLabel(run.year, run.month)}?`}
         message="Finalizing locks this payroll run. It can no longer be reprocessed, and employees will be able to see their payslips."
         confirmLabel="Finalize payroll"
         loading={finalize.isPending}

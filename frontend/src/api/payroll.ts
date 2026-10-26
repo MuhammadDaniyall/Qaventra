@@ -1,9 +1,11 @@
-import type { Payslip, PayslipSummary, PayrollRun, PayrollRunDetail, PayrollSettings } from '../types';
+import type { PayFrequency, PayPeriod, Payslip, PayslipSummary, PayrollRun, PayrollRunDetail, PayrollSettings } from '../types';
 import { http } from './client';
 
 export const payrollApi = {
   runs: () => http.get<PayrollRun[]>('/payroll/runs'),
   process: (year: number, month: number) => http.post<PayrollRunDetail>('/payroll/runs', { year, month }),
+  processPeriod: (frequency: PayFrequency, date: string) => http.post<PayrollRunDetail>('/payroll/runs/period', { frequency, date }),
+  periods: (year: number, month: number) => http.get<PayPeriod[]>('/payroll/periods', { year, month }),
   run: (id: string) => http.get<PayrollRunDetail>(`/payroll/runs/${id}`),
   finalize: (id: string) => http.post(`/payroll/runs/${id}/finalize`),
   submit: (id: string) => http.post(`/payroll/runs/${id}/submit`),

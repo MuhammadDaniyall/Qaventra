@@ -120,9 +120,10 @@ public class IntegrationController(HrmsDbContext db, TenantClock clock, TenantAc
     public async Task<ActionResult<List<IntegrationPayslipDto>>> Payroll(int year, int month)
     {
         if (!await AuthorizeAsync()) return Unauthorized();
-        var run = await db.PayrollRuns.AsNoTracking().FirstOrDefaultAsync(r => r.Year == year && r.Month == month && r.Status == PayrollRunStatus.Finalized);
-        if (run is null) return NotFound();
-        return await db.Payslips.AsNoTracking().Where(p => p.PayrollRunId == run.Id).OrderBy(p => p.Employee!.EmployeeCode)
+        // Every finalized run in the month: monthly, and the weekly or bi-weekly periods ending in it.
+        var runs = await db.PayrollRuns.AsNoTracking().Where(r => r.Year == year && r.Month == month && r.Status == PayrollRunStatus.Finalized).Select(r => r.Id).ToListAsync();
+        if (runs.Count == 0) return NotFound();
+        return await db.Payslips.AsNoTracking().Where(p => runs.Contains(p.PayrollRunId)).OrderBy(p => p.Employee!.EmployeeCode).ThenBy(p => p.PayrollRun!.PeriodStart)
             .Select(p => new IntegrationPayslipDto(p.Employee!.EmployeeCode, p.GrossEarnings, p.IncomeTax, p.EobiEmployee, p.OtherDeductions, p.NetPay, p.PaidDays))
             .ToListAsync();
     }

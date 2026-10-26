@@ -164,6 +164,7 @@ public class Employee : TenantEntity
 
     // ---------- Pay ----------
     public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.BankTransfer;
+    public PayFrequency PayFrequency { get; set; } = PayFrequency.Monthly;
     public bool ProvidentFundMember { get; set; }
     /// <summary>Voluntary pension scheme: the pension fund, the member's account and the monthly shares as a percent of basic.</summary>
     public bool VpsMember { get; set; }

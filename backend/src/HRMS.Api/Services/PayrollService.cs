@@ -13,15 +13,30 @@ public record PayrollProcessResult(PayrollRun Run, IReadOnlyList<string> Warning
 
 public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantClock clock, NotificationService notify, ICurrentUser me, IServiceProvider services)
 {
-    /// <summary>Calculates (or recalculates) a draft run for the month. A finalized run is locked.</summary>
-    public async Task<PayrollProcessResult> ProcessAsync(int year, int month)
+    /// <summary>Calculates (or recalculates) a draft run for the month's monthly-paid people. A finalized run is locked.</summary>
+    public Task<PayrollProcessResult> ProcessAsync(int year, int month)
     {
         if (month is < 1 or > 12)
             throw new DomainException("Month must be between 1 and 12.");
+        var first = new DateOnly(year, month, 1);
+        return ProcessAsync(new PayPeriod(PayFrequency.Monthly, first, first.AddMonths(1).AddDays(-1)));
+    }
 
-        var monthStart = new DateOnly(year, month, 1);
-        var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-        var daysInMonth = monthEnd.Day;
+    /// <summary>
+    /// Calculates (or recalculates) a draft run for one pay period of the people paid at that frequency. Weekly,
+    /// bi-weekly and semi-monthly periods pay their share of the monthly salary; once-a-month amounts (EOBI, recurring
+    /// items, loan installments, attendance rule penalties) go in the first period ending in each month.
+    /// </summary>
+    public async Task<PayrollProcessResult> ProcessAsync(PayPeriod pay)
+    {
+        var (year, month) = (pay.Year, pay.Month);
+        var monthly = pay.Frequency == PayFrequency.Monthly;
+        var monthlyItems = PayPeriods.TakesMonthlyItems(pay);
+        var share = PayPeriods.ShareOfMonth(pay.Frequency);
+        // For a monthly run these are the month; otherwise the pay period.
+        var monthStart = pay.Start;
+        var monthEnd = pay.End;
+        var daysInMonth = pay.Days;
         var warnings = new List<string>();
 
         var taxYear = await db.TaxYears.Include(t => t.Slabs)
@@ -34,9 +49,9 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
 
         var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
 
-        var run = await db.PayrollRuns.Include(r => r.Payslips).FirstOrDefaultAsync(r => r.Year == year && r.Month == month);
+        var run = await db.PayrollRuns.Include(r => r.Payslips).FirstOrDefaultAsync(r => r.Frequency == pay.Frequency && r.PeriodStart == pay.Start);
         if (run is { Status: PayrollRunStatus.Finalized })
-            throw new DomainException("This month's payroll is finalized and cannot be reprocessed.");
+            throw new DomainException(monthly ? "This month's payroll is finalized and cannot be reprocessed." : "This period's payroll is finalized and cannot be reprocessed.");
         if (run is { Status: PayrollRunStatus.Submitted or PayrollRunStatus.Approved })
         {
             // Numbers may change, so an earlier approval no longer holds.
@@ -48,7 +63,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         }
         if (run is null)
         {
-            run = new PayrollRun { Year = year, Month = month };
+            run = new PayrollRun { Year = year, Month = month, Frequency = pay.Frequency, PeriodStart = pay.Start, PeriodEnd = pay.End };
             db.PayrollRuns.Add(run);
         }
         else
@@ -78,18 +93,22 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         foreach (var x in pieces)
             x.PayrollRunId = null;
 
-        var recurring = await db.RecurringPayItems
-            .Where(r => r.StartYear * 12 + r.StartMonth <= period && (r.EndYear == null || r.EndYear * 12 + r.EndMonth >= period))
-            .ToListAsync();
+        var recurring = monthlyItems
+            ? await db.RecurringPayItems
+                .Where(r => r.StartYear * 12 + r.StartMonth <= period && (r.EndYear == null || r.EndYear * 12 + r.EndMonth >= period))
+                .ToListAsync()
+            : [];
 
         // Loan installments: drop this run's earlier ones (reprocess), then take the next installment of every active loan.
         db.LoanRepayments.RemoveRange(await db.LoanRepayments.Where(x => x.PayrollRunId == run.Id).ToListAsync());
-        var loans = await db.Loans.Include(l => l.Repayments)
-            .Where(l => l.Status == RequestStatus.Approved && l.StartYear * 12 + l.StartMonth <= period)
-            .ToListAsync();
+        var loans = monthlyItems
+            ? await db.Loans.Include(l => l.Repayments)
+                .Where(l => l.Status == RequestStatus.Approved && l.StartYear * 12 + l.StartMonth <= period)
+                .ToListAsync()
+            : [];
 
         var employees = await db.Employees
-            .Where(e => e.JoiningDate <= monthEnd && (e.LeavingDate == null || e.LeavingDate >= monthStart))
+            .Where(e => e.PayFrequency == pay.Frequency && e.JoiningDate <= monthEnd && (e.LeavingDate == null || e.LeavingDate >= monthStart))
             .ToListAsync();
         var employeeIds = employees.Select(e => e.Id).ToList();
 
@@ -97,7 +116,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 .Where(s => employeeIds.Contains(s.EmployeeId) && s.EffectiveFrom <= monthEnd)
                 .ToListAsync())
             .GroupBy(s => s.EmployeeId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.EffectiveFrom).First());
+            .ToDictionary(g => g.Key, g => monthly ? g.OrderByDescending(s => s.EffectiveFrom).First() : ShareOf(g.OrderByDescending(s => s.EffectiveFrom).First(), share));
 
         var unpaidLeaves = await db.LeaveRequests
             .Where(r => employeeIds.Contains(r.EmployeeId) && r.Status == LeaveStatus.Approved
@@ -123,7 +142,9 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         var calendars = await schedules.ForEmployeesAsync(employeeIds, monthStart, monthEnd);
         var today = await clock.TodayAsync();
         // Penalty rules (late, early leave, absent…) that cost pay this month.
-        var rulePenalties = await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().PayDaysAsync(employeeIds, monthStart.Year, monthStart.Month);
+        var rulePenalties = monthly
+            ? await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().PayDaysAsync(employeeIds, monthStart.Year, monthStart.Month)
+            : [];
         // Tax adjustments for the tax year (previous employer, credits) and what this employer already withheld this year.
         var adjustments = (await db.TaxAdjustments.Where(a => a.TaxYearCode == taxYear.Code && employeeIds.Contains(a.EmployeeId)).ToListAsync())
             .ToLookup(a => a.EmployeeId);
@@ -248,8 +269,20 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             if (vpsEmployee > 0)
                 extras.Add(new PayItem($"Voluntary pension ({employee.VpsProvider ?? "VPS"})", SalaryComponentKind.Deduction, vpsEmployee, false));
 
-            Func<decimal, decimal>? taxFor = null;
-            if (adjustments[employee.Id].Any())
+            Func<decimal, decimal>? taxFor = monthly ? null : t => PayPeriods.PeriodTax(taxYear, t, pay.Frequency);
+            if (adjustments[employee.Id].Any() && !monthly)
+            {
+                var adj = adjustments[employee.Id].ToList();
+                decimal Sum(TaxAdjustmentKind k) => adj.Where(a => a.Kind == k).Sum(a => a.Amount);
+                var perYear = PayPeriods.PerYear(pay.Frequency);
+                taxFor = periodTaxable =>
+                {
+                    var income = Sum(TaxAdjustmentKind.PreviousIncome) + Sum(TaxAdjustmentKind.OtherIncome) + periodTaxable * perYear;
+                    var due = TaxCalculator.AnnualTax(taxYear, income) - Sum(TaxAdjustmentKind.TaxCredit) - Sum(TaxAdjustmentKind.PreviousTax);
+                    return Math.Max(0, Math.Round(due / perYear, 0, MidpointRounding.AwayFromZero));
+                };
+            }
+            else if (adjustments[employee.Id].Any())
             {
                 var adj = adjustments[employee.Id].ToList();
                 decimal Sum(TaxAdjustmentKind k) => adj.Where(a => a.Kind == k).Sum(a => a.Amount);
@@ -279,11 +312,11 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             }
 
             var result = PayrollCalculator.Calculate(new PayrollInput(
-                salary, taxYear, daysInMonth, unpaid, settings.EobiEmployeeContribution, settings.EobiEmployerContribution,
+                salary, taxYear, daysInMonth, unpaid, monthlyItems ? settings.EobiEmployeeContribution : 0m, monthlyItems ? settings.EobiEmployerContribution : 0m,
                 employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted), extras, taxFor));
             var wages = result.GrossEarnings - employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted);
             var socialSecurity = settings.SocialSecurityPercent > 0 && !string.IsNullOrEmpty(employee.SocialSecurityNo)
-                ? Math.Round(Math.Min(wages, settings.SocialSecurityWageCeiling ?? wages) * settings.SocialSecurityPercent / 100m, 0, MidpointRounding.AwayFromZero)
+                ? Math.Round(Math.Min(wages, settings.SocialSecurityWageCeiling is { } ceiling ? ceiling * share : wages) * settings.SocialSecurityPercent / 100m, 0, MidpointRounding.AwayFromZero)
                 : 0m;
 
             var payslip = new Payslip
@@ -321,6 +354,18 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         return new PayrollProcessResult(run, warnings);
     }
 
+    /// <summary>A detached copy of a monthly salary scaled to one shorter pay period; never saved.</summary>
+    private static EmployeeSalary ShareOf(EmployeeSalary s, decimal share) => new()
+    {
+        EmployeeId = s.EmployeeId,
+        EffectiveFrom = s.EffectiveFrom,
+        BasicSalary = Math.Round(s.BasicSalary * share, 0, MidpointRounding.AwayFromZero),
+        EobiApplicable = s.EobiApplicable,
+        Components = s.Components.Select(c => new SalaryComponent { Name = c.Name, Kind = c.Kind, IsTaxable = c.IsTaxable, Amount = Math.Round(c.Amount * share, 0, MidpointRounding.AwayFromZero) }).ToList(),
+    };
+
+    public static string Label(PayrollRun run) => PayPeriods.Label(run.Frequency, run.PeriodStart, run.PeriodEnd);
+
     /// <summary>HR sends a processed month to the company admins to approve.</summary>
     public async Task SubmitAsync(Guid runId)
     {
@@ -330,7 +375,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         run.Status = PayrollRunStatus.Submitted;
         run.SubmittedAtUtc = clock.UtcNow;
         run.ApprovalNote = null;
-        var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var month = Label(run);
         var admins = await db.Users.Where(u => u.Role == UserRole.CompanyAdmin && u.IsActive && u.EmployeeId != null).Select(u => u.EmployeeId!.Value).ToListAsync();
         await notify.ToEmployeesAsync(admins, NotificationKind.ApprovalNeeded, $"Payroll for {month} to approve", $"Net pay PKR {run.TotalNet:N0}", $"/payroll/runs/{run.Id}");
         await db.SaveChangesAsync();
@@ -350,7 +395,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         run.ApprovedByName = approve ? await LetterService.CurrentUserNameAsync(db, me) : null;
         run.ApprovedAtUtc = approve ? clock.UtcNow : null;
         run.ApprovalNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
-        var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var month = Label(run);
         await notify.ToHrAsync(NotificationKind.ApprovalNeeded, approve ? $"Payroll for {month} approved" : $"Payroll for {month} sent back",
             run.ApprovalNote, $"/payroll/runs/{run.Id}");
         await db.SaveChangesAsync();
@@ -400,12 +445,14 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         {
             c.Status = ExpenseStatus.Paid;
             c.PaidAtUtc = run.FinalizedAtUtc;
-            c.PaidVia = $"Payroll {new DateOnly(run.Year, run.Month, 1):MMMM yyyy}";
+            c.PaidVia = $"Payroll {Label(run)}";
         }
 
-        // Paid attendance should not change any more: close the month if it has ended.
-        var monthEnd = new DateOnly(run.Year, run.Month, 1).AddMonths(1).AddDays(-1);
-        var closing = monthEnd < await clock.TodayAsync() && !await db.AttendancePeriods.AnyAsync(p => p.Year == run.Year && p.Month == run.Month);
+        // Paid attendance should not change any more: close the month if it has ended. Shorter periods leave the month open
+        // for the people paid monthly.
+        var monthEnd = run.PeriodEnd;
+        var closing = run.Frequency == PayFrequency.Monthly && monthEnd < await clock.TodayAsync()
+                      && !await db.AttendancePeriods.AnyAsync(p => p.Year == run.Year && p.Month == run.Month);
         if (closing)
             db.AttendancePeriods.Add(new AttendancePeriod { Year = run.Year, Month = run.Month, ClosedAtUtc = clock.UtcNow, ClosedByName = "Payroll finalized" });
 
@@ -414,10 +461,10 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             db.FundEntries.Add(new FundEntry
             {
                 EmployeeId = p.EmployeeId, Fund = FundKind.ProvidentFund, Kind = FundEntryKind.Contribution, Date = monthEnd,
-                EmployeeAmount = p.PfEmployee, EmployerAmount = p.PfEmployer, PayrollRunId = run.Id, Note = $"Payroll {new DateOnly(run.Year, run.Month, 1):MMM yyyy}",
+                EmployeeAmount = p.PfEmployee, EmployerAmount = p.PfEmployer, PayrollRunId = run.Id, Note = $"Payroll {Label(run)}",
             });
 
-        var month = new DateOnly(run.Year, run.Month, 1).ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+        var month = Label(run);
         var paid = await db.Payslips.Where(p => p.PayrollRunId == run.Id).Select(p => p.EmployeeId).ToListAsync();
         await notify.ToEmployeesAsync(paid, NotificationKind.Payslip, $"Your payslip for {month} is ready", null, "/me/payslips");
         await db.SaveChangesAsync();

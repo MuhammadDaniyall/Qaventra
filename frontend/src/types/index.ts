@@ -635,6 +635,23 @@ export interface PayrollRun {
   disbursedVia: string | null;
   /** Salaries on hold this month (left out of the bank advice). */
   held: number;
+  frequency: PayFrequency;
+  periodStart: string;
+  periodEnd: string;
+  /** "October 2026", or "Week 12–18 Oct 2026" for shorter periods. */
+  label: string;
+}
+
+export type PayFrequency = 'Monthly' | 'SemiMonthly' | 'BiWeekly' | 'Weekly';
+
+export interface PayPeriod {
+  frequency: PayFrequency;
+  start: string;
+  end: string;
+  label: string;
+  people: number;
+  runId: string | null;
+  status: PayrollRunStatus | null;
 }
 
 export interface PayslipSummary {
@@ -711,6 +728,8 @@ export interface PayrollSettings {
   pfOnGross?: boolean;
   pfVestingYears?: number;
   vpsEnabled?: boolean;
+  payWeekStartsOn?: 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+  biWeeklyAnchor?: string | null;
   vpsCreditCapPercent?: number;
   gratuityEnabled?: boolean;
   gratuityDaysPerYear?: number;
