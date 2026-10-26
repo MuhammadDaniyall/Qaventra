@@ -94,3 +94,40 @@ public class ReviewItem : BaseEntity
     public int? ManagerScore { get; set; }
     public string? ManagerComment { get; set; }
 }
+
+/// <summary>A ready-made goal people can pick when setting goals: what is measured, how, and a usual target.</summary>
+public class Kpi : TenantEntity
+{
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public string? Category { get; set; }
+    /// <summary>How it is measured, e.g. %, PKR, units, days.</summary>
+    public string? Unit { get; set; }
+    public string? DefaultTarget { get; set; }
+    public decimal DefaultWeight { get; set; } = 10;
+    public bool IsActive { get; set; } = true;
+}
+
+/// <summary>Feedback a reviewer asked from someone else (a peer, another manager) for a review.</summary>
+public class ReviewFeedback : TenantEntity
+{
+    public Guid ReviewId { get; set; }
+    public Guid FromEmployeeId { get; set; }
+    public Guid RequestedByEmployeeId { get; set; }
+    /// <summary>1–5, set when submitted.</summary>
+    public int? Rating { get; set; }
+    public string? Comment { get; set; }
+    public DateTime? SubmittedAtUtc { get; set; }
+}
+
+/// <summary>A progress note during the review period (usually once a quarter), by the employee or their reviewer.</summary>
+public class ReviewCheckIn : TenantEntity
+{
+    public Guid ReviewId { get; set; }
+    public Guid AuthorEmployeeId { get; set; }
+    /// <summary>"Q1 2026" style label for the quarter the note is about.</summary>
+    public string Period { get; set; } = "";
+    /// <summary>How far along the goals are overall, 0–100.</summary>
+    public int? Progress { get; set; }
+    public string Note { get; set; } = "";
+}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CalendarRange, ClipboardList, Plus, Rocket, Settings2, Target, Trash2, Users } from 'lucide-react';
+import { CalendarRange, ClipboardList, Plus, Rocket, Settings2, Target, Trash2, Users, BookMarked, MessageSquareQuote } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -43,15 +43,16 @@ import {
 } from '../../components/ui';
 import { formatDate } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
+import { FeedbackRequestsTab, KpiLibraryTab } from './PerformanceExtras';
 
-type Tab = 'mine' | 'team' | 'cycles' | 'templates' | 'settings';
+type Tab = 'mine' | 'team' | 'feedback' | 'cycles' | 'kpis' | 'templates' | 'settings';
 
 export function PerformancePage() {
   const hr = isHr(useUser());
   const [params, setParams] = useSearchParams();
   const team = useQuery({ queryKey: qk.performanceTeam, queryFn: performanceApi.team });
   const raw = (params.get('tab') as Tab | null) ?? 'mine';
-  const tab: Tab = !hr && (raw === 'cycles' || raw === 'templates' || raw === 'settings') ? 'mine' : raw;
+  const tab: Tab = !hr && (raw === 'cycles' || raw === 'kpis' || raw === 'templates' || raw === 'settings') ? 'mine' : raw;
   const showTeam = !!team.data?.length;
   return (
     <>
@@ -63,9 +64,11 @@ export function PerformancePage() {
         items={[
           { value: 'mine', label: 'My reviews', icon: <Target className="size-4" /> },
           ...(showTeam ? ([{ value: 'team', label: `My team (${team.data!.length})`, icon: <Users className="size-4" /> }] as const) : []),
+          { value: 'feedback', label: 'Feedback requests', icon: <MessageSquareQuote className="size-4" /> },
           ...(hr
             ? ([
                 { value: 'cycles', label: 'Review cycles', icon: <CalendarRange className="size-4" /> },
+                { value: 'kpis', label: 'KPI library', icon: <BookMarked className="size-4" /> },
                 { value: 'templates', label: 'Templates', icon: <ClipboardList className="size-4" /> },
                 { value: 'settings', label: 'Ratings', icon: <Settings2 className="size-4" /> },
               ] as const)
@@ -74,7 +77,9 @@ export function PerformancePage() {
       />
       {tab === 'mine' && <ReviewList query={{ queryKey: qk.performanceMy, queryFn: performanceApi.my }} mine />}
       {tab === 'team' && <ReviewList query={{ queryKey: qk.performanceTeam, queryFn: performanceApi.team }} />}
+      {tab === 'feedback' && <FeedbackRequestsTab />}
       {tab === 'cycles' && <Cycles />}
+      {tab === 'kpis' && <KpiLibraryTab />}
       {tab === 'templates' && <Templates />}
       {tab === 'settings' && <SettingsTab />}
     </>

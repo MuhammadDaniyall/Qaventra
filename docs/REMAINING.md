@@ -42,7 +42,7 @@ tested and committed locally; one production deploy at the end. Tick items as th
 - [x] Letters: approvals, candidate letters, auto-use (offer, transfer, salary change, exit), page margins
 - [x] Recruitment: candidate portal (status by email link), shortlisting score, offer letter print
 - [x] Recruitment: interview templates with marks (templates tab, scorecard on each interview)
-- [ ] Performance: KPI library, multiple reviewers, quarterly check-ins
+- [x] Performance: KPI library, multiple reviewers (feedback from others), quarterly check-ins
 - [ ] Helpdesk: (done except email reply)
 
 ## G. Organization and system
@@ -55,5 +55,5 @@ tested and committed locally; one production deploy at the end. Tick items as th
 
 ## H. Dashboard and UX
 - [x] Role-based home, organogram, birthday and work-anniversary wishes
-- [ ] Request from a missing day
+- [x] Request from a missing day (tap an empty day in My attendance)
 - [x] Urdu translation with RTL

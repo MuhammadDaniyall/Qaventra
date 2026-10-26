@@ -9,6 +9,7 @@ import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, ErrorState, F
 import { cn } from '../../lib/cn';
 import { formatDate } from '../../lib/format';
 import { RatingPicker, StageBar } from './shared';
+import { KpiPickerButton, ReviewExtras } from './PerformanceExtras';
 
 export function ReviewPage() {
   const { id = '' } = useParams();
@@ -76,6 +77,7 @@ function ReviewView({ r }: { r: Review }) {
       )}
       {r.stage === 'SignOff' && r.isEmployee && <SignOff r={r} />}
       {r.stage === 'Calibration' && r.isHr && <CalibrateCard r={r} />}
+      <ReviewExtras reviewId={r.id} isReviewer={r.isReviewer} isEmployee={r.isEmployee} />
       <ConfirmDialog
         open={reverting}
         title="Send this review back a stage?"
@@ -139,9 +141,25 @@ function GoalsEditor({ r }: { r: Review }) {
                   <Input className="sm:col-span-3" value={g.target} maxLength={1000} placeholder="What success looks like (measure, target, date)" onChange={(e) => set(i, { target: e.target.value })} aria-label="Target" />
                 </div>
               ))}
-              <Button variant="ghost" size="sm" icon={<Plus className="size-3.5" />} onClick={() => setGoals((g) => [...g, { sectionIndex: si, title: '', description: '', target: '', weight: '' }])}>
-                Add goal
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" size="sm" icon={<Plus className="size-3.5" />} onClick={() => setGoals((g) => [...g, { sectionIndex: si, title: '', description: '', target: '', weight: '' }])}>
+                  Add goal
+                </Button>
+                <KpiPickerButton
+                  onPick={(k) =>
+                    setGoals((g) => [
+                      ...g,
+                      {
+                        sectionIndex: si,
+                        title: k.name,
+                        description: k.description ?? '',
+                        target: k.defaultTarget ? `${k.defaultTarget}${k.unit ? ` ${k.unit}` : ''}` : '',
+                        weight: String(k.defaultWeight),
+                      },
+                    ])
+                  }
+                />
+              </div>
             </CardBody>
           </Card>
         );

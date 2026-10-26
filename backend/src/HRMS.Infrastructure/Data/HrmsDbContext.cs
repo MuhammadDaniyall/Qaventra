@@ -48,6 +48,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<CelebrationWish> CelebrationWishes => Set<CelebrationWish>();
     public DbSet<GlAccount> GlAccounts => Set<GlAccount>();
     public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
+    public DbSet<Kpi> Kpis => Set<Kpi>();
+    public DbSet<ReviewFeedback> ReviewFeedback => Set<ReviewFeedback>();
+    public DbSet<ReviewCheckIn> ReviewCheckIns => Set<ReviewCheckIn>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
     public DbSet<PayrollGlMapping> PayrollGlMappings => Set<PayrollGlMapping>();
@@ -709,6 +712,32 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Subject).HasMaxLength(300);
             e.Property(x => x.Kind).HasMaxLength(50);
             e.Property(x => x.Error).HasMaxLength(500);
+        });
+
+        b.Entity<Kpi>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(1000);
+            e.Property(x => x.Category).HasMaxLength(100);
+            e.Property(x => x.Unit).HasMaxLength(30);
+            e.Property(x => x.DefaultTarget).HasMaxLength(200);
+            e.Property(x => x.DefaultWeight).HasPrecision(5, 2);
+        });
+
+        b.Entity<ReviewFeedback>(e =>
+        {
+            e.HasIndex(x => new { x.ReviewId, x.FromEmployeeId }).IsUnique();
+            e.HasIndex(x => x.FromEmployeeId);
+            e.Property(x => x.Comment).HasMaxLength(4000);
+            e.HasOne<PerformanceReview>().WithMany().HasForeignKey(x => x.ReviewId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ReviewCheckIn>(e =>
+        {
+            e.HasIndex(x => x.ReviewId);
+            e.Property(x => x.Period).HasMaxLength(20);
+            e.Property(x => x.Note).HasMaxLength(4000);
+            e.HasOne<PerformanceReview>().WithMany().HasForeignKey(x => x.ReviewId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<ApiToken>(e =>

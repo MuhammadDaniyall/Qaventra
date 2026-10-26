@@ -183,7 +183,7 @@ function IdCardFront({ card, tpl, company }: { card: CardData; tpl: Template; co
           {initials(card.name)}
         </div>
         <div className="min-w-0 flex-1 text-[2.4mm] leading-snug">
-          <p className="truncate text-[3.4mm] leading-tight font-bold">{card.name}</p>
+          <p className="line-clamp-2 text-[3.4mm] leading-tight font-bold">{card.name}</p>
           <p className="truncate text-zinc-600">{card.designation ?? ''}</p>
           <p className="truncate text-zinc-600">{card.department ?? ''}</p>
           <dl className="mt-[1.5mm] grid grid-cols-[auto_1fr] gap-x-[2mm]">

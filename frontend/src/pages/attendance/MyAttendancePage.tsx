@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ExcuseButton, MyExemptions } from './Exemptions';
 import { MyOffDays, OffDayModal } from './OffDays';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeftRight, CalendarClock, CalendarOff, ChevronLeft, ChevronRight, ClipboardEdit, Repeat } from 'lucide-react';
+import { ArrowLeftRight, CalendarClock, CalendarOff, ChevronLeft, ChevronRight, ClipboardEdit, Plus, Repeat } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
 import { qk } from '../../api/keys';
 import { setupApi } from '../../api/organization';
@@ -24,7 +24,8 @@ import {
   Tr,
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { formatDate, formatMinutes, formatTime, monthLabel, pad, todayIso } from '../../lib/format';
+import { formatDate, formatMinutes, formatTime, monthLabel, pad, todayIso, toIsoDate } from '../../lib/format';
+import { tx } from '../../lib/i18n';
 import type { Attendance, AttendanceStatus } from '../../types';
 import { MyAttendanceRequests, RequestAttendanceModal } from './AttendanceRequests';
 import { CheckInCard } from './CheckInCard';
@@ -42,7 +43,7 @@ const DOT: Record<AttendanceStatus, string> = {
 export function MyAttendancePage() {
   const now = new Date();
   const [ym, setYm] = useState({ y: now.getFullYear(), m: now.getMonth() + 1 });
-  const [requesting, setRequesting] = useState(false);
+  const [requesting, setRequesting] = useState<boolean | string>(false);
   const [offDays, setOffDays] = useState(false);
   const [shiftRequest, setShiftRequest] = useState<'Change' | 'Swap' | null>(null);
   const records = useQuery({ queryKey: qk.attendanceMy(ym.y, ym.m), queryFn: () => attendanceApi.my(ym.y, ym.m) });
@@ -118,6 +119,7 @@ export function MyAttendancePage() {
               month={ym.m}
               records={records.data ?? []}
               holidays={new Map((holidays.data ?? []).map((h) => [h.date, h.name]))}
+              onRequest={(d) => setRequesting(d)}
             />
             {(records.data ?? []).length === 0 ? (
               <EmptyState icon={CalendarClock} title="No attendance this month" description="Your check-ins will appear here." className="border-t border-zinc-100 dark:border-zinc-800" />
@@ -164,7 +166,7 @@ export function MyAttendancePage() {
       <MyOffDays />
       <MyShiftRequests />
       <MyAttendanceRequests />
-      {requesting && <RequestAttendanceModal onClose={() => setRequesting(false)} />}
+      {requesting && <RequestAttendanceModal date={typeof requesting === 'string' ? requesting : undefined} onClose={() => setRequesting(false)} />}
       {offDays && <OffDayModal onClose={() => setOffDays(false)} />}
       {shiftRequest && <ShiftRequestModal kind={shiftRequest} onClose={() => setShiftRequest(null)} />}
     </>
@@ -176,17 +178,21 @@ function MonthCalendar({
   month,
   records,
   holidays,
+  onRequest,
 }: {
   year: number;
   month: number;
   records: Attendance[];
   holidays: Map<string, string>;
+  /** Opens a correction request for a past day that has no record. */
+  onRequest: (date: string) => void;
 }) {
   const byDate = new Map(records.map((r) => [r.date, r]));
   const first = new Date(year, month - 1, 1);
   const daysInMonth = new Date(year, month, 0).getDate();
   const offset = (first.getDay() + 6) % 7; // Monday first
   const today = todayIso();
+  const earliest = toIsoDate(new Date(Date.now() - 45 * 86_400_000));
   const cells: Array<number | null> = [...Array(offset).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
 
   return (
@@ -205,6 +211,21 @@ function MonthCalendar({
           const r = byDate.get(iso);
           const holiday = holidays.get(iso);
           const isToday = iso === today;
+          // A past day with nothing recorded may be a missed punch; recent ones can be fixed with a request.
+          const requestable = !r && !holiday && iso < today && iso >= earliest;
+          if (requestable)
+            return (
+              <button
+                key={iso}
+                type="button"
+                onClick={() => onRequest(iso)}
+                title={`${formatDate(iso)} · ${tx('No record. Tap to ask for a correction.')}`}
+                className="group flex aspect-square min-h-10 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-zinc-300 text-sm transition-colors hover:border-accent-400 hover:bg-accent-50 focus-visible:outline-2 focus-visible:outline-accent-500 sm:aspect-auto sm:h-14 dark:border-zinc-700 dark:hover:bg-accent-500/10"
+              >
+                <span className="text-zinc-700 tabular-nums dark:text-zinc-300">{day}</span>
+                <Plus className="size-3 text-zinc-400 group-hover:text-accent-600" aria-hidden="true" />
+              </button>
+            );
           return (
             <div
               key={iso}
@@ -236,6 +257,9 @@ function MonthCalendar({
         ))}
         <span className="inline-flex items-center gap-1.5">
           <span className="size-2.5 rounded-sm bg-sky-100 dark:bg-sky-500/20" /> Holiday
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2.5 rounded-sm border border-dashed border-zinc-400" /> {tx('No record: tap to request a correction')}
         </span>
       </div>
     </div>
