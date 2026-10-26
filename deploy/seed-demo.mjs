@@ -385,8 +385,11 @@ async function newFeatures(admin, emp, dept, me) {
 
 // ---------- Remaining modules ----------
 
-/** The clearance template this section makes last; its presence means the whole script has run. */
-const MORE_MARKER = 'Standard exit clearance';
+/**
+ * The clearance template this section makes last. With the script's own "Head Office Main Gate" machine it means the
+ * whole script has run; the name alone is not enough, as a company may have made a template of that name itself.
+ */
+const MORE_MARKER = 'Exit clearance: IT, Finance, HR';
 
 // Letters, onboarding, exit, travel, desks, projects, piece work, scheduled alerts and reports, budget, custom
 // fields, suggestions, pay changes, the voluntary pension scheme and weekly pay, so every module has something in it.
@@ -411,7 +414,7 @@ async function moreModules(admin, emp, dept, me) {
 
   await step('Onboarding', async () => {
     const t = await admin.post('/onboarding/templates', {
-      name: 'Standard joiner', isDefault: true, welcomeMessage: 'Welcome aboard! Please bring your CNIC and two photographs on day one.',
+      name: 'Standard joiner (demo)', isDefault: false, welcomeMessage: 'Welcome aboard! Please bring your CNIC and two photographs on day one.',
       tasks: [
         { title: 'Prepare offer pack and contract', category: 'Paperwork', assigneeKind: 'Hr', dueOffsetDays: -3 },
         { title: 'Laptop, email and VPN ready', category: 'ItSetup', assigneeKind: 'Hr', dueOffsetDays: -1 },
@@ -536,7 +539,7 @@ async function moreModules(admin, emp, dept, me) {
   // Last: the clearance template marks the whole script as run.
   await step('Exit clearance, interview and a resignation', async () => {
     await admin.post('/separation-setup/exit-templates', {
-      name: 'Standard exit interview', isDefault: true,
+      name: 'Exit interview (demo)', isDefault: false,
       questions: [
         { text: 'How would you rate your manager?', kind: 'Rating' },
         { text: 'What could we have done to keep you?', kind: 'Text' },
@@ -544,7 +547,7 @@ async function moreModules(admin, emp, dept, me) {
       ],
     });
     await admin.post('/separation-setup/clearance-templates', {
-      name: MORE_MARKER, isDefault: true,
+      name: MORE_MARKER, isDefault: false,
       items: [
         { department: 'IT', title: 'Laptop, access card and accounts returned', level: 1, responsibleEmployeeId: emp.it1 ?? null },
         { department: 'Finance', title: 'Loans and advances settled', level: 2, responsibleEmployeeId: emp.acc ?? null },
@@ -572,7 +575,8 @@ async function main() {
     adminEmail = `${first.me.email} (your own password)`;
     console.log(`Signed in to "${first.me.companyName}" as ${first.me.email}\n`);
     const devices = (await admin.get('/biometric/devices')).map((d) => d.name);
-    const moreDone = (await admin.get('/separation-setup/clearance-templates')).some((t) => t.name === MORE_MARKER);
+    const moreDone = devices.includes('Head Office Main Gate')
+      && (await admin.get('/separation-setup/clearance-templates')).some((t) => t.name === MORE_MARKER);
     if (moreDone) {
       console.log('Demo data is already in this company. Nothing was changed.');
       process.exit(1);
