@@ -21,7 +21,7 @@ import { compOffApi, leaveApi } from '../../api/leave';
 import { lettersApi } from '../../api/letters';
 import { payApi } from '../../api/pay';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
-import { Button, Card, EmptyState, PageHeader, SkeletonRows, StatusBadge } from '../../components/ui';
+import { Button, Card, EmptyState, ErrorState, FormError, PageHeader, SkeletonRows, StatusBadge } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatDateTimeUtc, humanize } from '../../lib/format';
 import { tx } from '../../lib/i18n';
@@ -62,8 +62,13 @@ export function MyRequestsPage() {
   const attendance = useQuery({ queryKey: qk.attendanceRequestsMy, queryFn: attendanceRequestsApi.my });
   const expenses = useQuery({ queryKey: qk.myExpenses, queryFn: expensesApi.my });
   const pay = useQuery({ queryKey: qk.payMy, queryFn: payApi.myRequests });
+  const loans = useQuery({ queryKey: qk.payLoansMy, queryFn: payApi.myLoans });
   const letters = useQuery({ queryKey: ['letters', 'requests', 'mine'], queryFn: lettersApi.myRequests });
-  const loading = [leave, compOff, attendance, expenses, pay, letters].some((q) => q.isLoading);
+  const queries = [leave, compOff, attendance, expenses, pay, loans, letters];
+  const loading = queries.some((q) => q.isLoading);
+  // A failed source must not read as "no requests".
+  const failed = queries.filter((q) => q.isError);
+  const retry = () => failed.forEach((q) => q.refetch());
 
   const rows: Row[] = [
     ...(leave.data ?? []).map((l) => ({
@@ -89,9 +94,14 @@ export function MyRequestsPage() {
       key: `p-${p.id}`, type: 'PayRequest' as const, subjectId: p.id, icon: Banknote, title: p.title,
       detail: formatCurrency(p.amount), status: p.status, at: p.createdAtUtc, to: '/me/pay',
     })),
+    ...(loans.data ?? []).map((l) => ({
+      key: `n-${l.id}`, type: 'Loan' as const, subjectId: l.id, icon: Banknote, title: l.title,
+      detail: `${formatCurrency(l.amount)} · ${l.installments} ${l.installments === 1 ? 'installment' : 'installments'}`,
+      status: l.status, at: l.createdAtUtc, to: '/me/pay',
+    })),
     ...(letters.data ?? []).map((l) => ({
       key: `t-${l.id}`, type: 'Letter' as const, subjectId: l.id, icon: FileSignature, title: l.subject,
-      detail: l.referenceNo, status: l.status ?? 'Pending', at: l.issuedOn, to: '/me/documents',
+      detail: l.referenceNo, status: l.status ?? 'Pending', at: l.createdAtUtc, to: '/me/documents',
     })),
   ].sort((a, b) => b.at.localeCompare(a.at));
 
@@ -134,8 +144,20 @@ export function MyRequestsPage() {
       </div>
 
       <Card>
+        {!loading && failed.length > 0 && !!visible.length && (
+          <div className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 sm:px-5 dark:border-zinc-800">
+            <div className="flex-1">
+              <FormError message={tx('Some requests could not be loaded.')} />
+            </div>
+            <Button variant="secondary" onClick={retry}>
+              {tx('Try again')}
+            </Button>
+          </div>
+        )}
         {loading ? (
           <SkeletonRows rows={5} cols={3} />
+        ) : failed.length > 0 && !visible.length ? (
+          <ErrorState error={failed[0].error} onRetry={retry} />
         ) : !visible.length ? (
           <EmptyState
             icon={Inbox}
@@ -161,7 +183,7 @@ export function MyRequestsPage() {
                       <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{tx(r.title)}</span>
                       <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{r.detail}</span>
                     </span>
-                    <span className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:block">{r.type === 'Letter' ? formatDate(r.at) : formatDateTimeUtc(r.at)}</span>
+                    <span className="hidden text-xs text-zinc-500 dark:text-zinc-400 sm:block">{formatDateTimeUtc(r.at)}</span>
                     <StatusBadge status={r.status} />
                     <ChevronDown className={cn('size-4 shrink-0 text-zinc-500 dark:text-zinc-400 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
                   </button>

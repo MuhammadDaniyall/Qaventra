@@ -27,6 +27,11 @@ import { formatDate, formatDateTimeUtc } from '../../lib/format';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from '../settings/shared';
 
 const KEY = ['separation-setup'] as const;
+/** A UTC timestamp as a datetime-local value (local wall time), so a save round-trips unchanged. */
+const toLocalInput = (utc: string) => {
+  const d = new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(utc) ? utc : `${utc}Z`);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
 const useExtras = (id: string) => useQuery({ queryKey: [...KEY, 'extras', id], queryFn: () => separationSetupApi.extras(id) });
 
 /** HR: clearance level and owner of each checklist item. */
@@ -168,7 +173,7 @@ export function ExitPanelCard({ separationId }: { separationId: string }) {
   const v = f ?? {
     templateId: e?.exitTemplateId ?? '',
     ids: e?.interviewerIds ?? [],
-    at: e?.interviewScheduledUtc ? new Date(e.interviewScheduledUtc).toISOString().slice(0, 16) : '',
+    at: e?.interviewScheduledUtc ? toLocalInput(e.interviewScheduledUtc) : '',
     notes: e?.interviewNotes ?? '',
   };
   const save = useMutation({
@@ -350,7 +355,88 @@ export function MyClearancesPage() {
           </ul>
         )}
       </Card>
+      <MyExitInterviews />
     </>
+  );
+}
+
+/** Panel members (not HR) answer the questions and keep notes for exit interviews they sit on. */
+function MyExitInterviews() {
+  const list = useQuery({ queryKey: [...KEY, 'my-exit-interviews'], queryFn: separationSetupApi.myExitInterviews });
+  const [openId, setOpenId] = useState<string | null>(null);
+  if (!list.data?.length) return null;
+  return (
+    <div className="mt-6 space-y-4">
+      <Card>
+        <CardHeader title="Exit interviews I sit on" />
+        <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          {list.data.map((x) => (
+            <li key={x.separationId} className="flex items-center gap-3 px-5 py-3 text-sm">
+              <span className="flex-1">
+                <span className="font-medium">{x.employeeName}</span> <span className="text-zinc-500 dark:text-zinc-400">· {x.employeeCode}</span>
+                <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+                  {x.interviewScheduledUtc ? formatDateTimeUtc(x.interviewScheduledUtc) : 'Not scheduled'}
+                  {x.lastWorkingDay && ` · last day ${formatDate(x.lastWorkingDay)}`}
+                </span>
+              </span>
+              <Button size="sm" variant="secondary" onClick={() => setOpenId(openId === x.separationId ? null : x.separationId)}>
+                {openId === x.separationId ? 'Close' : 'Open'}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+      {openId && list.data.some((x) => x.separationId === openId) && (
+        <>
+          <ExitQuestionsCard separationId={openId} canAnswer />
+          <PanelNotesCard separationId={openId} />
+        </>
+      )}
+    </div>
+  );
+}
+
+/** A panel member's notes on one exit interview (the panel endpoint saves only notes for non-HR). */
+function PanelNotesCard({ separationId }: { separationId: string }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const extras = useExtras(separationId);
+  const [notes, setNotes] = useState<string | null>(null);
+  const e = extras.data;
+  const save = useMutation({
+    mutationFn: () =>
+      separationSetupApi.panel(separationId, {
+        templateId: e?.exitTemplateId ?? null,
+        interviewerIds: e?.interviewerIds ?? [],
+        scheduledUtc: e?.interviewScheduledUtc ?? null,
+        notes: notes || null,
+      }),
+    onSuccess: () => {
+      toast.success('Saved');
+      setNotes(null);
+      qc.invalidateQueries({ queryKey: KEY });
+    },
+    onError: (err) => toast.error(err),
+  });
+  if (!e) return null;
+  return (
+    <Card>
+      <CardHeader
+        title="Panel notes"
+        actions={
+          <Button size="sm" variant={notes !== null ? 'primary' : 'secondary'} loading={save.isPending} onClick={() => (notes !== null ? save.mutate() : setNotes(e.interviewNotes ?? ''))}>
+            {notes !== null ? 'Save' : 'Edit'}
+          </Button>
+        }
+      />
+      <CardBody>
+        {notes !== null ? (
+          <Textarea rows={4} value={notes} maxLength={4000} aria-label="Panel notes" onChange={(x) => setNotes(x.target.value)} />
+        ) : (
+          <p className="whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-300">{e.interviewNotes || 'No notes yet.'}</p>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 

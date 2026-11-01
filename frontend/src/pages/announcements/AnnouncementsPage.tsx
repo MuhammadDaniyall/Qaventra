@@ -31,7 +31,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { formatDate, todayIso } from '../../lib/format';
+import { formatDate, todayIso, toIsoDate } from '../../lib/format';
 
 type Tab = 'news' | 'polls';
 
@@ -342,6 +342,7 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
     onSuccess: () => {
       toast.success(poll.myOptionId ? 'Vote changed' : 'Vote counted');
       qc.invalidateQueries({ queryKey: qk.polls });
+      qc.invalidateQueries({ queryKey: qk.pollsManage });
     },
     onError: (err) => toast.error(err),
   });
@@ -355,7 +356,7 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
   });
   const total = poll.totalVotes ?? 0;
   const lead = Math.max(0, ...poll.options.map((o) => o.votes ?? 0));
-  const canVote = poll.isOpen && !hr;
+  const canVote = poll.isOpen;
 
   return (
     <Card className="flex flex-col p-5">
@@ -453,7 +454,7 @@ function PollModal({ onClose }: { onClose: () => void }) {
   const [closes, setCloses] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    return d.toISOString().slice(0, 10);
+    return toIsoDate(d);
   });
   const [departments, setDepartments] = useState<string[]>([]);
   const [anonymous, setAnonymous] = useState(false);

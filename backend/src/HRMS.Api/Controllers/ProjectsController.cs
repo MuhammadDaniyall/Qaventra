@@ -16,7 +16,7 @@ public record ProjectMemberDto(Guid EmployeeId, string? Name, decimal? HourlyRat
 public record ProjectTaskDto(Guid Id, string Name, Guid? AssigneeEmployeeId, string? Assignee, DateOnly? DueDate, decimal? EstimatedHours, bool IsDone, decimal LoggedHours);
 public record ProjectDto(Guid Id, string Name, string? Code, string? Client, string? Description, Guid? ManagerEmployeeId, string? Manager, DateOnly? StartDate,
     DateOnly? EndDate, decimal? BudgetHours, bool Billable, bool OpenToAll, ProjectStatus Status, List<ProjectMemberDto> Members, List<ProjectTaskDto> Tasks,
-    decimal LoggedHours, decimal Cost, bool CanManage);
+    decimal LoggedHours, decimal Cost, bool CanManage, bool CanLog);
 
 public record SaveProjectRequest([Required, StringLength(150)] string Name, [StringLength(30)] string? Code, [StringLength(150)] string? Client,
     [StringLength(2000)] string? Description, Guid? ManagerEmployeeId, DateOnly? StartDate, DateOnly? EndDate, [Range(0, 1_000_000)] decimal? BudgetHours,
@@ -24,7 +24,9 @@ public record SaveProjectRequest([Required, StringLength(150)] string Name, [Str
 
 public record SaveProjectTaskRequest([Required, StringLength(200)] string Name, Guid? AssigneeEmployeeId, DateOnly? DueDate, [Range(0, 100_000)] decimal? EstimatedHours, bool IsDone);
 
-public record TimesheetLineDto(DateOnly Date, Guid ProjectId, Guid? TaskId, [Range(1, 1440)] int Minutes, [StringLength(500)] string? Note);
+/// <summary>ProjectName and TaskName are filled on reads so approvers outside the project still see them; ignored on save.</summary>
+public record TimesheetLineDto(DateOnly Date, Guid ProjectId, Guid? TaskId, [Range(1, 1440)] int Minutes, [StringLength(500)] string? Note,
+    string? ProjectName = null, string? TaskName = null);
 
 public record TimesheetDto(Guid? Id, Guid EmployeeId, string EmployeeName, DateOnly WeekStart, TimesheetStatus Status, DateTime? SubmittedAtUtc, string? DecisionNote,
     List<TimesheetLineDto> Lines, int TotalMinutes, Dictionary<string, int> AttendanceMinutes);
@@ -159,14 +161,20 @@ public class ProjectsController(HrmsDbContext db, TimesheetService timesheets, A
     }
 
     [HttpGet("projects/{id:guid}")]
-    public async Task<ProjectDto> Project(Guid id) =>
-        (await ToDtosAsync([await db.Projects.Include(p => p.Members).Include(p => p.Tasks).AsNoTracking().FirstOrDefaultAsync(p => p.Id == id) ?? throw new NotFoundException("Project")]))[0];
+    public async Task<ProjectDto> Project(Guid id)
+    {
+        var p = await db.Projects.Include(x => x.Members).Include(x => x.Tasks).AsNoTracking().FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Project");
+        // Same visibility as the list: HR, or open to all, or the manager or a member.
+        if (!me.IsHr() && !p.OpenToAll && p.ManagerEmployeeId != me.EmployeeId && p.Members.All(m => m.EmployeeId != me.EmployeeId))
+            throw new NotFoundException("Project");
+        return (await ToDtosAsync([p]))[0];
+    }
 
     private async Task<List<ProjectDto>> ToDtosAsync(List<Project> list)
     {
         var ids = list.Select(p => p.Id).ToList();
         var logged = await db.TimesheetLines.Where(l => ids.Contains(l.ProjectId))
-            .Join(db.Timesheets.Where(t => t.Status != TimesheetStatus.Draft), l => l.TimesheetId, t => t.Id, (l, t) => new { l.ProjectId, l.TaskId, l.Minutes, t.EmployeeId })
+            .Join(db.Timesheets.Where(t => t.Status == TimesheetStatus.Submitted || t.Status == TimesheetStatus.Approved), l => l.TimesheetId, t => t.Id, (l, t) => new { l.ProjectId, l.TaskId, l.Minutes, t.EmployeeId })
             .ToListAsync();
         var people = list.SelectMany(p => p.Members.Select(m => m.EmployeeId).Concat(p.Tasks.Where(t => t.AssigneeEmployeeId != null).Select(t => t.AssigneeEmployeeId!.Value))
                 .Concat(p.ManagerEmployeeId is { } m ? [m] : [])).Distinct().ToList();
@@ -182,7 +190,10 @@ public class ProjectsController(HrmsDbContext db, TimesheetService timesheets, A
                 p.Tasks.OrderBy(t => t.IsDone).ThenBy(t => t.DueDate ?? DateOnly.MaxValue).ThenBy(t => t.Name)
                     .Select(t => new ProjectTaskDto(t.Id, t.Name, t.AssigneeEmployeeId, t.AssigneeEmployeeId is { } a ? names.GetValueOrDefault(a) : null, t.DueDate, t.EstimatedHours,
                         t.IsDone, Math.Round(mineLogged.Where(l => l.TaskId == t.Id).Sum(l => l.Minutes) / 60m, 2))).ToList(),
-                Math.Round(mineLogged.Sum(l => l.Minutes) / 60m, 2), me.IsHr() || p.ManagerEmployeeId == me.EmployeeId ? Math.Round(cost, 0) : 0, CanManage(p));
+                Math.Round(mineLogged.Sum(l => l.Minutes) / 60m, 2), me.IsHr() || p.ManagerEmployeeId == me.EmployeeId ? Math.Round(cost, 0) : 0, CanManage(p),
+                // Mirrors TimesheetService.SaveAsync, so the timesheet only offers projects the save accepts.
+                p.Status == ProjectStatus.Active && me.EmployeeId is { } mine
+                    && (p.OpenToAll || p.ManagerEmployeeId == mine || p.Members.Any(x => x.EmployeeId == mine)));
         }).ToList();
     }
 
@@ -379,7 +390,12 @@ public class ProjectsController(HrmsDbContext db, TimesheetService timesheets, A
         var end = weekStart.AddDays(6);
         var attendance = await db.AttendanceRecords.Where(a => a.EmployeeId == employeeId && a.Date >= weekStart && a.Date <= end)
             .ToDictionaryAsync(a => a.Date.ToString("yyyy-MM-dd"), a => a.WorkedMinutes);
-        var lines = sheet?.Lines.OrderBy(l => l.Date).Select(l => new TimesheetLineDto(l.Date, l.ProjectId, l.TaskId, l.Minutes, l.Note)).ToList() ?? [];
+        var pids = sheet?.Lines.Select(l => l.ProjectId).Distinct().ToList() ?? [];
+        var tids = sheet?.Lines.Where(l => l.TaskId != null).Select(l => l.TaskId!.Value).Distinct().ToList() ?? [];
+        var projectNames = await db.Projects.Where(p => pids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.Name);
+        var taskNames = await db.ProjectTasks.Where(t => tids.Contains(t.Id)).ToDictionaryAsync(t => t.Id, t => t.Name);
+        var lines = sheet?.Lines.OrderBy(l => l.Date).Select(l => new TimesheetLineDto(l.Date, l.ProjectId, l.TaskId, l.Minutes, l.Note,
+            projectNames.GetValueOrDefault(l.ProjectId), l.TaskId is { } t ? taskNames.GetValueOrDefault(t) : null)).ToList() ?? [];
         return new TimesheetDto(sheet?.Id, employeeId, name, weekStart, sheet?.Status ?? TimesheetStatus.Draft, sheet?.SubmittedAtUtc, sheet?.DecisionNote,
             lines, lines.Sum(l => l.Minutes), attendance);
     }

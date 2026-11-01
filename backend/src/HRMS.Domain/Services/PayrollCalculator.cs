@@ -11,10 +11,13 @@ public record PayrollInput(
     decimal EobiEmployer,
     decimal Reimbursements = 0m,
     IReadOnlyList<PayItem>? Extras = null,
-    Func<decimal, decimal>? TaxFor = null);
+    Func<decimal, decimal, decimal>? TaxFor = null);
 
-/// <summary>A one-off line for the month (bonus, overtime, deduction, loan installment): never prorated.</summary>
-public record PayItem(string Name, SalaryComponentKind Kind, decimal Amount, bool IsTaxable);
+/// <summary>
+/// A one-off line for the month (bonus, overtime, deduction, loan installment): never prorated. OneOff earnings
+/// (pay requests, piece work) are taxed once at the marginal rate rather than annualised as if paid every period.
+/// </summary>
+public record PayItem(string Name, SalaryComponentKind Kind, decimal Amount, bool IsTaxable, bool OneOff = false);
 
 public record PayrollLine(string Name, SalaryComponentKind Kind, decimal Amount);
 
@@ -50,6 +53,7 @@ public static class PayrollCalculator
 
         var gross = basic;
         var taxable = basic;
+        var oneOffTaxable = 0m;
         var otherDeductions = 0m;
 
         foreach (var c in input.Salary.Components)
@@ -83,7 +87,11 @@ public static class PayrollCalculator
             {
                 gross += item.Amount;
                 if (item.IsTaxable)
+                {
                     taxable += item.Amount;
+                    if (item.OneOff)
+                        oneOffTaxable += item.Amount;
+                }
             }
             else
             {
@@ -91,8 +99,12 @@ public static class PayrollCalculator
             }
         }
 
-        // A projected-year rule (previous employer, tax credits) when given; otherwise the month annualised.
-        var tax = input.TaxFor is { } taxFor ? taxFor(taxable) : TaxCalculator.MonthlyTax(input.TaxYear, taxable);
+        // A projected-year rule (previous employer, tax credits) when given; otherwise the month's regular pay annualised,
+        // plus the extra annual tax the one-off earnings cause.
+        var regular = taxable - oneOffTaxable;
+        var tax = input.TaxFor is { } taxFor
+            ? taxFor(regular, oneOffTaxable)
+            : TaxCalculator.MonthlyTax(input.TaxYear, regular) + OneOffTax(input.TaxYear, regular * 12m, oneOffTaxable);
         if (tax > 0)
             lines.Add(new("Income Tax", SalaryComponentKind.Deduction, tax));
 
@@ -105,4 +117,9 @@ public static class PayrollCalculator
 
         return new PayrollResult(paidDays, gross, taxable, tax, eobiEmployee, eobiEmployer, otherDeductions, net, lines);
     }
+
+    /// <summary>The extra annual tax a one-off amount adds on top of the given annual income, withheld in full when paid.</summary>
+    public static decimal OneOffTax(TaxYear taxYear, decimal annualIncome, decimal oneOff) =>
+        oneOff <= 0 ? 0m
+            : Math.Round(TaxCalculator.AnnualTax(taxYear, annualIncome + oneOff) - TaxCalculator.AnnualTax(taxYear, annualIncome), 0, MidpointRounding.AwayFromZero);
 }

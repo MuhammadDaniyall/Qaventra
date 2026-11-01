@@ -121,7 +121,8 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
     to: todayIso(),
     date: todayIso(),
     month: `${now.getFullYear()}-${now.getMonth() + 1}`,
-    year: String(now.getFullYear()),
+    // The tax certificate's year is the one the tax year (July to June) ends in.
+    year: String(def.key === 'payroll.taxcertificate' && now.getMonth() >= 6 ? now.getFullYear() + 1 : now.getFullYear()),
     department: '',
     group: '',
     employee: '',
@@ -135,7 +136,7 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
       from: has('period') ? f.from : null,
       to: has('period') ? f.to : null,
       date: has('date') ? f.date : null,
-      year: has('month') ? y : has('year') ? Number(f.year) : null,
+      year: has('month') ? y : has('year') && /^\d{4}$/.test(f.year) ? Number(f.year) : null,
       month: has('month') ? m : null,
       departmentIds: f.department ? [f.department] : [],
       employeeId: f.employee || null,

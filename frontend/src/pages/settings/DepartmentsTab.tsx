@@ -105,6 +105,9 @@ function DepartmentModal({ item, onClose }: { item: Department | null; onClose: 
       <Field label="Head" hint="Can approve requests when an approval chain has a Department head step.">
         <Select value={head} onChange={(e) => setHead(e.target.value)}>
           <option value="">No head</option>
+          {item?.headEmployeeId && people.data && !people.data.some((p) => p.id === item.headEmployeeId) && (
+            <option value={item.headEmployeeId}>{item.head ?? 'Former employee'} (left)</option>
+          )}
           {people.data?.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}

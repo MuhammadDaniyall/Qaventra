@@ -88,4 +88,30 @@ public class SeparationDepthTests(ApiFactory factory) : IClassFixture<ApiFactory
         await Ok(await admin.PostAsJsonAsync($"/api/separation-setup/separations/{id}/settlement/paid", new { via = "Cheque" }, ApiFactory.Json));
         Assert.Equal("Cheque", (await Ok(await admin.GetAsync($"/api/separation-setup/separations/{id}"))).GetProperty("settlementPaidVia").GetString());
     }
+
+    [Fact]
+    public async Task Leaving_hr_cannot_own_or_clear_their_own_clearance()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("ExitSelf");
+        var leaver = (await Ok(await admin.PostAsJsonAsync("/api/employees", new { firstName = "Hina", lastName = "Q", joiningDate = "2022-01-01", status = "Active" }, ApiFactory.Json)))
+            .GetProperty("id").GetGuid();
+        var email = $"hina+{Guid.NewGuid():N}@exit.test";
+        await Ok(await admin.PostAsJsonAsync($"/api/employees/{leaver}/login", new { email, password = "Exit-Pass-1234", role = "HrManager" }));
+        var hr = await factory.SignInAsync(email, "Exit-Pass-1234");
+
+        var sep = await Ok(await admin.PostAsJsonAsync("/api/separations", new
+        {
+            employeeId = leaver, type = "Resignation", noticeDate = Iso(Today.AddDays(-30)), lastWorkingDay = Iso(Today.AddDays(-1)), noticePeriodDays = 30, reason = "Moving",
+        }, ApiFactory.Json));
+        var id = sep.GetProperty("summary").GetProperty("id").GetGuid();
+        var item = (await Ok(await admin.GetAsync($"/api/separation-setup/separations/{id}"))).GetProperty("clearance")[0].GetProperty("itemId").GetGuid();
+
+        // Nobody may hand the leaver their own item, and the leaver may not reassign items on their own exit.
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/separation-setup/separations/{id}/clearance/{item}/owner",
+            new { level = 1, responsibleEmployeeId = leaver }, ApiFactory.Json)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await hr.PutAsJsonAsync($"/api/separation-setup/separations/{id}/clearance/{item}/owner",
+            new { level = 1, responsibleEmployeeId = (Guid?)null }, ApiFactory.Json)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await hr.PutAsJsonAsync($"/api/separation-setup/separations/{id}/clearance/{item}/mine",
+            new { isCleared = true }, ApiFactory.Json)).StatusCode);
+    }
 }

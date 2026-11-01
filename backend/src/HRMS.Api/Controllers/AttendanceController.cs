@@ -47,8 +47,12 @@ public class AttendanceController(HrmsDbContext db, AttendanceService attendance
         var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == today);
         var shift = (await schedule.ForEmployeeAsync(employeeId, today, today)).ShiftOn(today);
         var breaks = record is null ? [] : await BreaksAsync(await db.AttendanceBreaks.Where(b => b.AttendanceRecordId == record.Id).OrderBy(b => b.StartUtc).ToListAsync());
+        // Same rule as the punch check: people who may check in anywhere need no location; others need it when there are offices or their own place.
+        var emp = await db.Employees.Where(e => e.Id == employeeId).Select(e => new { e.CheckInAnywhere, e.OwnLatitude, e.OwnLongitude }).FirstOrDefaultAsync();
+        var locationRequired = emp is not null && !emp.CheckInAnywhere
+                               && (await db.OfficeLocations.AnyAsync() || (emp.OwnLatitude != null && emp.OwnLongitude != null));
         return new TodayDto(today, record is null ? null : await ToDto(record), shift?.Name, shift?.StartTime, shift?.EndTime,
-            await db.OfficeLocations.AnyAsync(), breaks, shift?.BreakMinutes ?? 0);
+            locationRequired, breaks, shift?.BreakMinutes ?? 0);
     }
 
     [HttpPost("break/start")]
@@ -111,6 +115,8 @@ public class AttendanceController(HrmsDbContext db, AttendanceService attendance
     [HttpGet("my")]
     public async Task<List<AttendanceDto>> My([FromQuery] int year, [FromQuery] int month)
     {
+        if (month is < 1 or > 12 || year is < 2000 or > 2100)
+            throw new DomainException("Choose a valid month.");
         var employeeId = MyEmployeeId();
         var from = new DateOnly(year, month, 1);
         var to = from.AddMonths(1).AddDays(-1);

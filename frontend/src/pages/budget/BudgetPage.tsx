@@ -98,7 +98,7 @@ export function BudgetPage() {
               ))}
             </ul>
           </Card>
-          {selected && <PlanView id={selected} onDeleted={() => setParams({})} />}
+          {selected && <PlanView key={selected} id={selected} onDeleted={() => setParams({})} />}
         </div>
       )}
       {creating && <NewPlanModal onClose={() => setCreating(false)} onCreated={(id) => setParams({ plan: id })} />}
@@ -237,6 +237,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
   const remove = useMutation({
     mutationFn: () => budgetApi.remove(p.id),
     onSuccess: () => {
+      setDeleting(false);
       refresh();
       onDeleted();
     },
@@ -296,7 +297,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
               </Button>
             </>
           )}
-          {p.status === 'Approved' && (
+          {p.canClose && (
             <Button size="sm" variant="ghost" loading={close.isPending} onClick={() => close.mutate()}>
               Close
             </Button>
@@ -340,7 +341,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                     <Td>
                       {p.canEdit ? (
                         <Select aria-label="Department" value={r.departmentId} onChange={(e) => set(i, { departmentId: e.target.value })}>
-                          <option value="">Any department</option>
+                          <option value="">No department</option>
                           {departments.data?.map((d) => (
                             <option key={d.id} value={d.id}>
                               {d.name}

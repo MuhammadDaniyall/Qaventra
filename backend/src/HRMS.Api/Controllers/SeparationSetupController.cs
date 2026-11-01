@@ -33,6 +33,8 @@ public record ClearanceLevelDto(Guid ItemId, int Level, Guid? ResponsibleEmploye
 public record MyClearanceDto(Guid SeparationId, Guid ItemId, string EmployeeName, string EmployeeCode, DateOnly? LastWorkingDay, string Department, string Title,
     int Level, bool IsCleared, string? Note);
 
+public record MyExitInterviewDto(Guid SeparationId, string EmployeeName, string EmployeeCode, DateOnly? LastWorkingDay, DateTime? InterviewScheduledUtc);
+
 public record ClearMineRequest(bool IsCleared, [StringLength(500)] string? Note);
 public record SetClearanceOwnerRequest([Range(1, 10)] int Level, Guid? ResponsibleEmployeeId);
 public record ExitPanelRequest(Guid? TemplateId, List<Guid>? InterviewerIds, DateTime? ScheduledUtc, [StringLength(4000)] string? Notes);
@@ -63,6 +65,7 @@ public class SettlementApprovalService(HrmsDbContext db, TenantClock clock, Appr
     public async Task DecideAsync(Guid id, bool approve, string? note)
     {
         var s = await separations.LoadAsync(id);
+        if (s.Status != SeparationStatus.InProgress) throw new DomainException("This separation is not in progress.");
         if (s.SettlementSubmittedAtUtc is null || s.SettlementApprovedAtUtc is not null) throw new DomainException("This settlement is not waiting for approval.");
         var outcome = await approvals.DecideAsync(ApprovalRequestType.FinalSettlement, s.Id, s.EmployeeId, approve, note);
         if (outcome == ApprovalStatus.Approved)
@@ -288,7 +291,10 @@ public class SeparationSetupController(HrmsDbContext db, SeparationService separ
     public async Task<IActionResult> SetOwner(Guid id, Guid itemId, SetClearanceOwnerRequest req)
     {
         var s = await separations.LoadAsync(id);
+        separations.RequireHrNotSelf(s);
+        SeparationService.RequireInProgress(s);
         var item = s.Clearance.FirstOrDefault(c => c.Id == itemId) ?? throw new NotFoundException("Checklist item");
+        if (req.ResponsibleEmployeeId == s.EmployeeId) throw new DomainException("The leaving employee cannot own their own clearance item.");
         if (req.ResponsibleEmployeeId is { } r && !await db.Employees.AnyAsync(e => e.Id == r)) throw new NotFoundException("Employee");
         item.Level = req.Level;
         item.ResponsibleEmployeeId = req.ResponsibleEmployeeId;
@@ -308,11 +314,24 @@ public class SeparationSetupController(HrmsDbContext db, SeparationService separ
             .OrderBy(x => x.LastWorkingDay).ToList();
     }
 
+    /// <summary>Open exit interviews the signed-in person sits on the panel of.</summary>
+    [HttpGet("my-exit-interviews")]
+    public async Task<List<MyExitInterviewDto>> MyExitInterviews()
+    {
+        var mine = me.EmployeeId ?? Guid.Empty;
+        var open = await db.Separations.Include(s => s.Employee)
+            .Where(s => s.Status == SeparationStatus.InProgress && s.ExitInterviewerIds != null && s.EmployeeId != mine).ToListAsync();
+        return open.Where(s => HelpdeskService.Ids(s.ExitInterviewerIds!).Contains(mine))
+            .Select(s => new MyExitInterviewDto(s.Id, s.Employee!.FullName, s.Employee.EmployeeCode, s.LastWorkingDay, s.ExitInterviewScheduledUtc))
+            .OrderBy(x => x.InterviewScheduledUtc ?? DateTime.MaxValue).ToList();
+    }
+
     [HttpPut("separations/{id:guid}/clearance/{itemId:guid}/mine")]
     public async Task<IActionResult> ClearMine(Guid id, Guid itemId, ClearMineRequest req)
     {
         var s = await separations.LoadAsync(id);
         if (s.Status != SeparationStatus.InProgress) throw new DomainException("This separation is not in progress.");
+        if (s.EmployeeId == me.EmployeeId) throw new ForbiddenException("You cannot clear your own exit.");
         var item = s.Clearance.FirstOrDefault(c => c.Id == itemId) ?? throw new NotFoundException("Checklist item");
         if (item.ResponsibleEmployeeId != me.EmployeeId) throw new ForbiddenException("This item is not yours to clear.");
         await separations.SetClearedAsync(s, item, req.IsCleared, req.Note);

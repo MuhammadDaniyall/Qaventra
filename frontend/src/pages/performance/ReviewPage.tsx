@@ -58,6 +58,7 @@ function ReviewView({ r }: { r: Review }) {
         description={`${formatDate(r.periodFrom)} – ${formatDate(r.periodTo)}${r.reviewer ? ` · Reviewer: ${r.reviewer}` : ''}${r.due ? ` · Due ${formatDate(r.due)}` : ''}`}
         actions={
           r.isHr &&
+          !r.isEmployee &&
           r.stage !== 'Goals' && (
             <Button variant="ghost" icon={<Undo2 className="size-4" />} onClick={() => setReverting(true)}>
               Send back a stage
@@ -76,7 +77,7 @@ function ReviewView({ r }: { r: Review }) {
         <ReadOnly r={r} />
       )}
       {r.stage === 'SignOff' && r.isEmployee && <SignOff r={r} />}
-      {r.stage === 'Calibration' && r.isHr && <CalibrateCard r={r} />}
+      {r.stage === 'Calibration' && r.isHr && !r.isEmployee && <CalibrateCard r={r} />}
       <ReviewExtras reviewId={r.id} isReviewer={r.isReviewer} isEmployee={r.isEmployee} />
       <ConfirmDialog
         open={reverting}

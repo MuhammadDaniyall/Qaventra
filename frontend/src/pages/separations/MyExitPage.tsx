@@ -43,7 +43,7 @@ export function MyExitPage() {
     );
   }
 
-  const s = mine.data;
+  const s = mine.data ?? undefined;
   const open = s && (s.summary.status === 'Requested' || s.summary.status === 'InProgress' || s.summary.status === 'Completed');
   return (
     <>

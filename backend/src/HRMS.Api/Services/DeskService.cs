@@ -23,6 +23,9 @@ public class DeskService(HrmsDbContext db, ICurrentUser me, TenantClock clock)
     public async Task<SpaceBooking> BookAsync(DeskBookingInput input)
     {
         var employeeId = input.ForEmployeeId is { } other && me.IsHr() ? other : me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
+        if (employeeId != me.EmployeeId
+            && !await db.Employees.AnyAsync(e => e.Id == employeeId && (e.Status == EmploymentStatus.Probation || e.Status == EmploymentStatus.Active)))
+            throw new NotFoundException("Employee");
         var space = await db.Spaces.Include(s => s.Floor).FirstOrDefaultAsync(s => s.Id == input.SpaceId && s.IsActive) ?? throw new NotFoundException("Space");
         var settings = await SettingsAsync();
         var today = await clock.TodayAsync();
@@ -57,6 +60,9 @@ public class DeskService(HrmsDbContext db, ICurrentUser me, TenantClock clock)
             throw new DomainException(space.Kind == SpaceKind.Desk ? $"{space.Name} is already booked that day." : $"{space.Name} is booked at that time.");
         if (space.Kind == SpaceKind.Desk && await db.SpaceBookings.AnyAsync(b => b.EmployeeId == employeeId && b.Date == input.Date && Live.Contains(b.Status) && b.Space!.Kind == SpaceKind.Desk))
             throw new DomainException(employeeId == me.EmployeeId ? "You already have a desk that day." : "They already have a desk that day.");
+        if (space.Kind == SpaceKind.Desk && space.AssignedEmployeeId != employeeId
+            && await db.Spaces.AnyAsync(s => s.IsActive && s.Kind == SpaceKind.Desk && s.AssignedEmployeeId == employeeId))
+            throw new DomainException(employeeId == me.EmployeeId ? "You have a permanent desk." : "They have a permanent desk.");
 
         var booking = new SpaceBooking
         {
@@ -118,6 +124,10 @@ public class DeskService(HrmsDbContext db, ICurrentUser me, TenantClock clock)
         foreach (var b in open)
         {
             var start = b.Date.ToDateTime(b.From ?? new TimeOnly(settings.DayStartsAt, 0));
+            // Booked on the day after the start: the grace period runs from the booking time.
+            var made = await clock.ToLocalAsync(b.CreatedAtUtc);
+            if (DateOnly.FromDateTime(made) == b.Date && made > start)
+                start = made;
             if (now > start.AddMinutes(settings.ReleaseAfterMinutes))
                 b.Status = BookingStatus.Released;
         }

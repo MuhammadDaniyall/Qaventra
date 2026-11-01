@@ -89,6 +89,7 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
     toast.success(message);
     qc.invalidateQueries({ queryKey: qk.expenses });
     qc.invalidateQueries({ queryKey: qk.approvals });
+    qc.invalidateQueries({ queryKey: ['expense-setup'] });
     onClose();
   };
   const decide = useMutation({
@@ -212,7 +213,9 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
           )}
           {d.claim.status === 'Approved' && !d.claim.paidVia && (
             <p className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">
-              Approved. It will be paid with the next payroll.
+              {d.claim.advanceAdjusted
+                ? `Approved. ${formatCurrency(d.claim.advanceAdjusted)} is covered by the advance; ${formatCurrency(d.claim.total - d.claim.advanceAdjusted)} will be paid with the next payroll.`
+                : 'Approved. It will be paid with the next payroll.'}
             </p>
           )}
 

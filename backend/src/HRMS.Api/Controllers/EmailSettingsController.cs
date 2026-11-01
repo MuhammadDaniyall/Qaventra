@@ -17,6 +17,7 @@ public record EmailUsageDto(int SentThisMonth, int FailedThisMonth, int? QuotaPe
 /// <summary>The company's email wording per notification kind, the log of emails sent, and this month's usage.</summary>
 [ApiController]
 [Route("api/setup/email")]
+[Authorize(Policy = Policies.CompanyUser)]
 [Authorize(Policy = Policies.Hr)]
 public class EmailSettingsController(HrmsDbContext db) : ControllerBase
 {

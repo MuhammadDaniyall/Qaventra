@@ -150,7 +150,7 @@ const taskTones = {
 };
 
 /** What needs attention today, built from the dashboard numbers. */
-export function ActionCenter({ d, hr, className }: { d: Dashboard | undefined; hr: boolean; className?: string }) {
+export function ActionCenter({ d, hr, payroll, className }: { d: Dashboard | undefined; hr: boolean; payroll: boolean; className?: string }) {
   const tasks: Task[] = [];
   if (d) {
     if (d.pendingApprovals > 0)
@@ -169,9 +169,9 @@ export function ActionCenter({ d, hr, className }: { d: Dashboard | undefined; h
         detail: 'See who came in after shift start',
         to: '/attendance/daily',
       });
-    if (hr && !d.lastPayroll)
+    if (payroll && !d.lastPayroll)
       tasks.push({ icon: Wallet, tone: 'accent', title: 'Run your first payroll', detail: 'Once salaries are set up', to: '/payroll' });
-    else if (hr && d.lastPayroll && d.lastPayroll.status !== 'Approved')
+    else if (payroll && d.lastPayroll && d.lastPayroll.status !== 'Finalized')
       tasks.push({
         icon: Wallet,
         tone: 'accent',

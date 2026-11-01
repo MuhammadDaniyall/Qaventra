@@ -31,15 +31,19 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
         if (advanceId is { } aid && !await db.ExpenseAdvances.AnyAsync(a => a.Id == aid && a.EmployeeId == employeeId && a.Status == RequestStatus.Approved && a.ClosedAtUtc == null))
             throw new DomainException("That advance is not open for this person.");
 
+        if (items.Any(i => i.ExpenseTypeId is null && !Enum.IsDefined(i.Category)))
+            throw new DomainException("Choose a category for every item.");
+
         var claim = new ExpenseClaim { EmployeeId = employeeId, Title = title.Trim(), AdvanceId = advanceId };
-        var typed = new Dictionary<Guid, decimal>();
+        // Typed amounts per type and calendar year: each line counts against its own year's limit.
+        var typed = new Dictionary<(Guid TypeId, int Year), decimal>();
         foreach (var i in items)
         {
             var (category, amount) = (i.Category, i.Amount);
             if (i.ExpenseTypeId is { } typeId)
             {
                 (category, amount) = await TypedAmountAsync(employeeId, typeId, i);
-                typed[typeId] = typed.GetValueOrDefault(typeId) + amount;
+                typed[(typeId, i.Date.Year)] = typed.GetValueOrDefault((typeId, i.Date.Year)) + amount;
             }
             if (amount <= 0)
                 throw new DomainException("Every item needs an amount greater than zero.");
@@ -70,7 +74,7 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             claim.Items.Add(item);
         }
         claim.Total = claim.Items.Sum(i => i.Amount);
-        await CheckYearlyLimitsAsync(employeeId, typed, items.Min(i => i.Date).Year);
+        await CheckYearlyLimitsAsync(employeeId, typed);
         db.ExpenseClaims.Add(claim);
 
         var approval = await approvals.StartAsync(ApprovalRequestType.Expense, claim.Id, employeeId, $"{claim.Title} · Rs {claim.Total:N0}");
@@ -125,14 +129,14 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
         return await db.DistanceRoutes.Where(r => (r.FromCity == a && r.ToCity == b) || (r.FromCity == b && r.ToCity == a)).Select(r => (decimal?)r.Km).FirstOrDefaultAsync();
     }
 
-    private async Task CheckYearlyLimitsAsync(Guid employeeId, Dictionary<Guid, decimal> typed, int year)
+    private async Task CheckYearlyLimitsAsync(Guid employeeId, Dictionary<(Guid TypeId, int Year), decimal> typed)
     {
         if (typed.Count == 0) return;
         var grade = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.GradeId).FirstAsync();
-        var start = new DateOnly(year, 1, 1);
-        var end = new DateOnly(year, 12, 31);
-        foreach (var (typeId, amount) in typed)
+        foreach (var ((typeId, year), amount) in typed)
         {
+            var start = new DateOnly(year, 1, 1);
+            var end = new DateOnly(year, 12, 31);
             var type = await db.ExpenseTypes.Include(t => t.GradeRates).FirstAsync(t => t.Id == typeId);
             var limit = type.GradeRates.FirstOrDefault(r => r.GradeId == grade)?.YearlyLimit ?? type.YearlyLimit;
             if (limit is not { } cap) continue;

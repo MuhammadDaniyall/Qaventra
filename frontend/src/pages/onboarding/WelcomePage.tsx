@@ -25,8 +25,9 @@ export function WelcomePage() {
         <EmptyState icon={PartyPopper} title={`Hi ${first}`} description="There is no onboarding for you right now." />
       </Card>
     );
-  const mine = o.tasks.filter((t) => t.canDo);
-  const others = o.tasks.filter((t) => !t.canDo);
+  // Split by who the task is for, not canDo: HR can do every task, but only the joiner's own belong in their checklist.
+  const mine = o.tasks.filter((t) => t.assigneeEmployeeId === o.summary.employeeId);
+  const others = o.tasks.filter((t) => t.assigneeEmployeeId !== o.summary.employeeId);
   return (
     <div className="mx-auto max-w-5xl">
       <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-accent-600 to-violet-600 p-6 text-white shadow-lg sm:p-8">
@@ -126,7 +127,7 @@ export function WelcomeBanner({ className }: { className?: string }) {
   const welcome = useQuery({ queryKey: qk.welcome, queryFn: onboardingApi.welcome });
   const o = welcome.data?.onboarding;
   if (!o || o.summary.status !== 'InProgress') return null;
-  const left = o.tasks.filter((t) => t.canDo && !t.completedAtUtc).length + (o.summary.introduced ? 0 : 1);
+  const left = o.tasks.filter((t) => t.assigneeEmployeeId === o.summary.employeeId && !t.completedAtUtc).length + (o.summary.introduced ? 0 : 1);
   return (
     <Link to="/welcome" className={cn('flex items-center gap-4 rounded-xl border border-accent-200 bg-accent-50 p-4 transition hover:bg-accent-100 dark:border-accent-500/30 dark:bg-accent-500/10 dark:hover:bg-accent-500/15', className)}>
       <PartyPopper className="size-6 shrink-0 text-accent-600 dark:text-accent-300" />

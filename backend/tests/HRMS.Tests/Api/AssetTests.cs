@@ -146,4 +146,21 @@ public class AssetTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var xlsx = await admin.GetAsync("/api/assets/export");
         Assert.Equal(HttpStatusCode.OK, xlsx.StatusCode);
     }
+
+    [Fact]
+    public async Task A_handler_cannot_edit_or_take_over_assets_of_a_type_they_do_not_handle()
+    {
+        var (admin, person) = await CompanyAsync("TypeGuard");
+        var (ian, ianClient) = await person("Ian");
+        var (pia, piaClient) = await person("Pia");
+        var laptop = await TypeAsync(admin, "Laptop", [ian]);
+        var phone = await TypeAsync(admin, "Phone", [pia]);
+        var l = (await AddAsync(ianClient, laptop, "Dell Latitude 5420")).GetProperty("id").GetGuid();
+
+        // Pia handles phones only: she can neither rename the laptop nor move it into her type.
+        Assert.Equal(HttpStatusCode.Forbidden, (await piaClient.PutAsJsonAsync($"/api/assets/{l}", new { typeId = laptop, name = "Renamed", condition = "Good" }, ApiFactory.Json)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await piaClient.PutAsJsonAsync($"/api/assets/{l}", new { typeId = phone, name = "Mine now", condition = "Good" }, ApiFactory.Json)).StatusCode);
+        await Ok(await ianClient.PutAsJsonAsync($"/api/assets/{l}", new { typeId = laptop, name = "Dell Latitude 5430", condition = "Good" }, ApiFactory.Json));
+        Assert.Equal("Dell Latitude 5430", (await Ok(await admin.GetAsync($"/api/assets/{l}"))).GetProperty("asset").GetProperty("name").GetString());
+    }
 }

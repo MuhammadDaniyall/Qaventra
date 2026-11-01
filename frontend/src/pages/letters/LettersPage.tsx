@@ -24,6 +24,7 @@ import {
   Skeleton,
   SkeletonRows,
   Spinner,
+  StatusBadge,
   Switch,
   Table,
   TBody,
@@ -137,7 +138,17 @@ function IssuedList() {
                   {formatDate(l.issuedOn)}
                   {l.issuedByName && <p className="text-xs text-zinc-500 dark:text-zinc-400">by {l.issuedByName}</p>}
                 </Td>
-                <Td>{l.sharedWithEmployee ? <Badge tone="green">Shared</Badge> : <Badge>HR only</Badge>}</Td>
+                <Td>
+                  {l.status === 'Pending' ? (
+                    <StatusBadge status="Pending" />
+                  ) : l.status === 'Rejected' ? (
+                    <StatusBadge status="Rejected" />
+                  ) : l.sharedWithEmployee ? (
+                    <Badge tone="green">Shared</Badge>
+                  ) : (
+                    <Badge>HR only</Badge>
+                  )}
+                </Td>
               </Tr>
             ))}
           </TBody>
@@ -390,7 +401,7 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
   }, [employees.data, employeeId]);
 
   const issue = useMutation({
-    mutationFn: () => lettersApi.issue({ employeeId, category, subject, body, issuedOn, shareWithEmployee: share }),
+    mutationFn: () => lettersApi.issue({ employeeId, category, subject, body, issuedOn, shareWithEmployee: share, templateId: templateId || null }),
     onSuccess: (l) => {
       toast.success('Letter issued', l.referenceNo);
       qc.invalidateQueries({ queryKey: qk.letters });

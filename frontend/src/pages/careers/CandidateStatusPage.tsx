@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { Briefcase } from 'lucide-react';
-import { http } from '../../api/client';
+import { errorMessage, http } from '../../api/client';
 import type { CandidateLetter } from '../../api/letters';
-import { Button, Card, CardBody, CardHeader, EmptyState, ErrorState, PageSpinner } from '../../components/ui';
+import { Button, Card, CardBody, CardHeader, EmptyState, ErrorState, FormError, PageSpinner } from '../../components/ui';
 import { formatDate, formatDateTimeUtc, formatNumber } from '../../lib/format';
 
 interface PortalApplication {
@@ -34,12 +34,22 @@ export function CandidateStatusPage() {
   const key = ['candidate-portal', token];
   const page = useQuery({ queryKey: key, queryFn: () => http.get<Portal>(`/careers/portal/${token}`), retry: false });
   const [letter, setLetter] = useState<CandidateLetter | null>(null);
+  const [letterError, setLetterError] = useState<string | null>(null);
   const act = useMutation({
     mutationFn: ({ kind, id, accepted }: { kind: 'offer' | 'withdraw'; id: string; accepted?: boolean }) =>
       kind === 'offer' ? http.post(`/careers/portal/${token}/offer/${id}`, { accepted, note: null }) : http.post(`/careers/portal/${token}/withdraw/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+    // The offer may have changed since the page loaded, so show the reason and reload.
+    onError: () => qc.invalidateQueries({ queryKey: key }),
   });
-  const openLetter = async (id: string) => setLetter(await http.get<CandidateLetter>(`/careers/portal/${token}/offer-letter/${id}`));
+  const openLetter = async (id: string) => {
+    setLetterError(null);
+    try {
+      setLetter(await http.get<CandidateLetter>(`/careers/portal/${token}/offer-letter/${id}`));
+    } catch (err) {
+      setLetterError(errorMessage(err));
+    }
+  };
 
   if (page.isLoading) return <PageSpinner />;
   if (page.isError || !page.data)
@@ -76,6 +86,7 @@ export function CandidateStatusPage() {
         <h1 className="text-2xl font-semibold">Hello {p.name}</h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">Your applications and where they stand.</p>
       </div>
+      <FormError message={act.isError ? errorMessage(act.error) : letterError} />
       {!p.applications.length && <EmptyState icon={Briefcase} title="No applications" />}
       {p.applications.map((a) => (
         <Card key={a.id}>

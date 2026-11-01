@@ -143,6 +143,8 @@ public class HelpdeskService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
         if (string.IsNullOrWhiteSpace(body))
             throw new DomainException("Write a reply.");
         var agent = IsAgent(t, c);
+        // The employee the ticket is for; HR who raised it on their behalf still replies as an agent.
+        var subject = me.EmployeeId == t.EmployeeId;
         if (isInternal && !agent)
             throw new ForbiddenException("Only agents can add internal notes.");
         if (t.Status is TicketStatus.Closed or TicketStatus.Cancelled)
@@ -156,7 +158,7 @@ public class HelpdeskService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
             if (t.AssigneeEmployeeId is { } a && a != me.EmployeeId)
                 await notify.ToEmployeesAsync([a], NotificationKind.Ticket, $"Note on {Code(t.Number)}", Trim(body), link);
         }
-        else if (agent && !IsRequester(t))
+        else if (agent && !subject)
         {
             t.FirstResponseAtUtc ??= clock.UtcNow;
             if (t.Status == TicketStatus.Open)
@@ -166,7 +168,7 @@ public class HelpdeskService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
         else
         {
             // The requester (or someone involved) answered: back to the agents.
-            if (t.Status is TicketStatus.WaitingOnEmployee or TicketStatus.Resolved && IsRequester(t))
+            if (t.Status is TicketStatus.WaitingOnEmployee or TicketStatus.Resolved && subject)
             {
                 if (t.Status == TicketStatus.Resolved)
                     await AddCommentAsync(t, "Reopened by the reply", false, system: true);
@@ -302,7 +304,11 @@ public class HelpdeskService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
             .Select(e => new { e.Id, Name = e.FirstName + " " + e.LastName }).ToListAsync();
         if (names.Count != ids.Count)
             throw new NotFoundException("Employee");
-        t.InvolvedIds = string.Join(',', Ids(t.InvolvedIds).Concat(ids));
+        var all = Ids(t.InvolvedIds).Concat(ids).ToList();
+        // InvolvedIds holds at most 2000 characters (37 per id).
+        if (all.Count > 50)
+            throw new DomainException("A ticket can involve at most 50 colleagues.");
+        t.InvolvedIds = string.Join(',', all);
         await AddCommentAsync(t, $"Involved {string.Join(", ", names.Select(n => n.Name))}", false, system: true);
         await notify.ToEmployeesAsync(ids, NotificationKind.Ticket, $"You were involved in {Code(t.Number)}", t.Subject, $"/helpdesk/{t.Id}");
         await db.SaveChangesAsync();
@@ -410,10 +416,11 @@ public class HelpdeskService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
             {
                 t.DueSoonRemindedAtUtc = now;
                 var title = $"Due soon: {Code(t.Number)} {t.Subject}";
+                var body = $"Due {await clock.ToLocalAsync(t.DueAtUtc):HH:mm}";
                 if (handlers.Count > 0)
-                    await notify.ToEmployeesAsync(handlers, NotificationKind.Ticket, title, $"Due {t.DueAtUtc:HH:mm} UTC", link, includeMe: true);
+                    await notify.ToEmployeesAsync(handlers, NotificationKind.Ticket, title, body, link, includeMe: true);
                 else
-                    await notify.ToHrAsync(NotificationKind.Ticket, title, $"Due {t.DueAtUtc:HH:mm} UTC", link, includeMe: true);
+                    await notify.ToHrAsync(NotificationKind.Ticket, title, body, link, includeMe: true);
             }
         }
         if (db.ChangeTracker.HasChanges())

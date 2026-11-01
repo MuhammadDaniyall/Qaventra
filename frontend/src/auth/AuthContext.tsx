@@ -2,9 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { authApi } from '../api/auth';
-import { ACCESS_BLOCK_CODES, getPlatformToken, isAccessBlocked, getToken, onAuthFailure, setPlatformToken, setToken } from '../api/client';
+import { WifiOff } from 'lucide-react';
+import { ACCESS_BLOCK_CODES, ApiError, errorMessage, getPlatformToken, isAccessBlocked, getToken, onAuthFailure, setPlatformToken, setToken } from '../api/client';
 import { platformApi } from '../api/platform';
-import { useToast } from '../components/ui';
+import { Button, EmptyState, useToast } from '../components/ui';
 import type { LoginRequest, Me, Session } from '../types';
 
 interface AuthState {
@@ -20,8 +21,8 @@ interface AuthState {
   enterCompany: (companyId: string) => Promise<Me>;
   /** Owner only: leave the company and restore the platform session. */
   exitCompany: () => Promise<Me | null>;
-  /** Clears the "must change password" flag after the user picked their own. */
-  passwordChanged: () => void;
+  /** Stores the fresh session issued after a password change (older tokens no longer work). */
+  passwordChanged: (session: Session) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -43,6 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
   }, [queryClient]);
 
+  // Set when the stored session could not be checked (no connection, server error); the tokens are kept for a retry.
+  const [unreachable, setUnreachable] = useState<unknown>(null);
+  const [restoreAttempt, setRestoreAttempt] = useState(0);
+
   // Restore the session(s) from stored tokens.
   useEffect(() => {
     let cancelled = false;
@@ -50,39 +55,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const active = getToken();
       const platform = getPlatformToken();
       let me: Me | null = null;
+      // Only a real rejection (401, access blocked) drops a token; anything else keeps it so a retry can succeed.
+      let failure: unknown = null;
       if (active) {
         try {
           me = await authApi.me(active);
         } catch (err) {
           me = null;
           if (isAccessBlocked(err) && !cancelled) setNotice(err.message);
+          if (!isRejected(err)) failure = err;
         }
       }
       if (me && !me.isActingAsOwner && platform) {
         // Stale leftover from an earlier company visit.
         setPlatformToken(null);
       }
-      if (!me && platform) {
+      if (!me && !failure && platform) {
         // The company token expired or is invalid: fall back to the owner's platform session.
         try {
           me = await authApi.me(platform);
           setToken(platform);
           setPlatformToken(null);
-        } catch {
+        } catch (err) {
           me = null;
+          if (!isRejected(err)) failure = err;
         }
       }
       if (cancelled) return;
       if (me) setUser(me);
-      else {
+      else if (failure) {
+        setUnreachable(failure);
+        return;
+      } else {
         setToken(null);
         setPlatformToken(null);
       }
+      setUnreachable(null);
       setInitializing(false);
     })();
     return () => {
       cancelled = true;
     };
+  }, [restoreAttempt]);
+
+  const retryRestore = useCallback(() => {
+    setUnreachable(null);
+    setRestoreAttempt((n) => n + 1);
   }, []);
 
   // 401 anywhere -> sign out completely; 403 -> permission toast.
@@ -168,12 +186,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   const clearNotice = useCallback(() => setNotice(null), []);
-  const passwordChanged = useCallback(() => setUser((u) => (u ? { ...u, mustChangePassword: false } : u)), []);
+  const passwordChanged = useCallback((session: Session) => {
+    setToken(session.token);
+    setUser(session.user);
+  }, []);
   const value = useMemo(
     () => ({ user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged }),
     [user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged],
   );
+  if (unreachable) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <EmptyState
+          icon={WifiOff}
+          title="Cannot reach the server"
+          description={`${errorMessage(unreachable)} You are still signed in.`}
+          action={<Button onClick={retryRestore}>Retry</Button>}
+        />
+      </div>
+    );
+  }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+/** The server looked at the token and refused it, as opposed to a network or server error. */
+function isRejected(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 401 || isAccessBlocked(err));
 }
 
 export function useAuth(): AuthState {

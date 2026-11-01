@@ -113,8 +113,8 @@ public class PerformanceTests(ApiFactory factory) : IClassFixture<ApiFactory>
         // HR can send it back one stage at a time.
         await Ok(await admin.PostAsync($"/api/performance/reviews/{id}/revert", null));
         Assert.Equal("Calibration", (await Ok(await admin.GetAsync($"/api/performance/reviews/{id}"))).GetProperty("stage").GetString());
-        await Ok(await admin.PostAsync($"/api/performance/cycles/{cycle}/close", null));
-        Assert.Equal(HttpStatusCode.BadRequest, (await workerClient.GetAsync($"/api/performance/reviews/{id}")).StatusCode);
+        // A cycle with unfinished reviews cannot be closed, or nobody could finish them.
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/performance/cycles/{cycle}/close", null)).StatusCode);
         _ = lead;
     }
 }

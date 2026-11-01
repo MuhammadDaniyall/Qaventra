@@ -111,4 +111,27 @@ public class OnboardingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Ok(await admin.PostAsync($"/api/onboarding/{id}/cancel", null));
         Assert.Single((await Ok(await admin.GetAsync("/api/onboarding?status=Cancelled"))).EnumerateArray());
     }
+
+    [Fact]
+    public async Task Tasks_stay_in_their_company_and_deleting_the_last_open_one_completes_onboarding()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Onboard3");
+        var (other, _, _) = await factory.CreateCompanyAsync("Onboard3Other");
+        var joiner = (await Ok(await admin.PostAsJsonAsync("/api/employees", new { firstName = "Hira", lastName = "O", joiningDate = Iso(Today), status = "Probation" }, ApiFactory.Json))).GetProperty("id").GetGuid();
+        var id = (await Ok(await admin.PostAsJsonAsync("/api/onboarding", new { employeeId = joiner }, ApiFactory.Json))).GetProperty("summary").GetProperty("id").GetGuid();
+        await Ok(await admin.PostAsJsonAsync($"/api/onboarding/{id}/tasks", new { title = "Laptop", category = "Paperwork", assigneeKind = "Hr", dueOn = Iso(Today) }, ApiFactory.Json));
+        var detail = await Ok(await admin.PostAsJsonAsync($"/api/onboarding/{id}/tasks", new { title = "Desk", category = "Paperwork", assigneeKind = "Hr", dueOn = Iso(Today) }, ApiFactory.Json));
+        var tasks = detail.GetProperty("tasks").EnumerateArray().Select(t => t.GetProperty("id").GetGuid()).ToList();
+
+        // Another company's HR can neither tick nor delete these tasks.
+        Assert.Equal(HttpStatusCode.NotFound, (await other.DeleteAsync($"/api/onboarding/tasks/{tasks[0]}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsJsonAsync($"/api/onboarding/tasks/{tasks[0]}", new { done = true })).StatusCode);
+        Assert.Equal(2, (await Ok(await admin.GetAsync($"/api/onboarding/{id}"))).GetProperty("tasks").GetArrayLength());
+
+        // Ticking one and deleting the other open one completes the onboarding.
+        await Ok(await admin.PostAsJsonAsync($"/api/onboarding/tasks/{tasks[0]}", new { done = true }));
+        await Ok(await admin.DeleteAsync($"/api/onboarding/tasks/{tasks[1]}"));
+        Assert.Equal("Completed", (await Ok(await admin.GetAsync($"/api/onboarding/{id}"))).GetProperty("summary").GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.DeleteAsync($"/api/onboarding/tasks/{tasks[0]}")).StatusCode);
+    }
 }

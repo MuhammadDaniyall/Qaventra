@@ -41,7 +41,7 @@ export function MyPayslipsPage() {
                     <Td className="font-medium text-zinc-900 dark:text-zinc-100">
                       <span className="inline-flex items-center gap-2">
                         <FileText className="size-4 text-zinc-500 dark:text-zinc-400" />
-                        {monthLabel(p.year, p.month)}
+                        {p.label || monthLabel(p.year, p.month)}
                       </span>
                     </Td>
                     <Td className="text-end tabular-nums">{formatNumber(p.paidDays)}</Td>

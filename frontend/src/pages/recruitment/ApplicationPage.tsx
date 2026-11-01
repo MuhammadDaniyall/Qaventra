@@ -119,7 +119,7 @@ function ApplicationView({ a }: { a: Application }) {
                   {a.offerStatus === 'Sent' ? 'Change offer' : 'Make offer'}
                 </Button>
               )}
-              {a.canHire && a.offerStatus === 'Accepted' && a.stage !== 'Hired' && (
+              {a.canHire && a.offerStatus === 'Accepted' && a.stage === 'Offer' && (
                 <Button size="sm" variant="success" icon={<UserCheck className="size-3.5" />} onClick={() => setHiring(true)}>
                   Hire
                 </Button>

@@ -59,7 +59,8 @@ public class PieceWorkTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var mine = (await Ok(await amnaClient.GetAsync($"/api/piece-work/entries?year={day.Year}&month={day.Month}"))).EnumerateArray().ToList();
         Assert.Contains(mine, e => e.GetProperty("efficiency").GetDecimal() == 120m);
 
-        // Payroll: 120 × 12 + 50 × 12 for Amna (if both days fall in this month), 80 × 15 for Bilal.
+        // Payroll: 120 × 12 + 50 × 12 for Amna, 80 × 15 for Bilal. Yesterday's sheet is paid here even when it fell in last month,
+        // since no finalized payroll has paid it yet.
         var run = await Ok(await admin.PostAsJsonAsync("/api/payroll/runs", new { year = Today.Year, month = Today.Month }));
         run = await Ok(await admin.PostAsJsonAsync("/api/payroll/runs", new { year = Today.Year, month = Today.Month }));
         async Task<List<JsonElement>> Lines(Guid id)
@@ -68,7 +69,7 @@ public class PieceWorkTests(ApiFactory factory) : IClassFixture<ApiFactory>
             return (await Ok(await admin.GetAsync($"/api/payroll/payslips/{slip}"))).GetProperty("lines").EnumerateArray().ToList();
         }
         var amnaPiece = Assert.Single(await Lines(amna), l => l.GetProperty("name").GetString()!.StartsWith("Piece work"));
-        Assert.Equal(day.Month == Today.Month ? 2040m : 600m, amnaPiece.GetProperty("amount").GetDecimal());
+        Assert.Equal(2040m, amnaPiece.GetProperty("amount").GetDecimal());
         Assert.Equal(1200m, Assert.Single(await Lines(bilal), l => l.GetProperty("name").GetString()!.StartsWith("Piece work")).GetProperty("amount").GetDecimal());
 
         await Ok(await admin.PostAsync($"/api/payroll/runs/{run.GetProperty("run").GetProperty("id").GetGuid()}/finalize", null));

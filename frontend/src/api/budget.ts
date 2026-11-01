@@ -52,6 +52,7 @@ export interface BudgetPlan {
   actualCost: number;
   canEdit: boolean;
   canDecide: boolean;
+  canClose: boolean;
 }
 
 export interface PositionInput {

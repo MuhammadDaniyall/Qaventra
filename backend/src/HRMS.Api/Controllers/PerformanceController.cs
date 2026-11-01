@@ -207,6 +207,8 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
         var c = await db.ReviewCycles.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Review cycle");
         if (c.Status != ReviewCycleStatus.Active)
             throw new DomainException("Only a running cycle can be closed.");
+        if (await db.PerformanceReviews.AnyAsync(r => r.CycleId == id && r.Stage != ReviewStage.Done))
+            throw new DomainException("Some reviews are not finished yet.");
         c.Status = ReviewCycleStatus.Closed;
         c.ClosedAtUtc = clock.UtcNow;
         await db.SaveChangesAsync();
@@ -234,7 +236,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
     public async Task<List<ReviewListItemDto>> MyReviews()
     {
         var mine = me.EmployeeId ?? Guid.Empty;
-        var list = await ListAsync(db.PerformanceReviews.Where(r => r.EmployeeId == mine && r.Cycle!.Status != ReviewCycleStatus.Draft), await Settings());
+        var list = await ListAsync(db.PerformanceReviews.Where(r => r.EmployeeId == mine && r.Cycle!.Status != ReviewCycleStatus.Draft), await Settings(), maskDraftSelf: false);
         // Scores stay hidden from the employee until HR releases the review.
         return list.Select(r => r.Stage < ReviewStage.SignOff ? r with { ManagerScore = null, FinalRating = null, Potential = null, SuggestedRaise = null } : r with { SuggestedRaise = null }).ToList();
     }
@@ -251,7 +253,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
     [HttpGet("reviews/{id:guid}")]
     public async Task<ReviewDto> Get(Guid id)
     {
-        var (r, sections) = await perf.LoadAsync(id);
+        var (r, sections) = await perf.LoadAsync(id, forWrite: false);
         var isEmployee = perf.IsEmployee(r);
         var isReviewer = perf.IsReviewer(r) && !isEmployee;
         var showManager = !isEmployee || r.Stage >= ReviewStage.SignOff;
@@ -340,7 +342,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
 
     // ---------- Helpers ----------
 
-    private async Task<List<ReviewListItemDto>> ListAsync(IQueryable<PerformanceReview> q, PerformanceSettingsDto settings)
+    private async Task<List<ReviewListItemDto>> ListAsync(IQueryable<PerformanceReview> q, PerformanceSettingsDto settings, bool maskDraftSelf = true)
     {
         var rows = await q.OrderBy(r => r.Employee!.FirstName).Select(r => new
         {
@@ -350,7 +352,8 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
             r.Stage, r.SelfScore, r.ManagerScore, r.FinalRating, r.Potential, r.EmployeeAgrees,
         }).ToListAsync();
         return rows.Select(r => new ReviewListItemDto(r.Id, r.CycleId, r.Cycle, r.EmployeeId, r.Name, r.EmployeeCode, r.Department, r.Reviewer, r.Stage,
-            r.SelfScore, r.ManagerScore, r.FinalRating, r.Potential, r.EmployeeAgrees,
+            // A self score still being drafted is only the employee's to see.
+            maskDraftSelf && r.Stage <= ReviewStage.SelfReview ? null : r.SelfScore, r.ManagerScore, r.FinalRating, r.Potential, r.EmployeeAgrees,
             // The raise follows the rating people see (after calibration), not the unrounded score.
             r.FinalRating is { } f ? PerformanceMath.Raise(f, settings.RaiseSlabs) : r.ManagerScore is { } s ? PerformanceMath.Raise(s, settings.RaiseSlabs) : null)).ToList();
     }

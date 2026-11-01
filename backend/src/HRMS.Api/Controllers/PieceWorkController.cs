@@ -152,8 +152,7 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
     public async Task<List<PieceEntryDto>> Entries([FromQuery] int? year, [FromQuery] int? month, [FromQuery] bool team = false, [FromQuery] RequestStatus? status = null,
         [FromQuery] Guid? employeeId = null)
     {
-        var today = await clock.TodayAsync();
-        var from = new DateOnly(year ?? today.Year, month ?? today.Month, 1);
+        var from = await MonthStartAsync(year, month);
         var to = from.AddMonths(1).AddDays(-1);
         var q = db.PieceEntries.Where(e => e.Date >= from && e.Date <= to);
         q = team ? q.Where(e => Team().Contains(e.EmployeeId)) : q.Where(e => e.EmployeeId == me.EmployeeId);
@@ -192,10 +191,10 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
 
         var rates = await db.PieceRates.Where(r => r.ItemId == item.Id && ids.Contains(r.EmployeeId)).ToDictionaryAsync(r => r.EmployeeId, r => r.Rate);
         var by = await LetterService.CurrentUserNameAsync(db, me);
-        // Entries made by a supervisor or HR for others count as approved; a worker's own entry waits for their manager.
-        var approved = !self || me.IsHr();
+        // Entries made by a supervisor or HR for others count as approved; anyone's own entry, HR's included, waits for someone else.
         foreach (var l in lines)
         {
+            var approved = l.EmployeeId != me.EmployeeId;
             var rate = rates.GetValueOrDefault(l.EmployeeId, item.Rate);
             db.PieceEntries.Add(new PieceEntry
             {
@@ -205,7 +204,7 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
             });
         }
         await db.SaveChangesAsync();
-        return new { added = lines.Count, approved };
+        return new { added = lines.Count, approved = lines.All(l => l.EmployeeId != me.EmployeeId) };
     }
 
     [HttpPost("entries/decide")]
@@ -242,18 +241,17 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
 
     [HttpGet("team")]
     public async Task<List<LookupDto>> TeamList() =>
-        await db.Employees.Where(e => Team().Contains(e.Id) && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)).OrderBy(e => e.FirstName)
+        await db.Employees.Where(e => Team().Contains(e.Id) && e.Id != me.EmployeeId && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)).OrderBy(e => e.FirstName)
             .Select(e => new LookupDto(e.Id, e.EmployeeCode + " · " + e.FirstName + " " + e.LastName)).ToListAsync();
 
     [HttpGet("report")]
     public async Task<PieceReportDto> Report([FromQuery] int? year, [FromQuery] int? month)
     {
-        var today = await clock.TodayAsync();
-        var from = new DateOnly(year ?? today.Year, month ?? today.Month, 1);
+        var from = await MonthStartAsync(year, month);
         var to = from.AddMonths(1).AddDays(-1);
         var rows = await db.PieceEntries.Where(e => e.Date >= from && e.Date <= to && Team().Contains(e.EmployeeId)
                                                     && (e.Status == RequestStatus.Approved || e.Status == RequestStatus.Pending))
-            .Select(e => new { e.EmployeeId, Name = e.Employee!.FirstName + " " + e.Employee.LastName, Item = e.Item!.Name, e.Item.Unit, e.Item.DailyTarget, e.Date, e.Quantity, e.Amount, e.Status })
+            .Select(e => new { e.EmployeeId, e.Employee!.EmployeeCode, Name = e.Employee.FirstName + " " + e.Employee.LastName, Item = e.Item!.Name, e.Item.Unit, e.Item.DailyTarget, e.Date, e.Quantity, e.Amount, e.Status })
             .ToListAsync();
         var ok = rows.Where(r => r.Status == RequestStatus.Approved).ToList();
         var byItem = ok.GroupBy(r => r.Item).Select(g =>
@@ -263,17 +261,25 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
             return new PieceSummaryRowDto($"{g.Key} ({g.First().Unit})", g.Sum(r => r.Quantity), g.Sum(r => r.Amount), days,
                 target is > 0 && days > 0 ? Math.Round(100 * g.Sum(r => r.Quantity) / (target.Value * days), 0) : null);
         }).OrderByDescending(r => r.Amount).ToList();
-        var byEmployee = ok.GroupBy(r => r.Name).Select(g =>
+        var byEmployee = ok.GroupBy(r => r.EmployeeId).Select(g =>
         {
             var withTarget = g.Where(r => r.DailyTarget is > 0).ToList();
             var eff = withTarget.Count > 0 ? Math.Round(100 * withTarget.Average(r => r.Quantity / r.DailyTarget!.Value), 0) : (decimal?)null;
-            return new PieceSummaryRowDto(g.Key, g.Sum(r => r.Quantity), g.Sum(r => r.Amount), g.Select(r => r.Date).Distinct().Count(), eff);
+            return new PieceSummaryRowDto($"{g.First().EmployeeCode} · {g.First().Name}", g.Sum(r => r.Quantity), g.Sum(r => r.Amount), g.Select(r => r.Date).Distinct().Count(), eff);
         }).OrderByDescending(r => r.Amount).ToList();
         var pending = rows.Where(r => r.Status == RequestStatus.Pending).ToList();
         return new PieceReportDto(ok.Sum(r => r.Amount), ok.Sum(r => r.Quantity), ok.Select(r => r.EmployeeId).Distinct().Count(), pending.Count, pending.Sum(r => r.Amount), byItem, byEmployee);
     }
 
     // ---------- Helpers ----------
+
+    private async Task<DateOnly> MonthStartAsync(int? year, int? month)
+    {
+        if (month is < 1 or > 12 || year is < 2000 or > 2100)
+            throw new DomainException("Choose a valid month.");
+        var today = await clock.TodayAsync();
+        return new DateOnly(year ?? today.Year, month ?? today.Month, 1);
+    }
 
     /// <summary>People whose work the signed-in user enters and approves: everyone for HR, direct reports for managers.</summary>
     private IQueryable<Guid> Team()

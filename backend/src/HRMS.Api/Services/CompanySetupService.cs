@@ -88,6 +88,8 @@ public class CompanySetupService(HrmsDbContext db, IPasswordHasher<User> hasher,
             FullName = $"{input.AdminFirstName} {input.AdminLastName}".Trim(),
             Role = UserRole.CompanyAdmin,
             EmployeeId = adminEmployee.Id,
+            // The owner knows this password, so the admin replaces it on first sign-in.
+            MustChangePassword = true,
         };
         user.PasswordHash = hasher.HashPassword(user, generated ?? input.AdminPassword!);
         db.Users.Add(user);
@@ -104,7 +106,9 @@ public class CompanySetupService(HrmsDbContext db, IPasswordHasher<User> hasher,
             ?? throw new DomainException("This company has no Company Super Admin.");
         var generated = string.IsNullOrWhiteSpace(password) ? GeneratePassword() : null;
         admin.PasswordHash = hasher.HashPassword(admin, generated ?? password!);
+        admin.MustChangePassword = true;
         admin.IsActive = true;
+        admin.SecurityStamp = Guid.NewGuid();
         await db.SaveChangesAsync();
         return (admin, generated);
     }

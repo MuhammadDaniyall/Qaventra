@@ -64,19 +64,21 @@ function LetterView({ l, back, hr }: { l: LetterDocument; back: { to: string; la
         <PageHeader
           back={back}
           title={l.subject}
-          description={`${categoryLabel(l.category)} · ${l.employeeName} · ${l.referenceNo}`}
+          description={`${categoryLabel(l.category)} · ${l.employeeName} · ${l.referenceNo}${l.status && l.status !== 'Issued' ? ` · ${l.status}` : ''}`}
           actions={
             <>
               {hr && (
                 <>
-                  <Button
-                    variant="secondary"
-                    icon={l.sharedWithEmployee ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    loading={share.isPending}
-                    onClick={() => share.mutate()}
-                  >
-                    {l.sharedWithEmployee ? 'Hide from employee' : 'Share with employee'}
-                  </Button>
+                  {(l.status ?? 'Issued') === 'Issued' && (
+                    <Button
+                      variant="secondary"
+                      icon={l.sharedWithEmployee ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                      loading={share.isPending}
+                      onClick={() => share.mutate()}
+                    >
+                      {l.sharedWithEmployee ? 'Hide from employee' : 'Share with employee'}
+                    </Button>
+                  )}
                   <Button variant="secondary" icon={<Trash2 className="size-4" />} onClick={() => setDeleting(true)}>
                     Delete
                   </Button>
@@ -132,7 +134,7 @@ function LetterView({ l, back, hr }: { l: LetterDocument; back: { to: string; la
       <ConfirmDialog
         open={deleting}
         title="Delete this letter?"
-        message={<>{l.referenceNo} will be removed for everyone. Its reference number will not be reused.</>}
+        message={<>{l.referenceNo} will be removed for everyone. If it is the latest letter of its kind this year, the next letter may get the same reference number.</>}
         confirmLabel="Delete letter"
         tone="danger"
         loading={remove.isPending}

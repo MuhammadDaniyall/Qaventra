@@ -204,6 +204,7 @@ export const trainingApi = {
   compliance: (departmentId?: string) => http.get<Compliance>('/training/compliance', { departmentId: departmentId || undefined }),
 
   requests: () => http.get<TrainingRequest[]>('/training/requests'),
+  myRequests: () => http.get<TrainingRequest[]>('/training/requests', { mine: true }),
   request: (b: {
     programId: string | null;
     courseName: string | null;

@@ -6,15 +6,17 @@ import { employeesApi } from '../../api/employees';
 import { qk } from '../../api/keys';
 import { orgApi, setupApi } from '../../api/organization';
 import { payrollApi } from '../../api/payroll';
+import { useUser } from '../../auth/AuthContext';
 import { Card, IconButton } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { tx, txf } from '../../lib/i18n';
 
-const HIDE_KEY = 'hrms.setup-guide.hidden';
+/** Hidden per company and user, so a new company still gets the guide. */
+const hideKey = (tenantId: string | null, userId: string) => `hrms.setup-guide.hidden:${tenantId ?? 'none'}:${userId}`;
 
-function readHidden() {
+function readHidden(key: string) {
   try {
-    return localStorage.getItem(HIDE_KEY) === '1';
+    return localStorage.getItem(key) === '1';
   } catch {
     return false;
   }
@@ -22,7 +24,9 @@ function readHidden() {
 
 /** First-run checklist for HR: the setup a company needs before attendance, leave and payroll work. */
 export function SetupGuide({ className }: { className?: string }) {
-  const [hidden, setHidden] = useState(readHidden);
+  const user = useUser();
+  const key = hideKey(user.tenantId, user.id);
+  const [hidden, setHidden] = useState(() => readHidden(key));
   const year = new Date().getFullYear();
   const [departments, designations, shifts, offices, holidays, leaveTypes, employees, runs] = useQueries({
     queries: [
@@ -75,7 +79,7 @@ export function SetupGuide({ className }: { className?: string }) {
           onClick={() => {
             setHidden(true);
             try {
-              localStorage.setItem(HIDE_KEY, '1');
+              localStorage.setItem(key, '1');
             } catch {
               // ignore
             }

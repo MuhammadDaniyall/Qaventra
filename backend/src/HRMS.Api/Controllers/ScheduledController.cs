@@ -237,6 +237,9 @@ public class ScheduledController(HrmsDbContext db, ScheduledService scheduled, I
     private async Task CheckPeopleAsync(List<Guid>? people, List<Guid>? departments)
     {
         var p = (people ?? []).Distinct().ToList();
+        // The ids are stored comma-joined in a 2000-character column.
+        if (p.Count > 50 || (departments ?? []).Distinct().Count() > 50)
+            throw new DomainException("Choose at most 50 people and 50 departments.");
         if (await db.Employees.CountAsync(e => p.Contains(e.Id)) != p.Count)
             throw new NotFoundException("Employee");
         var d = (departments ?? []).Distinct().ToList();

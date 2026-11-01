@@ -34,7 +34,7 @@ public static class AccessModules
         new("desks", "Desks and rooms", ["/api/desks"]),
         new("projects", "Projects and timesheets", ["/api/projects", "/api/timesheets"]),
         new("announcements", "Announcements and polls", ["/api/announcements"]),
-        new("reports", "Reports, alerts and scheduled reports", ["/api/reports", "/api/scheduled"]),
+        new("reports", "Reports, alerts and scheduled reports", ["/api/reports", "/api/scheduled", "/api/dashboard/trends"]),
         new("suggestions", "Suggestions", ["/api/suggestions"]),
     ];
 

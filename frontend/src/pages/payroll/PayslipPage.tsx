@@ -31,7 +31,7 @@ export function PayslipPage() {
 }
 
 function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: string } }) {
-  useDocumentTitle(`Payslip ${p.employeeCode} ${monthLabel(p.year, p.month)}`);
+  useDocumentTitle(`Payslip ${p.employeeCode} ${(p.label || monthLabel(p.year, p.month))}`);
   const earnings = p.lines.filter((l) => l.kind === 'Earning');
   // Lines already include basic salary, income tax and EOBI (employee) as separate entries.
   const deductions = p.lines.filter((l) => l.kind === 'Deduction');
@@ -52,7 +52,7 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
       <div className="no-print">
         <PageHeader
           back={back}
-          title={`Payslip · ${monthLabel(p.year, p.month)}`}
+          title={`Payslip · ${(p.label || monthLabel(p.year, p.month))}`}
           description={p.employeeName}
           actions={
             <Button icon={<Printer className="size-4" />} onClick={() => window.print()}>
@@ -66,7 +66,7 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-zinc-200 pb-6 dark:border-zinc-800">
           <div>
             <p className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-white">{p.companyName}</p>
-            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Salary slip for {monthLabel(p.year, p.month)}</p>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Salary slip for {(p.label || monthLabel(p.year, p.month))}</p>
           </div>
           {p.runStatus === 'Draft' && (
             <Badge tone="amber" dot>

@@ -51,7 +51,10 @@ public class DeskTests(ApiFactory factory) : IClassFixture<ApiFactory>
         // A-03 is Omar's permanent desk.
         await Ok(await admin.PutAsJsonAsync($"/api/desks/spaces/{Id("A-03")}", new { floorId = floor, name = "A-03", kind = "Desk", seats = 1, assignedEmployeeId = omar, isActive = true }, ApiFactory.Json));
 
+        // A working day, so Omar's permanent desk counts him in the office.
         var day = Today.AddDays(1);
+        while (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            day = day.AddDays(1);
         await Ok(await sanaClient.PostAsJsonAsync("/api/desks/bookings", new { spaceId = Id("A-01"), date = Iso(day) }, ApiFactory.Json));
         Assert.Equal(HttpStatusCode.BadRequest, (await sanaClient.PostAsJsonAsync("/api/desks/bookings", new { spaceId = Id("A-02"), date = Iso(day) }, ApiFactory.Json)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await omarClient.PostAsJsonAsync("/api/desks/bookings", new { spaceId = Id("A-01"), date = Iso(day) }, ApiFactory.Json)).StatusCode);
@@ -103,5 +106,21 @@ public class DeskTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal("Released", (await Ok(await sanaClient.GetAsync("/api/desks/bookings/my")))[0].GetProperty("status").GetString());
         var use = await Ok(await admin.GetAsync("/api/desks/utilisation"));
         Assert.Equal(1, use.GetProperty("noShows").GetInt32());
+    }
+
+    [Fact]
+    public async Task A_desk_booked_late_in_the_day_is_not_released_at_once()
+    {
+        var (admin, floor, person) = await OfficeAsync("Late Desk Co");
+        var (_, sanaClient) = await person("Sana");
+        // The day starts at midnight with a 10-minute grace, so the slot start has passed by the time Sana books.
+        await Ok(await admin.PutAsJsonAsync("/api/desks/settings", new { maxDaysAhead = 14, requireCheckIn = true, releaseAfterMinutes = 10, dayStartsAt = 0 }, ApiFactory.Json));
+        await Ok(await admin.PostAsJsonAsync("/api/desks/spaces/bulk", new { floorId = floor, prefix = "C", from = 1, to = 1 }, ApiFactory.Json));
+        var desk = (await Ok(await admin.GetAsync($"/api/desks/floors/{floor}/spaces")))[0].GetProperty("id").GetGuid();
+        await Ok(await sanaClient.PostAsJsonAsync("/api/desks/bookings", new { spaceId = desk, date = Iso(Today) }, ApiFactory.Json));
+        var booking = (await Ok(await sanaClient.GetAsync("/api/desks/bookings/my")))[0];
+        Assert.Equal("Booked", booking.GetProperty("status").GetString());
+        await Ok(await sanaClient.PostAsync($"/api/desks/bookings/{booking.GetProperty("id").GetGuid()}/check-in", null));
+        Assert.Equal("CheckedIn", (await Ok(await sanaClient.GetAsync("/api/desks/bookings/my")))[0].GetProperty("status").GetString());
     }
 }

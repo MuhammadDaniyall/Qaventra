@@ -74,7 +74,7 @@ public class PerformanceExtrasController(HrmsDbContext db, PerformanceService pe
     [HttpGet("reviews/{id:guid}/feedback")]
     public async Task<List<ReviewFeedbackDto>> Feedback(Guid id)
     {
-        var (r, _) = await perf.LoadAsync(id);
+        var (r, _) = await perf.LoadAsync(id, forWrite: false);
         if (!perf.IsReviewer(r) || perf.IsEmployee(r))
             return [];
         return await (from f in db.ReviewFeedback
@@ -137,7 +137,7 @@ public class PerformanceExtrasController(HrmsDbContext db, PerformanceService pe
     [HttpGet("reviews/{id:guid}/check-ins")]
     public async Task<List<CheckInDto>> CheckIns(Guid id)
     {
-        var (r, _) = await perf.LoadAsync(id);
+        var (r, _) = await perf.LoadAsync(id, forWrite: false);
         return await (from c in db.ReviewCheckIns
                       join e in db.Employees on c.AuthorEmployeeId equals e.Id
                       where c.ReviewId == id

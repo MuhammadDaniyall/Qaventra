@@ -130,6 +130,12 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         var owner = s.EmployeeId == me.EmployeeId;
         if (!(owner && s.Status == SeparationStatus.Requested) && !(me.IsHr() && !owner && s.IsOpen))
             throw new ForbiddenException("This separation cannot be withdrawn.");
+        // A settlement still waiting for approval must not be approvable after the cancel.
+        if (s.SettlementSubmittedAtUtc is not null && s.SettlementApprovedAtUtc is null)
+        {
+            await services.GetRequiredService<ApprovalEngine>().CancelAsync(ApprovalRequestType.FinalSettlement, s.Id);
+            s.SettlementSubmittedAtUtc = null;
+        }
         s.Status = SeparationStatus.Withdrawn;
         await db.SaveChangesAsync();
     }
@@ -148,9 +154,9 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         s.ExitFeedback = feedback;
         s.ExitInterviewAtUtc = clock.UtcNow;
 
-        // Tick the matching checklist item so HR sees it done.
+        // Tick the matching checklist item so HR sees it done, but only when its level is open.
         var item = s.Clearance.FirstOrDefault(c => c.Department == "HR" && c.Title.StartsWith("Exit interview"));
-        if (item is { IsCleared: false })
+        if (item is { IsCleared: false } && !s.Clearance.Any(c => c.Level < item.Level && !c.IsCleared))
         {
             item.IsCleared = true;
             item.ClearedAtUtc = clock.UtcNow;
@@ -312,7 +318,7 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             throw new DomainException("This employee has already left.");
     }
 
-    private void RequireHrNotSelf(Separation s)
+    internal void RequireHrNotSelf(Separation s)
     {
         if (!me.IsHr())
             throw new ForbiddenException("Only HR can manage separations.");
@@ -320,7 +326,7 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             throw new ForbiddenException("You cannot process your own separation.");
     }
 
-    private static void RequireInProgress(Separation s)
+    internal static void RequireInProgress(Separation s)
     {
         if (s.Status != SeparationStatus.InProgress)
             throw new DomainException("This separation is not in progress.");

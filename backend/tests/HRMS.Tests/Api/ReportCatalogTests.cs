@@ -59,4 +59,31 @@ public class ReportCatalogTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Ok(await admin.PutAsJsonAsync("/api/reports/settings", new { signatures = new[] { "Prepared by", "HR Manager", "" } }));
         Assert.Equal(2, (await Ok(await leadClient.GetAsync("/api/reports/settings"))).GetProperty("signatures").GetArrayLength());
     }
+
+    [Fact]
+    public async Task Hr_with_an_access_template_runs_only_its_modules_reports_and_bad_years_are_refused()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Reports Template");
+        var id = (await Ok(await admin.PostAsJsonAsync("/api/employees", new { firstName = "Rida", lastName = "R", joiningDate = "2024-01-01", status = "Active" }, ApiFactory.Json)))
+            .GetProperty("id").GetGuid();
+        var email = $"rida+{Guid.NewGuid():N}@reports.test";
+        await Ok(await admin.PostAsJsonAsync($"/api/employees/{id}/login", new { email, password = "Rep-Pass-1234", role = "HrManager" }));
+        var userId = (await Ok(await admin.GetAsync($"/api/employees/{id}"))).GetProperty("userId").GetGuid();
+        var hr = await factory.SignInAsync(email, "Rep-Pass-1234");
+        await Ok(await admin.PostAsJsonAsync("/api/access/templates", new { name = "Reports clerk", modules = new[] { "reports", "employees" } }, ApiFactory.Json));
+        var template = (await Ok(await admin.GetAsync("/api/access/templates"))).EnumerateArray().First(t => t.GetProperty("name").GetString() == "Reports clerk").GetProperty("id").GetGuid();
+        await Ok(await admin.PutAsJsonAsync($"/api/access/users/{userId}", new { accessTemplateId = template }, ApiFactory.Json));
+
+        var body = new { year = Today.Year, month = Today.Month };
+        var keys = (await Ok(await hr.GetAsync("/api/reports"))).EnumerateArray().Select(r => r.GetProperty("key").GetString()!).ToList();
+        Assert.Contains("employees.list", keys);
+        Assert.DoesNotContain(keys, k => k.StartsWith("payroll") || k.StartsWith("attendance"));
+        Assert.Equal(HttpStatusCode.Forbidden, (await hr.PostAsJsonAsync("/api/reports/payroll.bank", body)).StatusCode);
+        await Ok(await hr.PostAsJsonAsync("/api/reports/employees.list", body));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/reports/employees.birthdays", new { year = 0, month = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/reports/employees.birthdays", new { year = Today.Year, month = 13 })).StatusCode);
+        var excel = await admin.PostAsJsonAsync("/api/reports/payroll.socialsecurity/excel", body);
+        Assert.Equal(HttpStatusCode.OK, excel.StatusCode);
+    }
 }

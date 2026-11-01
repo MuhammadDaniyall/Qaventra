@@ -102,6 +102,13 @@ public class SharedEngineTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal("Accepted", mine.GetProperty("status").GetString());
         Assert.Equal(HttpStatusCode.Forbidden, (await author.GetAsync("/api/suggestions/review")).StatusCode);
 
+        // Neither the audit log nor the change history gives the sender away.
+        var created = (await Ok(await admin.GetAsync("/api/audit-logs?entityType=Suggestion&action=Created"))).GetProperty("items").EnumerateArray().Single();
+        Assert.Equal(JsonValueKind.Null, created.GetProperty("userEmail").ValueKind);
+        Assert.Equal(JsonValueKind.Null, created.GetProperty("userId").ValueKind);
+        Assert.DoesNotContain("EmployeeId", created.GetProperty("changes").GetString());
+        Assert.Equal(0, (await Ok(await admin.GetAsync($"/api/history/Suggestion/{item.GetProperty("id").GetGuid()}"))).GetArrayLength());
+
         // Change history of a record.
         var dept = (await Ok(await admin.PostAsJsonAsync("/api/departments", new { name = "Ops" }))).GetProperty("id").GetGuid();
         await Ok(await admin.PutAsJsonAsync($"/api/departments/{dept}", new { name = "Operations" }));

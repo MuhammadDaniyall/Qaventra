@@ -174,4 +174,29 @@ public class TravelTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Ok(await omarClient.PostAsJsonAsync($"/api/travel/{other}/cancel", new { note = "Meeting moved online" }, ApiFactory.Json));
         Assert.DoesNotContain((await Ok(await managerClient.GetAsync("/api/approvals/inbox"))).EnumerateArray(), i => i.GetProperty("requestType").GetString() == "Travel");
     }
+
+    [Fact]
+    public async Task Advance_on_a_cancelled_trip_is_recovered_from_salary()
+    {
+        var (admin, person) = await CompanyAsync("Travel Cancel");
+        var (manager, managerClient) = await person("Maha", null);
+        var (sana, sanaClient) = await person("Sana", manager);
+
+        var id = (await Ok(await sanaClient.PostAsJsonAsync("/api/travel", Trip(Today.AddDays(10), Today.AddDays(11), advance: 30000), ApiFactory.Json))).GetProperty("id").GetGuid();
+        await Ok(await managerClient.PostAsJsonAsync($"/api/travel/{id}/approve", new { }));
+        await Ok(await admin.PostAsJsonAsync($"/api/travel/{id}/advance", new { amount = 30000, paidOn = Iso(Today), via = "Bank" }, ApiFactory.Json));
+        await Ok(await sanaClient.PostAsJsonAsync($"/api/travel/{id}/cancel", new { note = "Client postponed" }, ApiFactory.Json));
+
+        var trip = await Ok(await sanaClient.GetAsync($"/api/travel/{id}"));
+        Assert.Equal("Cancelled", trip.GetProperty("status").GetString());
+        Assert.Equal("Settled", trip.GetProperty("settlement").GetString());
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<HRMS.Infrastructure.Data.HrmsDbContext>();
+            var pay = await db.PayRequests.IgnoreQueryFilters().SingleAsync(p => p.EmployeeId == sana);
+            Assert.Equal(HRMS.Domain.PayRequestKind.Deduction, pay.Kind);
+            Assert.Equal(30000m, pay.Amount);
+        }
+        Assert.Equal(0m, (await Ok(await admin.GetAsync("/api/travel/report"))).GetProperty("advancesOutstanding").GetDecimal());
+    }
 }

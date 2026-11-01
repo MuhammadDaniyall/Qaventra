@@ -15,8 +15,8 @@ export interface ExitInterviewRequest {
 }
 
 export const separationsApi = {
-  /** Undefined when the employee never started a separation (204). */
-  my: () => http.get<Separation | undefined>('/separations/my'),
+  /** Null when the employee never started a separation (204). */
+  my: async () => (await http.get<Separation | undefined>('/separations/my')) ?? null,
   resign: (proposedLastDay: string, reason: string | null) =>
     http.post<Separation>('/separations/resign', { proposedLastDay, reason }),
   list: (status: SeparationStatus | '') => http.get<SeparationSummary[]>('/separations', { status }),

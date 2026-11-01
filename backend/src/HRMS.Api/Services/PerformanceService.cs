@@ -98,7 +98,7 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
     {
         var (r, sections) = await LoadAsync(reviewId);
         var employee = IsEmployee(r) && r.Stage == ReviewStage.Goals;
-        var reviewer = IsReviewer(r) && r.Stage is ReviewStage.Goals or ReviewStage.GoalsSubmitted;
+        var reviewer = IsReviewer(r) && !IsEmployee(r) && r.Stage is ReviewStage.Goals or ReviewStage.GoalsSubmitted;
         if (!employee && !reviewer)
             throw new ForbiddenException(r.Stage is ReviewStage.Goals or ReviewStage.GoalsSubmitted ? "Waiting for your manager to approve your goals." : "Goals can no longer be changed.");
         var goalSections = sections.Select((s, i) => (s, i)).Where(x => x.s.Kind == ReviewSectionKind.Goals).Select(x => x.i).ToHashSet();
@@ -106,6 +106,8 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
             throw new DomainException("Goals go in a goals section.");
         if (goals.Count > 20 || goals.Any(g => string.IsNullOrWhiteSpace(g.Title) || g.Weight <= 0))
             throw new DomainException("Give each goal a title and a weight (up to 20 goals).");
+        if (goals.Any(g => g.Title.Trim().Length > 300 || g.Weight > 100))
+            throw new DomainException("Goal titles are up to 300 characters and weights up to 100.");
         db.ReviewItems.RemoveRange(r.Items.Where(i => goalSections.Contains(i.SectionIndex)));
         r.Items.RemoveAll(i => goalSections.Contains(i.SectionIndex));
         var order = 0;
@@ -244,6 +246,8 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
         if (!me.IsHr())
             throw new ForbiddenException("Only HR calibrates ratings.");
         var (r, _) = await LoadAsync(reviewId);
+        if (IsEmployee(r))
+            throw new ForbiddenException("You cannot change your own review.");
         if (r.Stage != ReviewStage.Calibration)
             throw new DomainException("This review is not waiting for calibration.");
         if (finalRating is < 1 or > 5)
@@ -258,7 +262,12 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
     {
         if (!me.IsHr())
             throw new ForbiddenException("Only HR releases reviews.");
-        var q = db.PerformanceReviews.Where(r => r.CycleId == cycleId && r.Stage == ReviewStage.Calibration);
+        var cycle = await db.ReviewCycles.FirstOrDefaultAsync(c => c.Id == cycleId) ?? throw new NotFoundException("Review cycle");
+        if (cycle.Status != ReviewCycleStatus.Active)
+            throw new DomainException("Only a running cycle can be released.");
+        // HR never releases their own review; another HR user does.
+        var mine = me.EmployeeId ?? Guid.Empty;
+        var q = db.PerformanceReviews.Where(r => r.CycleId == cycleId && r.Stage == ReviewStage.Calibration && r.EmployeeId != mine);
         if (reviewIds is { Count: > 0 })
             q = q.Where(r => reviewIds.Contains(r.Id));
         var list = await q.Include(r => r.Cycle).ToListAsync();
@@ -301,6 +310,8 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
         if (!me.IsHr())
             throw new ForbiddenException("Only HR can send a review back.");
         var (r, sections) = await LoadAsync(reviewId);
+        if (IsEmployee(r))
+            throw new ForbiddenException("You cannot change your own review.");
         var hasGoals = sections.Any(s => s.Kind == ReviewSectionKind.Goals);
         r.Stage = r.Stage switch
         {
@@ -317,17 +328,25 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
             r.SignedOffAtUtc = null;
             r.ReleasedAtUtc = null;
         }
+        else if (r.Stage < ReviewStage.Calibration)
+        {
+            // The manager rescores, so the old rating must not count in the bell curve or the raise.
+            r.FinalRating = null;
+            r.CalibrationNote = null;
+            r.ManagerSubmittedAtUtc = null;
+        }
         await db.SaveChangesAsync();
     }
 
-    public async Task<(PerformanceReview Review, List<ReviewSection> Sections)> LoadAsync(Guid id)
+    /// <summary>Loads a review the user takes part in. A closed cycle stays readable but only HR can change it.</summary>
+    public async Task<(PerformanceReview Review, List<ReviewSection> Sections)> LoadAsync(Guid id, bool forWrite = true)
     {
         var r = await db.PerformanceReviews.Include(x => x.Cycle).Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Review");
         if (!IsEmployee(r) && !IsReviewer(r))
             throw new NotFoundException("Review");
-        if (r.Cycle!.Status == ReviewCycleStatus.Closed && !me.IsHr())
+        if (forWrite && r.Cycle!.Status == ReviewCycleStatus.Closed && !me.IsHr())
             throw new DomainException("This review cycle is closed.");
-        return (r, Sections(r.Cycle.SectionsJson));
+        return (r, Sections(r.Cycle!.SectionsJson));
     }
 
     private async Task NotifyReviewerAsync(PerformanceReview r, string title)

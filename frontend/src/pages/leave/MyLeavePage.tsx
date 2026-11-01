@@ -270,8 +270,8 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   const range = useDebounced({ from, to }, 250);
   const validRange = !!range.from && !!range.to && range.to >= range.from;
   const days = useQuery({
-    queryKey: ['leave', 'count', range.from, range.to],
-    queryFn: () => leaveApi.countDays(range.from, range.to),
+    queryKey: ['leave', 'count', range.from, range.to, forWhom, typeId],
+    queryFn: () => leaveApi.countDays(range.from, range.to, forWhom || undefined, typeId || undefined),
     enabled: validRange,
     retry: false,
   });
@@ -415,7 +415,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
               className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm dark:bg-zinc-800/50"
               aria-live="polite"
             >
-              <span className="text-zinc-600 dark:text-zinc-300">Working days</span>
+              <span className="text-zinc-600 dark:text-zinc-300">{type?.sandwich ? 'Days charged' : 'Working days'}</span>
               <span className="font-semibold text-zinc-900 tabular-nums dark:text-white">
                 {!validRange ? '—' : days.isFetching ? <Spinner className="size-4" /> : days.isError ? '—' : formatNumber(days.data?.days)}
               </span>

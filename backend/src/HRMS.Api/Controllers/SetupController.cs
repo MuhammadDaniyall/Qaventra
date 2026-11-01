@@ -67,7 +67,10 @@ public class SetupController(HrmsDbContext db) : ControllerBase
     [HttpDelete("office-locations/{id:guid}"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> DeleteOffice(Guid id)
     {
-        db.OfficeLocations.Remove(await db.OfficeLocations.FirstOrDefaultAsync(o => o.Id == id) ?? throw new NotFoundException("Office location"));
+        var o = await db.OfficeLocations.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Office location");
+        if (await db.Floors.AnyAsync(f => f.OfficeLocationId == id))
+            throw new DomainException("This office has floors set up. Remove them before deleting it.");
+        db.OfficeLocations.Remove(o);
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -110,6 +113,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         var s = await db.Shifts.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Shift");
         if (s.IsDefault) throw new DomainException("Make another shift the default before deleting this one.");
         if (await db.Employees.AnyAsync(e => e.ShiftId == id)) throw new DomainException("Move employees off this shift before deleting it.");
+        if (await db.ShiftAssignments.AnyAsync(a => a.ShiftId == id) || await db.ShiftRequests.AnyAsync(r => r.ShiftId == id))
+            throw new DomainException("This shift is used on the roster or in shift requests. Clear those before deleting it.");
         db.Shifts.Remove(s);
         await db.SaveChangesAsync();
         return NoContent();
@@ -131,6 +136,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
             throw new DomainException("The short-day mark must be more hours than the half-day mark.");
         if (req.ShortDayMinutes is { } sd && sd > length)
             throw new DomainException("The short-day mark is longer than the shift.");
+        if (req.HalfDayMinutes is { } hd && hd > length)
+            throw new DomainException("The half-day mark is longer than the shift.");
         s.EarlyLeaveGraceMinutes = req.EarlyLeaveGraceMinutes;
         s.HalfDayMinutes = req.HalfDayMinutes;
         s.ShortDayMinutes = req.ShortDayMinutes;
@@ -251,6 +258,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         var t = await db.LeaveTypes.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Leave type");
         if (await db.LeaveRequests.AnyAsync(r => r.LeaveTypeId == id) || await db.LeaveBalances.AnyAsync(b => b.LeaveTypeId == id && b.Used > 0))
             throw new DomainException("This leave type has been used. Mark it inactive instead of deleting it.");
+        if (await db.PenaltyRules.AnyAsync(r => r.LeaveTypeId == id))
+            throw new DomainException("A penalty rule uses this leave type. Change that rule before deleting it.");
         db.LeaveBalances.RemoveRange(db.LeaveBalances.Where(b => b.LeaveTypeId == id));
         db.LeaveTypes.Remove(t);
         await db.SaveChangesAsync();

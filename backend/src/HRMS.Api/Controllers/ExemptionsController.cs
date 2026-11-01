@@ -24,7 +24,7 @@ public record AttendanceSettingsDto([Range(0, 31)] int ExemptionsPerMonth, [Rang
 public record ExemptionQuotaDto(int Allowed, int Used, int WithinDays);
 
 /// <summary>Service for exemptions; also used by the approvals inbox.</summary>
-public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals)
+public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, ScheduleService schedule)
 {
     public async Task<AttendanceSettings> SettingsAsync() => await db.AttendanceSettings.FirstOrDefaultAsync() ?? new AttendanceSettings();
 
@@ -38,6 +38,7 @@ public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clo
         var today = await clock.TodayAsync();
         if (date > today || date < today.AddDays(-s.ExemptionWithinDays))
             throw new DomainException($"Ask within {s.ExemptionWithinDays} days of the day.");
+        await schedule.EnsureOpenAsync(date);
         var record = await db.AttendanceRecords.FirstOrDefaultAsync(r => r.EmployeeId == employeeId && r.Date == date)
                      ?? throw new DomainException("There is no attendance on that day. Use an attendance request instead.");
         if (record.Status is not (AttendanceStatus.Late or AttendanceStatus.HalfDay or AttendanceStatus.ShortDay) && record.EarlyLeaveMinutes == 0)
@@ -73,6 +74,8 @@ public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clo
         var x = await db.AttendanceExemptions.FirstOrDefaultAsync(e => e.Id == id) ?? throw new NotFoundException("Exemption");
         if (x.Status != RequestStatus.Pending)
             throw new DomainException("This request is not waiting for approval.");
+        // Before the approval step moves on, so a closed month leaves the request where it was.
+        await schedule.EnsureOpenAsync(x.Date);
         var outcome = await approvals.DecideAsync(ApprovalRequestType.Exemption, x.Id, x.EmployeeId, approve, note);
         if (outcome == ApprovalStatus.Approved)
             await ApplyAsync(x, note);
@@ -108,7 +111,8 @@ public class ExemptionService(HrmsDbContext db, ICurrentUser me, TenantClock clo
             record.LateMinutes = 0;
             record.EarlyLeaveMinutes = 0;
             var what = x.Flag switch { AttendanceStatus.Late => "Late", AttendanceStatus.HalfDay => "Half day", AttendanceStatus.ShortDay => "Short day", _ => "Early leave" };
-            record.Note = string.IsNullOrEmpty(record.Note) ? $"{what} excused (approved exemption)" : $"{record.Note}; {what.ToLowerInvariant()} excused";
+            var n = string.IsNullOrEmpty(record.Note) ? $"{what} excused (approved exemption)" : $"{record.Note}; {what.ToLowerInvariant()} excused";
+            record.Note = n.Length > 300 ? n[..300] : n;
         }
     }
 }

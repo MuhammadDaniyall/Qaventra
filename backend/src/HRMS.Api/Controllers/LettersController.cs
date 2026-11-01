@@ -52,7 +52,7 @@ public record IssueLetterRequest(
 public record IssuedLetterDto(
     Guid Id, string ReferenceNo, LetterCategory Category, string Subject, DateOnly IssuedOn,
     Guid EmployeeId, string EmployeeName, string EmployeeCode, string? IssuedByName, bool SharedWithEmployee,
-    LetterStatus Status = LetterStatus.Issued, bool Requested = false, string? RequestReason = null);
+    LetterStatus Status = LetterStatus.Issued, bool Requested = false, string? RequestReason = null, DateTime CreatedAtUtc = default);
 
 public record LetterDocumentDto(
     Guid Id, string ReferenceNo, LetterCategory Category, string Subject, string Body, DateOnly IssuedOn,
@@ -138,7 +138,7 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
 
     [HttpGet("my")]
     public Task<List<IssuedLetterDto>> My() =>
-        Project(db.IssuedLetters.Where(l => l.EmployeeId == me.EmployeeId && l.SharedWithEmployee)).ToListAsync();
+        Project(db.IssuedLetters.Where(l => l.EmployeeId == me.EmployeeId && l.SharedWithEmployee && l.Status == LetterStatus.Issued)).ToListAsync();
 
     [HttpPost, Authorize(Policy = Policies.Hr)]
     public async Task<IssuedLetterDto> Issue(IssueLetterRequest req)
@@ -152,7 +152,7 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
     {
         var l = await db.IssuedLetters.Include(x => x.Employee).ThenInclude(e => e!.Designation)
             .FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Letter");
-        if (!me.IsHr() && !(l.EmployeeId == me.EmployeeId && l.SharedWithEmployee))
+        if (!me.IsHr() && !(l.EmployeeId == me.EmployeeId && l.SharedWithEmployee && l.Status == LetterStatus.Issued))
             throw new NotFoundException("Letter");
 
         var company = await db.Tenants.Where(t => t.Id == db.CurrentTenantId)
@@ -227,6 +227,8 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
     public async Task<IActionResult> SetSharing(Guid id, [FromQuery] bool shared)
     {
         var l = await db.IssuedLetters.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Letter");
+        if (shared && l.Status != LetterStatus.Issued)
+            throw new DomainException("Only issued letters can be shared.");
         l.SharedWithEmployee = shared;
         await db.SaveChangesAsync();
         return NoContent();
@@ -236,6 +238,9 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
     public async Task<IActionResult> Delete(Guid id)
     {
         var l = await db.IssuedLetters.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Letter");
+        // Close its approval so it leaves the approvers' inboxes.
+        if (l.Status == LetterStatus.Pending)
+            await approvals.CancelAsync(ApprovalRequestType.Letter, l.Id);
         db.IssuedLetters.Remove(l);
         await db.SaveChangesAsync();
         return NoContent();
@@ -264,5 +269,5 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
     private static IQueryable<IssuedLetterDto> Project(IQueryable<IssuedLetter> q) =>
         q.OrderByDescending(l => l.IssuedOn).ThenByDescending(l => l.CreatedAtUtc).Select(l => new IssuedLetterDto(
             l.Id, l.ReferenceNo, l.Category, l.Subject, l.IssuedOn, l.EmployeeId,
-            l.Employee!.FirstName + " " + l.Employee.LastName, l.Employee.EmployeeCode, l.IssuedByName, l.SharedWithEmployee, l.Status, l.Requested, l.RequestReason));
+            l.Employee!.FirstName + " " + l.Employee.LastName, l.Employee.EmployeeCode, l.IssuedByName, l.SharedWithEmployee, l.Status, l.Requested, l.RequestReason, l.CreatedAtUtc));
 }

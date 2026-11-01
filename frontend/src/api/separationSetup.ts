@@ -64,6 +64,14 @@ export interface MyClearance {
   note: string | null;
 }
 
+export interface MyExitInterview {
+  separationId: string;
+  employeeName: string;
+  employeeCode: string;
+  lastWorkingDay: string | null;
+  interviewScheduledUtc: string | null;
+}
+
 const base = '/separation-setup';
 export const separationSetupApi = {
   clearanceTemplates: () => http.get<ClearanceTemplate[]>(`${base}/clearance-templates`),
@@ -81,6 +89,7 @@ export const separationSetupApi = {
   setOwner: (id: string, itemId: string, level: number, responsibleEmployeeId: string | null) =>
     http.put(`${base}/separations/${id}/clearance/${itemId}/owner`, { level, responsibleEmployeeId }),
   myClearances: () => http.get<MyClearance[]>(`${base}/my-clearances`),
+  myExitInterviews: () => http.get<MyExitInterview[]>(`${base}/my-exit-interviews`),
   clearMine: (id: string, itemId: string, isCleared: boolean, note: string | null) =>
     http.put(`${base}/separations/${id}/clearance/${itemId}/mine`, { isCleared, note }),
   submitSettlement: (id: string) => http.post(`${base}/separations/${id}/settlement/submit`),

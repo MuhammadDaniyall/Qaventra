@@ -31,6 +31,7 @@ public record IntegrationPayslipDto(string EmployeeCode, decimal GrossEarnings, 
 /// <summary>Company admin's API keys for other systems.</summary>
 [ApiController]
 [Route("api/setup/api-tokens")]
+[Authorize(Policy = Policies.CompanyUser)]
 [Authorize(Policy = Policies.Admin)]
 public class ApiTokensController(HrmsDbContext db, ICurrentUser me, TenantClock clock) : ControllerBase
 {

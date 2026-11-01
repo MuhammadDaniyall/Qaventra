@@ -60,6 +60,8 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
         var by = await LetterService.CurrentUserNameAsync(db, me);
         foreach (var (preview, current, factor) in plan)
         {
+            // The current salary may be the row being replaced (same tracked instance), so copy its components first.
+            var components = current.Components.Select(c => (c.Name, c.Kind, c.IsTaxable, c.Amount)).ToList();
             var existing = await db.EmployeeSalaries.Include(x => x.Components).FirstOrDefaultAsync(x => x.EmployeeId == preview.EmployeeId && x.EffectiveFrom == req.EffectiveFrom);
             var target = existing ?? new EmployeeSalary { EmployeeId = preview.EmployeeId, EffectiveFrom = req.EffectiveFrom, EobiApplicable = current.EobiApplicable };
             if (existing is null)
@@ -67,12 +69,17 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
             else
                 target.Components.Clear();
             target.BasicSalary = preview.NewBasic;
-            foreach (var c in current.Components)
-                target.Components.Add(new SalaryComponent
+            foreach (var c in components)
+            {
+                var component = new SalaryComponent
                 {
                     Name = c.Name, Kind = c.Kind, IsTaxable = c.IsTaxable,
                     Amount = req.IncludeAllowances && c.Kind == SalaryComponentKind.Earning ? Math.Round(c.Amount * factor, 0) : c.Amount,
-                });
+                };
+                target.Components.Add(component);
+                // Its Id is already set, so on a tracked salary EF would take it for an existing row and update it; mark it new.
+                db.Add(component);
+            }
             db.SalaryRevisions.Add(new SalaryRevision
             {
                 EmployeeId = preview.EmployeeId, EffectiveFrom = req.EffectiveFrom, Kind = req.Kind, OldBasic = preview.OldBasic, NewBasic = preview.NewBasic,

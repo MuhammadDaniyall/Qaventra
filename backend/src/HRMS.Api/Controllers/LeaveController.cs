@@ -38,11 +38,11 @@ public record LeaveDaysDto(decimal Days);
 [ApiController]
 [Route("api/leave")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngine approvals, ICurrentUser me, OnBehalfService onBehalf) : ControllerBase
+public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngine approvals, ICurrentUser me, OnBehalfService onBehalf, TenantClock clock) : ControllerBase
 {
     [HttpGet("balances")]
     public async Task<List<LeaveBalanceDto>> MyBalances([FromQuery] int? year) =>
-        ToDtos(await leave.BalancesAsync(MyEmployeeId(), year ?? DateTime.UtcNow.Year));
+        ToDtos(await leave.BalancesAsync(MyEmployeeId(), year ?? (await clock.TodayAsync()).Year));
 
     /// <summary>HR: any employee's balances for a year.</summary>
     [HttpGet("balances/{employeeId:guid}"), Authorize(Policy = Policies.Hr)]
@@ -50,7 +50,7 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
     {
         if (!await db.Employees.AnyAsync(e => e.Id == employeeId))
             throw new Infrastructure.NotFoundException("Employee");
-        return ToDtos(await leave.BalancesAsync(employeeId, year ?? DateTime.UtcNow.Year));
+        return ToDtos(await leave.BalancesAsync(employeeId, year ?? (await clock.TodayAsync()).Year));
     }
 
     /// <summary>HR: add or remove days from a balance (replaces the previous adjustment), with a reason for the record.</summary>
@@ -72,9 +72,16 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
         v.Type.Id, v.Type.Name, v.Type.Code, v.Balance.Entitled, v.Earned, v.Balance.CarriedForward, v.Balance.Adjustment,
         v.Balance.AdjustmentNote, v.Balance.Credited, v.Balance.Used, v.Pending, v.Available, v.Type.Accrual, v.Type.IsCompensatory)).ToList();
 
+    /// <summary>Days a request would take, by the roster of the employee it is for; with a leave type, the days it would charge.</summary>
     [HttpGet("count-days")]
-    public async Task<LeaveDaysDto> CountDays([FromQuery] DateOnly from, [FromQuery] DateOnly to) =>
-        new(await leave.CountDaysAsync(MyEmployeeId(), from, to));
+    public async Task<LeaveDaysDto> CountDays([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] Guid? employeeId, [FromQuery] Guid? leaveTypeId)
+    {
+        var who = await onBehalf.ResolveAsync(employeeId);
+        if (leaveTypeId is not { } typeId)
+            return new(await leave.CountDaysAsync(who, from, to));
+        var type = await db.LeaveTypes.FirstOrDefaultAsync(t => t.Id == typeId) ?? throw new Infrastructure.NotFoundException("Leave type");
+        return new(await leave.ChargeableDaysAsync(who, type, from, to));
+    }
 
     [HttpGet("my")]
     public Task<List<LeaveRequestDto>> My() =>

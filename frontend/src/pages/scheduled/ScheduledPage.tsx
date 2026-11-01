@@ -683,6 +683,8 @@ function HistoryTab() {
     <Card>
       {runs.isLoading ? (
         <SkeletonRows rows={5} cols={4} />
+      ) : runs.isError ? (
+        <ErrorState error={runs.error} onRetry={() => runs.refetch()} />
       ) : !runs.data?.length ? (
         <EmptyState icon={History} title="Nothing sent yet" />
       ) : (

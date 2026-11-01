@@ -150,7 +150,11 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
     public async Task<EmployeeDto> Get(Guid id)
     {
         await EnsureCanView(id);
-        return await Load(id);
+        var dto = await Load(id);
+        // Managers see their team's work details, not their personal or bank details.
+        if (!me.IsHr() && id != me.EmployeeId)
+            dto = dto with { Cnic = null, BankName = null, BankAccount = null, Address = null, PersonalEmail = null, DateOfBirth = null };
+        return dto;
     }
 
     [HttpPost, Authorize(Policy = Policies.Hr)]
@@ -160,7 +164,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         var employee = await employees.CreateAsync(new NewEmployee(
             req.FirstName, req.LastName, req.JoiningDate, req.EmployeeCode, req.Email, req.Phone, req.Cnic,
             req.DateOfBirth, req.Gender, req.Status, req.Address, req.BankName, req.BankAccount,
-            req.DepartmentId, req.DesignationId, req.ManagerId, req.ShiftId));
+            req.DepartmentId, req.DesignationId, req.ManagerId, req.ShiftId,
+            req.PersonalEmail, req.MaritalStatus, req.BloodGroup));
         return await Load(employee.Id);
     }
 
@@ -169,6 +174,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
     {
         var e = await db.Employees.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Employee");
         await ValidateReferences(req, id);
+        if (!e.IsCurrent && req.Status is EmploymentStatus.Probation or EmploymentStatus.Active)
+            throw new DomainException("Use Re-hire to bring this person back.");
 
         if (!string.IsNullOrWhiteSpace(req.EmployeeCode) && req.EmployeeCode.Trim() != e.EmployeeCode)
         {
@@ -176,9 +183,14 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
                 throw new DomainException($"Employee code {req.EmployeeCode} is already in use.");
             e.EmployeeCode = req.EmployeeCode.Trim();
         }
+        var newEmail = req.Email?.Trim().ToLowerInvariant();
+        var login = await db.Users.FirstOrDefaultAsync(u => u.EmployeeId == id);
+        var emailChanged = newEmail is not null && newEmail != e.Email && newEmail != login?.Email;
+        if (login is not null && emailChanged && await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == newEmail))
+            throw new DomainException("This email is already registered to another login.");
         e.FirstName = req.FirstName.Trim();
         e.LastName = req.LastName.Trim();
-        e.Email = req.Email?.Trim().ToLowerInvariant();
+        e.Email = newEmail;
         e.Phone = req.Phone;
         e.Cnic = req.Cnic;
         e.DateOfBirth = req.DateOfBirth;
@@ -198,17 +210,20 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         e.DesignationId = req.DesignationId;
         e.ManagerId = req.ManagerId;
         e.ShiftId = req.ShiftId ?? e.ShiftId;
+        if (e.DepartmentId != oldDepartment)
+            await employees.ClearStaleSubDepartmentAsync(e);
         await employees.TrackProfileEditAsync(e, oldDepartment, oldDesignation, oldManager);
 
-        // A person who has left can no longer sign in.
-        if (!e.IsCurrent)
+        if (login is not null)
         {
-            var login = await db.Users.FirstOrDefaultAsync(u => u.EmployeeId == id);
-            if (login is not null)
-            {
+            // The login follows the profile's name and work email.
+            login.FullName = e.FullName;
+            if (emailChanged)
+                login.Email = newEmail!;
+            // A person who has left can no longer sign in.
+            if (!e.IsCurrent)
                 login.IsActive = false;
-                access.InvalidateUser(login.Id);
-            }
+            access.InvalidateUser(login.Id);
         }
         await db.SaveChangesAsync();
         if (confirmed)
@@ -234,6 +249,11 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         GuardRoleAssignment(req.Role);
         if (user.Role == UserRole.CompanyAdmin && !me.IsCompanyAdmin())
             throw new ForbiddenException("Only a company admin can change another admin's login.");
+        if (req.IsActive && !user.IsActive && !await db.Employees.AnyAsync(e => e.Id == id && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)))
+            throw new DomainException("This employee has left. Re-hire them before turning their login on.");
+        // A new role ends the sessions signed in with the old one.
+        if (user.Role != req.Role)
+            user.SecurityStamp = Guid.NewGuid();
         user.Role = req.Role;
         user.IsActive = req.IsActive;
         await db.SaveChangesAsync();
@@ -400,9 +420,12 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         {
             if (m == selfId) throw new DomainException("An employee cannot be their own manager.");
             if (!await db.Employees.AnyAsync(x => x.Id == m)) throw new NotFoundException("Manager");
+            if (selfId is { } self) await employees.EnsureNoReportingLoopAsync(self, m);
         }
         if (req.LeavingDate is { } left && left < req.JoiningDate)
             throw new DomainException("Leaving date cannot be before the joining date.");
+        if (req.Status is EmploymentStatus.Resigned or EmploymentStatus.Terminated && req.LeavingDate is null)
+            throw new DomainException("Set a leaving date for a resigned or terminated employee.");
     }
 
     private async Task<EmployeeDto> Load(Guid id)

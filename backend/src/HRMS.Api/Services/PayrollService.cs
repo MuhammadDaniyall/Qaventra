@@ -141,9 +141,11 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             : null;
         var calendars = await schedules.ForEmployeesAsync(employeeIds, monthStart, monthEnd);
         var today = await clock.TodayAsync();
-        // Penalty rules (late, early leave, absent…) that cost pay this month.
-        var rulePenalties = monthly
-            ? await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().PayDaysAsync(employeeIds, monthStart.Year, monthStart.Month)
+        // Penalty rules (late, early leave, absent…) that cost pay: a monthly run charges its month; other frequencies charge
+        // the previous (finished) month in the first period ending in each month, so every month is charged once.
+        var penaltyMonth = monthly ? new DateOnly(year, month, 1) : new DateOnly(year, month, 1).AddMonths(-1);
+        var rulePenalties = monthlyItems
+            ? await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().PayDaysAsync(employeeIds, penaltyMonth.Year, penaltyMonth.Month)
             : [];
         // Tax adjustments for the tax year (previous employer, credits) and what this employer already withheld this year.
         var adjustments = (await db.TaxAdjustments.Where(a => a.TaxYearCode == taxYear.Code && employeeIds.Contains(a.EmployeeId)).ToListAsync())
@@ -227,7 +229,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                     PayRequestKind.AdvanceSalary => "Advance salary recovery",
                     _ => item.Title,
                 };
-                extras.Add(new PayItem(name, item.IsEarning ? SalaryComponentKind.Earning : SalaryComponentKind.Deduction, item.Amount, item.IsEarning && item.IsTaxable));
+                extras.Add(new PayItem(name, item.IsEarning ? SalaryComponentKind.Earning : SalaryComponentKind.Deduction, item.Amount, item.IsEarning && item.IsTaxable, OneOff: true));
             }
             foreach (var r in recurring.Where(r => r.EmployeeId == employee.Id))
                 extras.Add(new PayItem(r.Title, r.IsEarning ? SalaryComponentKind.Earning : SalaryComponentKind.Deduction, r.Amount, r.IsEarning && r.IsTaxable));
@@ -236,7 +238,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 foreach (var x in group)
                     x.PayrollRunId = run.Id;
                 extras.Add(new PayItem($"Piece work: {group.Key.Name} ({group.Sum(x => x.Quantity):0.##} {group.Key.Unit})", SalaryComponentKind.Earning,
-                    Math.Round(group.Sum(x => x.Amount), 0), true));
+                    Math.Round(group.Sum(x => x.Amount), 0), true, OneOff: true));
             }
             foreach (var loan in loans.Where(l => l.EmployeeId == employee.Id))
             {
@@ -269,17 +271,22 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             if (vpsEmployee > 0)
                 extras.Add(new PayItem($"Voluntary pension ({employee.VpsProvider ?? "VPS"})", SalaryComponentKind.Deduction, vpsEmployee, false));
 
-            Func<decimal, decimal>? taxFor = monthly ? null : t => PayPeriods.PeriodTax(taxYear, t, pay.Frequency);
+            // Regular pay is annualised; one-off earnings add their own extra tax once, in the period they are paid.
+            Func<decimal, decimal, decimal>? taxFor = monthly ? null
+                : (t, oneOff) => PayPeriods.PeriodTax(taxYear, t, pay.Frequency) + PayrollCalculator.OneOffTax(taxYear, t * PayPeriods.PerYear(pay.Frequency), oneOff);
             if (adjustments[employee.Id].Any() && !monthly)
             {
                 var adj = adjustments[employee.Id].ToList();
                 decimal Sum(TaxAdjustmentKind k) => adj.Where(a => a.Kind == k).Sum(a => a.Amount);
                 var perYear = PayPeriods.PerYear(pay.Frequency);
-                taxFor = periodTaxable =>
+                taxFor = (periodTaxable, oneOff) =>
                 {
                     var income = Sum(TaxAdjustmentKind.PreviousIncome) + Sum(TaxAdjustmentKind.OtherIncome) + periodTaxable * perYear;
-                    var due = TaxCalculator.AnnualTax(taxYear, income) - Sum(TaxAdjustmentKind.TaxCredit) - Sum(TaxAdjustmentKind.PreviousTax);
-                    return Math.Max(0, Math.Round(due / perYear, 0, MidpointRounding.AwayFromZero));
+                    var credits = Sum(TaxAdjustmentKind.TaxCredit) + Sum(TaxAdjustmentKind.PreviousTax);
+                    var due = TaxCalculator.AnnualTax(taxYear, income) - credits;
+                    var dueWithOneOff = TaxCalculator.AnnualTax(taxYear, income + oneOff) - credits;
+                    return Math.Max(0, Math.Round(due / perYear, 0, MidpointRounding.AwayFromZero))
+                           + Math.Round(Math.Max(0, dueWithOneOff) - Math.Max(0, due), 0, MidpointRounding.AwayFromZero);
                 };
             }
             else if (adjustments[employee.Id].Any())
@@ -287,11 +294,14 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 var adj = adjustments[employee.Id].ToList();
                 decimal Sum(TaxAdjustmentKind k) => adj.Where(a => a.Kind == k).Sum(a => a.Amount);
                 var ytd = yearToDate.GetValueOrDefault(employee.Id);
-                taxFor = monthTaxable =>
+                taxFor = (monthTaxable, oneOff) =>
                 {
                     var income = Sum(TaxAdjustmentKind.PreviousIncome) + Sum(TaxAdjustmentKind.OtherIncome) + ytd.Taxable + monthTaxable * monthsLeft;
-                    var due = TaxCalculator.AnnualTax(taxYear, income) - Sum(TaxAdjustmentKind.TaxCredit) - Sum(TaxAdjustmentKind.PreviousTax) - ytd.Tax;
-                    return Math.Max(0, Math.Round(due / monthsLeft, 0, MidpointRounding.AwayFromZero));
+                    var credits = Sum(TaxAdjustmentKind.TaxCredit) + Sum(TaxAdjustmentKind.PreviousTax) + ytd.Tax;
+                    var due = TaxCalculator.AnnualTax(taxYear, income) - credits;
+                    var dueWithOneOff = TaxCalculator.AnnualTax(taxYear, income + oneOff) - credits;
+                    return Math.Max(0, Math.Round(due / monthsLeft, 0, MidpointRounding.AwayFromZero))
+                           + Math.Round(Math.Max(0, dueWithOneOff) - Math.Max(0, due), 0, MidpointRounding.AwayFromZero);
                 };
             }
 
@@ -299,10 +309,11 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             var vpsCredit = 0m;
             if (vpsEmployee > 0)
             {
-                var plainTax = taxFor ?? (t => TaxCalculator.MonthlyTax(taxYear, t));
-                taxFor = monthTaxable =>
+                var plainTax = taxFor ?? ((t, oneOff) => TaxCalculator.MonthlyTax(taxYear, t) + PayrollCalculator.OneOffTax(taxYear, t * 12m, oneOff));
+                taxFor = (regularTaxable, oneOff) =>
                 {
-                    var tax = plainTax(monthTaxable);
+                    var tax = plainTax(regularTaxable, oneOff);
+                    var monthTaxable = regularTaxable + oneOff;
                     if (tax <= 0 || monthTaxable <= 0)
                         return tax;
                     var eligible = Math.Min(vpsEmployee, monthTaxable * settings.VpsCreditCapPercent / 100m);

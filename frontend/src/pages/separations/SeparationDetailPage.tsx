@@ -174,6 +174,8 @@ function useRefresh(id: string) {
   return () => {
     qc.invalidateQueries({ queryKey: qk.separations });
     qc.invalidateQueries({ queryKey: qk.separation(id) });
+    // Clearance levels and settlement approval live under the extras query.
+    qc.invalidateQueries({ queryKey: ['separation-setup'] });
   };
 }
 

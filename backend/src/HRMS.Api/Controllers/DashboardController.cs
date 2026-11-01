@@ -42,24 +42,66 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
     {
         var today = await clock.TodayAsync();
         var monthStart = new DateOnly(today.Year, today.Month, 1);
-        var current = db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
+        // On the books today: joined by now (future hires are not counted yet).
+        var current = db.Employees.Where(e => (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation) && e.JoiningDate <= today);
         var isHr = me.IsHr();
-
-        // Same as the Approvals inbox: every module's requests, all of them for HR, otherwise those waiting on me.
         var mine = me.EmployeeId;
-        var pending = db.ApprovalRequests.Where(a => a.Status == ApprovalStatus.Pending && a.EmployeeId != mine);
+
+        // HR sees the whole company; anyone else only their direct reports (as on the Daily attendance page).
+        IQueryable<AttendanceRecord> attendance = db.AttendanceRecords;
+        IQueryable<LeaveRequest> leave = db.LeaveRequests;
         if (!isHr)
-            pending = pending.Where(a => a.Steps.Any(s => s.Status == ApprovalStepStatus.Current && s.ApproverEmployeeId == mine));
+        {
+            current = current.Where(e => e.ManagerId != null && e.ManagerId == mine);
+            var team = current.Select(e => e.Id);
+            attendance = attendance.Where(a => team.Contains(a.EmployeeId));
+            leave = leave.Where(r => team.Contains(r.EmployeeId));
+        }
+
+        // Same as the Approvals inbox: every module's requests, all of them for HR, otherwise those waiting on me
+        // or on someone who handed their approvals to me today.
+        var pending = db.ApprovalRequests.Where(a => a.Status == ApprovalStatus.Pending && a.EmployeeId != mine);
+        int pendingCount;
+        if (isHr)
+            pendingCount = await pending.CountAsync();
+        else
+        {
+            var delegations = mine is { } m0
+                ? await db.ApprovalDelegations.Where(d => d.ToEmployeeId == m0 && !d.IsCancelled && d.FromDate <= today && d.ToDate >= today)
+                    .Select(d => new { d.FromEmployeeId, d.RequestTypes }).ToListAsync()
+                : [];
+            var forIds = delegations.Select(d => d.FromEmployeeId).Distinct().ToList();
+            var waiting = await pending
+                .Where(a => a.Steps.Any(s => s.Status == ApprovalStepStatus.Current && s.ApproverEmployeeId != null
+                                             && (s.ApproverEmployeeId == mine || forIds.Contains(s.ApproverEmployeeId.Value))))
+                .Select(a => new
+                {
+                    a.RequestType,
+                    Approver = a.Steps.Where(s => s.Status == ApprovalStepStatus.Current).Select(s => s.ApproverEmployeeId).FirstOrDefault(),
+                })
+                .ToListAsync();
+            pendingCount = waiting.Count(w => w.Approver is { } ap && (ap == mine
+                || delegations.Any(d => d.FromEmployeeId == ap && ApprovalEngine.Covers(d.RequestTypes, w.RequestType))));
+        }
 
         var trendFrom = today.AddDays(-13);
-        var trend = await db.AttendanceRecords.Where(a => a.Date >= trendFrom && a.Date <= today)
+        var trend = await attendance.Where(a => a.Date >= trendFrom && a.Date <= today)
             .GroupBy(a => a.Date)
             .Select(g => new TrendPointDto(g.Key, g.Count(), g.Count(a => a.Status == AttendanceStatus.Late)))
             .ToListAsync();
         var trendFilled = Enumerable.Range(0, 14).Select(i => trendFrom.AddDays(i))
             .Select(d => trend.FirstOrDefault(t => t.Date == d) ?? new TrendPointDto(d, 0, 0)).ToList();
 
-        var lastPayroll = isHr
+        // Payroll figures only for HR who may open payroll: an access template without it hides them.
+        var seesPayroll = me.IsCompanyAdmin();
+        if (!seesPayroll && isHr)
+        {
+            var modules = await db.Users.IgnoreQueryFilters().Where(u => u.Id == me.UserId && u.AccessTemplateId != null)
+                .Select(u => db.AccessTemplates.IgnoreQueryFilters().Where(t => t.Id == u.AccessTemplateId).Select(t => t.Modules).FirstOrDefault())
+                .FirstOrDefaultAsync();
+            seesPayroll = modules is null || AccessModules.Parse(modules).Contains("payroll");
+        }
+        var lastPayroll = seesPayroll
             ? await db.PayrollRuns.OrderByDescending(r => r.Year).ThenByDescending(r => r.Month)
                 .Select(r => new PayrollRunDto(r.Id, r.Year, r.Month, r.Status, r.TaxYearCode, r.ProcessedAtUtc, r.FinalizedAtUtc,
                     r.Payslips.Count, r.TotalGross, r.TotalDeductions, r.TotalNet, r.SubmittedAtUtc, r.ApprovedByName, r.ApprovedAtUtc, r.ApprovalNote,
@@ -67,19 +109,28 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
                 .FirstOrDefaultAsync()
             : null;
 
+        // Holidays that apply to me: region/religion-targeted ones only for the people they cover.
+        var holidays = await db.Holidays.Where(h => h.Date >= today).OrderBy(h => h.Date)
+            .Select(h => new { h.Id, h.Date, h.Name, h.RegionIds, h.Religion, h.ExemptEmployeeIds }).ToListAsync();
+        var self = mine is { } m1
+            ? await db.Employees.Where(e => e.Id == m1).Select(e => new { e.Id, e.RegionId, e.Religion }).FirstOrDefaultAsync()
+            : null;
+        var upcoming = holidays
+            .Where(h => self is null || ScheduleService.Applies(h.RegionIds, h.Religion, h.ExemptEmployeeIds, self.Id, self.RegionId, self.Religion))
+            .Take(5).Select(h => new HolidayDto(h.Id, h.Date, h.Name)).ToList();
+
         return new DashboardDto(
             await current.CountAsync(),
             await current.CountAsync(e => e.JoiningDate >= monthStart),
-            await db.AttendanceRecords.CountAsync(a => a.Date == today),
-            await db.AttendanceRecords.CountAsync(a => a.Date == today && a.Status == AttendanceStatus.Late),
-            await db.LeaveRequests.CountAsync(r => r.Status == LeaveStatus.Approved && r.FromDate <= today && r.ToDate >= today),
-            await pending.CountAsync(),
+            await attendance.CountAsync(a => a.Date == today),
+            await attendance.CountAsync(a => a.Date == today && a.Status == AttendanceStatus.Late),
+            await leave.CountAsync(r => r.Status == LeaveStatus.Approved && r.FromDate <= today && r.ToDate >= today),
+            pendingCount,
             await current.GroupBy(e => e.Department != null ? e.Department.Name : "Unassigned")
                 .OrderByDescending(g => g.Count()).Select(g => new NameCountDto(g.Key, g.Count())).ToListAsync(),
             trendFilled,
             lastPayroll,
-            await db.Holidays.Where(h => h.Date >= today).OrderBy(h => h.Date).Take(5)
-                .Select(h => new HolidayDto(h.Id, h.Date, h.Name)).ToListAsync());
+            upcoming);
     }
 
     /// <summary>The last 12 months (this month included) for the HR reports dashboard.</summary>
@@ -89,7 +140,9 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
         var today = await clock.TodayAsync();
         var first = new DateOnly(today.Year, today.Month, 1).AddMonths(-11);
 
+        // A resigned/terminated row with no leaving date can't be placed in time: leave it out rather than count it forever.
         var people = await db.Employees.AsNoTracking()
+            .Where(e => e.LeavingDate != null || (e.Status != EmploymentStatus.Resigned && e.Status != EmploymentStatus.Terminated))
             .Select(e => new { e.JoiningDate, e.LeavingDate }).ToListAsync();
         var leave = await db.LeaveRequests.AsNoTracking()
             .Where(r => r.Status == LeaveStatus.Approved && r.FromDate >= first)

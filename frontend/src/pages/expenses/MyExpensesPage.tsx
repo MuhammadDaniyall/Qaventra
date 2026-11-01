@@ -44,9 +44,12 @@ export function MyExpensesPage() {
   const stats = useMemo(() => {
     const list = claims.data ?? [];
     const sum = (s: string) => list.filter((c) => c.status === s).reduce((t, c) => t + c.total, 0);
+    // What payroll pays: the part covered by an advance is not paid again.
+    const payable = (c: (typeof list)[number]) => c.total - (c.advanceAdjusted ?? 0);
     const year = new Date().getFullYear();
-    const paidThisYear = list.filter((c) => c.status === 'Paid' && c.paidAtUtc?.startsWith(String(year))).reduce((t, c) => t + c.total, 0);
-    return { pending: sum('Pending'), approved: sum('Approved'), paidThisYear };
+    const paidThisYear = list.filter((c) => c.status === 'Paid' && c.paidAtUtc?.startsWith(String(year))).reduce((t, c) => t + payable(c), 0);
+    const approved = list.filter((c) => c.status === 'Approved').reduce((t, c) => t + payable(c), 0);
+    return { pending: sum('Pending'), approved, paidThisYear };
   }, [claims.data]);
 
   return (
@@ -212,18 +215,19 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
           description: i.description.trim(),
           amount: amountOf(i),
           receipt: i.receipt,
-          expenseTypeId: i.typeId || null,
+          expenseTypeId: typeOf(i) ? i.typeId : null,
           quantity: i.quantity ? Number(i.quantity) : null,
           fromCity: i.fromCity || null,
           toCity: i.toCity || null,
         })),
-        advanceId: advanceId || null,
+        advanceId: advances.data?.some((a) => a.id === advanceId) ? advanceId : null,
         employeeId: forWhom || null,
       }),
     onSuccess: (c) => {
       toast.success('Claim submitted', `${formatCurrency(c.total)} sent for approval.`);
       qc.invalidateQueries({ queryKey: qk.expenses });
       qc.invalidateQueries({ queryKey: qk.approvals });
+      qc.invalidateQueries({ queryKey: ['expense-setup'] });
       onClose();
     },
     onError: (err) => setError(errorMessage(err)),
@@ -264,7 +268,15 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
     >
       <form id="new-claim-form" onSubmit={onSubmit} className="space-y-5">
         <FormError message={error} />
-        <OnBehalfField value={forWhom} onChange={setForWhom} />
+        <OnBehalfField
+          value={forWhom}
+          onChange={(v) => {
+            // Types and advances belong to the person, so drop choices made for someone else.
+            setForWhom(v);
+            setAdvanceId('');
+            setItems((l) => l.map((i) => ({ ...i, typeId: '', quantity: '', fromCity: '', toCity: '' })));
+          }}
+        />
         <Field label="Title" required>
           <Input value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Lahore client visit, October" autoFocus />
         </Field>

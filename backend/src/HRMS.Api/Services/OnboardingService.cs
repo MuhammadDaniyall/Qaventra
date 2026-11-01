@@ -41,6 +41,11 @@ public class OnboardingService(
         OnboardingTemplate? template = null;
         if (input.TemplateId is { } tid)
             template = await db.OnboardingTemplates.Include(t => t.Tasks).FirstOrDefaultAsync(t => t.Id == tid) ?? throw new NotFoundException("Template");
+        // A named person who has since left can't do the task; it falls to HR instead.
+        var named = template?.Tasks.Where(t => t.AssigneeKind == OnboardingAssignee.SpecificEmployee && t.AssigneeEmployeeId != null)
+            .Select(t => t.AssigneeEmployeeId!.Value).Distinct().ToList() ?? [];
+        var current = await db.Employees
+            .Where(e => named.Contains(e.Id) && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)).Select(e => e.Id).ToListAsync();
 
         var onboarding = new Onboarding
         {
@@ -57,7 +62,8 @@ public class OnboardingService(
             onboarding.Tasks.Add(new OnboardingTask
             {
                 Title = t.Title, Description = t.Description, Category = t.Category, AssigneeKind = t.AssigneeKind,
-                AssigneeEmployeeId = Resolve(t.AssigneeKind, t.AssigneeEmployeeId, employee, input.BuddyEmployeeId),
+                AssigneeEmployeeId = t.AssigneeKind == OnboardingAssignee.SpecificEmployee && t.AssigneeEmployeeId is { } who && !current.Contains(who)
+                    ? null : Resolve(t.AssigneeKind, t.AssigneeEmployeeId, employee, input.BuddyEmployeeId),
                 DueOn = employee.JoiningDate.AddDays(t.DueOffsetDays), Order = t.Order,
             });
         db.Onboardings.Add(onboarding);
@@ -101,7 +107,10 @@ public class OnboardingService(
     public async Task AutoStartAsync(Guid employeeId)
     {
         var template = await db.OnboardingTemplates.Where(t => t.IsDefault).Select(t => (Guid?)t.Id).FirstOrDefaultAsync();
-        if (template is not null && !await db.Onboardings.AnyAsync(o => o.EmployeeId == employeeId))
+        // Someone added as already gone (resigned, terminated) has nothing to onboard; don't fail their creation over it.
+        if (template is not null
+            && await db.Employees.AnyAsync(e => e.Id == employeeId && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation))
+            && !await db.Onboardings.AnyAsync(o => o.EmployeeId == employeeId))
             await StartAsync(employeeId, new StartOnboarding(template, null, null, null, null));
     }
 
@@ -119,8 +128,9 @@ public class OnboardingService(
     /// <summary>Marks a task done (or not). When every task is done, the onboarding is complete.</summary>
     public async Task SetTaskAsync(Guid taskId, bool done, string? note)
     {
-        var task = await db.OnboardingTasks.FirstOrDefaultAsync(t => t.Id == taskId) ?? throw new NotFoundException("Task");
-        var onboarding = await db.Onboardings.Include(o => o.Tasks).Include(o => o.Employee).FirstAsync(o => o.Id == task.OnboardingId);
+        var task = await FindTaskAsync(taskId);
+        var onboarding = await db.Onboardings.Include(o => o.Tasks).Include(o => o.Employee).FirstOrDefaultAsync(o => o.Id == task.OnboardingId)
+                         ?? throw new NotFoundException("Onboarding");
         if (!CanDo(task))
             throw new ForbiddenException("This task is someone else's.");
         if (onboarding.Status == OnboardingStatus.Cancelled)
@@ -130,6 +140,32 @@ public class OnboardingService(
         if (note is not null)
             task.Note = Clean(note, 1000);
 
+        await RefreshStatusAsync(onboarding);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>HR removes a task; if it was the last one open, the onboarding is complete.</summary>
+    public async Task DeleteTaskAsync(Guid taskId)
+    {
+        var task = await FindTaskAsync(taskId);
+        var onboarding = await db.Onboardings.Include(o => o.Tasks).Include(o => o.Employee).FirstOrDefaultAsync(o => o.Id == task.OnboardingId)
+                         ?? throw new NotFoundException("Onboarding");
+        if (onboarding.Status != OnboardingStatus.InProgress)
+            throw new DomainException("This onboarding is not in progress.");
+        onboarding.Tasks.Remove(task);
+        db.OnboardingTasks.Remove(task);
+        await RefreshStatusAsync(onboarding);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>Tasks aren't tenant entities themselves; only find one whose onboarding is in this company.</summary>
+    private async Task<OnboardingTask> FindTaskAsync(Guid taskId) =>
+        await db.OnboardingTasks.FirstOrDefaultAsync(t => t.Id == taskId && db.Onboardings.Any(o => o.Id == t.OnboardingId))
+        ?? throw new NotFoundException("Task");
+
+    /// <summary>Completes the onboarding when every task is done, and reopens it when one is undone.</summary>
+    private async Task RefreshStatusAsync(Onboarding onboarding)
+    {
         var allDone = onboarding.Tasks.All(t => t.CompletedAtUtc is not null);
         if (allDone && onboarding.Status == OnboardingStatus.InProgress)
         {
@@ -142,7 +178,6 @@ public class OnboardingService(
             onboarding.Status = OnboardingStatus.InProgress;
             onboarding.CompletedAtUtc = null;
         }
-        await db.SaveChangesAsync();
     }
 
     public async Task<OnboardingTask> AddTaskAsync(Guid onboardingId, string title, OnboardingTaskCategory category, OnboardingAssignee kind, Guid? employeeId, DateOnly dueOn)
@@ -152,7 +187,7 @@ public class OnboardingService(
             throw new DomainException("This onboarding is not in progress.");
         if (string.IsNullOrWhiteSpace(title))
             throw new DomainException("Name the task.");
-        if (kind == OnboardingAssignee.SpecificEmployee && (employeeId is not { } e || !await db.Employees.AnyAsync(x => x.Id == e)))
+        if (kind == OnboardingAssignee.SpecificEmployee && (employeeId is not { } e || !await db.Employees.AnyAsync(x => x.Id == e && (x.Status == EmploymentStatus.Active || x.Status == EmploymentStatus.Probation))))
             throw new DomainException("Choose who does it.");
         var task = new OnboardingTask
         {

@@ -130,12 +130,15 @@ export function EmployeeForm({
     if (!v.joiningDate) fe.joiningDate = 'Joining date is required.';
     if (v.cnic && !CNIC_RE.test(v.cnic)) fe.cnic = 'CNIC must look like 12345-1234567-1.';
     if (v.leavingDate && v.joiningDate && v.leavingDate < v.joiningDate) fe.leavingDate = 'Cannot be before the joining date.';
+    if ((v.status === 'Resigned' || v.status === 'Terminated') && !v.leavingDate) fe.leavingDate = 'Set a leaving date for someone who has left.';
     setErrors(fe);
     if (Object.keys(fe).length) return;
     onSubmit({ ...v, firstName: v.firstName.trim(), lastName: v.lastName.trim(), email: v.email?.trim() || null, personalEmail: v.personalEmail?.trim() || null });
   };
 
   const leaving = v.status === 'Resigned' || v.status === 'Terminated';
+  // Someone who has left comes back through Re-hire, not by changing the status here.
+  const hasLeft = !!selfId && (initial.status === 'Resigned' || initial.status === 'Terminated');
 
   return (
     <form onSubmit={submit} className="space-y-5" noValidate>
@@ -241,13 +244,13 @@ export function EmployeeForm({
         <Field label="Employee code" hint={selfId ? undefined : 'Leave blank to auto-generate.'} error={allErrors.employeeCode}>
           <Input {...text('employeeCode')} placeholder="EMP-0001" />
         </Field>
-        <Field label="Status" required error={allErrors.status}>
+        <Field label="Status" required hint={hasLeft && !readOnly ? 'Use Re-hire to bring them back.' : undefined} error={allErrors.status}>
           <Select
             value={v.status}
             disabled={readOnly}
             onChange={(e) => setV((s) => ({ ...s, status: e.target.value as EmploymentStatus }))}
           >
-            {EMPLOYMENT_STATUSES.map((s) => (
+            {EMPLOYMENT_STATUSES.filter((s) => !hasLeft || s === 'Resigned' || s === 'Terminated').map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -259,6 +262,7 @@ export function EmployeeForm({
         </Field>
         <Field
           label="Leaving date"
+          required={leaving}
           hint={leaving ? 'Their login is disabled once they leave.' : undefined}
           error={allErrors.leavingDate}
         >
@@ -289,14 +293,17 @@ export function EmployeeForm({
         </Field>
       </Section>
 
-      <Section title="Bank" description="Where salary is paid.">
-        <Field label="Bank name" error={allErrors.bankName}>
-          <Input placeholder="Meezan Bank" {...text('bankName')} />
-        </Field>
-        <Field label="Account number / IBAN" error={allErrors.bankAccount}>
-          <Input placeholder="PK36MEZN0000000000000000" {...text('bankAccount')} />
-        </Field>
-      </Section>
+      {/* Bank details are not sent to managers viewing their team. */}
+      {(!readOnly || v.bankName || v.bankAccount) && (
+        <Section title="Bank" description="Where salary is paid.">
+          <Field label="Bank name" error={allErrors.bankName}>
+            <Input placeholder="Meezan Bank" {...text('bankName')} />
+          </Field>
+          <Field label="Account number / IBAN" error={allErrors.bankAccount}>
+            <Input placeholder="PK36MEZN0000000000000000" {...text('bankAccount')} />
+          </Field>
+        </Section>
+      )}
 
       {!readOnly && (
         <div className="flex justify-end gap-2">

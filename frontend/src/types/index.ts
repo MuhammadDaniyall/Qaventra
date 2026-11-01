@@ -670,6 +670,8 @@ export interface PayslipSummary {
   otherDeductions: number;
   netPay: number;
   heldReason?: string | null;
+  /** The pay period, e.g. "Week 6–12 Oct 2026"; set on the employee's own list. */
+  label?: string | null;
 }
 
 export interface PayrollRunDetail {
@@ -708,6 +710,7 @@ export interface Payslip {
   otherDeductions: number;
   netPay: number;
   lines: PayslipLine[];
+  label?: string | null;
 }
 
 export interface PayrollSettings {

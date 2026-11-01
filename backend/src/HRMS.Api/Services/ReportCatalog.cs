@@ -60,13 +60,45 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("travel.trips", "Travel", "Trips", "Business trips in a period with cost and settlement", ["period", "department", "employee"], true),
     ];
 
-    public IEnumerable<ReportDefinition> Available() => All.Where(r => me.IsHr() || !r.HrOnly);
+    public async Task<IEnumerable<ReportDefinition>> AvailableAsync()
+    {
+        var modules = await TemplateModulesAsync();
+        return All.Where(r => (me.IsHr() || !r.HrOnly) && InTemplate(r, modules)).ToList();
+    }
+
+    /// <summary>The access module each report category reads from.</summary>
+    private static readonly Dictionary<string, string> CategoryModules = new()
+    {
+        ["Employees"] = "employees", ["Attendance"] = "attendance", ["Projects"] = "projects", ["Leave"] = "leave", ["Payroll"] = "payroll",
+        ["Expenses"] = "expenses", ["Approvals"] = "approvals", ["Training"] = "training", ["Travel"] = "travel",
+    };
+
+    /// <summary>An HR manager with an access template sees only the reports of the template's modules.</summary>
+    private bool InTemplate(ReportDefinition r, List<string>? modules) =>
+        me.Role != UserRole.HrManager || modules is null || !CategoryModules.TryGetValue(r.Category, out var m) || modules.Contains(m);
+
+    /// <summary>The current user's access template modules, or null when they have none.</summary>
+    private async Task<List<string>?> TemplateModulesAsync()
+    {
+        if (me.Role != UserRole.HrManager || me.UserId is not { } userId)
+            return null;
+        var csv = await db.Users.IgnoreQueryFilters().Where(u => u.Id == userId && u.AccessTemplateId != null)
+            .Select(u => db.AccessTemplates.IgnoreQueryFilters().Where(t => t.Id == u.AccessTemplateId).Select(t => t.Modules).FirstOrDefault())
+            .FirstOrDefaultAsync();
+        return csv is null ? null : AccessModules.Parse(csv);
+    }
 
     public async Task<ReportResult> RunAsync(string key, ReportRequest f)
     {
         var def = All.FirstOrDefault(r => r.Key == key) ?? throw new NotFoundException("Report");
         if (def.HrOnly && !me.IsHr())
             throw new ForbiddenException("Only HR can run this report.");
+        if (!InTemplate(def, await TemplateModulesAsync()))
+            throw new ForbiddenException("Your access does not include this report.");
+        if (f.Year is < 2000 or > 2100)
+            throw new DomainException("Choose a year between 2000 and 2100.");
+        if (f.Month is < 1 or > 12)
+            throw new DomainException("Choose a valid month.");
         if (f.GroupIds is { Count: > 0 } gids)
             groups = (await db.OrgLookups.Where(l => gids.Contains(l.Id)).Select(l => new { l.Id, l.Kind }).ToListAsync()).Select(x => (x.Id, x.Kind)).ToList();
         var today = await clock.TodayAsync();
@@ -177,7 +209,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
                 var ids = staff.Select(s => s.Id).ToList();
                 var logged = await db.TimesheetLines.Where(l => l.Date >= from && l.Date <= to)
-                    .Join(db.Timesheets.Where(t => t.Status != TimesheetStatus.Draft && ids.Contains(t.EmployeeId)), l => l.TimesheetId, t => t.Id, (l, t) => new { t.EmployeeId, l.ProjectId, l.Minutes })
+                    .Join(db.Timesheets.Where(t => (t.Status == TimesheetStatus.Submitted || t.Status == TimesheetStatus.Approved) && ids.Contains(t.EmployeeId)), l => l.TimesheetId, t => t.Id, (l, t) => new { t.EmployeeId, l.ProjectId, l.Minutes })
                     .ToListAsync();
                 var projectNames = await db.Projects.ToDictionaryAsync(p => p.Id, p => p.Name);
                 var rates = await db.ProjectMembers.ToDictionaryAsync(m => (m.ProjectId, m.EmployeeId), m => m.HourlyRate ?? 0);
@@ -247,7 +279,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             case "attendance.daily":
             {
                 var day = f.Date ?? today;
-                var staff = await people.OrderBy(e => e.FirstName).Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "" }).ToListAsync();
+                var staff = await people.OrderBy(e => e.FirstName).Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "", e.JoiningDate }).ToListAsync();
                 var ids = staff.Select(s => s.Id).ToList();
                 var plan = await schedules.ForEmployeesAsync(ids, day, day);
                 var recs = await db.AttendanceRecords.Where(a => a.Date == day && ids.Contains(a.EmployeeId)).ToListAsync();
@@ -259,7 +291,8 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     var rec = recs.FirstOrDefault(x => x.EmployeeId == s.Id);
                     var lv = leave.FirstOrDefault(x => x.EmployeeId == s.Id);
                     var working = plan.TryGetValue(s.Id, out var sc) && sc.IsWorkingDay(day);
-                    var status = rec is not null ? ScheduledService.Humanize(rec.Status.ToString()) : lv is not null ? $"On leave ({lv.Type})" : working ? "Absent" : "Off";
+                    var status = rec is not null ? ScheduledService.Humanize(rec.Status.ToString()) : day < s.JoiningDate ? "Not joined" : lv is not null ? $"On leave ({lv.Type})"
+                        : !working ? "Off" : day > today ? "Not yet" : "Absent";
                     rows.Add(L(s.EmployeeCode, s.Name, s.Department, status, rec is null ? "" : Time(await clock.ToLocalAsync(rec.CheckInUtc)),
                         rec?.CheckOutUtc is { } co ? Time(await clock.ToLocalAsync(co)) : "", rec is null ? "" : Hours(rec.WorkedMinutes)));
                 }
@@ -292,23 +325,23 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                             absent++;
                     }
                     return L(s.EmployeeCode, s.Name, N(working), N(mine.Count(r => r.Status == AttendanceStatus.Present)), N(mine.Count(r => r.Status == AttendanceStatus.Late)),
-                        N(mine.Count(r => r.Status == AttendanceStatus.HalfDay)), N(absent), N(onLeave), Hours(mine.Sum(r => r.WorkedMinutes)));
+                        N(mine.Count(r => r.Status == AttendanceStatus.HalfDay)), N(mine.Count(r => r.Status == AttendanceStatus.ShortDay)), N(absent), N(onLeave), Hours(mine.Sum(r => r.WorkedMinutes)));
                 }).ToList();
-                return T(def, $"{month:MMMM yyyy}{(end < monthEnd ? $" (to {end:d MMM})" : "")}", ["Code", "Name", "Working days", "Present", "Late", "Half day", "Absent", "On leave", "Hours"],
-                    [2, 3, 4, 5, 6, 7, 8], rows, totals: true);
+                return T(def, $"{month:MMMM yyyy}{(end < monthEnd ? $" (to {end:d MMM})" : "")}", ["Code", "Name", "Working days", "Present", "Late", "Half day", "Short day", "Absent", "On leave", "Hours"],
+                    [2, 3, 4, 5, 6, 7, 8, 9], rows, totals: true);
             }
             case "attendance.late":
             {
                 var ids = people.Select(e => e.Id);
                 var recs = await db.AttendanceRecords.Where(a => a.Status == AttendanceStatus.Late && a.Date >= from && a.Date <= to && ids.Contains(a.EmployeeId))
-                    .OrderBy(a => a.Date).Select(a => new { a.Date, a.CheckInUtc, a.Employee!.EmployeeCode, Name = a.Employee.FirstName + " " + a.Employee.LastName, Department = a.Employee.Department != null ? a.Employee.Department.Name : "", Shift = a.Employee.Shift != null ? a.Employee.Shift.StartTime : (TimeOnly?)null })
+                    .OrderBy(a => a.Date).Select(a => new { a.Date, a.CheckInUtc, a.Employee!.EmployeeCode, Name = a.Employee.FirstName + " " + a.Employee.LastName, Department = a.Employee.Department != null ? a.Employee.Department.Name : "", a.LateMinutes })
                     .ToListAsync();
                 var rows = new List<List<string>>();
                 foreach (var r in recs)
                 {
                     var inAt = await clock.ToLocalAsync(r.CheckInUtc);
-                    var late = r.Shift is { } st ? (int)(TimeOnly.FromDateTime(inAt) - st).TotalMinutes : (int?)null;
-                    rows.Add(L(D(r.Date), r.EmployeeCode, r.Name, r.Department, Time(inAt), late is > 0 ? $"{late} min" : ""));
+                    // Stored at check-in against the rostered shift, after the grace.
+                    rows.Add(L(D(r.Date), r.EmployeeCode, r.Name, r.Department, Time(inAt), r.LateMinutes > 0 ? $"{r.LateMinutes} min" : ""));
                 }
                 return T(def, $"{range}: {rows.Count} late arrivals", ["Date", "Code", "Name", "Department", "In", "Late by"], [], rows);
             }
@@ -333,8 +366,16 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 var rows = await db.LeaveRequests.Where(l => l.Status == LeaveStatus.Approved && l.FromDate <= to && l.ToDate >= from && ids.Contains(l.EmployeeId))
                     .OrderBy(l => l.FromDate).Select(l => new { l.Employee!.EmployeeCode, Name = l.Employee.FirstName + " " + l.Employee.LastName, Type = l.LeaveType!.Name, l.FromDate, l.ToDate, l.Days, l.LeaveType.IsPaid })
                     .ToListAsync();
+                // A leave running past either end of the period counts only its share of days inside it.
                 return T(def, range, ["Code", "Name", "Leave", "From", "To", "Days", "Paid"], [5],
-                    rows.Select(r => L(r.EmployeeCode, r.Name, r.Type, D(r.FromDate), D(r.ToDate), Num(r.Days), r.IsPaid ? "Yes" : "No")), totals: true);
+                    rows.Select(r =>
+                    {
+                        var clipFrom = r.FromDate < from ? from : r.FromDate;
+                        var clipTo = r.ToDate > to ? to : r.ToDate;
+                        var days = clipFrom == r.FromDate && clipTo == r.ToDate ? r.Days
+                            : Math.Round(r.Days * (clipTo.DayNumber - clipFrom.DayNumber + 1) / (r.ToDate.DayNumber - r.FromDate.DayNumber + 1), 1);
+                        return L(r.EmployeeCode, r.Name, r.Type, D(clipFrom), D(clipTo), Num(days), r.IsPaid ? "Yes" : "No");
+                    }), totals: true);
             }
             case "payroll.costcenters":
             {
@@ -479,9 +520,12 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                                                                    && (x.Status == EnrollmentStatus.Attended || x.Status == EnrollmentStatus.Completed || x.Status == EnrollmentStatus.Failed))
                     .Select(x => new { x.Employee!.EmployeeCode, Name = x.Employee.FirstName + " " + x.Employee.LastName, Course = x.Session!.Program!.Title, x.Session.Program.DurationHours, x.Session.StartsAtUtc, x.Session.EndsAtUtc, x.Status, x.Score })
                     .ToListAsync();
-                return T(def, range, ["Code", "Name", "Course", "Date", "Hours", "Result", "Score"], [4],
-                    rows.OrderBy(r => r.Name).ThenBy(r => r.StartsAtUtc).Select(r => L(r.EmployeeCode, r.Name, r.Course, D(DateOnly.FromDateTime(r.StartsAtUtc)),
-                        Num(r.DurationHours ?? (decimal)Math.Round((r.EndsAtUtc - r.StartsAtUtc).TotalHours, 1)), r.Status.ToString(), r.Score is { } s ? $"{s}%" : "")), totals: true);
+                // The session's date in the company's time zone, not UTC.
+                var list = new List<List<string>>();
+                foreach (var r in rows.OrderBy(r => r.Name).ThenBy(r => r.StartsAtUtc))
+                    list.Add(L(r.EmployeeCode, r.Name, r.Course, D(DateOnly.FromDateTime(await clock.ToLocalAsync(r.StartsAtUtc))),
+                        Num(r.DurationHours ?? (decimal)Math.Round((r.EndsAtUtc - r.StartsAtUtc).TotalHours, 1)), r.Status.ToString(), r.Score is { } s ? $"{s}%" : ""));
+                return T(def, range, ["Code", "Name", "Course", "Date", "Hours", "Result", "Score"], [4], list, totals: true);
             }
             case "travel.trips":
             {

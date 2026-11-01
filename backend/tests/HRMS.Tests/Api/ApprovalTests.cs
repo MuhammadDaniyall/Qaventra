@@ -109,6 +109,26 @@ public class ApprovalTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Steps_for_people_whose_login_cannot_approve_go_to_hr()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Routing");
+        async Task<Guid> Employee(string first, Guid? managerId) =>
+            (await Ok(await admin.PostAsJsonAsync("/api/employees", new { firstName = first, lastName = "R", joiningDate = "2025-01-01", status = "Active", managerId }, ApiFactory.Json)))
+            .GetProperty("id").GetGuid();
+        var boss = await Employee("Bilal", null);
+        var worker = await Employee("Wali", boss);
+        var email = $"wali+{Guid.NewGuid():N}@routing.test";
+        await Ok(await admin.PostAsJsonAsync($"/api/employees/{worker}/login", new { email, password = "Approval-Pass-1", role = "Employee" }));
+        var workerClient = await factory.SignInAsync(email, "Approval-Pass-1");
+
+        // The manager has no login, so the line-manager step goes to HR instead of waiting forever.
+        var id = await ApplyLeaveAsync(workerClient);
+        var timeline = await Ok(await admin.GetAsync($"/api/approvals/Leave/{id}"));
+        Assert.Equal("Hr", Assert.Single(timeline.GetProperty("steps").EnumerateArray()).GetProperty("kind").GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/approvals/flows/Expense", new { steps = new object[] { new { kind = "SpecificEmployee", employeeId = boss } } }, ApiFactory.Json)).StatusCode);
+    }
+
+    [Fact]
     public async Task Specific_person_and_automatic_approval()
     {
         var o = await CreateOrgAsync("Rules");

@@ -112,6 +112,8 @@ public class EmployeeRecordsTests(ApiFactory factory) : IClassFixture<ApiFactory
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/api/employees/{id}/job-changes", new { kind = "Transfer", effectiveDate = today, departmentId = eng })).StatusCode);
         var former = await Ok(await admin.GetAsync("/api/employees?former=true"));
         Assert.Single(former.GetProperty("items").EnumerateArray());
+        // The profile form cannot bring them back; that bypasses the re-hire checks.
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/employees/{id}", new { firstName = "Omar", lastName = "R", joiningDate = "2024-01-01", status = "Active", email = "omar@jobhist.test", departmentId = qa, designationId = senior })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/api/employees/{id}/rehire", new { joiningDate = "2025-03-01", status = "Probation", departmentId = eng })).StatusCode);
         var back = await Ok(await admin.PostAsJsonAsync($"/api/employees/{id}/rehire", new { joiningDate = today, status = "Probation", departmentId = eng, designationId = dev }));
         Assert.Equal("Probation", back.GetProperty("status").GetString());
@@ -121,6 +123,17 @@ public class EmployeeRecordsTests(ApiFactory factory) : IClassFixture<ApiFactory
         var rehire = (await Ok(await admin.GetAsync($"/api/employees/{id}/job-history"))).EnumerateArray().First();
         Assert.Equal("Rehire", rehire.GetProperty("kind").GetString());
         Assert.Contains("1 Jan 2024", rehire.GetProperty("note").GetString());
+    }
+
+    [Fact]
+    public async Task Adding_an_employee_keeps_personal_email_marital_status_and_blood_group()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Personal");
+        var id = await NewEmployee(admin, "Nida", new { personalEmail = "Nida@Home.test", maritalStatus = "Married", bloodGroup = "B+" });
+        var e = await Ok(await admin.GetAsync($"/api/employees/{id}"));
+        Assert.Equal("nida@home.test", e.GetProperty("personalEmail").GetString());
+        Assert.Equal("Married", e.GetProperty("maritalStatus").GetString());
+        Assert.Equal("B+", e.GetProperty("bloodGroup").GetString());
     }
 
     [Fact]
@@ -146,7 +159,10 @@ public class EmployeeRecordsTests(ApiFactory factory) : IClassFixture<ApiFactory
         var asad = await factory.SignInAsync(email, password);
         Assert.True((await Ok(await asad.GetAsync("/api/auth/me"))).GetProperty("mustChangePassword").GetBoolean());
         Assert.Equal(HttpStatusCode.BadRequest, (await asad.PostAsJsonAsync("/api/auth/change-password", new { currentPassword = password, newPassword = password })).StatusCode);
-        await Ok(await asad.PostAsJsonAsync("/api/auth/change-password", new { currentPassword = password, newPassword = "My-Own-Pass-99" }));
+        var fresh = await Ok(await asad.PostAsJsonAsync("/api/auth/change-password", new { currentPassword = password, newPassword = "My-Own-Pass-99" }));
+        // Changing the password signs out the old token; the response carries a new one.
+        Assert.Equal(HttpStatusCode.Unauthorized, (await asad.GetAsync("/api/auth/me")).StatusCode);
+        asad.DefaultRequestHeaders.Authorization = new("Bearer", fresh.GetProperty("token").GetString());
         Assert.False((await Ok(await asad.GetAsync("/api/auth/me"))).GetProperty("mustChangePassword").GetBoolean());
 
         // Reset hands out a new temporary password and asks again.

@@ -75,7 +75,8 @@ export const approvalsApi = {
   saveFlow: (type: ApprovalRequestType, steps: Array<{ kind: ApproverKind; employeeId: string | null }>) => http.put(`/approvals/flows/${type}`, { steps }),
   inbox: () => http.get<InboxItem[]>('/approvals/inbox'),
   /** Undefined for requests submitted before approval chains existed. */
-  timeline: (type: ApprovalRequestType, subjectId: string) => http.get<ApprovalTimeline | undefined>(`/approvals/${type}/${subjectId}`),
+  timeline: async (type: ApprovalRequestType, subjectId: string) =>
+    (await http.get<ApprovalTimeline | undefined>(`/approvals/${type}/${subjectId}`)) ?? null,
   /** Approve or reject any kind of request; HR may force-approve over the remaining steps (a note is required). */
   decide: (type: ApprovalRequestType, subjectId: string, b: { approve: boolean; note: string | null; force?: boolean }) =>
     http.post(`/approvals/${type}/${subjectId}/decide`, b),

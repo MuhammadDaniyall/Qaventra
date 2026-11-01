@@ -94,6 +94,8 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         await ValidateJobAsync(input.Title, input.DepartmentId, input.DesignationId, input.Positions, input.SalaryMin, input.SalaryMax);
         if (string.IsNullOrWhiteSpace(input.Reason))
             throw new DomainException("Say why the position is needed.");
+        if (input.ExperienceMinYears is < 0 or > 60)
+            throw new DomainException("Minimum experience must be 0 to 60 years.");
         if (input.ReplacesEmployeeId is { } rep && !await db.Employees.AnyAsync(e => e.Id == rep))
             throw new NotFoundException("Employee being replaced");
         if (input.NeededBy is { } nb && nb < await clock.TodayAsync())
@@ -250,6 +252,9 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Careers addresses taken by the candidate status page routes (/careers/status, api/careers/portal).</summary>
+    private static readonly HashSet<string> ReservedSlugs = ["status", "portal"];
+
     /// <summary>The company's careers page address part, made from its name the first time it is needed.</summary>
     public async Task<string> EnsureCareersSlugAsync()
     {
@@ -260,7 +265,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         if (root.Length < 3)
             root = "company";
         var slug = root;
-        for (var n = 2; await db.Tenants.AnyAsync(t => t.CareersSlug == slug); n++)
+        for (var n = 2; ReservedSlugs.Contains(slug) || await db.Tenants.AnyAsync(t => t.CareersSlug == slug); n++)
             slug = $"{root}-{n}";
         tenant.CareersSlug = slug;
         return slug;
@@ -272,6 +277,8 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         var clean = Slugify(slug, 60);
         if (clean.Length < 3)
             throw new DomainException("Use at least 3 letters or numbers.");
+        if (ReservedSlugs.Contains(clean))
+            throw new DomainException("This address is reserved.");
         var tenant = await db.Tenants.FirstAsync(t => t.Id == db.CurrentTenantId);
         if (await db.Tenants.AnyAsync(t => t.CareersSlug == clean && t.Id != tenant.Id))
             throw new DomainException("Another company already uses this address.");
@@ -296,6 +303,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
             CheckCv(cv);
 
         var candidate = await db.Candidates.FirstOrDefaultAsync(c => c.Email == email);
+        var isNew = candidate is null;
         if (candidate is null)
         {
             candidate = new Candidate { Email = email, Source = source };
@@ -307,19 +315,38 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
                 ? "You have already applied for this job. We will be in touch."
                 : $"{candidate.FullName} is already in this job's pipeline.");
         }
-        // The latest application's details win, but nothing is wiped by a blank field.
-        candidate.FirstName = Clean(input.FirstName, 100)!;
-        candidate.LastName = Clean(input.LastName, 100) ?? candidate.LastName;
-        candidate.Phone = Clean(input.Phone, 30) ?? candidate.Phone;
-        candidate.Cnic = Clean(input.Cnic, 15) ?? candidate.Cnic;
-        candidate.City = Clean(input.City, 100) ?? candidate.City;
-        candidate.CurrentTitle = Clean(input.CurrentTitle, 150) ?? candidate.CurrentTitle;
-        candidate.CurrentCompany = Clean(input.CurrentCompany, 150) ?? candidate.CurrentCompany;
-        candidate.ExperienceYears = input.ExperienceYears is >= 0 and < 100 ? input.ExperienceYears : candidate.ExperienceYears;
-        candidate.ExpectedSalary = input.ExpectedSalary is > 0 ? input.ExpectedSalary : candidate.ExpectedSalary;
-        candidate.NoticeDays = input.NoticeDays is >= 0 and <= 365 ? input.NoticeDays : candidate.NoticeDays;
-        candidate.LinkedInUrl = Clean(input.LinkedInUrl, 300) ?? candidate.LinkedInUrl;
-        candidate.Skills = Clean(input.Skills, 1000) ?? candidate.Skills;
+        // The latest application's details win, but nothing is wiped by a blank field. The careers page is anonymous and
+        // the email is not verified, so there an existing candidate's details are only filled in where blank.
+        if (source == CandidateSource.CareersPage && !isNew)
+        {
+            if (string.IsNullOrEmpty(candidate.LastName))
+                candidate.LastName = Clean(input.LastName, 100) ?? "";
+            candidate.Phone ??= Clean(input.Phone, 30);
+            candidate.Cnic ??= Clean(input.Cnic, 15);
+            candidate.City ??= Clean(input.City, 100);
+            candidate.CurrentTitle ??= Clean(input.CurrentTitle, 150);
+            candidate.CurrentCompany ??= Clean(input.CurrentCompany, 150);
+            candidate.ExperienceYears ??= input.ExperienceYears is >= 0 and < 100 ? input.ExperienceYears : null;
+            candidate.ExpectedSalary ??= input.ExpectedSalary is > 0 ? input.ExpectedSalary : null;
+            candidate.NoticeDays ??= input.NoticeDays is >= 0 and <= 365 ? input.NoticeDays : null;
+            candidate.LinkedInUrl ??= Clean(input.LinkedInUrl, 300);
+            candidate.Skills ??= Clean(input.Skills, 1000);
+        }
+        else
+        {
+            candidate.FirstName = Clean(input.FirstName, 100)!;
+            candidate.LastName = Clean(input.LastName, 100) ?? candidate.LastName;
+            candidate.Phone = Clean(input.Phone, 30) ?? candidate.Phone;
+            candidate.Cnic = Clean(input.Cnic, 15) ?? candidate.Cnic;
+            candidate.City = Clean(input.City, 100) ?? candidate.City;
+            candidate.CurrentTitle = Clean(input.CurrentTitle, 150) ?? candidate.CurrentTitle;
+            candidate.CurrentCompany = Clean(input.CurrentCompany, 150) ?? candidate.CurrentCompany;
+            candidate.ExperienceYears = input.ExperienceYears is >= 0 and < 100 ? input.ExperienceYears : candidate.ExperienceYears;
+            candidate.ExpectedSalary = input.ExpectedSalary is > 0 ? input.ExpectedSalary : candidate.ExpectedSalary;
+            candidate.NoticeDays = input.NoticeDays is >= 0 and <= 365 ? input.NoticeDays : candidate.NoticeDays;
+            candidate.LinkedInUrl = Clean(input.LinkedInUrl, 300) ?? candidate.LinkedInUrl;
+            candidate.Skills = Clean(input.Skills, 1000) ?? candidate.Skills;
+        }
         if (source == CandidateSource.Referral)
         {
             candidate.Source = source;
@@ -371,6 +398,13 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
     {
         var post = await MyPosts().FirstOrDefaultAsync(p => p.Id == postId) ?? throw new NotFoundException("Job post");
         var candidate = await db.Candidates.FirstOrDefaultAsync(c => c.Id == candidateId) ?? throw new NotFoundException("Candidate");
+        // Hiring teams can only pull in people already in one of their jobs.
+        if (!me.IsHr())
+        {
+            var posts = MyPosts().Select(p => p.Id);
+            if (!await db.JobApplications.AnyAsync(a => a.CandidateId == candidateId && posts.Contains(a.JobPostId)))
+                throw new NotFoundException("Candidate");
+        }
         if (await db.JobApplications.AnyAsync(a => a.CandidateId == candidateId && a.JobPostId == postId))
             throw new DomainException($"{candidate.FullName} is already in this job's pipeline.");
         var app = new JobApplication { JobPostId = post.Id, CandidateId = candidate.Id, StageChangedAtUtc = clock.UtcNow };
@@ -457,13 +491,14 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         app.StageChangedAtUtc = clock.UtcNow;
         if (stage == ApplicationStage.Rejected)
             app.RejectionReason = Clean(reason, 500);
+        if (stage is ApplicationStage.Rejected or ApplicationStage.Withdrawn && (app.OfferStatus is OfferStatus.Sent or OfferStatus.Accepted))
+            app.OfferStatus = OfferStatus.Declined;
         var by = await MyNameAsync();
         Log(app.Id, $"{Label(from)} → {Label(stage)}" + (string.IsNullOrWhiteSpace(reason) ? "" : $": {reason.Trim()}"), by);
 
         if (stage == ApplicationStage.Rejected)
         {
-            foreach (var i in await db.Interviews.Where(i => i.ApplicationId == app.Id && i.Status == InterviewStatus.Scheduled).ToListAsync())
-                i.Status = InterviewStatus.Cancelled;
+            await CancelInterviewsAsync(app.Id);
             if (emailCandidate)
                 notify.EmailOnly(app.Candidate!.Email, $"Your application for {app.JobPost!.Title}",
                     $"Dear {app.Candidate.FirstName},\n\nThank you for your interest. After careful review we will not be moving ahead with your application at this time. We wish you the best and hope you will apply again.",
@@ -652,6 +687,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         {
             app.Stage = ApplicationStage.Withdrawn;
             app.StageChangedAtUtc = clock.UtcNow;
+            await CancelInterviewsAsync(app.Id);
         }
         var by = await MyNameAsync();
         Log(app.Id, (accepted ? "Offer accepted" : "Offer declined") + (string.IsNullOrWhiteSpace(note) ? "" : $": {note.Trim()}"), by);
@@ -677,6 +713,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         {
             app.Stage = ApplicationStage.Withdrawn;
             app.StageChangedAtUtc = clock.UtcNow;
+            await CancelInterviewsAsync(app.Id);
         }
         Log(app.Id, (accepted ? "Offer accepted by the candidate" : "Offer declined by the candidate") + (string.IsNullOrWhiteSpace(note) ? "" : $": {note.Trim()}"), app.Candidate!.FullName);
         await TellTeamAsync(app, $"{app.Candidate.FullName} {(accepted ? "accepted" : "declined")} the offer for {app.JobPost!.Title}");
@@ -689,9 +726,20 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         var app = await db.JobApplications.Include(a => a.JobPost).Include(a => a.Candidate).FirstAsync(a => a.Id == applicationId);
         app.Stage = ApplicationStage.Withdrawn;
         app.StageChangedAtUtc = clock.UtcNow;
+        // A withdrawn candidate's offer is no longer open, so it cannot be hired on.
+        if (app.OfferStatus is OfferStatus.Sent or OfferStatus.Accepted)
+            app.OfferStatus = OfferStatus.Declined;
+        await CancelInterviewsAsync(app.Id);
         Log(app.Id, "Withdrawn by the candidate", app.Candidate!.FullName);
         await TellTeamAsync(app, $"{app.Candidate.FullName} withdrew from {app.JobPost!.Title}");
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>Cancels the application's interviews that have not happened yet.</summary>
+    private async Task CancelInterviewsAsync(Guid applicationId)
+    {
+        foreach (var i in await db.Interviews.Where(i => i.ApplicationId == applicationId && i.Status == InterviewStatus.Scheduled).ToListAsync())
+            i.Status = InterviewStatus.Cancelled;
     }
 
     private async Task TellTeamAsync(JobApplication app, string title)
@@ -709,8 +757,12 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         var app = await RunAsync(applicationId);
         if (app.Stage == ApplicationStage.Hired)
             throw new DomainException("This candidate has already been hired.");
+        if (app.Stage is ApplicationStage.Rejected or ApplicationStage.Withdrawn)
+            throw new DomainException("This application is closed.");
         if (app.OfferStatus != OfferStatus.Accepted)
             throw new DomainException("The candidate must accept an offer first.");
+        if (app.Stage != ApplicationStage.Offer)
+            throw new DomainException("The candidate is not at the offer stage.");
         var candidate = app.Candidate!;
         if (candidate.EmployeeId is { } existing && await db.Employees.AnyAsync(e => e.Id == existing && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)))
             throw new DomainException($"{candidate.FullName} already works here.");
@@ -748,6 +800,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         {
             other.Stage = ApplicationStage.Withdrawn;
             other.StageChangedAtUtc = clock.UtcNow;
+            await CancelInterviewsAsync(other.Id);
             Log(other.Id, $"Withdrawn: hired for {post.Title}", by);
         }
 

@@ -111,7 +111,7 @@ export const NAV: NavSection[] = [
       { to: '/performance', label: 'Performance', icon: Target, roles: COMPANY_ROLES },
       { to: '/training', label: 'Training', icon: GraduationCap, roles: COMPANY_ROLES },
       { to: '/recruitment', label: 'Recruitment', icon: BriefcaseBusiness, roles: COMPANY_ROLES },
-      { to: '/suggestions', label: 'Suggestions', icon: Lightbulb, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/suggestions', label: 'Suggestions', icon: Lightbulb, roles: COMPANY_ROLES },
     ],
   },
   {

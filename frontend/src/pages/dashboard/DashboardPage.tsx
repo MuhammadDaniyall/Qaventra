@@ -40,6 +40,8 @@ export function DashboardPage() {
   const user = useUser();
   const navigate = useNavigate();
   const hr = isHr(user);
+  // An access template without payroll hides the payroll card and reminder.
+  const payroll = hr && (user.role !== 'HrManager' || !user.modules || user.modules.includes('payroll'));
   const approver = isApprover(user);
   const self = !!user.employeeId;
   const dash = useQuery({ queryKey: qk.dashboard, queryFn: dashboardApi.get });
@@ -98,7 +100,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
-            <ActionCenter d={d} hr={hr} />
+            <ActionCenter d={d} hr={hr} payroll={payroll} />
             <Card className="lg:col-span-2">
               <CardHeader title="Attendance" description="Check-ins over the last 14 days" />
               <CardBody>
@@ -121,7 +123,7 @@ export function DashboardPage() {
                 )}
               </CardBody>
             </Card>
-            {hr && <LastPayrollCard d={d} loading={loading} />}
+            {payroll && <LastPayrollCard d={d} loading={loading} />}
             <HolidaysCard holidays={d?.upcomingHolidays} loading={loading} />
           </div>
         </>

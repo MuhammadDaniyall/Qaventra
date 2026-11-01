@@ -29,7 +29,7 @@ public record UnplannedDto(Guid? DepartmentId, string Department, Guid? Designat
 public record BudgetPlanDto(
     Guid Id, string Name, DateOnly FromDate, DateOnly ToDate, BudgetStatus Status, string? Notes, DateTime? SubmittedAtUtc, string? DecidedByName, DateTime? DecidedAtUtc,
     string? DecisionNote, List<BudgetLineDto> Lines, List<UnplannedDto> Unplanned, int Headcount, int OnRoll, int Vacant, int Hiring, decimal BudgetCost, decimal ActualCost,
-    bool CanEdit, bool CanDecide);
+    bool CanEdit, bool CanDecide, bool CanClose);
 
 public record BudgetDecisionRequest(bool Approve, [StringLength(1000)] string? Note);
 
@@ -79,6 +79,8 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
     {
         var p = await EditableAsync(id);
         Validate(req);
+        if (p.Positions.Any(x => x.FilledFrom is { } f && (f < req.FromDate || f > req.ToDate)))
+            throw new DomainException("Hiring dates must fall within the plan.");
         p.Name = req.Name.Trim();
         p.FromDate = req.FromDate;
         p.ToDate = req.ToDate;
@@ -172,7 +174,7 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
 
     /// <summary>
     /// For a hiring request: whether the current approved budget has room for the department and designation.
-    /// A line without a designation covers the whole department.
+    /// A line without a designation covers the rest of the department (designations without their own line).
     /// </summary>
     [HttpGet("check")]
     public async Task<BudgetCheckDto> Check([FromQuery] Guid? departmentId, [FromQuery] Guid? designationId)
@@ -186,7 +188,7 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
                    ?? plan.Positions.FirstOrDefault(x => x.DepartmentId == departmentId && x.DesignationId == null);
         if (line is null)
             return new BudgetCheckDto(true, plan.Name, false, 0, 0, 0, 0);
-        var (onRoll, hiring) = await CountsAsync(line.DepartmentId, line.DesignationId);
+        var (onRoll, hiring) = await CountsAsync(line, plan.Positions);
         var open = Math.Max(0, line.Headcount - onRoll - hiring);
         return new BudgetCheckDto(true, plan.Name, open > 0, line.Headcount, onRoll, hiring, open);
     }
@@ -203,13 +205,13 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
         var lines = new List<BudgetLineDto>();
         foreach (var x in p.Positions.OrderBy(x => x.DepartmentId is { } d ? depts.GetValueOrDefault(d) : "").ThenBy(x => x.DesignationId is { } g ? desigs.GetValueOrDefault(g) : ""))
         {
-            var matching = staff.Where(s => s.DepartmentId == x.DepartmentId && (x.DesignationId == null || s.DesignationId == x.DesignationId)).ToList();
+            var matching = staff.Where(s => Covers(x, p.Positions, s.DepartmentId, s.DesignationId)).ToList();
             var onRoll = matching.Sum(s => s.Count);
-            var hires = hiring.Where(h => h.DepartmentId == x.DepartmentId && (x.DesignationId == null || h.DesignationId == x.DesignationId)).Sum(h => h.Count);
+            var hires = hiring.Where(h => Covers(x, p.Positions, h.DepartmentId, h.DesignationId)).Sum(h => h.Count);
             var budget = x.Headcount * x.MonthlyCost * Months(x.FilledFrom ?? p.FromDate, p.ToDate);
             // Today's payroll for these people, carried over the whole plan: what the roll costs if nothing changes.
             var actual = matching.Sum(s => s.Total) * Months(p.FromDate, p.ToDate);
-            lines.Add(new BudgetLineDto(x.Id, x.DepartmentId, x.DepartmentId is { } d ? depts.GetValueOrDefault(d) ?? "" : "Any department",
+            lines.Add(new BudgetLineDto(x.Id, x.DepartmentId, x.DepartmentId is { } d ? depts.GetValueOrDefault(d) ?? "" : "No department",
                 x.DesignationId, x.DesignationId is { } g ? desigs.GetValueOrDefault(g) ?? "" : "All designations", x.Headcount, x.MonthlyCost, x.FilledFrom, x.Notes,
                 onRoll, hires, Math.Max(0, x.Headcount - onRoll), Math.Round(budget, 0), Math.Round(actual, 0), Math.Round(budget - actual, 0)));
         }
@@ -220,7 +222,7 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
         var editable = Editable.Contains(p.Status);
         return new BudgetPlanDto(p.Id, p.Name, p.FromDate, p.ToDate, p.Status, p.Notes, p.SubmittedAtUtc, p.DecidedByName, p.DecidedAtUtc, p.DecisionNote, lines, unplanned,
             lines.Sum(l => l.Headcount), lines.Sum(l => l.OnRoll), lines.Sum(l => l.Vacant), lines.Sum(l => l.Hiring), lines.Sum(l => l.BudgetCost), lines.Sum(l => l.ActualCost),
-            editable, p.Status == BudgetStatus.Submitted && me.IsCompanyAdmin());
+            editable, p.Status == BudgetStatus.Submitted && me.IsCompanyAdmin(), p.Status == BudgetStatus.Approved && me.IsCompanyAdmin());
     }
 
     private record StaffGroup(Guid? DepartmentId, Guid? DesignationId, int Count, decimal Total, decimal Average);
@@ -255,13 +257,21 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
         return posts.GroupBy(p => (p.DepartmentId, p.DesignationId)).Select(g => (g.Key.DepartmentId, g.Key.DesignationId, g.Sum(p => Math.Max(0, p.Left)))).ToList();
     }
 
-    private async Task<(int OnRoll, int Hiring)> CountsAsync(Guid? departmentId, Guid? designationId)
+    private async Task<(int OnRoll, int Hiring)> CountsAsync(BudgetPosition line, IEnumerable<BudgetPosition> all)
     {
         var staff = await StaffAsync();
         var hiring = await HiringAsync();
-        return (staff.Where(s => s.DepartmentId == departmentId && (designationId == null || s.DesignationId == designationId)).Sum(s => s.Count),
-            hiring.Where(h => h.DepartmentId == departmentId && (designationId == null || h.DesignationId == designationId)).Sum(h => h.Count));
+        return (staff.Where(s => Covers(line, all, s.DepartmentId, s.DesignationId)).Sum(s => s.Count),
+            hiring.Where(h => Covers(line, all, h.DepartmentId, h.DesignationId)).Sum(h => h.Count));
     }
+
+    /// <summary>
+    /// Whether a line counts people of this department and designation. A line without a designation takes the
+    /// department's designations that have no line of their own, so nobody is counted twice.
+    /// </summary>
+    private static bool Covers(BudgetPosition line, IEnumerable<BudgetPosition> all, Guid? departmentId, Guid? designationId) =>
+        line.DepartmentId == departmentId && (line.DesignationId == designationId
+            || line.DesignationId == null && !all.Any(o => o.DepartmentId == departmentId && o.DesignationId != null && o.DesignationId == designationId));
 
     /// <summary>Whole and part months from <paramref name="from"/> to <paramref name="to"/> (inclusive), by days.</summary>
     private static decimal Months(DateOnly from, DateOnly to) => to < from ? 0 : Math.Round((to.DayNumber - from.DayNumber + 1) / 30.4375m, 2);

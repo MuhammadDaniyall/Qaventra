@@ -33,7 +33,7 @@ public record DisburseRequest([StringLength(100)] string? Via);
 
 public record PayslipSummaryDto(
     Guid Id, int Year, int Month, PayrollRunStatus RunStatus, Guid EmployeeId, string EmployeeCode, string EmployeeName, string? Department,
-    decimal PaidDays, decimal GrossEarnings, decimal IncomeTax, decimal EobiEmployee, decimal OtherDeductions, decimal NetPay, string? HeldReason = null);
+    decimal PaidDays, decimal GrossEarnings, decimal IncomeTax, decimal EobiEmployee, decimal OtherDeductions, decimal NetPay, string? HeldReason = null, string? Label = null);
 
 public record PayrollRunDetailDto(PayrollRunDto Run, List<PayslipSummaryDto> Payslips, IReadOnlyList<string> Warnings);
 
@@ -44,7 +44,7 @@ public record PayslipDto(
     string EmployeeCode, string EmployeeName, string? Department, string? Designation, string? Cnic, string? BankName, string? BankAccount,
     int DaysInMonth, decimal UnpaidDays, decimal PaidDays,
     decimal GrossEarnings, decimal TaxableIncome, decimal IncomeTax, decimal EobiEmployee, decimal EobiEmployer,
-    decimal OtherDeductions, decimal NetPay, List<PayslipLineDto> Lines);
+    decimal OtherDeductions, decimal NetPay, List<PayslipLineDto> Lines, string? Label = null);
 
 public record PayrollSettingsDto(
     [Range(0, 1_000_000)] decimal EobiEmployeeContribution, [Range(0, 1_000_000)] decimal EobiEmployerContribution, bool DeductAbsentDays,
@@ -148,15 +148,22 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
 
     /// <summary>Employees see payslips only once the month is finalized.</summary>
     [HttpGet("my-payslips")]
-    public Task<List<PayslipSummaryDto>> MyPayslips() =>
-        db.Payslips.Where(p => p.EmployeeId == me.EmployeeId && p.PayrollRun!.Status == PayrollRunStatus.Finalized)
-            .OrderByDescending(p => p.PayrollRun!.Year).ThenByDescending(p => p.PayrollRun!.Month)
-            .Select(SummaryDto()).ToListAsync();
+    public async Task<List<PayslipSummaryDto>> MyPayslips()
+    {
+        var mine = db.Payslips.Where(p => p.EmployeeId == me.EmployeeId && p.PayrollRun!.Status == PayrollRunStatus.Finalized);
+        var slips = await mine.OrderByDescending(p => p.PayrollRun!.PeriodEnd).Select(SummaryDto()).ToListAsync();
+        // Weekly and other non-monthly slips share a month, so each is labelled with its own period.
+        var periods = await mine.Select(p => new { p.Id, p.PayrollRun!.Frequency, p.PayrollRun.PeriodStart, p.PayrollRun.PeriodEnd })
+            .ToDictionaryAsync(x => x.Id);
+        return slips.Select(s => periods.TryGetValue(s.Id, out var x) ? s with { Label = PayPeriods.Label(x.Frequency, x.PeriodStart, x.PeriodEnd) } : s).ToList();
+    }
 
     [HttpGet("payslips/{id:guid}")]
     public async Task<PayslipDto> Payslip(Guid id)
     {
-        var isHr = me.IsHr();
+        // The Hr policy, not the role alone, so access templates decide who reads other people's payslips.
+        var auth = HttpContext.RequestServices.GetRequiredService<IAuthorizationService>();
+        var isHr = (await auth.AuthorizeAsync(User, HttpContext, Policies.Hr)).Succeeded;
         var p = await db.Payslips.AsNoTracking()
             .Include(x => x.Lines).Include(x => x.PayrollRun)
             .Include(x => x.Employee).ThenInclude(e => e!.Department)
@@ -173,7 +180,8 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
             e.EmployeeCode, e.FullName, e.Department?.Name, e.Designation?.Title, e.Cnic, e.BankName, e.BankAccount,
             p.DaysInMonth, p.UnpaidDays, p.PaidDays, p.GrossEarnings, p.TaxableIncome, p.IncomeTax, p.EobiEmployee, p.EobiEmployer,
             p.OtherDeductions, p.NetPay,
-            p.Lines.OrderBy(l => l.Kind).Select(l => new PayslipLineDto(l.Name, l.Kind, l.Amount)).ToList());
+            p.Lines.OrderBy(l => l.Kind).Select(l => new PayslipLineDto(l.Name, l.Kind, l.Amount)).ToList(),
+            PayPeriods.Label(p.PayrollRun.Frequency, p.PayrollRun.PeriodStart, p.PayrollRun.PeriodEnd));
     }
 
     [HttpGet("settings"), Authorize(Policy = Policies.Hr)]

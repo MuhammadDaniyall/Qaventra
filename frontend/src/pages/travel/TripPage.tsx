@@ -87,7 +87,7 @@ function TripView({ t }: { t: Trip }) {
         description={`${t.employeeName} (${t.employeeCode}) · ${formatDate(t.departOn)}${t.returnOn !== t.departOn ? ` – ${formatDate(t.returnOn)}` : ''} · ${TRIP_LABELS[t.tripType]}${t.isInternational ? ' · International' : ''}`}
         actions={
           <div className="flex flex-wrap gap-2">
-            {t.isDesk && active && t.settlement !== 'Settled' && (
+            {t.isDesk && !t.isMine && active && t.settlement !== 'Settled' && (
               <Button
                 size="sm"
                 variant={t.status === 'Approved' ? 'primary' : 'secondary'}
@@ -97,7 +97,7 @@ function TripView({ t }: { t: Trip }) {
                 {t.status === 'Booked' ? 'Edit booking' : 'Book'}
               </Button>
             )}
-            {t.isDesk && active && (t.settlement === 'None' || t.settlement === 'Returned') && (
+            {t.isDesk && !t.isMine && active && (t.settlement === 'None' || t.settlement === 'Returned') && (
               <Button size="sm" variant="secondary" icon={<Banknote className="size-3.5" />} onClick={() => setAdvancing(true)}>
                 {t.advancePaid ? 'Change advance' : 'Pay advance'}
               </Button>

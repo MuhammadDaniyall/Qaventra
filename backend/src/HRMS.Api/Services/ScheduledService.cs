@@ -31,7 +31,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
         if (depts.Count > 0)
             staff = staff.Where(e => e.DepartmentId != null && depts.Contains(e.DepartmentId.Value));
         var people = await staff.Select(e => new Person(
-            e.Id, e.FirstName + " " + e.LastName, e.ManagerId, e.Department != null ? e.Department.Name : null, e.DateOfBirth, e.JoiningDate, e.Status)).ToListAsync();
+            e.Id, e.FirstName + " " + e.LastName, e.ManagerId, e.Department != null ? e.Department.Name : null, e.DateOfBirth, e.JoiningDate, e.ConfirmationDate, e.Status)).ToListAsync();
         static AlertSubject S(Person p, DateOnly date, string? extra = null, int? years = null) => new(p.Id, p.Name, p.ManagerId, p.Department, date, extra, years);
 
         switch (a.Kind)
@@ -42,7 +42,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
                 return people.Where(p => SameDay(p.JoiningDate, target) && target.Year > p.JoiningDate.Year)
                     .Select(p => S(p, target, null, target.Year - p.JoiningDate.Year)).ToList();
             case AlertKind.ProbationEnd:
-                return people.Where(p => p.Status == EmploymentStatus.Probation && p.JoiningDate.AddMonths(a.ProbationMonths) == target).Select(p => S(p, target)).ToList();
+                return people.Where(p => p.Status == EmploymentStatus.Probation && (p.ConfirmationDate ?? p.JoiningDate.AddMonths(a.ProbationMonths)) == target).Select(p => S(p, target)).ToList();
             case AlertKind.NewJoiner:
                 return people.Where(p => p.JoiningDate == target).Select(p => S(p, target)).ToList();
             case AlertKind.DocumentExpiry:
@@ -65,7 +65,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
                 var checkedIn = await db.AttendanceRecords.Where(r => r.Date == today && ids.Contains(r.EmployeeId)).Select(r => r.EmployeeId).ToListAsync();
                 var onLeave = await db.LeaveRequests.Where(l => l.Status == LeaveStatus.Approved && l.FromDate <= today && l.ToDate >= today && ids.Contains(l.EmployeeId))
                     .Select(l => l.EmployeeId).ToListAsync();
-                return people.Where(p => plan.TryGetValue(p.Id, out var s) && s.IsWorkingDay(today) && !checkedIn.Contains(p.Id) && !onLeave.Contains(p.Id))
+                return people.Where(p => plan.TryGetValue(p.Id, out var s) && s.IsWorkingDay(today) && p.JoiningDate <= today && !checkedIn.Contains(p.Id) && !onLeave.Contains(p.Id))
                     .Select(p => S(p, today)).ToList();
             }
             default:
@@ -95,9 +95,10 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
                 var everyone = await db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation).Select(e => e.Id).ToListAsync();
                 to.AddRange(everyone.Where(id => id != s.EmployeeId || a.ToEmployee));
             }
-            await notify.ToEmployeesAsync(to.Distinct(), NotificationKind.Alert, title, body, link, includeMe: true);
+            // 'Also email' off: in-app and push only.
+            await notify.ToEmployeesAsync(to.Distinct(), NotificationKind.Alert, title, body, link, includeMe: true, email: a.SendEmail);
             if (a.ToHr)
-                await notify.ToHrAsync(NotificationKind.Alert, title, body, link ?? $"/employees/{s.EmployeeId}", includeMe: true);
+                await notify.ToHrAsync(NotificationKind.Alert, title, body, link ?? $"/employees/{s.EmployeeId}", includeMe: true, email: a.SendEmail);
             foreach (var id in to)
                 recipients.Add(id);
         }
@@ -137,7 +138,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             case ReportKind.Headcount:
             {
                 var rows = await current.GroupBy(e => e.Department != null ? e.Department.Name : "No department")
-                    .Select(g => new { g.Key, Total = g.Count(), Probation = g.Count(e => e.Status == EmploymentStatus.Probation), Joined = g.Count(e => e.JoiningDate >= from && e.JoiningDate <= to) })
+                    .Select(g => new { g.Key, Total = g.Count(e => e.JoiningDate <= today), Probation = g.Count(e => e.Status == EmploymentStatus.Probation && e.JoiningDate <= today), Joined = g.Count(e => e.JoiningDate >= from && e.JoiningDate <= to) })
                     .OrderBy(x => x.Key).ToListAsync();
                 var left = await staff.Where(e => e.LeavingDate >= from && e.LeavingDate <= to).GroupBy(e => e.Department != null ? e.Department.Name : "No department")
                     .Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
@@ -148,7 +149,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             case ReportKind.DailyAttendance:
             {
                 var day = r.Frequency == ReportFrequency.Daily && (await clock.LocalNowAsync()).Hour < 12 ? today.AddDays(-1) : today;
-                var people = await current.OrderBy(e => e.FirstName).Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "" }).ToListAsync();
+                var people = await current.Where(e => e.JoiningDate <= day).OrderBy(e => e.FirstName).Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "" }).ToListAsync();
                 var ids = people.Select(p => p.Id).ToList();
                 var plan = await schedules.ForEmployeesAsync(ids, day, day);
                 var recs = await db.AttendanceRecords.Where(a => a.Date == day && ids.Contains(a.EmployeeId)).ToListAsync();
@@ -228,12 +229,12 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             {
                 var until = today.AddDays(30);
                 var people = await current.Where(e => e.Status == EmploymentStatus.Probation)
-                    .Select(e => new { e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "", e.JoiningDate, Manager = e.Manager != null ? e.Manager.FirstName + " " + e.Manager.LastName : "" })
+                    .Select(e => new { e.EmployeeCode, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : "", e.JoiningDate, e.ConfirmationDate, Manager = e.Manager != null ? e.Manager.FirstName + " " + e.Manager.LastName : "" })
                     .ToListAsync();
-                var rows = people.Select(p => new { p, Ends = p.JoiningDate.AddMonths(3) }).Where(x => x.Ends <= until).OrderBy(x => x.Ends)
+                var rows = people.Select(p => new { p, Ends = p.ConfirmationDate ?? p.JoiningDate.AddMonths(3) }).Where(x => x.Ends <= until).OrderBy(x => x.Ends)
                     .Select(x => new List<string> { x.p.EmployeeCode, x.p.Name, x.p.Department, x.p.Manager, x.p.JoiningDate.ToString("d MMM yyyy"), x.Ends.ToString("d MMM yyyy"), x.Ends < today ? "Overdue" : "Due" })
                     .ToList();
-                return new("Probation reviews due", "Three months after joining, within the next 30 days or overdue", ["Code", "Name", "Department", "Manager", "Joined", "Probation ends", "State"], rows);
+                return new("Probation reviews due", "Confirmation date (or three months after joining), within the next 30 days or overdue", ["Code", "Name", "Department", "Manager", "Joined", "Probation ends", "State"], rows);
             }
             default:
                 return new(r.Name, null, [], []);
@@ -257,8 +258,9 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             to.AddRange(await db.Employees.Where(e => ids.Contains(e.Id) && e.Email != null && !db.Users.Any(u => u.EmployeeId == e.Id)).Select(e => e.Email!).ToListAsync());
             to.AddRange(Emails(r.ExtraEmails));
         }
-        foreach (var address in to.Distinct(StringComparer.OrdinalIgnoreCase))
-            emails.Enqueue(new EmailMessage(address, $"{r.Name}: {table.Subtitle ?? table.Title}", html, [file]));
+        var unique = to.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        foreach (var address in unique)
+            emails.Enqueue(new EmailMessage(address, $"{r.Name}: {table.Subtitle ?? table.Title}", html, [file], TenantId: db.CurrentTenantId, Kind: "ScheduledReport"));
         if (onlyTo is null)
         {
             r.LastSentAtUtc = clock.UtcNow;
@@ -266,11 +268,11 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
         }
         db.ScheduledRuns.Add(new ScheduledRun
         {
-            ReportId = r.Id, Name = r.Name, Items = table.Rows.Count, Recipients = to.Distinct(StringComparer.OrdinalIgnoreCase).Count(), Manual = manual,
+            ReportId = r.Id, Name = r.Name, Items = table.Rows.Count, Recipients = unique.Count, Manual = manual,
             Note = onlyTo is null ? table.Subtitle : $"Test sent to {onlyTo}",
         });
         await db.SaveChangesAsync();
-        return to.Count;
+        return unique.Count;
     }
 
     /// <summary>The next time after <paramref name="afterUtc"/> the report is due, at its hour in company time.</summary>
@@ -311,7 +313,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
 
     // ---------- Helpers ----------
 
-    private record Person(Guid Id, string Name, Guid? ManagerId, string? Department, DateOnly? DateOfBirth, DateOnly JoiningDate, EmploymentStatus Status);
+    private record Person(Guid Id, string Name, Guid? ManagerId, string? Department, DateOnly? DateOfBirth, DateOnly JoiningDate, DateOnly? ConfirmationDate, EmploymentStatus Status);
 
     public static byte[] ToExcel(ReportTable t)
     {

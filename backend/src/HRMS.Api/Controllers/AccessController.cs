@@ -263,10 +263,55 @@ public class SuggestionsController(HrmsDbContext db, ICurrentUser me, TenantCloc
 [Authorize(Policy = Policies.Hr)]
 public class HistoryController(HrmsDbContext db, ICurrentUser me) : ControllerBase
 {
+    /// <summary>The access-template module each record type belongs to. Types not listed are refused to HR users with a template.</summary>
+    private static readonly Dictionary<string, string> ModuleOf = new (string Module, string[] Types)[]
+    {
+        ("employees", ["Employee", "Dependant", "Qualification", "WorkExperience", "EmergencyContact", "ProfileChangeRequest", "JobChange", "CustomFieldValue", "Attachment"]),
+        ("organization", ["Department", "Designation", "OrgLookup", "CustomField"]),
+        ("attendance", ["OfficeLocation", "Shift", "Holiday", "AttendanceRecord", "AttendanceBreak", "AttendanceRequest", "AttendanceExemption", "AttendanceSettings",
+            "BiometricDevice", "OffDayRequest", "PenaltyRule", "PenaltyCharge", "ShiftAssignment", "ShiftRequest", "AttendancePeriod"]),
+        ("leave", ["LeaveType", "LeaveReason", "LeaveBalance", "LeaveRequest", "CompOffRequest"]),
+        ("payroll", ["PayrollSettings", "TaxYear", "TaxSlab", "EmployeeSalary", "SalaryComponent", "PayrollRun", "Payslip", "PayslipLine", "SalaryRevision",
+            "RecurringPayItem", "SalaryHold", "FundEntry", "FundWithdrawal", "TaxAdjustment", "SalarySplit", "PayRequest", "Loan", "LoanRepayment", "GlAccount", "PayrollGlMapping"]),
+        ("expenses", ["ExpenseType", "ExpenseTypeRate", "DistanceRoute", "ExpenseAdvance", "ExpenseClaim", "ExpenseItem", "ExpenseReceipt"]),
+        ("approvals", ["ApprovalFlow", "ApprovalFlowStep", "ApprovalRequest", "ApprovalStep", "ApprovalDelegation"]),
+        ("recruitment", ["JobRequest", "JobPost", "Candidate", "JobApplication", "ApplicationEvent", "Interview", "InterviewTemplate", "InterviewQuestion", "InterviewFeedback"]),
+        ("onboarding", ["OnboardingTemplate", "OnboardingTemplateTask", "Onboarding", "OnboardingTask"]),
+        ("separations", ["Separation", "ClearanceItem", "ClearanceTemplate", "ClearanceTemplateItem", "ExitInterviewTemplate", "ExitQuestion"]),
+        ("letters", ["LetterTemplate", "CandidateLetter", "IssuedLetter"]),
+        ("assets", ["AssetType", "Asset", "AssetAssignment", "AssetRequest", "AssetKit"]),
+        ("helpdesk", ["TicketCategory", "TicketType", "HelpdeskSettings", "Ticket", "TicketComment"]),
+        ("performance", ["PerformanceSettings", "PerformanceTemplate", "ReviewCycle", "PerformanceReview", "ReviewItem", "Kpi", "ReviewFeedback", "ReviewCheckIn"]),
+        ("training", ["TrainingCategory", "TrainingProgram", "TrainingSession", "TrainingEnrollment", "TrainingRequest"]),
+        ("travel", ["TravelSettings", "TravelReason", "TravelRequest", "TravelLeg", "TravelExpense"]),
+        ("budget", ["BudgetPlan", "BudgetPosition"]),
+        ("piecework", ["PieceCategory", "PieceItem", "PieceRate", "PieceEntry"]),
+        ("desks", ["DeskSettings", "Floor", "Space", "SpaceBooking"]),
+        ("projects", ["Project", "ProjectMember", "ProjectTask", "Timesheet", "TimesheetLine"]),
+        ("announcements", ["Announcement", "Poll", "PollOption"]),
+        ("reports", ["ScheduledAlert", "ScheduledReport", "ScheduledRun", "ReportSettings"]),
+        ("suggestions", ["SuggestionCategory", "Suggestion"]),
+    }.SelectMany(m => m.Types.Select(t => (Type: t, m.Module))).ToDictionary(x => x.Type, x => x.Module);
+
     [HttpGet("{entityType}/{entityId}")]
-    public Task<List<HistoryEntryDto>> Get(string entityType, string entityId) =>
-        db.AuditLogs.AsNoTracking()
+    public async Task<ActionResult<List<HistoryEntryDto>>> Get(string entityType, string entityId)
+    {
+        // A suggestion's history would name its sender, and some are anonymous.
+        if (entityType == nameof(Suggestion)) return new List<HistoryEntryDto>();
+
+        // The Hr policy cannot see the module from this path, so an HR user with a template is held to it here.
+        if (me.Role == UserRole.HrManager && me.UserId is { } userId)
+        {
+            var csv = await db.Users.IgnoreQueryFilters().Where(u => u.Id == userId && u.AccessTemplateId != null)
+                .Select(u => db.AccessTemplates.IgnoreQueryFilters().Where(t => t.Id == u.AccessTemplateId).Select(t => t.Modules).FirstOrDefault())
+                .FirstOrDefaultAsync();
+            if (csv is not null && !(ModuleOf.TryGetValue(entityType, out var module) && AccessModules.Parse(csv).Contains(module)))
+                return Forbid();
+        }
+
+        return await db.AuditLogs.AsNoTracking()
             .Where(l => l.TenantId == me.TenantId && l.Category == AuditCategory.Data && l.EntityType == entityType && l.EntityId == entityId)
             .OrderByDescending(l => l.Id).Take(100)
             .Select(l => new HistoryEntryDto(l.TimestampUtc, l.UserEmail, l.Action, l.Changes)).ToListAsync();
+    }
 }

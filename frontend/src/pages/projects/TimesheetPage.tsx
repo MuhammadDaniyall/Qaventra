@@ -120,6 +120,7 @@ function MyWeek() {
   const dayTotal = (i: number) => v.reduce((t, r) => t + (Number(r.cells[i]) || 0), 0);
   const total = days.reduce((t, _, i) => t + dayTotal(i), 0);
   const project = (id: string) => projects.data?.find((p) => p.id === id);
+  const loggable = (projects.data ?? []).filter((x) => x.canLog);
   const error = save.error ?? submit.error;
 
   return (
@@ -184,7 +185,7 @@ function MyWeek() {
                     <td className="space-y-1.5 px-4 py-2">
                       <Select aria-label="Project" disabled={locked} value={r.projectId} onChange={(e) => edit(i, { projectId: e.target.value, taskId: null })}>
                         <option value="">Choose project…</option>
-                        {(projects.data ?? []).map((x) => (
+                        {(projects.data ?? []).filter((x) => x.canLog || x.id === r.projectId).map((x) => (
                           <option key={x.id} value={x.id}>
                             {x.name}
                           </option>
@@ -243,13 +244,13 @@ function MyWeek() {
                       size="sm"
                       variant="ghost"
                       icon={<Plus className="size-4" />}
-                      disabled={!projects.data?.length}
-                      onClick={() => setRows([...v, { projectId: projects.data?.[0]?.id ?? '', taskId: null, note: '', cells: Array(7).fill('') }])}
+                      disabled={!loggable.length}
+                      onClick={() => setRows([...v, { projectId: loggable[0]?.id ?? '', taskId: null, note: '', cells: Array(7).fill('') }])}
                     >
                       Add row
                     </Button>
                   )}
-                  {!projects.data?.length && <span>You are not on any project yet.</span>}
+                  {projects.data && !loggable.length && <span>You are not on any active project yet.</span>}
                 </td>
                 {days.map((d, i) => (
                   <td key={d} className="py-2 text-center tabular-nums">
@@ -270,7 +271,6 @@ function ToApprove() {
   const toast = useToast();
   const qc = useQueryClient();
   const list = useQuery({ queryKey: qk.timesheetApprovals, queryFn: () => projectsApi.approvals() });
-  const projects = useQuery({ queryKey: [...qk.projects, true], queryFn: () => projectsApi.list(true) });
   const [notes, setNotes] = useState<Record<string, string>>({});
   const decide = useMutation({
     mutationFn: ({ id, approve }: { id: string; approve: boolean }) =>
@@ -282,14 +282,14 @@ function ToApprove() {
     },
     onError: (e) => toast.error(e),
   });
-  const pname = (id: string) => projects.data?.find((p) => p.id === id)?.name ?? '';
   if (list.isLoading) return <SkeletonRows rows={4} cols={4} />;
+  if (list.isError) return <ErrorState error={list.error} onRetry={() => list.refetch()} />;
   if (!list.data?.length) return <EmptyState icon={ClipboardList} title="No timesheets waiting" />;
   return (
     <div className="space-y-4">
       {list.data.map((t) => {
         const byProject = Object.entries(
-          t.lines.reduce<Record<string, number>>((acc, l) => ({ ...acc, [l.projectId]: (acc[l.projectId] ?? 0) + l.minutes }), {}),
+          t.lines.reduce<Record<string, number>>((acc, l) => ({ ...acc, [l.projectName ?? '']: (acc[l.projectName ?? ''] ?? 0) + l.minutes }), {}),
         );
         const atWork = Object.values(t.attendanceMinutes).reduce((a, b) => a + b, 0);
         return (
@@ -300,16 +300,17 @@ function ToApprove() {
             />
             <div className="space-y-3 px-5 pb-4">
               <div className="flex flex-wrap gap-2">
-                {byProject.map(([pid, min]) => (
-                  <Badge key={pid}>
-                    {pname(pid)}: {hours(min)} h
+                {byProject.map(([name, min]) => (
+                  <Badge key={name}>
+                    {name}: {hours(min)} h
                   </Badge>
                 ))}
               </div>
               <ul className="text-sm text-zinc-600 dark:text-zinc-300">
                 {t.lines.map((l, i) => (
                   <li key={i}>
-                    {formatDate(l.date)} · {pname(l.projectId)} · {hours(l.minutes)} h{l.note ? ` · ${l.note}` : ''}
+                    {formatDate(l.date)} · {l.projectName}
+                    {l.taskName ? ` · ${l.taskName}` : ''} · {hours(l.minutes)} h{l.note ? ` · ${l.note}` : ''}
                   </li>
                 ))}
               </ul>
@@ -320,10 +321,21 @@ function ToApprove() {
                   value={notes[t.id!] ?? ''}
                   onChange={(e) => setNotes({ ...notes, [t.id!]: e.target.value })}
                 />
-                <Button variant="secondary" onClick={() => decide.mutate({ id: t.id!, approve: false })}>
+                <Button
+                  variant="secondary"
+                  disabled={decide.isPending}
+                  loading={decide.isPending && decide.variables?.id === t.id && decide.variables?.approve === false}
+                  onClick={() => decide.mutate({ id: t.id!, approve: false })}
+                >
                   Send back
                 </Button>
-                <Button onClick={() => decide.mutate({ id: t.id!, approve: true })}>Approve</Button>
+                <Button
+                  disabled={decide.isPending}
+                  loading={decide.isPending && decide.variables?.id === t.id && decide.variables?.approve === true}
+                  onClick={() => decide.mutate({ id: t.id!, approve: true })}
+                >
+                  Approve
+                </Button>
               </div>
             </div>
           </Card>

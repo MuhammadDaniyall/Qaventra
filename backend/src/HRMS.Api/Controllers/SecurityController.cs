@@ -17,6 +17,7 @@ public record ErrorLogDto(long Id, DateTime TimestampUtc, string? UserEmail, str
 /// <summary>Company admin's security screen: allowed sign-in domains, when each login was last used, and server errors.</summary>
 [ApiController]
 [Route("api/setup/security")]
+[Authorize(Policy = Policies.CompanyUser)]
 [Authorize(Policy = Policies.Admin)]
 public class SecurityController(HrmsDbContext db) : ControllerBase
 {

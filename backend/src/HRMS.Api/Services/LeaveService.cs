@@ -25,7 +25,10 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         if (missing.Count == 0)
             return;
 
-        var lastYear = await db.LeaveBalances.Where(b => b.EmployeeId == employeeId && b.Year == year - 1).ToListAsync();
+        // Last year's rows are created lazily too; without them nothing would carry forward. Stops at the joining year.
+        if (employee.JoiningDate.Year <= year - 1 && !await db.LeaveBalances.AnyAsync(b => b.EmployeeId == employeeId && b.Year == year - 1))
+            await EnsureBalancesAsync(employeeId, year - 1);
+        var lastYear =await db.LeaveBalances.Where(b => b.EmployeeId == employeeId && b.Year == year - 1).ToListAsync();
         foreach (var type in missing)
         {
             var previous = lastYear.FirstOrDefault(b => b.LeaveTypeId == type.Id);
@@ -76,6 +79,21 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
     public async Task<decimal> CountDaysAsync(Guid employeeId, DateOnly from, DateOnly to) =>
         to < from ? 0 : (await schedule.ForEmployeeAsync(employeeId, from, to)).CountWorkingDays(from, to);
 
+    /// <summary>Full days charged for the range: working days, or for a sandwich type the span from the first to the last working day.</summary>
+    public async Task<decimal> ChargeableDaysAsync(Guid employeeId, LeaveType type, DateOnly from, DateOnly to)
+    {
+        var days = await CountDaysAsync(employeeId, from, to);
+        if (days <= 0 || !type.Sandwich)
+            return days;
+        // Offs and holidays between the first and last working day are counted too.
+        var plan = await schedule.ForEmployeeAsync(employeeId, from, to);
+        var first = from;
+        while (!plan.IsWorkingDay(first)) first = first.AddDays(1);
+        var last = to;
+        while (!plan.IsWorkingDay(last)) last = last.AddDays(-1);
+        return last.DayNumber - first.DayNumber + 1;
+    }
+
     public record LeaveApplication(
         Guid LeaveTypeId, DateOnly FromDate, DateOnly ToDate, string? Reason,
         LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null, Guid? ReasonId = null);
@@ -111,19 +129,9 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         decimal days;
         if (a.Duration == LeaveDuration.FullDay)
         {
-            days = await CountDaysAsync(employeeId, from, to);
+            days = await ChargeableDaysAsync(employeeId, type, from, to);
             if (days <= 0)
                 throw new DomainException("The selected dates are all weekly off days or holidays.");
-            if (type.Sandwich)
-            {
-                // Offs and holidays between the first and last working day are counted too.
-                var plan = await schedule.ForEmployeeAsync(employeeId, from, to);
-                var first = from;
-                while (!plan.IsWorkingDay(first)) first = first.AddDays(1);
-                var last = to;
-                while (!plan.IsWorkingDay(last)) last = last.AddDays(-1);
-                days = last.DayNumber - first.DayNumber + 1;
-            }
         }
         else
         {

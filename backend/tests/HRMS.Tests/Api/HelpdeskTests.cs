@@ -122,4 +122,28 @@ public class HelpdeskTests(ApiFactory factory) : IClassFixture<ApiFactory>
         // A category with tickets cannot be deleted.
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.DeleteAsync($"/api/helpdesk/categories/{category}")).StatusCode);
     }
+
+    [Fact]
+    public async Task HR_replying_on_a_ticket_raised_for_someone_answers_the_employee()
+    {
+        var (admin, person) = await CompanyAsync("Desk3");
+        var (agent, _) = await person("Ian");
+        var (worker, workerClient) = await person("Wali");
+        var hrId = (await Ok(await admin.PostAsJsonAsync("/api/employees", new { firstName = "Hira", lastName = "H", joiningDate = "2024-01-01", status = "Active" }, ApiFactory.Json)))
+            .GetProperty("id").GetGuid();
+        var hrEmail = $"hira+{Guid.NewGuid():N}@desk3.test";
+        await Ok(await admin.PostAsJsonAsync($"/api/employees/{hrId}/login", new { email = hrEmail, password = "Desk-Pass-1234", role = "HrManager" }));
+        var hr = await factory.SignInAsync(hrEmail, "Desk-Pass-1234");
+        await Ok(await admin.PostAsJsonAsync("/api/helpdesk/categories", new { name = "Payroll", targetHours = 24, agentIds = new[] { agent } }));
+        var category = (await Ok(await admin.GetAsync("/api/helpdesk/categories")))[0].GetProperty("id").GetGuid();
+
+        var id = (await Ok(await hr.PostAsJsonAsync("/api/helpdesk/tickets", new { forEmployeeId = worker, categoryId = category, subject = "Missing allowance", description = "March" }, ApiFactory.Json)))
+            .GetProperty("id").GetGuid();
+        await Ok(await hr.PostAsJsonAsync($"/api/helpdesk/tickets/{id}/comments", new { body = "Added to next payroll." }));
+
+        var detail = await Detail(hr, id);
+        Assert.Equal("InProgress", Status(detail));
+        Assert.NotEqual(JsonValueKind.Null, detail.GetProperty("firstResponseAtUtc").ValueKind);
+        Assert.Contains("Reply on HD-0001", (await Ok(await workerClient.GetAsync("/api/notifications"))).ToString());
+    }
 }

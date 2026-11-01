@@ -83,6 +83,8 @@ public class AssetService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             throw new DomainException("This asset has already been returned.");
         if (returnedOn < a.AssignedOn)
             throw new DomainException("The return date is before it was handed over.");
+        if (returnedOn > await clock.TodayAsync())
+            throw new DomainException("Record the return on the day it happens.");
         a.ReturnedOn = returnedOn;
         a.ConditionIn = condition;
         a.ReceivedByName = await MyNameAsync();
@@ -114,6 +116,12 @@ public class AssetService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             open.ReturnedOn = await clock.TodayAsync();
             open.ReceivedByName = await MyNameAsync();
             open.Notes = string.IsNullOrWhiteSpace(note) ? "Reported lost" : $"Reported lost: {note.Trim()}";
+            foreach (var r in await db.AssetRequests.Where(r => r.AssignmentId == open.Id && (r.Status == AssetRequestStatus.Pending || r.Status == AssetRequestStatus.Approved)).ToListAsync())
+            {
+                r.Status = AssetRequestStatus.Cancelled;
+                r.DecidedAtUtc = clock.UtcNow;
+                r.DecisionNote = "Asset reported lost";
+            }
         }
         asset.Status = status;
         if (Clean(note) is { } n)
@@ -191,7 +199,8 @@ public class AssetService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
     public async Task CancelAsync(Guid id)
     {
         var request = await db.AssetRequests.FirstOrDefaultAsync(r => r.Id == id) ?? throw new NotFoundException("Asset request");
-        if (request.EmployeeId != me.EmployeeId && !me.IsHr())
+        // The requester, or HR and the type's handlers (to close requests that can no longer be fulfilled).
+        if (request.EmployeeId != me.EmployeeId && !IsHandler(await db.AssetTypes.FirstAsync(t => t.Id == request.TypeId)))
             throw new ForbiddenException("You cannot cancel this request.");
         if (request.Status is not (AssetRequestStatus.Pending or AssetRequestStatus.Approved))
             throw new DomainException("This request can no longer be cancelled.");

@@ -47,10 +47,10 @@ export function PlatformDashboardPage() {
             <StatCard label="Revenue this month" value={formatCurrency(s?.revenueThisMonth)} icon={Banknote} tone="green" loading={loading} />
             <StatCard label="Revenue this year" value={formatCurrency(s?.revenueThisYear)} icon={TrendingUp} tone="blue" loading={loading} />
             <StatCard label="Employees (all companies)" value={formatNumber(s?.employees)} icon={Users} tone="blue" loading={loading} />
+            <StatCard label="User accounts (all companies)" value={formatNumber(s?.users)} icon={UserCog} tone="violet" loading={loading} />
           </div>
           <h2 className="mt-6 mb-3 text-xs font-semibold tracking-wider text-zinc-500 uppercase dark:text-zinc-400">Activity today</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <StatCard label="User logins" value={formatNumber(s?.users)} icon={UserCog} tone="violet" loading={loading} />
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
             <StatCard label="Sign-ins" value={formatNumber(s?.loginsToday)} icon={LogIn} tone="green" loading={loading} />
             <StatCard label="Failed sign-ins" value={formatNumber(s?.failedLoginsToday)} icon={ShieldX} tone="red" loading={loading} />
             <StatCard label="Audit events" value={formatNumber(s?.eventsToday)} icon={Activity} tone="amber" loading={loading} />

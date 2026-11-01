@@ -89,8 +89,9 @@ public class AuthController(
         return await sessions.ToMeAsync(user, me.TenantId);
     }
 
+    /// <summary>Signs out every other session; returns a fresh session for this one.</summary>
     [Authorize, HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword(ChangePasswordRequest req)
+    public async Task<SessionDto> ChangePassword(ChangePasswordRequest req)
     {
         var user = await db.Users.IgnoreQueryFilters().FirstAsync(u => u.Id == me.UserId);
         if (hasher.VerifyHashedPassword(user, user.PasswordHash, req.CurrentPassword) == PasswordVerificationResult.Failed)
@@ -99,8 +100,10 @@ public class AuthController(
             throw new DomainException("Choose a password different from the current one.");
         user.PasswordHash = hasher.HashPassword(user, req.NewPassword);
         user.MustChangePassword = false;
+        user.SecurityStamp = Guid.NewGuid();
         await db.SaveChangesAsync();
+        access.InvalidateUser(user.Id);
         await audit.AuthAsync("PasswordChanged", user);
-        return NoContent();
+        return await sessions.CreateAsync(user, me.TenantId);
     }
 }

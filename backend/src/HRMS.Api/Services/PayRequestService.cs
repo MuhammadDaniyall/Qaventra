@@ -58,6 +58,13 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
                 throw new DomainException("Overtime needs the date worked, within the last 60 days.");
             if (r.Hours is not { } h || h <= 0 || h > 16)
                 throw new DomainException("Overtime hours must be between 0 and 16.");
+            // Pending and approved claims for the same day count towards the 16-hour limit.
+            var claimed = await db.PayRequests
+                .Where(x => x.EmployeeId == r.EmployeeId && x.Kind == PayRequestKind.Overtime && x.WorkDate == d
+                            && (x.Status == RequestStatus.Pending || x.Status == RequestStatus.Approved))
+                .SumAsync(x => x.Hours) ?? 0;
+            if (claimed + h > 16)
+                throw new DomainException($"Overtime for {d:d MMM} is already claimed ({claimed:0.#} h).");
             amount = await OvertimeAmountAsync(r.EmployeeId, d, h);
         }
         else
@@ -68,8 +75,15 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             if (r.Kind == PayRequestKind.AdvanceSalary)
             {
                 var salary = await LetterService.CurrentSalaryAsync(db, r.EmployeeId, today);
-                if (salary is { } s && amount > s.Gross)
-                    throw new DomainException($"An advance can be at most one month's gross salary ({LetterService.Money(s.Gross)}). Apply for a loan for more.");
+                // Pending and approved advances not yet recovered share the one-month cap.
+                var open = salary is null ? 0 : await db.PayRequests
+                    .Where(x => x.EmployeeId == r.EmployeeId && x.Kind == PayRequestKind.AdvanceSalary && x.PaidAtUtc == null
+                                && (x.Status == RequestStatus.Pending || x.Status == RequestStatus.Approved))
+                    .SumAsync(x => (decimal?)x.Amount) ?? 0;
+                if (salary is { } s && open + amount > s.Gross)
+                    throw new DomainException(open > 0
+                        ? $"Advances can total at most one month's gross salary ({LetterService.Money(s.Gross)}); {LetterService.Money(open)} is already open. Apply for a loan for more."
+                        : $"An advance can be at most one month's gross salary ({LetterService.Money(s.Gross)}). Apply for a loan for more.");
             }
         }
 
@@ -157,10 +171,15 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
     {
         if (employeeId != me.EmployeeId && !me.IsHr())
             throw new ForbiddenException("You can only apply for a loan for yourself.");
+        var employee = await db.Employees.FirstOrDefaultAsync(e => e.Id == employeeId) ?? throw new NotFoundException("Employee");
+        if (!employee.IsCurrent)
+            throw new DomainException("This employee has left; use the final settlement instead.");
         if (amount is <= 0 or > 50_000_000)
             throw new DomainException("Enter a loan amount greater than zero.");
         if (installments is < 1 or > 60)
             throw new DomainException("Installments must be between 1 and 60.");
+        if (startMonth is < 1 or > 12 || startYear is < 2000 or > 2100)
+            throw new DomainException("Choose a valid first deduction month.");
         var today = await clock.TodayAsync();
         if (new DateOnly(startYear, startMonth, 1) < new DateOnly(today.Year, today.Month, 1))
             throw new DomainException("Repayment cannot start in a past month.");

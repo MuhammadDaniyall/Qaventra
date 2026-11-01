@@ -27,7 +27,10 @@ public record NewEmployee(
     Guid? DepartmentId = null,
     Guid? DesignationId = null,
     Guid? ManagerId = null,
-    Guid? ShiftId = null);
+    Guid? ShiftId = null,
+    string? PersonalEmail = null,
+    MaritalStatus? MaritalStatus = null,
+    string? BloodGroup = null);
 
 /// <summary>A transfer, promotion or other job change. Department, designation and manager are the new values.</summary>
 public record JobChangeInput(JobChangeKind Kind, DateOnly EffectiveDate, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, string? Note);
@@ -46,7 +49,8 @@ public class EmployeeService(
     HrmsDbContext db, IPasswordHasher<User> hasher, LeaveService leave, ICurrentUser me, TenantClock clock,
     NotificationService notify, SmtpOptions smtp, IServiceProvider services)
 {
-    public async Task<Employee> CreateAsync(NewEmployee input)
+    /// <param name="autoOnboard">False when the caller sets the manager afterwards and starts onboarding itself (bulk import).</param>
+    public async Task<Employee> CreateAsync(NewEmployee input, bool autoOnboard = true)
     {
         await EnsurePlanRoomAsync();
 
@@ -75,19 +79,25 @@ public class EmployeeService(
             DesignationId = input.DesignationId,
             ManagerId = input.ManagerId,
             ShiftId = shiftId,
+            PersonalEmail = input.PersonalEmail?.Trim().ToLowerInvariant(),
+            MaritalStatus = input.MaritalStatus,
+            BloodGroup = input.BloodGroup,
         };
         db.Employees.Add(employee);
         await db.SaveChangesAsync();
 
         await leave.EnsureBalancesAsync(employee.Id, input.JoiningDate.Year);
         // Resolved here, not injected: onboarding needs services that themselves create employees' records.
-        await services.GetRequiredService<OnboardingService>().AutoStartAsync(employee.Id);
+        if (autoOnboard)
+            await services.GetRequiredService<OnboardingService>().AutoStartAsync(employee.Id);
         return employee;
     }
 
     /// <summary>Gives an employee a login. The email must be unique across all companies.</summary>
     public async Task<User> CreateLoginAsync(Employee employee, string email, string password, UserRole role)
     {
+        if (!employee.IsCurrent)
+            throw new DomainException("This employee has left. Re-hire them first.");
         email = email.Trim().ToLowerInvariant();
         if (await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Email == email))
             throw new DomainException("This email is already registered.");
@@ -125,6 +135,7 @@ public class EmployeeService(
         employee.DepartmentId = input.DepartmentId;
         employee.DesignationId = input.DesignationId;
         employee.ManagerId = input.ManagerId;
+        await ClearStaleSubDepartmentAsync(employee);
         await FinishChangeAsync(change, employee);
         await db.SaveChangesAsync();
         await services.GetRequiredService<LetterService>().AutoIssueAsync(employeeId, LetterAutoUse.JobChange,
@@ -183,10 +194,18 @@ public class EmployeeService(
         employee.DesignationId = input.DesignationId;
         employee.ManagerId = input.ManagerId;
         employee.ShiftId = input.ShiftId ?? employee.ShiftId;
+        await ClearStaleSubDepartmentAsync(employee);
         await FinishChangeAsync(change, employee);
         await db.SaveChangesAsync();
         await leave.EnsureBalancesAsync(employee.Id, input.JoiningDate.Year);
         return employee;
+    }
+
+    /// <summary>Drops the sub-department when it does not belong to the employee's (new) department.</summary>
+    public async Task ClearStaleSubDepartmentAsync(Employee employee)
+    {
+        if (employee.SubDepartmentId is { } sd && !await db.OrgLookups.AnyAsync(l => l.Id == sd && l.ParentId == employee.DepartmentId))
+            employee.SubDepartmentId = null;
     }
 
     private record JobNames(string? Department, string? Designation, string? Manager);
@@ -232,6 +251,20 @@ public class EmployeeService(
             if (m == employeeId) throw new DomainException("An employee cannot be their own manager.");
             if (!await db.Employees.AnyAsync(x => x.Id == m && (x.Status == EmploymentStatus.Active || x.Status == EmploymentStatus.Probation)))
                 throw new DomainException("Choose a manager who currently works here.");
+            await EnsureNoReportingLoopAsync(employeeId, m);
+        }
+    }
+
+    /// <summary>Walks up from the new manager; reaching the employee again means they would end up managing themselves.</summary>
+    public async Task EnsureNoReportingLoopAsync(Guid employeeId, Guid managerId)
+    {
+        Guid? cur = managerId;
+        var seen = new HashSet<Guid>();
+        while (cur is { } c && seen.Add(c))
+        {
+            if (c == employeeId)
+                throw new DomainException("This would create a reporting loop: the chosen manager already reports to this employee.");
+            cur = await db.Employees.Where(x => x.Id == c).Select(x => x.ManagerId).FirstOrDefaultAsync();
         }
     }
 
@@ -294,13 +327,16 @@ public class EmployeeService(
         var user = await db.Users.FirstOrDefaultAsync(u => u.EmployeeId == employeeId) ?? throw new NotFoundException("Login");
         if (user.Id == me.UserId)
             throw new DomainException("Change your own password from My profile.");
-        if (user.Role == UserRole.CompanyAdmin && me.Role != UserRole.CompanyAdmin)
+        if (user.Role == UserRole.CompanyAdmin && !me.IsCompanyAdmin())
             throw new ForbiddenException("Only a company admin can reset another admin's password.");
         var password = GeneratePassword();
         user.PasswordHash = hasher.HashPassword(user, password);
         user.MustChangePassword = true;
+        // Whoever was signed in with the old password is signed out.
+        user.SecurityStamp = Guid.NewGuid();
         SendSignInEmail(user, password, "Your Qaventra password was reset");
         await db.SaveChangesAsync();
+        services.GetRequiredService<TenantAccessChecker>().InvalidateUser(user.Id);
         return new IssuedLogin(employeeId, user.FullName, user.Email, smtp.IsConfigured ? null : password);
     }
 

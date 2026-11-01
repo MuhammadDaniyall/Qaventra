@@ -151,6 +151,8 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
     public async Task<IActionResult> DeleteKit(Guid id)
     {
         var k = await db.AssetKits.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Kit");
+        // Onboarding templates that hand out this kit stop doing so.
+        await db.OnboardingTemplates.Where(t => t.AssetKitId == id).ExecuteUpdateAsync(s => s.SetProperty(t => t.AssetKitId, (Guid?)null));
         db.AssetKits.Remove(k);
         await db.SaveChangesAsync();
         return NoContent();
@@ -224,6 +226,9 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
     public async Task<AssetDto> Update(Guid id, SaveAssetRequest req)
     {
         var a = await db.Assets.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Asset");
+        var current = await db.AssetTypes.FirstAsync(t => t.Id == a.TypeId);
+        if (!assets.IsHandler(current))
+            throw new ForbiddenException($"Only HR and the {current.Name} handlers can manage these.");
         await ApplyAssetAsync(a, req);
         await db.SaveChangesAsync();
         return (await ProjectAssetsAsync(db.Assets.Where(x => x.Id == a.Id))).Single();

@@ -8,6 +8,8 @@ public static class HrmsClaims
 {
     public const string TenantId = "tenant_id";
     public const string EmployeeId = "employee_id";
+    /// <summary>The login's SecurityStamp when the token was issued.</summary>
+    public const string SecurityStamp = "sstamp";
 }
 
 public class CurrentUser(IHttpContextAccessor accessor) : ICurrentUser

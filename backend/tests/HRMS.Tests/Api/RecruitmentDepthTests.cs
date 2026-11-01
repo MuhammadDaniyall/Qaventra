@@ -54,4 +54,64 @@ public class RecruitmentDepthTests(ApiFactory factory) : IClassFixture<ApiFactor
         await Ok(await anon.PostAsync($"/api/careers/portal/{token}/withdraw/{appId}", null));
         Assert.Equal("Withdrawn", (await Ok(await anon.GetAsync($"/api/careers/portal/{token}"))).GetProperty("applications")[0].GetProperty("stage").GetString());
     }
+
+    [Fact]
+    public async Task A_candidate_who_withdraws_after_accepting_cannot_be_hired()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Hiring3");
+        var post = await Ok(await admin.PostAsJsonAsync("/api/recruitment/jobs", new
+        {
+            title = "Analyst", employmentType = "FullTime", description = "Analyse things", positions = 1, showSalary = false,
+        }, ApiFactory.Json));
+        var postId = post.GetProperty("id").GetGuid();
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent("Hina"), "FirstName" }, { new StringContent("A"), "LastName" }, { new StringContent($"hina+{Guid.NewGuid():N}@cand.test"), "Email" },
+        };
+        await Ok(await admin.PostAsync($"/api/recruitment/jobs/{postId}/candidates", form));
+        var card = (await Ok(await admin.GetAsync($"/api/recruitment/jobs/{postId}/pipeline"))).EnumerateArray().Single();
+        var appId = card.GetProperty("id").GetGuid();
+        string token;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<HRMS.Infrastructure.Data.HrmsDbContext>();
+            var c = await db.Candidates.IgnoreQueryFilters().FirstAsync(x => x.Id == card.GetProperty("candidateId").GetGuid());
+            c.PortalToken = "testtoken" + Guid.NewGuid().ToString("N");
+            token = c.PortalToken;
+            await db.SaveChangesAsync();
+        }
+        var joining = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(14).ToString("yyyy-MM-dd");
+        await Ok(await admin.PostAsJsonAsync($"/api/recruitment/applications/{appId}/offer", new { salary = 150000, joiningDate = joining, emailCandidate = false }, ApiFactory.Json));
+        var anon = factory.CreateClient();
+        await Ok(await anon.PostAsJsonAsync($"/api/careers/portal/{token}/offer/{appId}", new { accepted = true }, ApiFactory.Json));
+        await Ok(await anon.PostAsync($"/api/careers/portal/{token}/withdraw/{appId}", null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/api/recruitment/applications/{appId}/hire", new { }, ApiFactory.Json)).StatusCode);
+        var app = (await Ok(await anon.GetAsync($"/api/careers/portal/{token}"))).GetProperty("applications")[0];
+        Assert.Equal("Withdrawn", app.GetProperty("stage").GetString());
+        Assert.Equal("Declined", app.GetProperty("offerStatus").GetString());
+    }
+
+    [Fact]
+    public async Task A_candidate_moved_back_from_offer_cannot_be_hired()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Hiring4");
+        var post = await Ok(await admin.PostAsJsonAsync("/api/recruitment/jobs", new
+        {
+            title = "Analyst", employmentType = "FullTime", description = "Analyse things", positions = 1, showSalary = false,
+        }, ApiFactory.Json));
+        var postId = post.GetProperty("id").GetGuid();
+        var form = new MultipartFormDataContent
+        {
+            { new StringContent("Omar"), "FirstName" }, { new StringContent("B"), "LastName" }, { new StringContent($"omar+{Guid.NewGuid():N}@cand.test"), "Email" },
+        };
+        await Ok(await admin.PostAsync($"/api/recruitment/jobs/{postId}/candidates", form));
+        var appId = (await Ok(await admin.GetAsync($"/api/recruitment/jobs/{postId}/pipeline"))).EnumerateArray().Single().GetProperty("id").GetGuid();
+        var joining = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(14).ToString("yyyy-MM-dd");
+        await Ok(await admin.PostAsJsonAsync($"/api/recruitment/applications/{appId}/offer", new { salary = 150000, joiningDate = joining, emailCandidate = false }, ApiFactory.Json));
+        await Ok(await admin.PostAsJsonAsync($"/api/recruitment/applications/{appId}/offer-response", new { accepted = true }, ApiFactory.Json));
+        await Ok(await admin.PostAsJsonAsync($"/api/recruitment/applications/{appId}/move", new { stage = "Interview", emailCandidate = false }, ApiFactory.Json));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/api/recruitment/applications/{appId}/hire", new { }, ApiFactory.Json)).StatusCode);
+    }
 }

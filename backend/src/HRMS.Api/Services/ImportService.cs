@@ -18,7 +18,7 @@ public record ImportResult(bool Committed, int Total, int Valid, int Created, in
 }
 
 /// <summary>Bulk employee and attendance imports from Excel: download a template, check (dry run), then import all-or-nothing.</summary>
-public partial class ImportService(HrmsDbContext db, EmployeeService employees, AttendanceService attendance, TenantClock clock)
+public partial class ImportService(HrmsDbContext db, EmployeeService employees, AttendanceService attendance, TenantClock clock, IServiceProvider services)
 {
     public const int MaxRows = 3000;
 
@@ -223,6 +223,21 @@ public partial class ImportService(HrmsDbContext db, EmployeeService employees, 
             });
         }
 
+        // Rows that manage each other in a circle (A reports to B, B reports to A) would leave nobody at the top.
+        var managerOf = drafts.Where(d => d.Input.EmployeeCode is not null && d.ManagerCode is not null)
+            .GroupBy(d => d.Input.EmployeeCode!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().ManagerCode!, StringComparer.OrdinalIgnoreCase);
+        foreach (var d in drafts.Where(d => d.Input.EmployeeCode is not null && d.ManagerCode is not null))
+        {
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            for (var cur = d.ManagerCode; cur is not null && seen.Add(cur); cur = managerOf.GetValueOrDefault(cur))
+                if (cur.Equals(d.Input.EmployeeCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    d.Errors.Add("Manager codes in this file form a reporting loop.");
+                    break;
+                }
+        }
+
         var limit = await db.Tenants.Where(t => t.Id == db.CurrentTenantId).Select(t => t.MaxEmployees).FirstOrDefaultAsync();
         if (limit is { } max)
         {
@@ -265,7 +280,8 @@ public partial class ImportService(HrmsDbContext db, EmployeeService employees, 
         foreach (var d in drafts)
         {
             var input = d.Input with { DepartmentId = DeptId(d.DepartmentName), DesignationId = TitleId(d.DesignationName) };
-            created.Add((d, await employees.CreateAsync(input)));
+            // Onboarding waits until the manager is set below, so 'Line manager' tasks find them.
+            created.Add((d, await employees.CreateAsync(input, autoOnboard: false)));
         }
         var codes = existingCodes.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
         foreach (var (_, e) in created)
@@ -278,6 +294,9 @@ public partial class ImportService(HrmsDbContext db, EmployeeService employees, 
                 db.EmployeeSalaries.Add(new EmployeeSalary { EmployeeId = e.Id, EffectiveFrom = e.JoiningDate, BasicSalary = basic });
         }
         await db.SaveChangesAsync();
+        var onboarding = services.GetRequiredService<OnboardingService>();
+        foreach (var (_, e) in created)
+            await onboarding.AutoStartAsync(e.Id);
         await tx.CommitAsync();
         return new ImportResult(true, drafts.Count, valid, created.Count, 0, results);
     }

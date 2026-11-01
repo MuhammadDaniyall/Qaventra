@@ -72,12 +72,13 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         db.IssuedLetters.Add(letter);
         if (template is { RequiresApproval: true } || requestReason is not null)
         {
+            // Until approved the employee can't see it (status filter); the flag keeps whether to share it then.
             letter.Status = LetterStatus.Pending;
-            letter.SharedWithEmployee = false;
+            letter.SharedWithEmployee = shareWithEmployee || requestReason is not null;
             var approval = await approvals.StartAsync(ApprovalRequestType.Letter, letter.Id, employeeId,
                 $"{letter.Subject} ({letter.ReferenceNo}){(requestReason is null ? "" : $" · {requestReason}")}");
             if (approval.Status == ApprovalStatus.Approved)
-                await ReleaseAsync(letter, shareWithEmployee || requestReason is not null);
+                await ReleaseAsync(letter, letter.SharedWithEmployee);
         }
         else if (shareWithEmployee)
             await notify.ToEmployeesAsync([employeeId], NotificationKind.Letter, $"New letter: {letter.Subject}", letter.ReferenceNo, $"/letters/{letter.Id}");
@@ -109,9 +110,12 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         var outcome = await approvals.DecideAsync(ApprovalRequestType.Letter, letter.Id, letter.EmployeeId, approve, note);
         letter.DecisionNote = note;
         if (outcome == ApprovalStatus.Approved)
-            await ReleaseAsync(letter, true);
+            await ReleaseAsync(letter, letter.SharedWithEmployee);
         else if (outcome == ApprovalStatus.Rejected)
+        {
             letter.Status = LetterStatus.Rejected;
+            letter.SharedWithEmployee = false;
+        }
         await db.SaveChangesAsync();
     }
 
@@ -147,7 +151,9 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         };
         db.CandidateLetters.RemoveRange(await db.CandidateLetters.Where(c => c.ApplicationId == app.Id).ToListAsync());
         var prefix = $"HR/OFR/{today.Year}/C";
-        var taken = await db.CandidateLetters.Where(l => l.ReferenceNo.StartsWith(prefix)).CountAsync();
+        // Highest number so far (not a count), so a re-issued offer never repeats another's number.
+        var taken = (await db.CandidateLetters.Where(l => l.ReferenceNo.StartsWith(prefix)).Select(l => l.ReferenceNo).ToListAsync())
+            .Select(r => int.TryParse(r[prefix.Length..], out var n) ? n : 0).DefaultIfEmpty(0).Max();
         var letter = new CandidateLetter
         {
             ApplicationId = app.Id, CandidateName = values["CandidateName"]!, ReferenceNo = $"{prefix}{taken + 1:D4}",

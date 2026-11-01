@@ -79,8 +79,8 @@ public record TrainingReportDto(int Sessions, int PeopleTrained, decimal Hours, 
 public class TrainingController(HrmsDbContext db, TrainingService training, TenantClock clock, ICurrentUser me) : ControllerBase
 {
     [HttpGet("me")]
-    public async Task<TrainingMeDto> Me() => new(me.IsHr(),
-        me.EmployeeId is { } mine && await db.Employees.AnyAsync(e => e.ManagerId == mine && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)),
+    public async Task<TrainingMeDto> Me() => new(training.IsHr,
+        training.IsApprover && me.EmployeeId is { } mine && await db.Employees.AnyAsync(e => e.ManagerId == mine && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)),
         me.EmployeeId is { } m2 && await db.TrainingSessions.AnyAsync(s => s.TrainerEmployeeId == m2));
 
     // ---------- Catalog ----------
@@ -127,7 +127,7 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
     public async Task<List<TrainingProgramDto>> Programs()
     {
         var q = db.TrainingPrograms.AsQueryable();
-        if (!me.IsHr())
+        if (!training.IsHr)
             q = q.Where(p => p.IsActive);
         var list = await q.OrderBy(p => p.Title).Select(p => new
         {
@@ -194,7 +194,7 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
         var rows = await q.OrderBy(x => x.Employee!.FirstName).Select(x => new EnrollmentDto(x.Id, x.EmployeeId, x.Employee!.FirstName + " " + x.Employee.LastName,
             x.Employee.EmployeeCode, x.Employee.Department != null ? x.Employee.Department.Name : null, x.Status, x.NominatedByName, x.Score, x.CompletedOn,
             canRun ? x.FeedbackRating : null, canRun ? x.TrainerRating : null, canRun ? x.WouldRecommend : null, canRun ? x.FeedbackComment : null)).ToListAsync();
-        return new SessionDetailDto((await SessionDtosAsync([s]))[0], rows, await training.Nominatable().AnyAsync());
+        return new SessionDetailDto((await SessionDtosAsync([s]))[0], rows, training.IsApprover && await training.Nominatable().AnyAsync());
     }
 
     [HttpPost("sessions"), Authorize(Policy = Policies.Hr)]
@@ -290,11 +290,12 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
 
     // ---------- Requests ----------
 
+    /// <summary>HR: everyone's requests, or only their own with mine=true; others: their own.</summary>
     [HttpGet("requests")]
-    public async Task<List<TrainingRequestDto>> Requests()
+    public async Task<List<TrainingRequestDto>> Requests([FromQuery] bool mine = false)
     {
         var q = db.TrainingRequests.AsQueryable();
-        if (!me.IsHr())
+        if (!training.IsHr || mine)
             q = q.Where(r => r.EmployeeId == me.EmployeeId);
         return await q.OrderByDescending(r => r.CreatedAtUtc).Take(300).Select(r => new TrainingRequestDto(r.Id, r.EmployeeId, r.Employee!.FirstName + " " + r.Employee.LastName,
             r.ProgramId, r.ProgramId != null ? db.TrainingPrograms.Where(p => p.Id == r.ProgramId).Select(p => p.Title).First() : r.CourseName ?? "", r.Provider,
@@ -402,7 +403,7 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
         {
             var c = counts.FirstOrDefault(x => x.Key == s.Id);
             return new TrainingSessionDto(s.Id, s.ProgramId, s.Program!.Title, s.Program.Mode, s.StartsAtUtc, s.EndsAtUtc, s.Venue, s.TrainerEmployeeId,
-                s.TrainerEmployeeId is { } t ? names.GetValueOrDefault(t) : null, s.ExternalTrainer, s.Capacity, me.IsHr() ? s.Cost : null, s.Status, s.Notes,
+                s.TrainerEmployeeId is { } t ? names.GetValueOrDefault(t) : null, s.ExternalTrainer, s.Capacity, training.IsHr ? s.Cost : null, s.Status, s.Notes,
                 c?.Enrolled ?? 0, c?.Completed ?? 0, c?.Rating is { } r ? Math.Round(r, 1) : null, training.CanRunSession(s));
         }).ToList();
     }

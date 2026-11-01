@@ -25,7 +25,7 @@ export const lettersApi = {
   pending: () => http.get<IssuedLetter[]>('/letters/pending'),
   approve: (id: string, note: string | null) => http.post(`/letters/${id}/approve`, { note }),
   reject: (id: string, note: string | null) => http.post(`/letters/${id}/reject`, { note }),
-  candidate: (applicationId: string) => http.get<CandidateLetter | undefined>(`/letters/candidate/${applicationId}`),
+  candidate: async (applicationId: string) => (await http.get<CandidateLetter | undefined>(`/letters/candidate/${applicationId}`)) ?? null,
   issue: (b: IssueLetterRequest) => http.post<IssuedLetter>('/letters', b),
   get: (id: string) => http.get<LetterDocument>(`/letters/${id}`),
   setSharing: (id: string, shared: boolean) => http.put(`/letters/${id}/sharing?shared=${shared}`),

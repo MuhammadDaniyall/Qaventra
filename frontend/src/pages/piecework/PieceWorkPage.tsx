@@ -5,7 +5,7 @@ import { Check, ClipboardList, Factory, Plus, Trash2, X } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
-import { pieceApi, type PieceEntry, type PieceItem, type PieceReport } from '../../api/piecework';
+import { pieceApi, type PieceCategory, type PieceEntry, type PieceItem, type PieceReport } from '../../api/piecework';
 import { useUser } from '../../auth/AuthContext';
 import { isApprover, isHr } from '../../auth/roles';
 import {
@@ -82,7 +82,8 @@ export function PieceWorkPage() {
       <Tabs<Tab> className="mb-5" value={tab} onChange={(t) => setParams({ tab: t })} items={allowed.map((t) => ({ value: t, label: labels[t] }))} />
       {tab === 'mine' && <MineTab period={period} picker={monthPicker} />}
       {tab === 'sheet' && <SheetTab />}
-      {tab === 'approve' && <ApproveTab period={period} picker={monthPicker} />}
+      {/* Keyed by month so a selection never carries over to another month. */}
+      {tab === 'approve' && <ApproveTab key={`${period.year}-${period.month}`} period={period} picker={monthPicker} />}
       {tab === 'report' && <ReportTab period={period} picker={monthPicker} />}
       {tab === 'setup' && <SetupTab />}
     </>
@@ -307,7 +308,11 @@ function SheetTab() {
           Save {filled.length || ''}
         </Button>
       </div>
-      {!team.data?.length ? (
+      {team.isLoading ? (
+        <SkeletonRows rows={4} cols={3} />
+      ) : team.isError ? (
+        <ErrorState error={team.error} onRetry={() => team.refetch()} />
+      ) : !team.data?.length ? (
         <EmptyState icon={ClipboardList} title="No team" description="People who report to you show up here." />
       ) : (
         <Table>
@@ -353,7 +358,12 @@ function ApproveTab({ period, picker }: { period: { year: number; month: number 
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState('');
   const decide = useMutation({
-    mutationFn: (approve: boolean) => pieceApi.decide(ids, approve, approve ? null : note.trim()),
+    mutationFn: (approve: boolean) =>
+      pieceApi.decide(
+        ids.filter((id) => waiting.some((w) => w.id === id)),
+        approve,
+        approve ? null : note.trim(),
+      ),
     onSuccess: (r, approve) => {
       toast.success(`${r.decided} ${approve ? 'approved' : 'rejected'}`);
       setIds([]);
@@ -396,6 +406,8 @@ function ApproveTab({ period, picker }: { period: { year: number; month: number 
       />
       {entries.isLoading ? (
         <SkeletonRows rows={5} cols={6} />
+      ) : entries.isError ? (
+        <ErrorState error={entries.error} onRetry={() => entries.refetch()} />
       ) : !rows.length ? (
         <EmptyState icon={Factory} title="No work this month" />
       ) : (
@@ -459,7 +471,9 @@ function ReportTab({ period, picker }: { period: { year: number; month: number }
   return (
     <div className="space-y-5">
       <div className="flex justify-end">{picker}</div>
-      {r.isLoading || !d ? (
+      {r.isError ? (
+        <ErrorState error={r.error} onRetry={() => r.refetch()} />
+      ) : r.isLoading || !d ? (
         <SkeletonRows rows={4} cols={4} />
       ) : (
         <>
@@ -492,6 +506,7 @@ function SetupTab() {
   const [editing, setEditing] = useState<PieceItem | 'new' | null>(null);
   const [deleting, setDeleting] = useState<PieceItem | null>(null);
   const [rates, setRates] = useState<PieceItem | null>(null);
+  const [deletingCat, setDeletingCat] = useState<PieceCategory | null>(null);
   const [cat, setCat] = useState('');
   const addCat = useMutation({
     mutationFn: () => pieceApi.addCategory(cat.trim()),
@@ -557,8 +572,16 @@ function SetupTab() {
         <CardHeader title="Categories" />
         <div className="flex flex-wrap items-center gap-2 px-5 py-4">
           {categories.data?.map((c) => (
-            <Badge key={c.id}>
+            <Badge key={c.id} className="gap-1">
               {c.name} · {c.items}
+              <button
+                type="button"
+                aria-label={`Remove ${c.name}`}
+                className="rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
+                onClick={() => setDeletingCat(c)}
+              >
+                <X className="size-3" />
+              </button>
             </Badge>
           ))}
           <Input className="h-8 w-48" value={cat} maxLength={100} onChange={(e) => setCat(e.target.value)} placeholder="New category" />
@@ -570,6 +593,13 @@ function SetupTab() {
       {editing && <ItemModal item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       {rates && <RatesModal item={rates} onClose={() => setRates(null)} />}
       <DeleteConfirm item={deleting} name={deleting?.name ?? ''} remove={pieceApi.deleteItem} invalidate={[qk.pieceItems]} onClose={() => setDeleting(null)} />
+      <DeleteConfirm
+        item={deletingCat}
+        name={deletingCat?.name ?? ''}
+        remove={pieceApi.deleteCategory}
+        invalidate={[qk.pieceCategories]}
+        onClose={() => setDeletingCat(null)}
+      />
     </div>
   );
 }

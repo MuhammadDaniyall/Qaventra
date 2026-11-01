@@ -99,7 +99,13 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
             .Take(200).ToListAsync();
         var due = live.Where(a => a.NotifiedAtUtc is null).ToList();
         foreach (var a in due)
-            await NotifyIfLiveAsync(a);
+        {
+            // Claim the send first so overlapping feed requests don't notify the audience twice.
+            var claimed = await db.Announcements.Where(x => x.Id == a.Id && x.NotifiedAtUtc == null)
+                .ExecuteUpdateAsync(u => u.SetProperty(x => x.NotifiedAtUtc, clock.UtcNow));
+            if (claimed == 1)
+                await NotifyIfLiveAsync(a);
+        }
         if (due.Count > 0)
             await db.SaveChangesAsync();
         if (me.IsHr())
@@ -111,8 +117,11 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
     public async Task MarkReadAsync(Guid id)
     {
         var employeeId = me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
-        if (!await db.Announcements.AnyAsync(a => a.Id == id))
-            throw new NotFoundException("Announcement");
+        var departmentIds = await db.Announcements.Where(a => a.Id == id).Select(a => a.DepartmentIds).FirstOrDefaultAsync()
+            ?? throw new NotFoundException("Announcement");
+        // Only the audience counts as readers; HR opening another department's item doesn't.
+        if (!InAudience(departmentIds, await MyDepartmentAsync()))
+            return;
         if (await db.AnnouncementReads.AnyAsync(r => r.AnnouncementId == id && r.EmployeeId == employeeId))
             return;
         db.AnnouncementReads.Add(new AnnouncementRead { AnnouncementId = id, EmployeeId = employeeId, ReadAtUtc = clock.UtcNow });
@@ -183,9 +192,11 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
         var ids = (departmentIds ?? []).Distinct().ToList();
         if (ids.Count == 0)
             return "";
-        if (await db.Departments.CountAsync(d => ids.Contains(d.Id)) != ids.Count)
+        // Departments deleted since the item was saved are dropped, so it can still be edited.
+        var known = await db.Departments.Where(d => ids.Contains(d.Id)).Select(d => d.Id).ToListAsync();
+        if (known.Count == 0)
             throw new NotFoundException("Department");
-        return string.Join(',', ids);
+        return string.Join(',', ids.Where(known.Contains));
     }
 
     private async Task<string?> MyNameAsync() =>

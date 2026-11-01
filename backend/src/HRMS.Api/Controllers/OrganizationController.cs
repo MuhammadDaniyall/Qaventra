@@ -43,7 +43,9 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
     public async Task<IActionResult> UpdateDepartment(Guid id, SaveDepartmentRequest req)
     {
         var d = await db.Departments.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Department");
-        await ValidateHeadAsync(req.HeadEmployeeId);
+        // A head who has since left stays valid until it is changed, so the rest of the department can still be edited.
+        if (req.HeadEmployeeId != d.HeadEmployeeId)
+            await ValidateHeadAsync(req.HeadEmployeeId);
         d.Name = req.Name.Trim();
         d.Code = req.Code?.Trim();
         d.HeadEmployeeId = req.HeadEmployeeId;
@@ -63,6 +65,24 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
         var d = await db.Departments.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Department");
         if (await db.Employees.AnyAsync(e => e.DepartmentId == id))
             throw new DomainException("Move this department's employees before deleting it.");
+        if (await db.OrgLookups.AnyAsync(l => l.Kind == LookupKind.SubDepartment && l.ParentId == id))
+            throw new DomainException("Delete or move this department's sub-departments first.");
+        if (await db.BudgetPositions.AnyAsync(b => b.DepartmentId == id) || await db.JobRequests.AnyAsync(j => j.DepartmentId == id)
+            || await db.JobPosts.AnyAsync(j => j.DepartmentId == id))
+            throw new DomainException("Budget positions or hiring records use this department. Change those before deleting it.");
+        // Take it out of announcement and poll audiences. When it is the only department listed it stays, since an
+        // empty list would mean everyone.
+        var key = id.ToString();
+        string? Strip(string ids)
+        {
+            var parts = ids.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var left = parts.Where(p => !p.Equals(key, StringComparison.OrdinalIgnoreCase)).ToList();
+            return left.Count == parts.Length || left.Count == 0 ? null : string.Join(",", left);
+        }
+        foreach (var a in await db.Announcements.Where(a => a.DepartmentIds.Contains(key)).ToListAsync())
+            if (Strip(a.DepartmentIds) is { } ids) a.DepartmentIds = ids;
+        foreach (var poll in await db.Polls.Where(x => x.DepartmentIds.Contains(key)).ToListAsync())
+            if (Strip(poll.DepartmentIds) is { } ids) poll.DepartmentIds = ids;
         db.Departments.Remove(d);
         await db.SaveChangesAsync();
         return NoContent();
@@ -98,6 +118,9 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
         var d = await db.Designations.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Designation");
         if (await db.Employees.AnyAsync(e => e.DesignationId == id))
             throw new DomainException("Reassign employees with this designation before deleting it.");
+        if (await db.BudgetPositions.AnyAsync(b => b.DesignationId == id) || await db.JobRequests.AnyAsync(j => j.DesignationId == id)
+            || await db.JobPosts.AnyAsync(j => j.DesignationId == id))
+            throw new DomainException("Budget positions or hiring records use this designation. Change those before deleting it.");
         db.Designations.Remove(d);
         await db.SaveChangesAsync();
         return NoContent();

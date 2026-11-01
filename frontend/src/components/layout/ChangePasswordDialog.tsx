@@ -28,9 +28,9 @@ export function ChangePasswordDialog({ open, onClose, forced = false }: { open: 
 
   const mutation = useMutation({
     mutationFn: () => authApi.changePassword({ currentPassword: current, newPassword: next }),
-    onSuccess: () => {
+    onSuccess: (session) => {
       toast.success('Password changed');
-      passwordChanged();
+      passwordChanged(session);
       reset();
       onClose();
     },

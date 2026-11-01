@@ -34,14 +34,41 @@ public class TrainingService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
 {
     public const int DueSoonDays = 30;
 
+    private List<string>? _modules;
+    private bool _modulesLoaded;
+
+    /// <summary>The user's access template modules, or null when they have none (the role's usual access).</summary>
+    private List<string>? Modules
+    {
+        get
+        {
+            if (!_modulesLoaded && me.UserId is { } userId)
+            {
+                var csv = db.Users.IgnoreQueryFilters().Where(u => u.Id == userId && u.AccessTemplateId != null)
+                    .Select(u => db.AccessTemplates.IgnoreQueryFilters().Where(t => t.Id == u.AccessTemplateId).Select(t => t.Modules).FirstOrDefault())
+                    .FirstOrDefault();
+                _modules = csv is null ? null : AccessModules.Parse(csv);
+            }
+            _modulesLoaded = true;
+            return _modules;
+        }
+    }
+
+    /// <summary>HR rights in training: admins always; an HR manager unless their access template leaves training out.</summary>
+    public bool IsHr => me.Role is UserRole.SuperAdmin or UserRole.CompanyAdmin
+                        || (me.Role == UserRole.HrManager && (Modules is not { } m || m.Contains("training")));
+
+    /// <summary>Passes the Approver policy on training paths (nominating, team compliance), as ModuleRoleHandler decides it.</summary>
+    public bool IsApprover => IsHr || me.Role == UserRole.Manager || (Modules is { } m && m.Contains("training"));
+
     /// <summary>People the signed-in user may nominate: everyone for HR, otherwise their direct reports.</summary>
     public IQueryable<Employee> Nominatable()
     {
         var q = db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
-        return me.IsHr() ? q : q.Where(e => e.ManagerId == me.EmployeeId && me.EmployeeId != null);
+        return IsHr ? q : q.Where(e => e.ManagerId == me.EmployeeId && me.EmployeeId != null);
     }
 
-    public bool CanRunSession(TrainingSession s) => me.IsHr() || (me.EmployeeId is { } mine && s.TrainerEmployeeId == mine);
+    public bool CanRunSession(TrainingSession s) => IsHr || (me.EmployeeId is { } mine && s.TrainerEmployeeId == mine);
 
     public async Task<int> EnrollAsync(Guid sessionId, List<Guid> employeeIds)
     {
@@ -55,7 +82,7 @@ public class TrainingService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
             throw new DomainException("Choose who attends.");
         var allowed = await Nominatable().Where(e => ids.Contains(e.Id)).Select(e => e.Id).ToListAsync();
         if (allowed.Count != ids.Count)
-            throw new ForbiddenException(me.IsHr() ? "Some people do not work here any more." : "You can nominate only your own team.");
+            throw new ForbiddenException(IsHr ? "Some people do not work here any more." : "You can nominate only your own team.");
         var already = await db.TrainingEnrollments.Where(x => x.SessionId == sessionId && x.Status != EnrollmentStatus.Withdrawn).Select(x => x.EmployeeId).ToListAsync();
         var fresh = ids.Except(already).ToList();
         if (session.Capacity is { } cap && already.Count + fresh.Count > cap)
@@ -85,7 +112,7 @@ public class TrainingService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
         var mineOrTeam = e.EmployeeId == me.EmployeeId || await Nominatable().AnyAsync(x => x.Id == e.EmployeeId);
         if (!mineOrTeam)
             throw new ForbiddenException("You cannot change this nomination.");
-        if (e.Status != EnrollmentStatus.Enrolled || e.Session!.Status != TrainingSessionStatus.Scheduled)
+        if (e.Status != EnrollmentStatus.Enrolled || e.Session!.Status != TrainingSessionStatus.Scheduled || e.Session.StartsAtUtc <= clock.UtcNow)
             throw new DomainException("Only upcoming nominations can be withdrawn.");
         e.Status = EnrollmentStatus.Withdrawn;
         await db.SaveChangesAsync();
@@ -199,7 +226,7 @@ public class TrainingService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
     public async Task CancelRequestAsync(Guid id)
     {
         var r = await db.TrainingRequests.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Training request");
-        if (r.EmployeeId != me.EmployeeId && !me.IsHr())
+        if (r.EmployeeId != me.EmployeeId && !IsHr)
             throw new ForbiddenException("You cannot cancel this request.");
         if (r.Status is not (RequestStatus.Pending or RequestStatus.Approved) || r.CompletedOn is not null)
             throw new DomainException("This request can no longer be cancelled.");
@@ -212,7 +239,7 @@ public class TrainingService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
     /// <summary>HR: an approved outside course is done (the certificate goes on the request as a file).</summary>
     public async Task CompleteRequestAsync(Guid id, DateOnly completedOn)
     {
-        if (!me.IsHr())
+        if (!IsHr)
             throw new ForbiddenException("Only HR records completed courses.");
         var r = await db.TrainingRequests.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Training request");
         if (r.Status != RequestStatus.Approved)
@@ -259,12 +286,14 @@ public class TrainingService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
         foreach (var p in programs)
         {
             var depts = HelpdeskService.Ids(p.DepartmentIds);
+            // The window counts from joining, but not from before the course existed (else everyone is overdue on day one).
+            var since = DateOnly.FromDateTime(await clock.ToLocalAsync(p.CreatedAtUtc));
             foreach (var s in staff.Where(s => depts.Count == 0 || (s.DepartmentId is { } d && depts.Contains(d))))
             {
                 var last = done.Where(x => x.EmployeeId == s.Id && x.ProgramId == p.Id).Select(x => (DateOnly?)x.Date).Max();
                 DateOnly? due = last is { } l
                     ? p.RepeatEveryMonths is { } m ? l.AddMonths(m) : null
-                    : p.CompleteWithinDays is { } days ? s.JoiningDate.AddDays(days) : null;
+                    : p.CompleteWithinDays is { } days ? (s.JoiningDate > since ? s.JoiningDate : since).AddDays(days) : null;
                 var state = due is { } dd && dd < today ? ComplianceState.Overdue
                     : due is { } ds && ds <= today.AddDays(DueSoonDays) ? ComplianceState.DueSoon
                     : last is not null ? ComplianceState.Done

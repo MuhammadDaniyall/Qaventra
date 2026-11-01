@@ -119,7 +119,15 @@ public class ProfileChangeService(HrmsDbContext db, ICurrentUser me, TenantClock
         request.DecisionNote = note;
         if (!approved)
             return;
-        foreach (var c in Read(request.ChangesJson))
+        var changes = Read(request.ChangesJson);
+        // HR may have edited a detail directly after the request was sent; never overwrite that with a stale request.
+        foreach (var c in changes)
+        {
+            if (Fields.TryGetValue(c.Field, out var field)
+                && !string.Equals(field.Get(employee) ?? "", c.From ?? "", StringComparison.Ordinal))
+                throw new DomainException($"{c.Label} was changed after this request was sent. Reject it and ask the employee to send a new one.");
+        }
+        foreach (var c in changes)
         {
             if (Fields.TryGetValue(c.Field, out var field))
                 field.Set(employee, c.To);

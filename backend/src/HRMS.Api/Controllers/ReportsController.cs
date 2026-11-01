@@ -22,7 +22,7 @@ public record SaveReportSettingsRequest([MaxLength(5)] List<string> Signatures);
 public class ReportsController(HrmsDbContext db, ReportCatalog catalog, TenantClock clock) : ControllerBase
 {
     [HttpGet]
-    public IEnumerable<ReportDefinition> List() => catalog.Available();
+    public Task<IEnumerable<ReportDefinition>> List() => catalog.AvailableAsync();
 
     [HttpPost("{key}")]
     public Task<ReportResult> Run(string key, ReportRequest req) => catalog.RunAsync(key, req);
@@ -32,7 +32,9 @@ public class ReportsController(HrmsDbContext db, ReportCatalog catalog, TenantCl
     {
         var r = await catalog.RunAsync(key, req);
         using var wb = new XLWorkbook();
-        var ws = wb.AddWorksheet(r.Title.Length > 31 ? r.Title[..31] : r.Title);
+        // Excel refuses sheet names with : \ / ? * [ ] or longer than 31 characters.
+        var sheet = new string(r.Title.Select(ch => ":\\/?*[]".Contains(ch) ? '-' : ch).ToArray());
+        var ws = wb.AddWorksheet(sheet.Length > 31 ? sheet[..31] : sheet);
         for (var c = 0; c < r.Headers.Count; c++)
             ws.Cell(1, c + 1).Value = r.Headers[c];
         var rows = r.Totals is null ? r.Rows : [.. r.Rows, r.Totals];

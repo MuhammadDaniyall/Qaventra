@@ -123,7 +123,8 @@ export function EmployeeDetailPage() {
 
       {tab === 'profile' && (
         <div className="space-y-5">
-          <ProfileTab key={e.id} employee={e} readOnly={!hr} />
+          {/* Remount when the record changes elsewhere (job change, re-hire) so the form never saves stale values. */}
+          <ProfileTab key={`${e.id}-${employee.dataUpdatedAt}`} employee={e} readOnly={!hr} />
           <CustomValuesCard employeeId={e.id} editable={hr} />
         </div>
       )}

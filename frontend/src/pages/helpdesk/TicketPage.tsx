@@ -252,6 +252,8 @@ function EditCommentModal({ ticketId, comment, onClose }: { ticketId: string; co
 function ReplyBox({ detail }: { detail: TicketDetail }) {
   const [body, setBody] = useState('');
   const [internal, setInternal] = useState(false);
+  // HR who raised it for someone else still replies to that employee.
+  const isSubject = useUser().employeeId === detail.ticket.employeeId;
   const send = useTicketAction(detail.ticket.id, () => helpdeskApi.comment(detail.ticket.id, body.trim(), internal), '', () => setBody(''));
   return (
     <Card className={cn(internal && 'border-amber-300 dark:border-amber-500/40')}>
@@ -261,7 +263,7 @@ function ReplyBox({ detail }: { detail: TicketDetail }) {
           maxLength={8000}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder={internal ? 'Note for other agents. The employee will not see it.' : detail.isAgent && !detail.isRequester ? 'Reply to the employee…' : 'Add a reply…'}
+          placeholder={internal ? 'Note for other agents. The employee will not see it.' : detail.isAgent && !isSubject ? 'Reply to the employee…' : 'Add a reply…'}
           aria-label="Reply"
         />
         <div className="flex flex-wrap items-center justify-between gap-2">

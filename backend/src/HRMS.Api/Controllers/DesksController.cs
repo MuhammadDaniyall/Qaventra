@@ -45,7 +45,7 @@ public record UtilisationDto(int WorkingDays, int Bookings, int CheckedIn, int N
 [ApiController]
 [Route("api/desks")]
 [Authorize(Policy = Policies.CompanyUser)]
-public class DesksController(HrmsDbContext db, DeskService desks, TenantClock clock, ICurrentUser me) : ControllerBase
+public class DesksController(HrmsDbContext db, DeskService desks, TenantClock clock, ICurrentUser me, ScheduleService schedule, NotificationService notify) : ControllerBase
 {
     // ---------- Settings and layout (HR) ----------
 
@@ -156,6 +156,18 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
     {
         var s = await db.Spaces.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Space");
         await ApplyAsync(s, req);
+        // Turned off or given to someone: other people's bookings from today on are cancelled.
+        if (!s.IsActive || s.AssignedEmployeeId is not null)
+        {
+            var today = await clock.TodayAsync();
+            var (active, owner) = (s.IsActive, s.AssignedEmployeeId);
+            var gone = await db.SpaceBookings.Where(b => b.SpaceId == id && b.Date >= today && DeskService.Live.Contains(b.Status)
+                && (!active || b.EmployeeId != owner)).ToListAsync();
+            foreach (var b in gone)
+                b.Status = BookingStatus.Cancelled;
+            await notify.ToEmployeesAsync(gone.Select(b => b.EmployeeId), NotificationKind.Alert, $"Your booking of {s.Name} was cancelled",
+                s.IsActive ? $"{s.Name} is now a permanent desk." : $"{s.Name} is no longer available.", "/desks");
+        }
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -245,8 +257,11 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
             .Select(s => new { s.AssignedEmployeeId, s.Name, Floor = s.Floor!.Name }).ToListAsync();
         var ids = permanent.Select(p => p.AssignedEmployeeId!.Value).Where(id => booked.All(b => b.EmployeeId != id)).ToList();
         var onLeave = await db.LeaveRequests.Where(l => l.Status == LeaveStatus.Approved && l.FromDate <= day && l.ToDate >= day && ids.Contains(l.EmployeeId)).Select(l => l.EmployeeId).ToListAsync();
-        var people = await db.Employees.Where(e => ids.Contains(e.Id) && !onLeave.Contains(e.Id))
+        var people = await db.Employees.Where(e => ids.Contains(e.Id) && !onLeave.Contains(e.Id) && (e.Status == EmploymentStatus.Probation || e.Status == EmploymentStatus.Active))
             .Select(e => new { e.Id, Name = e.FirstName + " " + e.LastName, Department = e.Department != null ? e.Department.Name : null }).ToListAsync();
+        // Permanent desk holders are only expected on their working days.
+        var calendars = await schedule.ForEmployeesAsync(people.Select(p => p.Id).ToList(), day, day);
+        people = people.Where(p => calendars[p.Id].IsWorkingDay(day)).ToList();
         booked.AddRange(people.Select(p =>
         {
             var desk = permanent.First(x => x.AssignedEmployeeId == p.Id);
@@ -261,14 +276,22 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
         var today = await clock.TodayAsync();
         var end = to ?? today;
         var start = from ?? end.AddDays(-29);
-        var days = Enumerable.Range(0, end.DayNumber - start.DayNumber + 1).Select(i => start.AddDays(i)).Count(d => d.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday));
+        if (start > end || end.DayNumber - start.DayNumber > 366)
+            throw new DomainException("Choose a range of up to a year.");
+        // Working days follow the default shift's weekly off days and the company-wide holidays.
+        var offDays = await db.Shifts.Where(s => s.IsDefault).Select(s => s.WeeklyOffDays).FirstOrDefaultAsync() ?? [DayOfWeek.Saturday, DayOfWeek.Sunday];
+        var holidays = (await db.Holidays.Where(h => h.Date >= start && h.Date <= end && h.RegionIds == null && h.Religion == null && h.ExemptEmployeeIds == null)
+            .Select(h => h.Date).ToListAsync()).ToHashSet();
+        var workingDays = Enumerable.Range(0, end.DayNumber - start.DayNumber + 1).Select(i => start.AddDays(i))
+            .Where(d => !offDays.Contains(d.DayOfWeek) && !holidays.Contains(d)).ToHashSet();
+        var days = workingDays.Count;
         var spaces = await db.Spaces.Where(s => s.IsActive).Select(s => new { s.Id, s.Name, Floor = s.Floor!.Name, s.Kind }).ToListAsync();
         var bookings = await db.SpaceBookings.Where(b => b.Date >= start && b.Date <= end && b.Status != BookingStatus.Cancelled)
             .Select(b => new { b.SpaceId, b.Status, b.Date }).ToListAsync();
         var rows = spaces.Select(s =>
         {
             var mine = bookings.Where(b => b.SpaceId == s.Id).ToList();
-            var usedDays = mine.Where(b => b.Status != BookingStatus.Released).Select(b => b.Date).Distinct().Count();
+            var usedDays = mine.Where(b => b.Status != BookingStatus.Released && workingDays.Contains(b.Date)).Select(b => b.Date).Distinct().Count();
             return new UtilisationRowDto(s.Name, s.Floor, s.Kind, mine.Count, mine.Count(b => b.Status == BookingStatus.CheckedIn), mine.Count(b => b.Status == BookingStatus.Released),
                 days == 0 ? 0 : Math.Round(100.0 * usedDays / days, 1));
         }).OrderByDescending(r => r.UsedPercent).ToList();
@@ -304,7 +327,7 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
             throw new DomainException("Seats are 1 to 500.");
         if (r.AssignedEmployeeId is { } a)
         {
-            if (!await db.Employees.AnyAsync(e => e.Id == a))
+            if (a != s.AssignedEmployeeId && !await db.Employees.AnyAsync(e => e.Id == a && (e.Status == EmploymentStatus.Probation || e.Status == EmploymentStatus.Active)))
                 throw new NotFoundException("Employee");
             if (await db.Spaces.AnyAsync(x => x.AssignedEmployeeId == a && x.Id != s.Id && x.Kind == r.Kind))
                 throw new DomainException("This person already has a permanent one.");

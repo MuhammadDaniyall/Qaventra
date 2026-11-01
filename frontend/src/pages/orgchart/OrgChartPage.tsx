@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Network, Search } from 'lucide-react';
 import { employeesApi, type OrgChartNode } from '../../api/employees';
 import { useUser } from '../../auth/AuthContext';
-import { isApprover } from '../../auth/roles';
+import { isApprover, isHr } from '../../auth/roles';
 import { Avatar, Button, Card, EmptyState, ErrorState, Input, PageHeader, SkeletonRows } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { tx, txf } from '../../lib/i18n';
@@ -33,6 +33,15 @@ function buildTree(list: OrgChartNode[]): Node[] {
   };
   const seen = new Set<string>();
   roots.forEach((r) => size(r, seen));
+  // People caught in a reporting loop are never reached from a root. Cut the loop at the first one and show
+  // them at the top, rather than drop the whole branch (or recurse forever while rendering).
+  for (const n of byId.values()) {
+    if (seen.has(n.id)) continue;
+    const manager = byId.get(n.managerId!)!;
+    manager.reports = manager.reports.filter((r) => r !== n);
+    roots.push(n);
+    size(n, seen);
+  }
   return roots.sort((a, b) => b.teamSize - a.teamSize || a.name.localeCompare(b.name));
 }
 
@@ -52,10 +61,13 @@ function pathsTo(roots: Node[], match: (n: Node) => boolean): Set<string> {
 export function OrgChartPage() {
   const user = useUser();
   const navigate = useNavigate();
-  const canOpen = isApprover(user);
+  // A line manager can only open their own record and their direct reports.
+  const canOpen = (n: Node) =>
+    isHr(user) || (isApprover(user) && !!user?.employeeId && (n.id === user.employeeId || n.managerId === user.employeeId));
   const chart = useQuery({ queryKey: ['employees', 'org-chart'], queryFn: employeesApi.orgChart });
   const [search, setSearch] = useState('');
   const [opened, setOpened] = useState<Set<string>>(new Set());
+  const [closed, setClosed] = useState<Set<string>>(new Set());
   const [allOpen, setAllOpen] = useState(false);
 
   const roots = useMemo(() => buildTree(chart.data ?? []), [chart.data]);
@@ -64,18 +76,20 @@ export function OrgChartPage() {
     !!term && (n.name.toLowerCase().includes(term) || (n.designation ?? '').toLowerCase().includes(term) || (n.department ?? '').toLowerCase().includes(term));
   const searchOpen = useMemo(() => (term ? pathsTo(roots, matches) : new Set<string>()), [roots, term]); // eslint-disable-line react-hooks/exhaustive-deps
   // The top of the chart starts open so the first view shows the leadership and their teams.
-  const isOpen = (n: Node, depth: number) => allOpen || opened.has(n.id) || searchOpen.has(n.id) || (!term && depth === 0 && !opened.has(`closed:${n.id}`));
-  const toggle = (n: Node, depth: number) =>
-    setOpened((o) => {
-      const next = new Set(o);
-      if (depth === 0) {
-        const key = `closed:${n.id}`;
-        if (next.has(key)) next.delete(key);
-        else next.add(key);
-      } else if (next.has(n.id)) next.delete(n.id);
-      else next.add(n.id);
+  // An explicit collapse wins over Expand all, search and the default-open top level.
+  const isOpen = (n: Node, depth: number) =>
+    !closed.has(n.id) && (allOpen || opened.has(n.id) || searchOpen.has(n.id) || (!term && depth === 0));
+  const toggle = (n: Node, depth: number) => {
+    const wasOpen = isOpen(n, depth);
+    const edit = (s: Set<string>, add: boolean) => {
+      const next = new Set(s);
+      if (add) next.add(n.id);
+      else next.delete(n.id);
       return next;
-    });
+    };
+    setClosed((c) => edit(c, wasOpen));
+    setOpened((o) => edit(o, !wasOpen));
+  };
 
   const row = (n: Node, depth: number) => {
     const open = isOpen(n, depth);
@@ -104,7 +118,7 @@ export function OrgChartPage() {
           <Avatar name={n.name} size="sm" />
           <button
             type="button"
-            disabled={!canOpen}
+            disabled={!canOpen(n)}
             onClick={() => navigate(`/employees/${n.id}`)}
             className="min-w-0 flex-1 text-start disabled:cursor-default"
           >
@@ -138,14 +152,14 @@ export function OrgChartPage() {
         title="Org chart"
         description={people ? txf('{count} people and who they report to.', { count: people }) : 'Who reports to whom.'}
         actions={
-          <Button variant="secondary" onClick={() => (setAllOpen((a) => !a), setOpened(new Set()))}>
+          <Button variant="secondary" onClick={() => (setAllOpen((a) => !a), setOpened(new Set()), setClosed(new Set()))}>
             {tx(allOpen ? 'Collapse all' : 'Expand all')}
           </Button>
         }
       />
       <div className="relative mb-4 sm:max-w-sm">
         <Search className="pointer-events-none absolute top-1/2 start-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tx('Find a person, role or department')} aria-label="Search the org chart" className="ps-9" />
+        <Input value={search} onChange={(e) => (setSearch(e.target.value), setClosed(new Set()))} placeholder={tx('Find a person, role or department')} aria-label="Search the org chart" className="ps-9" />
       </div>
       {chart.isLoading ? (
         <Card>

@@ -77,6 +77,8 @@ public class User : BaseEntity, ITenantEntity
     public bool MustChangePassword { get; set; }
     /// <summary>Limits (HR) or opens (others) HR modules; null = the role's usual access.</summary>
     public Guid? AccessTemplateId { get; set; }
+    /// <summary>Copied into every token; changed on a role change or password reset so older tokens stop working at once.</summary>
+    public Guid SecurityStamp { get; set; } = Guid.NewGuid();
 }
 
 public class Department : TenantEntity

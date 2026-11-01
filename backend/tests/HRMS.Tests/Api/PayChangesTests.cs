@@ -83,6 +83,24 @@ public class PayChangesTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Revising_again_on_the_same_date_keeps_the_allowances()
+    {
+        var (admin, a, _, _) = await CompanyAsync("PayChg again");
+        var first = new DateOnly(Today.Year, Today.Month, 1);
+        object Body(decimal pct) => new { effectiveFrom = Iso(first), kind = "Increment", includeAllowances = true, reason = "Review",
+            lines = new object[] { new { employeeId = a, percent = pct } } };
+
+        await Ok(await admin.PostAsJsonAsync("/api/pay-changes/revisions", Body(10m), ApiFactory.Json));
+        // The second revision replaces the row it is based on.
+        await Ok(await admin.PostAsJsonAsync("/api/pay-changes/revisions", Body(10m), ApiFactory.Json));
+
+        var salary = await Ok(await admin.GetAsync($"/api/employees/{a}/salary"));
+        Assert.Equal(121000m, salary.GetProperty("basicSalary").GetDecimal());
+        var rent = Assert.Single(salary.GetProperty("components").EnumerateArray());
+        Assert.Equal(48400m, rent.GetProperty("amount").GetDecimal());
+    }
+
+    [Fact]
     public async Task Leave_is_encashed_and_payroll_needs_approval_when_required()
     {
         var (admin, a, _, _) = await CompanyAsync("Encash");

@@ -49,13 +49,19 @@ export function billPerCycle(opts: {
 
 /** "Starts today for one cycle": today + cycle months - 1 day. */
 export function oneCycleFrom(today: string, cycle: BillingCycle): string {
-  return addDays(addMonths(today, CYCLE_MONTHS[cycle]), -1);
+  return periodEnd(today, CYCLE_MONTHS[cycle]);
+}
+
+/** Last day covered by `months` from `from`. A month-end clamp (31 Jan + 1 = 28 Feb) is already that day. */
+function periodEnd(from: string, months: number): string {
+  const next = addMonths(from, months);
+  return Number(next.slice(8, 10)) < Number(from.slice(8, 10)) ? next : addDays(next, -1);
 }
 
 /** Mirrors the backend: extend from the day after the current end, or from today if lapsed / never started. */
 export function extendSubscription(today: string, currentEnd: string | null, cycle: BillingCycle, periods: number) {
   const from = currentEnd && currentEnd >= today ? addDays(currentEnd, 1) : today;
-  const to = addDays(addMonths(from, CYCLE_MONTHS[cycle] * periods), -1);
+  const to = periodEnd(from, CYCLE_MONTHS[cycle] * periods);
   return { from, to };
 }
 

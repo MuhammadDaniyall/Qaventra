@@ -35,19 +35,20 @@ public class NotificationService
     }
 
     /// <param name="includeMe">Also notify the signed-in user, for reminders that are not about their own action.</param>
-    public async Task ToEmployeesAsync(IEnumerable<Guid> employeeIds, NotificationKind kind, string title, string? body, string? link, bool includeMe = false)
+    /// <param name="email">False: in-app and push only, even for people who get notifications by email.</param>
+    public async Task ToEmployeesAsync(IEnumerable<Guid> employeeIds, NotificationKind kind, string title, string? body, string? link, bool includeMe = false, bool email = true)
     {
         var ids = employeeIds.Distinct().ToList();
         if (ids.Count == 0)
             return;
-        await ToUsersAsync(_db.Users.Where(u => u.EmployeeId != null && ids.Contains(u.EmployeeId.Value)), kind, title, body, link, includeMe);
+        await ToUsersAsync(_db.Users.Where(u => u.EmployeeId != null && ids.Contains(u.EmployeeId.Value)), kind, title, body, link, includeMe, email);
     }
 
     /// <summary>Everyone with HR rights in the company: HR managers and company admins.</summary>
-    public Task ToHrAsync(NotificationKind kind, string title, string? body, string? link, bool includeMe = false) =>
-        ToUsersAsync(_db.Users.Where(u => u.Role == UserRole.HrManager || u.Role == UserRole.CompanyAdmin), kind, title, body, link, includeMe);
+    public Task ToHrAsync(NotificationKind kind, string title, string? body, string? link, bool includeMe = false, bool email = true) =>
+        ToUsersAsync(_db.Users.Where(u => u.Role == UserRole.HrManager || u.Role == UserRole.CompanyAdmin), kind, title, body, link, includeMe, email);
 
-    private async Task ToUsersAsync(IQueryable<User> users, NotificationKind kind, string title, string? body, string? link, bool includeMe)
+    private async Task ToUsersAsync(IQueryable<User> users, NotificationKind kind, string title, string? body, string? link, bool includeMe, bool email)
     {
         var me = includeMe ? null : _me.UserId;
         var recipients = await users.Where(u => u.IsActive && u.Id != me)
@@ -60,7 +61,7 @@ public class NotificationService
         {
             _db.Notifications.Add(new Notification { UserId = r.Id, Kind = kind, Title = title, Body = body, Link = link });
             _pendingPush.Add(new PushMessage(r.Id, title, body, link));
-            if (!r.EmailNotifications || template is { Enabled: false })
+            if (!email || !r.EmailNotifications || template is { Enabled: false })
                 continue;
             string Fill(string text) => text.Replace("{name}", r.FullName).Replace("{company}", _company ?? "")
                 .Replace("{title}", title).Replace("{body}", body ?? "");

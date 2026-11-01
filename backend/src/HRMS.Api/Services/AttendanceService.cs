@@ -110,8 +110,14 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock, ScheduleServ
     {
         if (checkOut is { } co && co <= checkIn)
             throw new DomainException("Check-out must be after check-in.");
-        if (!await db.Employees.AnyAsync(e => e.Id == employeeId))
-            throw new NotFoundException("Employee");
+        var emp = await db.Employees.Where(e => e.Id == employeeId).Select(e => new { e.JoiningDate, e.LeavingDate }).FirstOrDefaultAsync()
+                  ?? throw new NotFoundException("Employee");
+        if (date > await clock.TodayAsync())
+            throw new DomainException("Attendance cannot be entered for a future day.");
+        if (date < emp.JoiningDate)
+            throw new DomainException("That day is before the employee joined.");
+        if (emp.LeavingDate is { } l && date > l)
+            throw new DomainException("That day is after the employee left.");
         await schedule.EnsureOpenAsync(date);
 
         var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == date);
@@ -161,7 +167,15 @@ public class AttendanceService(HrmsDbContext db, TenantClock clock, ScheduleServ
         var last = all.Max();
         // Punches a few minutes apart are one tap repeated, not a check-out.
         TimeOnly? checkOut = (last - first).TotalMinutes >= 5 ? last : null;
-        await SaveManualAsync(employeeId, date, first, checkOut, AttendanceSource.Biometric, $"Attendance machine: {device}");
+        try
+        {
+            await SaveManualAsync(employeeId, date, first, checkOut, AttendanceSource.Biometric, $"Attendance machine: {device}");
+        }
+        catch (DomainException ex)
+        {
+            // A day in the future or outside the person's employment skips these punches, not the whole batch.
+            return ex.Message;
+        }
         return null;
     }
 

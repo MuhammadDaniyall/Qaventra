@@ -183,6 +183,8 @@ public class RecruitmentExtrasController(HrmsDbContext db, RecruitmentService hi
     public async Task<ScreeningCriteriaDto> Criteria(Guid id)
     {
         var p = await db.JobPosts.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Job");
+        if (!me.IsHr() && p.RecruiterEmployeeId != me.EmployeeId && p.HiringManagerEmployeeId != me.EmployeeId)
+            throw new ForbiddenException("Only HR, the recruiter or the hiring manager.");
         return new ScreeningCriteriaDto(p.ScreenMinExperienceYears, p.ScreenMaxExpectedSalary, p.ScreenCities, p.ScreenKeywords);
     }
 
@@ -256,7 +258,7 @@ public class RecruitmentExtrasController(HrmsDbContext db, RecruitmentService hi
 [Route("api/careers/portal")]
 [AllowAnonymous]
 [EnableRateLimiting("careers")]
-public class CandidatePortalController(HrmsDbContext db, RecruitmentService hiring) : ControllerBase
+public class CandidatePortalController(HrmsDbContext db, RecruitmentService hiring, TenantAccessChecker access) : ControllerBase
 {
     [HttpGet("{token}")]
     public async Task<PortalDto> Get(string token)
@@ -309,6 +311,8 @@ public class CandidatePortalController(HrmsDbContext db, RecruitmentService hiri
     {
         if (string.IsNullOrWhiteSpace(token) || token.Length < 20) throw new NotFoundException("Page");
         var c = await db.Candidates.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.PortalToken == token) ?? throw new NotFoundException("Page");
+        // A suspended or expired company's status pages go dark, like its careers page.
+        if (await access.TenantAsync(c.TenantId) != TenantAccess.Allowed) throw new NotFoundException("Page");
         db.UseTenant(c.TenantId);
         return c;
     }

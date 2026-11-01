@@ -42,7 +42,8 @@ public record CreateCompanyRequest(
     BillingCycle? BillingCycle,
     [Range(0, 100_000_000)] decimal? PlanPrice,
     [Range(0, 1_000_000)] decimal? PricePerEmployee,
-    DateOnly? SubscriptionEndsOn);
+    DateOnly? SubscriptionEndsOn,
+    [Range(1, 10_000_000)] int? EmailQuotaPerMonth = null);
 
 public record UpdateCompanyRequest(
     [Required, StringLength(200, MinimumLength = 2)] string Name,
@@ -91,10 +92,11 @@ public class PlatformController(
     [HttpGet("stats")]
     public async Task<PlatformStatsDto> Stats()
     {
-        var since = DateTime.UtcNow.Date;
+        // "Today" is the Pakistan calendar day, the same day the revenue cards use.
+        var today = access.LocalToday("Asia/Karachi");
+        var since = TimeZoneInfo.ConvertTimeToUtc(today.ToDateTime(TimeOnly.MinValue), TimeZones.Find("Asia/Karachi"));
         var logs = db.AuditLogs.Where(l => l.TimestampUtc >= since);
         var companies = await LoadCompanies(db.Tenants);
-        var today = access.LocalToday("Asia/Karachi");
         var monthStart = new DateOnly(today.Year, today.Month, 1);
         var yearStart = new DateOnly(today.Year, 1, 1);
 
@@ -144,6 +146,7 @@ public class PlatformController(
         created.Company.PlanPrice = req.PlanPrice;
         created.Company.PricePerEmployee = req.PricePerEmployee;
         created.Company.SubscriptionEndsOn = req.SubscriptionEndsOn;
+        created.Company.EmailQuotaPerMonth = req.EmailQuotaPerMonth;
         await db.SaveChangesAsync();
 
         return new CompanyAdminCredentialsDto(await Company(created.Company.Id), created.Admin.Email, created.GeneratedPassword);

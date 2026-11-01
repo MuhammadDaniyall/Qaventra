@@ -69,6 +69,8 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             {
                 if (step.EmployeeId is not { } id || !await db.Employees.AnyAsync(e => e.Id == id))
                     throw new DomainException("Choose the employee for each 'specific person' step.");
+                if (!(await engine.CanApproveAsync([id])).Contains(id))
+                    throw new DomainException("That person's login cannot approve requests; give them the Manager role first.");
             }
             else if (step.EmployeeId is not null)
             {
@@ -227,6 +229,8 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
     public async Task<IActionResult> Delegate(SaveDelegationRequest req, [FromServices] NotificationService notify)
     {
         var from = req.FromEmployeeId is { } f && me.IsHr() ? f : me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
+        if (!await db.Employees.AnyAsync(e => e.Id == from && (e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation)))
+            throw new NotFoundException("Employee");
         if (req.ToEmployeeId == from)
             throw new DomainException("Choose someone else to approve for you.");
         var today = await clock.TodayAsync();
@@ -238,6 +242,8 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             throw new NotFoundException("Employee");
         if (!await db.Users.AnyAsync(u => u.EmployeeId == req.ToEmployeeId && u.IsActive))
             throw new DomainException("That person has no login, so they cannot approve.");
+        if (!(await engine.CanApproveAsync([req.ToEmployeeId])).Contains(req.ToEmployeeId))
+            throw new DomainException("That person's login cannot approve requests; give them the Manager role first.");
         var types = (req.RequestTypes ?? []).Distinct().ToList();
         if (types.Any(t => !Enum.IsDefined(t)))
             throw new DomainException("Unknown request type.");
@@ -253,9 +259,12 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             FromEmployeeId = from, ToEmployeeId = req.ToEmployeeId, FromDate = req.FromDate, ToDate = req.ToDate, RequestTypes = typeText,
             Reason = string.IsNullOrWhiteSpace(req.Reason) ? null : req.Reason.Trim(), CreatedByName = await LetterService.CurrentUserNameAsync(db, me),
         });
-        var fromName = await db.Employees.Where(e => e.Id == from).Select(e => e.FirstName + " " + e.LastName).FirstAsync();
-        await notify.ToEmployeesAsync([req.ToEmployeeId, from], NotificationKind.ApprovalNeeded, $"You approve for {fromName} from {req.FromDate:d MMM} to {req.ToDate:d MMM}",
-            types.Count == 0 ? "All kinds of requests." : string.Join(", ", types), "/approvals");
+        var names = await EmployeeNamesAsync([from, req.ToEmployeeId]);
+        var body = types.Count == 0 ? "All kinds of requests." : string.Join(", ", types);
+        await notify.ToEmployeesAsync([req.ToEmployeeId], NotificationKind.ApprovalNeeded, $"You approve for {names[from]} from {req.FromDate:d MMM} to {req.ToDate:d MMM}",
+            body, "/approvals");
+        await notify.ToEmployeesAsync([from], NotificationKind.ApprovalNeeded, $"{names[req.ToEmployeeId]} approves for you from {req.FromDate:d MMM} to {req.ToDate:d MMM}",
+            body, "/approvals");
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -269,6 +278,8 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
         if (d.IsCancelled)
             return NoContent();
         var today = await clock.TodayAsync();
+        if (d.ToDate < today)
+            throw new DomainException("This delegation has already ended.");
         // Not started (or started today): drop it. Running: end it yesterday, keeping the days it was used.
         if (d.FromDate >= today)
             d.IsCancelled = true;

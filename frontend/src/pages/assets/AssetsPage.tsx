@@ -23,6 +23,7 @@ import {
   Button,
   Card,
   Checkbox,
+  ConfirmDialog,
   Drawer,
   EmptyState,
   ErrorState,
@@ -447,6 +448,18 @@ function Requests() {
   const [status, setStatus] = useState<'Approved' | 'Fulfilled'>('Approved');
   const list = useQuery({ queryKey: [...qk.assets, 'requests', status], queryFn: () => assetsApi.requests(status) });
   const [handing, setHanding] = useState<AssetRequest | null>(null);
+  const [closing, setClosing] = useState<AssetRequest | null>(null);
+  const toast = useToast();
+  const qc = useQueryClient();
+  const close = useMutation({
+    mutationFn: (id: string) => assetsApi.cancel(id),
+    onSuccess: () => {
+      toast.success('Request closed');
+      setClosing(null);
+      qc.invalidateQueries({ queryKey: qk.assets });
+    },
+    onError: (err) => toast.error(err),
+  });
   return (
     <Card>
       <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-3 dark:border-zinc-800">
@@ -493,9 +506,14 @@ function Requests() {
                 <Td className="text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(r.createdAtUtc)}</Td>
                 <Td className="text-end">
                   {r.canFulfill && (
-                    <Button size="sm" onClick={() => setHanding(r)}>
-                      {r.kind === 'Return' ? 'Take back' : 'Hand over'}
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => setClosing(r)}>
+                        Close
+                      </Button>
+                      <Button size="sm" onClick={() => setHanding(r)}>
+                        {r.kind === 'Return' ? 'Take back' : 'Hand over'}
+                      </Button>
+                    </div>
                   )}
                 </Td>
               </Tr>
@@ -509,6 +527,16 @@ function Requests() {
         ) : (
           <HandOverModal request={handing} onClose={() => setHanding(null)} />
         ))}
+      <ConfirmDialog
+        open={!!closing}
+        title="Close this request?"
+        message="It is marked cancelled and leaves this list. Use this when it can no longer be done, for example after the employee has left."
+        confirmLabel="Close request"
+        tone="danger"
+        loading={close.isPending}
+        onConfirm={() => closing && close.mutate(closing.id)}
+        onClose={() => setClosing(null)}
+      />
     </Card>
   );
 }

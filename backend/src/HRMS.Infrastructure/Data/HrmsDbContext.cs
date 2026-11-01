@@ -1555,13 +1555,19 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         var logs = new List<AuditLog>();
         foreach (var entry in ChangeTracker.Entries())
         {
-            if (entry.Entity is AuditLog or Notification or PushSubscription or HRMS.Domain.Entities.PushKeys or EmailLog || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
+            // PollVote rows would say who picked which option in an anonymous poll, so they are never logged.
+            if (entry.Entity is AuditLog or Notification or PushSubscription or HRMS.Domain.Entities.PushKeys or EmailLog or PollVote || entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted))
                 continue;
 
+            // An anonymous suggestion's row must not say who sent it: leave out EmployeeId, and drop the actor when it is the sender (create or delete).
+            var anonymous = entry.Entity is Suggestion { IsAnonymous: true };
+            var hideActor = anonymous && entry.State is EntityState.Added or EntityState.Deleted;
             var changes = new Dictionary<string, object?>();
             foreach (var p in entry.Properties)
             {
                 var name = p.Metadata.Name;
+                if (anonymous && name == nameof(Suggestion.EmployeeId))
+                    continue;
                 if (entry.State == EntityState.Modified && !p.IsModified)
                     continue;
                 if (entry.State == EntityState.Modified && Equals(p.OriginalValue, p.CurrentValue))
@@ -1592,9 +1598,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             {
                 Category = AuditCategory.Data,
                 TenantId = tenantId,
-                UserId = currentUser.UserId,
-                UserEmail = currentUser.Email,
-                Role = currentUser.Role,
+                UserId = hideActor ? null : currentUser.UserId,
+                UserEmail = hideActor ? null : currentUser.Email,
+                Role = hideActor ? null : currentUser.Role,
                 Action = entry.State switch
                 {
                     EntityState.Added => "Created",
@@ -1604,8 +1610,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
                 EntityType = entry.Metadata.ClrType.Name,
                 EntityId = entry.Properties.FirstOrDefault(p => p.Metadata.IsPrimaryKey())?.CurrentValue?.ToString(),
                 Changes = JsonSerializer.Serialize(changes),
-                IpAddress = currentUser.IpAddress,
-                UserAgent = Truncate(currentUser.UserAgent, 512),
+                IpAddress = hideActor ? null : currentUser.IpAddress,
+                UserAgent = hideActor ? null : Truncate(currentUser.UserAgent, 512),
                 CorrelationId = currentUser.CorrelationId,
             });
         }

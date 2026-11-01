@@ -32,7 +32,9 @@ public class SubscriptionService(HrmsDbContext db, TenantAccessChecker access, I
 
         var today = access.LocalToday(tenant.TimeZoneId);
         var from = tenant.SubscriptionEndsOn is { } end && end >= today ? end.AddDays(1) : today;
-        var to = from.AddMonths(Months(cycle) * input.Periods).AddDays(-1);
+        // AddMonths clamps to the month end (31 Jan + 1 month = 28 Feb); a clamped date is already the last covered day.
+        var next = from.AddMonths(Months(cycle) * input.Periods);
+        var to = next.Day < from.Day ? next : next.AddDays(-1);
 
         var payment = new TenantPayment
         {

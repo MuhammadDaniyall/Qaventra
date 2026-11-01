@@ -133,9 +133,7 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
     [HttpDelete("tasks/{taskId:guid}"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> DeleteTask(Guid taskId)
     {
-        var t = await db.OnboardingTasks.FirstOrDefaultAsync(x => x.Id == taskId) ?? throw new NotFoundException("Task");
-        db.OnboardingTasks.Remove(t);
-        await db.SaveChangesAsync();
+        await onboarding.DeleteTaskAsync(taskId);
         return NoContent();
     }
 
@@ -204,7 +202,7 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
         if (tasks.Any(x => string.IsNullOrWhiteSpace(x.Title)))
             throw new DomainException("Every task needs a title.");
         foreach (var x in tasks.Where(x => x.AssigneeKind == OnboardingAssignee.SpecificEmployee))
-            if (x.AssigneeEmployeeId is not { } e || !await db.Employees.AnyAsync(y => y.Id == e))
+            if (x.AssigneeEmployeeId is not { } e || !await db.Employees.AnyAsync(y => y.Id == e && (y.Status == EmploymentStatus.Active || y.Status == EmploymentStatus.Probation)))
                 throw new DomainException($"Choose who does \"{x.Title}\".");
         if (req.IsDefault)
             foreach (var other in await db.OnboardingTemplates.Where(x => x.Id != t.Id && x.IsDefault).ToListAsync())

@@ -55,9 +55,11 @@ public class TrainingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         }, ApiFactory.Json));
         var sid = session.GetProperty("id").GetGuid();
 
-        // Everyone starts out not compliant; joining long ago means overdue.
+        // Everyone starts out not compliant; the window counts from when the course was added, so nobody is overdue yet.
+        // All five are due within 30 days: the four people above and the company admin's own employee record.
         var before = await Ok(await admin.GetAsync("/api/training/compliance"));
-        Assert.Equal(4, before.GetProperty("overdue").GetInt32());
+        Assert.Equal(0, before.GetProperty("overdue").GetInt32());
+        Assert.Equal(5, before.GetProperty("dueSoon").GetInt32());
 
         // A manager nominates only their own team; seats are limited.
         Assert.Equal(HttpStatusCode.Forbidden, (await managerClient.PostAsJsonAsync($"/api/training/sessions/{sid}/enroll", new { employeeIds = new[] { omar } }, ApiFactory.Json)).StatusCode);
@@ -86,7 +88,7 @@ public class TrainingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         }, ApiFactory.Json));
         Assert.Equal("Completed", (await Ok(await admin.GetAsync($"/api/training/sessions/{sid}"))).GetProperty("session").GetProperty("status").GetString());
 
-        // Sana gives feedback; she is now compliant for a year, Omar is still overdue.
+        // Sana gives feedback; she is now compliant for a year, Omar still has it to do.
         var mine = Assert.Single((await Ok(await sanaClient.GetAsync("/api/training/my"))).EnumerateArray());
         await Ok(await sanaClient.PostAsJsonAsync($"/api/training/enrollments/{mine.GetProperty("enrollmentId").GetGuid()}/feedback", new { rating = 5, trainerRating = 4, wouldRecommend = true, comment = "Useful" }, ApiFactory.Json));
         var myCompliance = await Ok(await sanaClient.GetAsync("/api/training/my/compliance"));
@@ -125,5 +127,31 @@ public class TrainingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(Today.ToString("yyyy-MM-dd"), (await Ok(await sanaClient.GetAsync("/api/training/requests")))[0].GetProperty("completedOn").GetString());
         Assert.Equal(HttpStatusCode.BadRequest, (await sanaClient.PostAsync($"/api/training/requests/{id}/cancel", null)).StatusCode);
         _ = sana;
+    }
+
+    [Fact]
+    public async Task Hr_without_training_in_their_template_gets_no_hr_rights_in_training()
+    {
+        var (admin, person) = await CompanyAsync("Learning Access");
+        var (_, sanaClient) = await person("Sana", null);
+        var hrId = (await Ok(await admin.PostAsJsonAsync("/api/employees", new { firstName = "Rida", lastName = "A", joiningDate = "2024-01-01", status = "Active" }, ApiFactory.Json)))
+            .GetProperty("id").GetGuid();
+        var email = $"rida+{Guid.NewGuid():N}@learningaccess.test";
+        await Ok(await admin.PostAsJsonAsync($"/api/employees/{hrId}/login", new { email, password = "Learn-Pass-1234", role = "HrManager" }));
+        var hrUser = (await Ok(await admin.GetAsync($"/api/employees/{hrId}"))).GetProperty("userId").GetGuid();
+        var hr = await factory.SignInAsync(email, "Learn-Pass-1234");
+
+        await Ok(await sanaClient.PostAsJsonAsync("/api/training/requests", new { courseName = "Excel", reason = "Reports" }, ApiFactory.Json));
+        var id = Assert.Single((await Ok(await admin.GetAsync("/api/training/requests"))).EnumerateArray()).GetProperty("id").GetGuid();
+        Assert.Single((await Ok(await hr.GetAsync("/api/training/requests"))).EnumerateArray());
+        Assert.Empty((await Ok(await admin.GetAsync("/api/training/requests?mine=true"))).EnumerateArray());
+
+        await Ok(await admin.PostAsJsonAsync("/api/access/templates", new { name = "Recruiter", modules = new[] { "recruitment" } }, ApiFactory.Json));
+        var template = (await Ok(await admin.GetAsync("/api/access/templates"))).EnumerateArray().First(t => t.GetProperty("name").GetString() == "Recruiter").GetProperty("id").GetGuid();
+        await Ok(await admin.PutAsJsonAsync($"/api/access/users/{hrUser}", new { accessTemplateId = template }, ApiFactory.Json));
+
+        Assert.False((await Ok(await hr.GetAsync("/api/training/me"))).GetProperty("isHr").GetBoolean());
+        Assert.Empty((await Ok(await hr.GetAsync("/api/training/requests"))).EnumerateArray());
+        Assert.Equal(HttpStatusCode.Forbidden, (await hr.PostAsync($"/api/training/requests/{id}/cancel", null)).StatusCode);
     }
 }

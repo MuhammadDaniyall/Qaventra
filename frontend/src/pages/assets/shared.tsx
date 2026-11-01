@@ -338,7 +338,7 @@ export function TakeBackModal({ assignmentId, request, label, onClose }: { assig
           <FormError message={error} />
         </div>
         <Field label="Returned on">
-          <Input type="date" value={on} onChange={(e) => setOn(e.target.value)} />
+          <Input type="date" value={on} max={todayIso()} onChange={(e) => setOn(e.target.value)} />
         </Field>
         <Field label="Condition" hint={condition === 'Damaged' ? 'Goes to repair' : undefined}>
           <ConditionSelect value={condition} onChange={setCondition} />

@@ -50,6 +50,7 @@ export interface IssueLetterRequest {
   body: string;
   issuedOn: string | null;
   shareWithEmployee: boolean;
+  templateId?: string | null;
 }
 
 export interface IssuedLetter {
@@ -66,6 +67,7 @@ export interface IssuedLetter {
   status?: 'Issued' | 'Pending' | 'Rejected';
   requested?: boolean;
   requestReason?: string | null;
+  createdAtUtc: string;
 }
 
 export interface LetterDocument extends IssuedLetter {
@@ -107,6 +109,8 @@ export interface ExpenseClaim {
   decisionNote: string | null;
   paidAtUtc: string | null;
   paidVia: string | null;
+  /** Part of the total covered by an advance; payroll pays only the rest. */
+  advanceAdjusted?: number;
 }
 
 export interface ExpenseItem {

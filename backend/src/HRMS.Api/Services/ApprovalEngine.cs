@@ -53,6 +53,17 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
             })
             .FirstAsync();
         var planned = ApprovalPlanner.Plan(await FlowAsync(type), employeeId, chain.ManagerId, chain.SecondId, chain.HeadId);
+        // A step for someone whose login cannot approve (no login, or an ordinary employee's) would wait forever: HR takes it.
+        var capable = await CanApproveAsync(planned.Where(p => p.ApproverEmployeeId is not null).Select(p => p.ApproverEmployeeId!.Value));
+        var routed = new List<PlannedStep>();
+        foreach (var p in planned)
+        {
+            var step = p.ApproverEmployeeId is { } a && !capable.Contains(a) ? new PlannedStep(ApproverKind.Hr, null) : p;
+            if (step.Kind == ApproverKind.Hr && routed.Count > 0 && routed[^1].Kind == ApproverKind.Hr)
+                continue;
+            routed.Add(step);
+        }
+        planned = routed;
 
         var request = new ApprovalRequest
         {
@@ -218,6 +229,25 @@ public class ApprovalEngine(HrmsDbContext db, ICurrentUser me, TenantClock clock
             .Where(d => d.ToEmployeeId == mine && !d.IsCancelled && d.FromDate <= today && d.ToDate >= today)
             .Select(d => new { d.FromEmployeeId, d.RequestTypes }).ToListAsync();
         return list.Where(d => type is null || Covers(d.RequestTypes, type.Value)).Select(d => d.FromEmployeeId).Distinct().ToList();
+    }
+
+    /// <summary>
+    /// Of these employees, those whose active login can approve: managers, HR and admins, or anyone whose access
+    /// template opens approvals.
+    /// </summary>
+    public async Task<HashSet<Guid>> CanApproveAsync(IEnumerable<Guid> employeeIds)
+    {
+        var ids = employeeIds.Distinct().ToList();
+        if (ids.Count == 0)
+            return [];
+        var users = await db.Users.Where(u => u.IsActive && u.EmployeeId != null && ids.Contains(u.EmployeeId.Value))
+            .Select(u => new
+            {
+                EmployeeId = u.EmployeeId!.Value, u.Role,
+                Modules = db.AccessTemplates.Where(t => t.Id == u.AccessTemplateId).Select(t => t.Modules).FirstOrDefault(),
+            }).ToListAsync();
+        return users.Where(u => u.Role is UserRole.Manager or UserRole.HrManager or UserRole.CompanyAdmin || AccessModules.Parse(u.Modules).Contains("approvals"))
+            .Select(u => u.EmployeeId).ToHashSet();
     }
 
     public static bool Covers(string types, ApprovalRequestType type) =>

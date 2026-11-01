@@ -137,6 +137,9 @@ function ShiftModal({ item, onClose }: { item: Shift | null; onClose: () => void
         if (!v.name.trim()) fe.name = 'Name is required.';
         if (v.endTime <= v.startTime) fe.endTime = 'End time must be after the start time.';
         if (v.graceMinutes < 0 || v.graceMinutes > 180) fe.graceMinutes = 'Between 0 and 180 minutes.';
+        const toMinutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+        if (v.halfDayMinutes != null && v.halfDayMinutes > toMinutes(v.endTime) - toMinutes(v.startTime))
+          fe.halfDayMinutes = 'The half-day mark is longer than the shift.';
         setFieldErrors(fe);
         if (!Object.keys(fe).length) mutation.mutate({ ...v, name: v.name.trim() });
       }}
@@ -170,7 +173,7 @@ function ShiftModal({ item, onClose }: { item: Shift | null; onClose: () => void
           <Field label="Break (minutes)" hint="Unpaid break inside the shift.">
             <Input type="number" min={0} max={240} value={v.breakMinutes} onChange={(e) => setV({ ...v, breakMinutes: Number(e.target.value) || 0 })} />
           </Field>
-          <Field label="Half day under (hours)" hint="Empty: under half the shift.">
+          <Field label="Half day under (hours)" hint="Empty: under half the shift." error={fieldErrors.halfDayMinutes}>
             <Input
               type="number"
               min={0}

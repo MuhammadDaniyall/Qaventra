@@ -594,6 +594,12 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
             var dupes = db.Candidates.Where(x => x.Id != c.Id && ((c.Cnic != null && x.Cnic == c.Cnic)
                                                                   || (phoneTail != null && x.Phone != null && x.Phone.Contains(phoneTail))
                                                                   || (x.FirstName == c.FirstName && x.LastName == c.LastName && x.LastName != "")));
+            // Hiring teams only see people in their own jobs.
+            if (!me.IsHr())
+            {
+                var posts = hiring.MyPosts().Select(p => p.Id);
+                dupes = dupes.Where(x => db.JobApplications.Any(a => a.CandidateId == x.Id && posts.Contains(a.JobPostId)));
+            }
             duplicates = await ProjectCandidates(dupes.Take(5)).ToListAsync();
         }
         return new CandidateDto(c.Id, c.FirstName, c.LastName, c.Email, c.Phone, full ? c.Cnic : null, c.City, c.CurrentTitle, c.CurrentCompany, c.ExperienceYears,

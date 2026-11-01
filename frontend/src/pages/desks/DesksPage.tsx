@@ -403,7 +403,7 @@ function SetupTab() {
   const floors = useQuery({ queryKey: qk.floors, queryFn: desksApi.floors });
   const offices = useQuery({ queryKey: qk.offices, queryFn: setupApi.offices });
   const settings = useQuery({ queryKey: qk.deskSettings, queryFn: desksApi.settings });
-  const [floor, setFloor] = useState<Floor | null>(null);
+  const [floorId, setFloorId] = useState<string | null>(null);
   const [editingFloor, setEditingFloor] = useState<Floor | 'new' | null>(null);
   const [deletingFloor, setDeletingFloor] = useState<Floor | null>(null);
   const [s, setS] = useState<{ days: string; check: boolean; release: string; start: string } | null>(null);
@@ -432,7 +432,7 @@ function SetupTab() {
     },
     onError: (e) => toast.error(e),
   });
-  const current = floor ?? floors.data?.[0] ?? null;
+  const current = floors.data?.find((x) => x.id === floorId) ?? floors.data?.[0] ?? null;
   return (
     <div className="grid gap-5 lg:grid-cols-[20rem_1fr]">
       <div className="space-y-5">
@@ -459,7 +459,7 @@ function SetupTab() {
             <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
               {floors.data.map((x) => (
                 <li key={x.id} className={cn('flex items-center gap-2 px-5 py-2.5', current?.id === x.id && 'bg-accent-50 dark:bg-accent-500/10')}>
-                  <button type="button" className="min-w-0 flex-1 text-start" onClick={() => setFloor(x)}>
+                  <button type="button" className="min-w-0 flex-1 text-start" onClick={() => setFloorId(x.id)}>
                     <p className="font-medium">{x.name}</p>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
                       {x.office} · {x.desks} desks, {x.rooms} rooms

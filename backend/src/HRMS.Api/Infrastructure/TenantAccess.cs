@@ -39,14 +39,19 @@ public class TenantAccessChecker(IServiceScopeFactory scopes, IMemoryCache cache
         return tenant.AccessOn(LocalToday(state.TimeZoneId));
     }
 
-    public async Task<bool> UserActiveAsync(Guid userId)
+    /// <summary>What a token is checked against: the login's current state. Null when the login no longer exists.</summary>
+    public record UserState(bool IsActive, UserRole Role, Guid SecurityStamp);
+
+    public async Task<UserState?> UserAsync(Guid userId)
     {
         return await cache.GetOrCreateAsync($"user-active:{userId}", async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheFor;
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<HrmsDbContext>();
-            return await db.Users.IgnoreQueryFilters().AnyAsync(u => u.Id == userId && u.IsActive);
+            return await db.Users.IgnoreQueryFilters().Where(u => u.Id == userId)
+                .Select(u => new UserState(u.IsActive, u.Role, u.SecurityStamp))
+                .FirstOrDefaultAsync();
         });
     }
 
@@ -68,7 +73,8 @@ public class TenantAccessChecker(IServiceScopeFactory scopes, IMemoryCache cache
 
 /// <summary>
 /// Blocks every request from a company user when their company is inactive or expired, or their login is disabled,
-/// so a suspension takes effect immediately and not only at the next sign-in. The owner is never blocked.
+/// so a suspension takes effect immediately and not only at the next sign-in. A token issued before a role change or
+/// password reset gets 401. The owner is never blocked.
 /// </summary>
 public class TenantAccessMiddleware(RequestDelegate next)
 {
@@ -77,9 +83,21 @@ public class TenantAccessMiddleware(RequestDelegate next)
         if (me.UserId is { } userId && me.Role is not null && me.Role != UserRole.SuperAdmin)
         {
             string? code = null, message = null;
-            if (!await checker.UserActiveAsync(userId))
+            var user = await checker.UserAsync(userId);
+            if (user is not { IsActive: true })
             {
                 (code, message) = (AccessCodes.UserInactive, "Your login is disabled. Contact your administrator.");
+            }
+            else if (user.Role != me.Role || http.User.FindFirst(HrmsClaims.SecurityStamp)?.Value != user.SecurityStamp.ToString())
+            {
+                // The role changed or the password was reset since this token was issued: sign in again.
+                http.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await problems.WriteAsync(new ProblemDetailsContext
+                {
+                    HttpContext = http,
+                    ProblemDetails = new ProblemDetails { Status = 401, Title = "Your session has ended. Please sign in again." },
+                });
+                return;
             }
             else if (me.TenantId is { } tenantId)
             {

@@ -168,16 +168,44 @@ public class TravelService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             throw new ForbiddenException("Only the traveller or HR can cancel a trip.");
         if (trip.Status is not (TravelStatus.Pending or TravelStatus.Approved or TravelStatus.Booked))
             throw new DomainException("This trip can no longer be cancelled.");
-        if (trip.DepartOn <= await clock.TodayAsync() && trip.Status == TravelStatus.Booked)
+        var today = await clock.TodayAsync();
+        if (trip.DepartOn <= today && trip.Status is TravelStatus.Approved or TravelStatus.Booked)
             throw new DomainException("The trip has started. Settle it instead.");
+        if (trip.Settlement != SettlementStatus.None)
+            throw new DomainException("The trip is being settled.");
         if (trip.Status == TravelStatus.Pending)
             await approvals.CancelAsync(ApprovalRequestType.Travel, trip.Id);
         var wasBooked = trip.Status == TravelStatus.Booked;
         trip.Status = TravelStatus.Cancelled;
         trip.DecisionNote = Clean(reason, 1000) ?? trip.DecisionNote;
-        if (wasBooked || trip.AdvancePaid is > 0)
+        // A cancelled trip cannot be settled, so an advance already paid is recovered from salary straight away.
+        var advance = trip.AdvancePaid ?? 0;
+        if (advance > 0)
+        {
+            var pay = new PayRequest
+            {
+                EmployeeId = trip.EmployeeId,
+                Kind = PayRequestKind.Deduction,
+                Title = $"Travel advance recovery: {Destination(trip)}",
+                Amount = advance,
+                IsTaxable = false,
+                Year = today.Year,
+                Month = today.Month,
+                Reason = $"Cancelled trip {trip.DepartOn:d MMM}–{trip.ReturnOn:d MMM yyyy}",
+                Status = RequestStatus.Approved,
+                DecidedAtUtc = clock.UtcNow,
+                DecisionNote = "Advance on a cancelled trip",
+            };
+            db.PayRequests.Add(pay);
+            trip.PayRequestId = pay.Id;
+            trip.Settlement = SettlementStatus.Settled;
+            trip.SettledAtUtc = clock.UtcNow;
+            await notify.ToEmployeesAsync([trip.EmployeeId], NotificationKind.Travel, $"Travel advance of PKR {advance:N0} to be recovered",
+                $"Your trip to {Destination(trip)} was cancelled. The advance will be recovered from your {today:MMMM} salary.", $"/travel/{trip.Id}");
+        }
+        if (wasBooked || advance > 0)
             await NotifyDeskAsync($"Trip cancelled: {trip.Employee!.FullName}, {Route(trip)}",
-                (wasBooked ? "Cancel the tickets and hotel. " : "") + (trip.AdvancePaid is > 0 ? $"An advance of PKR {trip.AdvancePaid:N0} was paid; settle it to recover it." : ""),
+                (wasBooked ? "Cancel the tickets and hotel. " : "") + (advance > 0 ? $"The advance of PKR {advance:N0} will be recovered from {today:MMMM} salary." : ""),
                 trip.Id);
         await db.SaveChangesAsync();
     }
@@ -187,6 +215,8 @@ public class TravelService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
     {
         await RequireDeskAsync();
         var trip = await LoadAsync(id);
+        if (trip.EmployeeId == me.EmployeeId)
+            throw new ForbiddenException("Someone else on the desk or in HR must handle your own trip.");
         if (trip.Status is not (TravelStatus.Approved or TravelStatus.Booked))
             throw new DomainException(trip.Status == TravelStatus.Pending ? "The trip is still waiting for approval." : "This trip cannot be booked.");
         if (trip.Settlement == SettlementStatus.Settled)
@@ -220,6 +250,8 @@ public class TravelService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
     {
         await RequireDeskAsync();
         var trip = await LoadAsync(id);
+        if (trip.EmployeeId == me.EmployeeId)
+            throw new ForbiddenException("Someone else on the desk or in HR must handle your own trip.");
         if (trip.Status is not (TravelStatus.Approved or TravelStatus.Booked))
             throw new DomainException("Advances are paid on approved trips.");
         if (trip.Settlement is SettlementStatus.Submitted or SettlementStatus.Settled)

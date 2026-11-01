@@ -57,26 +57,38 @@ public class RequestAuditMiddleware(RequestDelegate next)
         }
 
         var watch = Stopwatch.StartNew();
+        int? failed = null;
         try
         {
             await next(http);
         }
+        catch (Exception ex)
+        {
+            // The exception handler sits outside this middleware and sets the status only after we unwind,
+            // so work out here the status the client will get (499: the client went away).
+            var status = ErrorHandler.StatusFor(ex);
+            failed = ex is OperationCanceledException && http.RequestAborted.IsCancellationRequested ? 499
+                : status != 0 ? status : StatusCodes.Status500InternalServerError;
+            throw;
+        }
         finally
         {
             watch.Stop();
+            // Suggestions may be anonymous (the flag is in the body), so the submitter is never logged.
+            var hideActor = HttpMethods.IsPost(http.Request.Method) && http.Request.Path.Equals("/api/suggestions", StringComparison.OrdinalIgnoreCase);
             await audit.WriteAsync(new AuditLog
             {
                 Category = AuditCategory.Request,
                 Action = http.Request.Method,
                 TenantId = me.TenantId,
-                UserId = me.UserId,
-                UserEmail = me.Email,
-                Role = me.Role,
+                UserId = hideActor ? null : me.UserId,
+                UserEmail = hideActor ? null : me.Email,
+                Role = hideActor ? null : me.Role,
                 Path = AuditWriter.Cut(http.Request.Path + http.Request.QueryString, 500),
-                StatusCode = http.Response.StatusCode,
+                StatusCode = failed ?? http.Response.StatusCode,
                 DurationMs = (int)watch.ElapsedMilliseconds,
-                IpAddress = me.IpAddress,
-                UserAgent = AuditWriter.Cut(me.UserAgent, 512),
+                IpAddress = hideActor ? null : me.IpAddress,
+                UserAgent = hideActor ? null : AuditWriter.Cut(me.UserAgent, 512),
                 CorrelationId = me.CorrelationId,
             });
         }

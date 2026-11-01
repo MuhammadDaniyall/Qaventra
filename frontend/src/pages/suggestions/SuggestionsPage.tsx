@@ -47,7 +47,11 @@ export function SuggestionsPage() {
   const hr = isHr(user);
   const [params, setParams] = useSearchParams();
   const canReview = useQuery({ queryKey: [...KEY, 'can-review'], queryFn: suggestionsApi.canReview });
-  const tab = (params.get('tab') as Tab | null) ?? 'mine';
+  // A login without an employee record (the company owner) cannot send suggestions, only review them.
+  const sender = !!user.employeeId;
+  const raw = (params.get('tab') as Tab | null) ?? (sender ? 'mine' : 'review');
+  // Checked against false so the page does not flip while can-review is still loading.
+  const tab: Tab = raw !== 'mine' && canReview.data === false && !hr ? 'mine' : !sender && raw === 'mine' && hr ? 'review' : raw;
   const [writing, setWriting] = useState(false);
   return (
     <>
@@ -55,18 +59,20 @@ export function SuggestionsPage() {
         title="Suggestions"
         description="Share ideas or concerns with the company. You can stay anonymous."
         actions={
-          <Button icon={<Plus className="size-4" />} onClick={() => setWriting(true)}>
-            New suggestion
-          </Button>
+          sender && (
+            <Button icon={<Plus className="size-4" />} onClick={() => setWriting(true)}>
+              New suggestion
+            </Button>
+          )
         }
       />
       {(canReview.data || hr) && (
         <Tabs<Tab>
           className="mb-6"
           value={tab}
-          onChange={(t) => setParams(t === 'mine' ? {} : { tab: t }, { replace: true })}
+          onChange={(t) => setParams(t === (sender ? 'mine' : 'review') ? {} : { tab: t }, { replace: true })}
           items={[
-            { value: 'mine', label: 'Mine' },
+            ...(sender ? [{ value: 'mine' as const, label: 'Mine' }] : []),
             { value: 'review', label: 'To review' },
             ...(hr ? [{ value: 'categories' as const, label: 'Categories' }] : []),
           ]}
@@ -135,6 +141,7 @@ function Review() {
     onError: (e) => toast.error(e),
   });
   if (list.isLoading) return <SkeletonRows rows={3} cols={2} />;
+  if (list.isError) return <FormError message={errorMessage(list.error)} />;
   if (!list.data?.length) return <EmptyState icon={Lightbulb} title="Nothing to review" />;
   return (
     <div className="space-y-4">

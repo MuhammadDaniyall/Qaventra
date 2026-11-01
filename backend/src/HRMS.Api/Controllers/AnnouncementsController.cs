@@ -138,9 +138,15 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
         var everyone = 0;
         if (stats)
         {
-            reads = await db.AnnouncementReads.Where(r => ids.Contains(r.AnnouncementId)).GroupBy(r => r.AnnouncementId)
-                .Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
             var current = db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
+            // Only reads by people still in the audience count, so the read count can't pass the audience size.
+            var readers = await (from r in db.AnnouncementReads
+                                 join e in current on r.EmployeeId equals e.Id
+                                 where ids.Contains(r.AnnouncementId)
+                                 select new { r.AnnouncementId, e.DepartmentId }).ToListAsync();
+            var audienceOf = list.ToDictionary(a => a.Id, a => a.DepartmentIds);
+            reads = readers.Where(r => AnnouncementService.InAudience(audienceOf[r.AnnouncementId], r.DepartmentId))
+                .GroupBy(r => r.AnnouncementId).ToDictionary(g => g.Key, g => g.Count());
             // People without a department count towards "everyone" only; a null key can't go in the dictionary.
             perDept = (await current.GroupBy(e => e.DepartmentId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync())
                 .ToDictionary(x => (Guid?)(x.Key ?? Guid.Empty), x => x.Count);

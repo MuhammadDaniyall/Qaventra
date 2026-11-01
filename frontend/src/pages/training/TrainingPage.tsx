@@ -42,7 +42,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
-import { formatCurrency, formatDate, formatDateTimeUtc, todayIso } from '../../lib/format';
+import { formatCurrency, formatDate, formatDateTimeUtc, toIsoDate, todayIso } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { ComplianceBadge, Rating } from './shared';
 
@@ -164,7 +164,7 @@ function MineTab() {
                 {past.map((x) => (
                   <Tr key={x.enrollmentId}>
                     <Td className="font-medium">{x.program}</Td>
-                    <Td className="text-sm">{formatDate(x.completedOn ?? x.startsAtUtc.slice(0, 10))}</Td>
+                    <Td className="text-sm">{formatDate(x.completedOn ?? localDay(x.startsAtUtc))}</Td>
                     <Td>
                       <StatusBadge status={x.status} label={ENROLLMENT_LABELS[x.status]} />
                       {x.score != null && <span className="ms-2 text-xs text-zinc-500 dark:text-zinc-400">{x.score}%</span>}
@@ -810,10 +810,19 @@ function ComplianceMatrix({ data }: { data: Compliance }) {
 
 // ---------- Requests ----------
 
+/** The local calendar day of a UTC timestamp. */
+function localDay(utc: string): string {
+  return toIsoDate(new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(utc) ? utc : `${utc}Z`));
+}
+
 function RequestsTab({ all }: { all: boolean }) {
   const toast = useToast();
   const qc = useQueryClient();
-  const requests = useQuery({ queryKey: qk.trainingRequests, queryFn: trainingApi.requests });
+  // HR sees everyone's requests on the Requests tab; the My training card shows only their own.
+  const requests = useQuery({
+    queryKey: all ? qk.trainingRequests : [...qk.trainingRequests, 'mine'],
+    queryFn: all ? trainingApi.requests : trainingApi.myRequests,
+  });
   const [open, setOpen] = useState<string | null>(null);
   const cancel = useMutation({
     mutationFn: trainingApi.cancelRequest,

@@ -4,7 +4,8 @@ import { http } from './client';
 
 export const leaveApi = {
   balances: (year?: number) => http.get<LeaveBalance[]>('/leave/balances', { year }),
-  countDays: (from: string, to: string) => http.get<{ days: number }>('/leave/count-days', { from, to }),
+  countDays: (from: string, to: string, employeeId?: string, leaveTypeId?: string) =>
+    http.get<{ days: number }>('/leave/count-days', { from, to, employeeId, leaveTypeId }),
   my: () => http.get<LeaveRequest[]>('/leave/my'),
   apply: (b: ApplyLeaveRequest) => http.post<LeaveRequest>('/leave', b),
   approvals: (status: LeaveStatus) => http.get<LeaveRequest[]>('/leave/approvals', { status }),

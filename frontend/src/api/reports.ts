@@ -45,7 +45,10 @@ export const reportsApi = {
       headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(req),
     });
-    if (!res.ok) throw new ApiError(res.status, { status: res.status, title: 'Could not export the report.' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      throw new ApiError(res.status, body ?? { status: res.status, title: 'Could not export the report.' });
+    }
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement('a');
     a.href = url;

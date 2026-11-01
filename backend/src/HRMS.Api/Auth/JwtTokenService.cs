@@ -38,6 +38,7 @@ public class JwtTokenService(JwtOptions options)
             new(ClaimTypes.Email, user.Email),
             new(ClaimTypes.Name, user.FullName),
             new(ClaimTypes.Role, user.Role.ToString()),
+            new(HrmsClaims.SecurityStamp, user.SecurityStamp.ToString()),
         };
         if (user.TenantId != Guid.Empty)
             claims.Add(new(HrmsClaims.TenantId, user.TenantId.ToString()));

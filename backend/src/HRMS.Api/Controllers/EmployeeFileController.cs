@@ -101,6 +101,8 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
         var x = await db.OrgLookups.FirstOrDefaultAsync(l => l.Id == id) ?? throw new NotFoundException("Item");
         if ((await CountsAsync()).GetValueOrDefault(id) > 0)
             throw new DomainException("People are still linked to this. Move them or turn it off instead.");
+        if (await db.ExpenseTypeRates.AnyAsync(r => r.GradeId == id) || await db.SalarySplits.AnyAsync(s => s.CostCenterId == id))
+            throw new DomainException("Expense rates or salary splits still use this. Change them or turn it off instead.");
         db.OrgLookups.Remove(x);
         await db.SaveChangesAsync();
         return NoContent();

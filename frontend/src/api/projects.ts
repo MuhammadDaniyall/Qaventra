@@ -39,6 +39,8 @@ export interface Project {
   loggedHours: number;
   cost: number;
   canManage: boolean;
+  /** Active, and open to all or the caller is on the team: the timesheet save accepts it. */
+  canLog: boolean;
 }
 
 export interface SaveProject {
@@ -70,6 +72,9 @@ export interface TimesheetLine {
   taskId: string | null;
   minutes: number;
   note: string | null;
+  /** Filled on reads only. */
+  projectName?: string | null;
+  taskName?: string | null;
 }
 
 export interface Timesheet {
