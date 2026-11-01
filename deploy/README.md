@@ -58,6 +58,15 @@ A free Gmail account works for both. Turn on 2-step verification, create an app 
 
 Then deploy again. Use a mailbox only for Qaventra: every unread email in it is read.
 
+## Virtual clients
+
+`seed-demo.mjs` creates a client company; copy the `demo-logins.txt` it writes to `secrets/logins-<name>.txt`.
+`run-virtual-clients.sh` then runs `virtual-clients.mjs` for every `secrets/logins-*.txt`: one simulated working day of
+employees, managers and HR, with a report of anything that failed in `secrets/virtual-clients-report-<date>.md`. On this
+Mac a launchd job (`~/Library/LaunchAgents/com.qaventra.virtual-clients.plist`) runs it Monday to Saturday at 10:30
+and logs to `secrets/virtual-clients-daily.log`; if the Mac is asleep it runs on wake. Stop it with
+`launchctl bootout gui/$(id -u)/com.qaventra.virtual-clients`.
+
 ## Notes
 
 - Database tables are created or updated automatically when the site starts (`Database:MigrateOnStartup`).
