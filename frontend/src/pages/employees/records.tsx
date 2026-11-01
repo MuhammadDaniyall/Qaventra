@@ -25,6 +25,7 @@ import {
   Textarea,
   useToast,
 } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { formatDate, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import type { EmergencyContact, Employee, IssueLoginsResult, JobChange, JobChangeKind } from '../../types';
@@ -217,6 +218,7 @@ export function JobHistory({ employeeId, joiningDate, actions }: { employeeId?: 
                 <Move label="Manager" from={h.fromManager} to={h.toManager} />
               </div>
               {h.note && <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">{h.note}</p>}
+              {h.stamps && <RecordStamp stamps={h.stamps} className="mt-1.5" />}
             </li>
           ))}
           <li className="relative border-s-2 border-transparent ps-5">

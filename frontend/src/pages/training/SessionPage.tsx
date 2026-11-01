@@ -7,6 +7,7 @@ import { qk } from '../../api/keys';
 import { ENROLLMENT_LABELS, MODE_LABELS, trainingApi, type EnrollmentStatus, type SessionDetail } from '../../api/training';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Button,
   Card,
@@ -120,6 +121,7 @@ function SessionView({ d }: { d: SessionDetail }) {
                   <Th>Status</Th>
                   <Th>Score</Th>
                   {s.canRun && <Th>Feedback</Th>}
+                  <Th>Added / modified</Th>
                   <Th />
                 </Tr>
               </THead>
@@ -150,6 +152,9 @@ function SessionView({ d }: { d: SessionDetail }) {
                         )}
                       </Td>
                     )}
+                    <Td>
+                      <RecordStampCell stamps={e.stamps} />
+                    </Td>
                     <Td className="text-end">
                       {upcoming && e.status === 'Enrolled' && (
                         <Button size="sm" variant="ghost" loading={withdraw.isPending && withdraw.variables === e.id} onClick={() => withdraw.mutate(e.id)}>
@@ -181,6 +186,7 @@ function SessionView({ d }: { d: SessionDetail }) {
               </div>
             ))}
             {s.notes && <p className="border-t border-zinc-100 pt-2 whitespace-pre-line dark:border-zinc-800">{s.notes}</p>}
+            <RecordStamp stamps={s.stamps} className="border-t border-zinc-100 pt-2 dark:border-zinc-800" />
           </dl>
         </Card>
       </div>

@@ -6,6 +6,7 @@ import { errorMessage } from '../../api/client';
 import { budgetApi, type BudgetPlan, type BudgetStatus, type PositionInput } from '../../api/budget';
 import { useDepartments, useDesignations } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -266,6 +267,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
             {p.decidedByName && ` · ${p.status === 'Rejected' ? 'sent back' : 'approved'} by ${p.decidedByName}, ${formatDateTimeUtc(p.decidedAtUtc)}`}
           </p>
           {p.decisionNote && <p className="text-sm text-zinc-600 dark:text-zinc-300">“{p.decisionNote}”</p>}
+          <RecordStamp stamps={p.stamps} className="mt-1" />
         </div>
         <div className="flex flex-wrap gap-2">
           {p.canEdit && (

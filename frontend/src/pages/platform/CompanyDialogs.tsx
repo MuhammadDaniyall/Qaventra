@@ -4,6 +4,7 @@ import { AlertTriangle, Check, Copy, KeyRound } from 'lucide-react';
 import { platformApi } from '../../api/platform';
 import { ApiError, errorMessage } from '../../api/client';
 import { Button, Field, FormError, Input, Modal, Switch, useToast } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { blank, CompanyInfoFields, emptyCompanyFields, fieldsFromCompany, PlanFields, planFromFields, validateCompany, type CompanyFields } from './CompanyForm';
 import type { Company, CompanyAdminCredentials, CreateCompanyRequest } from '../../types';
 
@@ -240,6 +241,7 @@ export function EditCompanyModal({ company, onClose }: { company: Company; onClo
         }}
       >
         <FormError message={error} />
+        <RecordStamp stamps={company.stamps} />
         <Section title="Company">
           <CompanyInfoFields v={v} set={(p) => setV((s) => ({ ...s, ...p }))} errors={fieldErrors} />
         </Section>

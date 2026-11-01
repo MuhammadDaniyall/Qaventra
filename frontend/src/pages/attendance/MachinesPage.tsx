@@ -4,6 +4,7 @@ import { Copy, Fingerprint, KeyRound, Pencil, Plus, Trash2 } from 'lucide-react'
 import { biometricApi, type BiometricDevice, type SaveBiometricDevice } from '../../api/biometric';
 import { qk } from '../../api/keys';
 import { setupApi } from '../../api/organization';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -97,6 +98,7 @@ export function MachinesPage() {
                 <Th>Token</Th>
                 <Th>Last punch received</Th>
                 <Th className="text-end">Punches</Th>
+                <Th>Added / modified</Th>
                 <Th className="text-end">Actions</Th>
               </tr>
             </THead>
@@ -113,6 +115,9 @@ export function MachinesPage() {
                   </Td>
                   <Td>{d.lastSeenAtUtc ? formatDateTimeUtc(d.lastSeenAtUtc) : tx('Never')}</Td>
                   <Td className="text-end tabular-nums">{d.punchesReceived}</Td>
+                  <Td>
+                    <RecordStampCell stamps={d.stamps} />
+                  </Td>
                   <Td className="text-end">
                     <div className="inline-flex gap-1">
                       <IconButton label="Edit" onClick={() => setEditing(d)}>
@@ -204,6 +209,7 @@ function MachineModal({ device, onClose, onCreated }: { device: BiometricDevice 
       }
     >
       <div className="space-y-4">
+        {device && <RecordStamp stamps={device.stamps} />}
         <Field label="Name" required>
           <Input value={v.name} maxLength={100} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="Main gate" />
         </Field>

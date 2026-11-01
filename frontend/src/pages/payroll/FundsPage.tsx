@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { errorMessage } from '../../api/client';
 import { fundsApi, TAX_ADJUSTMENT_LABELS, type FundEntryKind, type FundKind, type FundSummary, type TaxAdjustmentKind } from '../../api/funds';
 import { useEmployeeLookup } from '../../api/hooks';
+import { RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -314,6 +315,7 @@ function Withdrawals() {
             <Th className="text-end">Amount</Th>
             <Th>Reason</Th>
             <Th>Status</Th>
+            <Th>Added / modified</Th>
             <Th />
           </tr>
         </THead>
@@ -331,6 +333,9 @@ function Withdrawals() {
               </Td>
               <Td>
                 <StatusBadge status={w.status} />
+              </Td>
+              <Td>
+                <RecordStampCell stamps={w.stamps} />
               </Td>
               <Td className="text-end">
                 {w.status === 'Pending' && (
@@ -418,6 +423,9 @@ function TaxAdjustments() {
               <Td>{TAX_ADJUSTMENT_LABELS[t.kind]}</Td>
               <Td className="text-end tabular-nums">{formatNumber(t.amount)}</Td>
               <Td className="text-sm text-zinc-500 dark:text-zinc-400">{t.note}</Td>
+              <Td>
+                <RecordStampCell stamps={t.stamps} />
+              </Td>
               <Td className="text-end">
                 <IconButton label="Delete" onClick={() => remove.mutate(t.id)}>
                   <Trash2 className="size-4" />
@@ -487,6 +495,9 @@ export function MyFundsCard() {
                 <Td className="text-end tabular-nums">{formatNumber(w.amount)}</Td>
                 <Td>
                   <StatusBadge status={w.status} />
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={w.stamps} />
                 </Td>
                 <Td className="text-end">
                   {w.status === 'Pending' && (

@@ -51,7 +51,11 @@ Every event is stored in `AuditLogs` and can never be edited or deleted through 
 - **Request**: every `/api/*` call with user, method, path, status code, duration, IP and browser.
 - **Data**: every row created, updated or deleted, with old and new values. Password hashes are masked.
 
+Every entry also carries the actor's employee id, name and code when their login has an employee record, and the Audit logs screen can search by them. Anonymous suggestions and poll votes never name their sender or voter.
+
 SuperAdmin sees all companies' logs; a CompanyAdmin sees only their own company's.
+
+**Added / modified stamps.** Every row (`BaseEntity`) has `CreatedAtUtc`, `CreatedById`/`CreatedBy`, `ModifiedAtUtc` and `ModifiedById`/`ModifiedBy`. `HrmsDbContext` sets them on save from the signed-in user; services never do. `CreatedBy`/`ModifiedBy` are display snapshots: "Ali Raza (EMP-0042)" for someone with an employee record, "Name (Owner)" or "Name (Company Super Admin)" otherwise (the owner shows as the owner inside a company too), "System" for background work, "Anonymous" on anonymous suggestions. A new row starts with Modified equal to Added. Bulk `ExecuteUpdate`/`ExecuteDelete` calls bypass both the stamps and the Data log. To show them on a screen: add `RecordStampsDto Stamps` to the DTO (in a LINQ projection write `new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)`; for a loaded entity use `RecordStampsDto.Of(entity)`), add `stamps: RecordStamps` to the TypeScript type, then render `<RecordStampCell stamps={r.stamps} />` in an "Added / modified" table column and `<RecordStamp stamps={r.stamps} />` in the detail view (both in `components/RecordStamp.tsx`, Pakistan time). Leave requests (My leave, Leave approvals and their detail drawer) are the reference example.
 
 ## Payroll rules (verify before going live)
 

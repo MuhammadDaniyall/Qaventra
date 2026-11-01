@@ -7,6 +7,7 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { ChangePasswordDialog } from '../../components/layout/ChangePasswordDialog';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge, Switch, useToast } from '../../components/ui';
 import { formatDate, humanize, roleLabel } from '../../lib/format';
 import { EmergencyContactsCard, JobHistory } from '../employees/records';
@@ -71,6 +72,7 @@ export function MyProfilePage() {
               <Badge tone="accent">{roleLabel(user.role)}</Badge>
               <span>{user.email}</span>
             </div>
+            <RecordStamp stamps={e.stamps} className="mt-2" />
           </div>
         </div>
       </Card>

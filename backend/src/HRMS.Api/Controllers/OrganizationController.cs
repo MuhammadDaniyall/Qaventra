@@ -11,10 +11,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record DepartmentDto(Guid Id, string Name, string? Code, int Employees, Guid? HeadEmployeeId = null, string? Head = null);
+public record DepartmentDto(Guid Id, string Name, string? Code, int Employees, Guid? HeadEmployeeId = null, string? Head = null, RecordStampsDto? Stamps = null);
 public record SaveDepartmentRequest([Required, StringLength(150)] string Name, [StringLength(30)] string? Code, Guid? HeadEmployeeId = null);
 
-public record DesignationDto(Guid Id, string Title, int Employees);
+public record DesignationDto(Guid Id, string Title, int Employees, RecordStampsDto Stamps);
 public record SaveDesignationRequest([Required, StringLength(150)] string Title);
 
 [ApiController]
@@ -26,7 +26,8 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
     public Task<List<DepartmentDto>> Departments() =>
         db.Departments.OrderBy(d => d.Name)
             .Select(d => new DepartmentDto(d.Id, d.Name, d.Code, db.Employees.Count(e => e.DepartmentId == d.Id), d.HeadEmployeeId,
-                db.Employees.Where(e => e.Id == d.HeadEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault()))
+                db.Employees.Where(e => e.Id == d.HeadEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault(),
+                new RecordStampsDto(d.CreatedAtUtc, d.CreatedBy, d.ModifiedAtUtc, d.ModifiedBy)))
             .ToListAsync();
 
     [HttpPost("departments"), Authorize(Policy = Policies.Hr)]
@@ -36,7 +37,7 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
         var d = new Department { Name = req.Name.Trim(), Code = req.Code?.Trim(), HeadEmployeeId = req.HeadEmployeeId };
         db.Departments.Add(d);
         await db.SaveChangesAsync();
-        return new DepartmentDto(d.Id, d.Name, d.Code, 0, d.HeadEmployeeId);
+        return new DepartmentDto(d.Id, d.Name, d.Code, 0, d.HeadEmployeeId, null, RecordStampsDto.Of(d));
     }
 
     [HttpPut("departments/{id:guid}"), Authorize(Policy = Policies.Hr)]
@@ -91,7 +92,8 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
     [HttpGet("designations")]
     public Task<List<DesignationDto>> Designations() =>
         db.Designations.OrderBy(d => d.Title)
-            .Select(d => new DesignationDto(d.Id, d.Title, db.Employees.Count(e => e.DesignationId == d.Id)))
+            .Select(d => new DesignationDto(d.Id, d.Title, db.Employees.Count(e => e.DesignationId == d.Id),
+                new RecordStampsDto(d.CreatedAtUtc, d.CreatedBy, d.ModifiedAtUtc, d.ModifiedBy)))
             .ToListAsync();
 
     [HttpPost("designations"), Authorize(Policy = Policies.Hr)]
@@ -100,7 +102,7 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
         var d = new Designation { Title = req.Title.Trim() };
         db.Designations.Add(d);
         await db.SaveChangesAsync();
-        return new DesignationDto(d.Id, d.Title, 0);
+        return new DesignationDto(d.Id, d.Title, 0, RecordStampsDto.Of(d));
     }
 
     [HttpPut("designations/{id:guid}"), Authorize(Policy = Policies.Hr)]

@@ -45,6 +45,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { formatDate, formatDateTimeUtc } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 
@@ -127,6 +128,7 @@ function AlertsTab() {
               <Th>When</Th>
               <Th>To</Th>
               <Th>Last sent</Th>
+              <Th>Added / modified</Th>
               <Th />
             </Tr>
           </THead>
@@ -157,6 +159,9 @@ function AlertsTab() {
                     .join(', ')}
                 </Td>
                 <Td className="text-sm">{a.lastRunOn ? formatDate(a.lastRunOn) : '—'}</Td>
+                <Td>
+                  <RecordStampCell stamps={a.stamps} />
+                </Td>
                 <Td>
                   <div className="flex justify-end gap-1">
                     <IconButton label="Who is it about today" onClick={() => look.mutate(a)}>
@@ -384,6 +389,7 @@ function AlertModal({ item, onClose }: { item: ScheduledAlert | null; onClose: (
         </div>
       </div>
       <FormError message={save.isError ? errorMessage(save.error) : null} />
+      {item && <RecordStamp stamps={item.stamps} className="mt-4" />}
     </Modal>
   );
 }
@@ -437,6 +443,7 @@ function ReportsTab() {
               <Th>When</Th>
               <Th>To</Th>
               <Th>Next</Th>
+              <Th>Added / modified</Th>
               <Th />
             </Tr>
           </THead>
@@ -456,6 +463,9 @@ function ReportsTab() {
                 <Td className="text-sm">
                   {r.isActive && r.nextRunAtUtc ? formatDateTimeUtc(r.nextRunAtUtc) : '—'}
                   {r.lastSentAtUtc && <p className="text-xs text-zinc-500 dark:text-zinc-400">Last {formatDateTimeUtc(r.lastSentAtUtc)}</p>}
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
                 </Td>
                 <Td>
                   <div className="flex justify-end gap-1">
@@ -663,6 +673,7 @@ function ReportModal({ item, onClose }: { item: ScheduledReport | null; onClose:
         <Checkbox label="On" checked={f.active} onChange={(e) => set('active', e.target.checked)} />
       </div>
       <FormError message={save.isError ? errorMessage(save.error) : look.isError ? errorMessage(look.error) : null} />
+      {item && <RecordStamp stamps={item.stamps} className="mt-4" />}
       {preview && (
         <div className="mt-4">
           <p className="mb-2 text-sm font-medium">

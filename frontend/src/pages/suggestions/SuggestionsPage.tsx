@@ -6,6 +6,7 @@ import { errorMessage } from '../../api/client';
 import { suggestionsApi, type Suggestion, type SuggestionCategory, type SuggestionStatus } from '../../api/engine';
 import { useEmployeeLookup } from '../../api/hooks';
 import { useUser } from '../../auth/AuthContext';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { isHr } from '../../auth/roles';
 import {
   Badge,
@@ -105,6 +106,7 @@ function SuggestionCard({ s, children }: { s: Suggestion; children?: React.React
             <span className="font-medium">{s.respondedByName}:</span> {s.response}
           </p>
         )}
+        <RecordStamp stamps={s.stamps} />
         {children}
       </div>
     </Card>
@@ -257,6 +259,7 @@ function Categories() {
             <span className="font-medium">{c.name}</span>
             {!c.isActive && <Badge>Off</Badge>}
             <span className="flex-1 text-xs text-zinc-500 dark:text-zinc-400">{c.reviewerIds.length ? c.reviewerIds.map(name).join(', ') : 'HR'}</span>
+            <RecordStampCell stamps={c.stamps} />
             <RowActions label={c.name} onEdit={() => setEditing(c)} onDelete={() => setDeleting(c)} />
           </li>
         ))}
@@ -286,6 +289,7 @@ function CategoryModal({ item, onClose }: { item: SuggestionCategory | null; onC
       error={error}
       onSubmit={() => (v.name.trim() ? mutation.mutate(undefined) : setFieldErrors({ name: 'Name is required.' }))}
     >
+      {item && <RecordStamp stamps={item.stamps} />}
       <Field label="Name" required error={fieldErrors.name}>
         <Input value={v.name} maxLength={100} placeholder="Workplace, Canteen, Process" onChange={(e) => setV({ ...v, name: e.target.value })} />
       </Field>

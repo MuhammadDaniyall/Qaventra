@@ -6,6 +6,7 @@ import { attendanceRequestsApi, type AttendanceRequestKind } from '../../api/att
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Button,
   Card,
@@ -184,7 +185,8 @@ export function MyAttendanceRequests() {
               )}
             </div>
             {open === r.id && (
-              <div className="mt-3 ms-7">
+              <div className="mt-3 ms-7 space-y-3">
+                <RecordStamp stamps={r.stamps} />
                 <ApprovalTimeline type="Attendance" subjectId={r.id} />
               </div>
             )}

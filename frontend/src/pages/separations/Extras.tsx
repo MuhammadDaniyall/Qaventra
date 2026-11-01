@@ -24,6 +24,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { formatDate, formatDateTimeUtc } from '../../lib/format';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from '../settings/shared';
 
 const KEY = ['separation-setup'] as const;
@@ -350,6 +351,9 @@ export function MyClearancesPage() {
                     {c.lastWorkingDay && ` · last day ${formatDate(c.lastWorkingDay)}`}
                   </span>
                 </span>
+                <span className="hidden sm:block">
+                  <RecordStampCell stamps={c.stamps} />
+                </span>
               </li>
             ))}
           </ul>
@@ -490,6 +494,9 @@ function ClearanceTemplates() {
             <span className="flex-1 text-xs text-zinc-500 dark:text-zinc-400">
               {t.items.length} items · {Math.max(...t.items.map((i) => i.level))} level(s)
             </span>
+            <span className="hidden sm:block">
+              <RecordStampCell stamps={t.stamps} />
+            </span>
             <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
           </li>
         ))}
@@ -527,6 +534,7 @@ function ClearanceTemplateModal({ item, onClose }: { item: ClearanceTemplate | n
       error={error}
       onSubmit={() => (v.name.trim() ? mutation.mutate(undefined) : setFieldErrors({ name: 'Name is required.' }))}
     >
+      {item && <RecordStamp stamps={item.stamps} />}
       <Field label="Name" required error={fieldErrors.name}>
         <Input value={v.name} maxLength={150} onChange={(e) => setV({ ...v, name: e.target.value })} />
       </Field>
@@ -590,6 +598,9 @@ function ExitTemplates() {
             <span className="font-medium">{t.name}</span>
             {t.isDefault && <Badge tone="accent">Default</Badge>}
             <span className="flex-1 text-xs text-zinc-500 dark:text-zinc-400">{t.questions.length} questions</span>
+            <span className="hidden sm:block">
+              <RecordStampCell stamps={t.stamps} />
+            </span>
             <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
           </li>
         ))}
@@ -626,6 +637,7 @@ function ExitTemplateModal({ item, onClose }: { item: ExitTemplate | null; onClo
       error={error}
       onSubmit={() => (v.name.trim() ? mutation.mutate(undefined) : setFieldErrors({ name: 'Name is required.' }))}
     >
+      {item && <RecordStamp stamps={item.stamps} />}
       <Field label="Name" required error={fieldErrors.name}>
         <Input value={v.name} maxLength={150} onChange={(e) => setV({ ...v, name: e.target.value })} />
       </Field>

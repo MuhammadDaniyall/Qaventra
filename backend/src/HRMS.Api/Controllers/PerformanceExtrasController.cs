@@ -12,18 +12,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record KpiDto(Guid Id, string Name, string? Description, string? Category, string? Unit, string? DefaultTarget, decimal DefaultWeight, bool IsActive);
+public record KpiDto(Guid Id, string Name, string? Description, string? Category, string? Unit, string? DefaultTarget, decimal DefaultWeight, bool IsActive,
+    RecordStampsDto Stamps);
 public record SaveKpiRequest(
     [Required, StringLength(200)] string Name, [StringLength(1000)] string? Description, [StringLength(100)] string? Category,
     [StringLength(30)] string? Unit, [StringLength(200)] string? DefaultTarget, [Range(0, 100)] decimal DefaultWeight, bool IsActive = true);
 
-public record ReviewFeedbackDto(Guid Id, Guid FromEmployeeId, string From, int? Rating, string? Comment, DateTime? SubmittedAtUtc);
+public record ReviewFeedbackDto(Guid Id, Guid FromEmployeeId, string From, int? Rating, string? Comment, DateTime? SubmittedAtUtc, RecordStampsDto Stamps);
 public record RequestFeedbackRequest([Required, MinLength(1), MaxLength(10)] List<Guid> EmployeeIds);
 /// <summary>A feedback request waiting on the signed-in person.</summary>
-public record MyFeedbackRequestDto(Guid Id, Guid ReviewId, string Employee, string? Designation, string Cycle, int? Rating, string? Comment, DateTime? SubmittedAtUtc);
+public record MyFeedbackRequestDto(Guid Id, Guid ReviewId, string Employee, string? Designation, string Cycle, int? Rating, string? Comment, DateTime? SubmittedAtUtc,
+    RecordStampsDto Stamps);
 public record GiveFeedbackRequest([Range(1, 5)] int Rating, [Required, StringLength(4000)] string Comment);
 
-public record CheckInDto(Guid Id, string Author, bool ByEmployee, string Period, int? Progress, string Note, DateTime CreatedAtUtc);
+public record CheckInDto(Guid Id, string Author, bool ByEmployee, string Period, int? Progress, string Note, DateTime CreatedAtUtc, RecordStampsDto Stamps);
 public record AddCheckInRequest([Required, StringLength(20)] string Period, [Range(0, 100)] int? Progress, [Required, StringLength(4000)] string Note);
 
 /// <summary>KPI library, feedback from other reviewers, and quarterly check-ins on a review.</summary>
@@ -38,7 +40,8 @@ public class PerformanceExtrasController(HrmsDbContext db, PerformanceService pe
     [HttpGet("kpis")]
     public Task<List<KpiDto>> Kpis() =>
         db.Kpis.Where(k => k.IsActive || me.IsHr()).OrderBy(k => k.Category).ThenBy(k => k.Name)
-            .Select(k => new KpiDto(k.Id, k.Name, k.Description, k.Category, k.Unit, k.DefaultTarget, k.DefaultWeight, k.IsActive)).ToListAsync();
+            .Select(k => new KpiDto(k.Id, k.Name, k.Description, k.Category, k.Unit, k.DefaultTarget, k.DefaultWeight, k.IsActive,
+                new RecordStampsDto(k.CreatedAtUtc, k.CreatedBy, k.ModifiedAtUtc, k.ModifiedBy))).ToListAsync();
 
     [HttpPost("kpis"), Authorize(Policy = Policies.Hr)]
     public async Task<KpiDto> AddKpi(SaveKpiRequest req)
@@ -81,7 +84,8 @@ public class PerformanceExtrasController(HrmsDbContext db, PerformanceService pe
                       join e in db.Employees on f.FromEmployeeId equals e.Id
                       where f.ReviewId == id
                       orderby f.CreatedAtUtc
-                      select new ReviewFeedbackDto(f.Id, f.FromEmployeeId, e.FirstName + " " + e.LastName, f.Rating, f.Comment, f.SubmittedAtUtc)).ToListAsync();
+                      select new ReviewFeedbackDto(f.Id, f.FromEmployeeId, e.FirstName + " " + e.LastName, f.Rating, f.Comment, f.SubmittedAtUtc,
+                          new RecordStampsDto(f.CreatedAtUtc, f.CreatedBy, f.ModifiedAtUtc, f.ModifiedBy))).ToListAsync();
     }
 
     [HttpPost("reviews/{id:guid}/feedback")]
@@ -114,7 +118,8 @@ public class PerformanceExtrasController(HrmsDbContext db, PerformanceService pe
                       where f.FromEmployeeId == mine && r.Cycle!.Status != ReviewCycleStatus.Closed
                       orderby f.SubmittedAtUtc != null, f.CreatedAtUtc descending
                       select new MyFeedbackRequestDto(f.Id, r.Id, r.Employee!.FirstName + " " + r.Employee.LastName,
-                          r.Employee.Designation != null ? r.Employee.Designation.Title : null, r.Cycle!.Name, f.Rating, f.Comment, f.SubmittedAtUtc))
+                          r.Employee.Designation != null ? r.Employee.Designation.Title : null, r.Cycle!.Name, f.Rating, f.Comment, f.SubmittedAtUtc,
+                          new RecordStampsDto(f.CreatedAtUtc, f.CreatedBy, f.ModifiedAtUtc, f.ModifiedBy)))
             .ToListAsync();
     }
 
@@ -142,7 +147,8 @@ public class PerformanceExtrasController(HrmsDbContext db, PerformanceService pe
                       join e in db.Employees on c.AuthorEmployeeId equals e.Id
                       where c.ReviewId == id
                       orderby c.CreatedAtUtc descending
-                      select new CheckInDto(c.Id, e.FirstName + " " + e.LastName, c.AuthorEmployeeId == r.EmployeeId, c.Period, c.Progress, c.Note, c.CreatedAtUtc))
+                      select new CheckInDto(c.Id, e.FirstName + " " + e.LastName, c.AuthorEmployeeId == r.EmployeeId, c.Period, c.Progress, c.Note, c.CreatedAtUtc,
+                          new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy)))
             .ToListAsync();
     }
 
@@ -174,5 +180,5 @@ public class PerformanceExtrasController(HrmsDbContext db, PerformanceService pe
         k.IsActive = req.IsActive;
     }
 
-    private static KpiDto ToDto(Kpi k) => new(k.Id, k.Name, k.Description, k.Category, k.Unit, k.DefaultTarget, k.DefaultWeight, k.IsActive);
+    private static KpiDto ToDto(Kpi k) => new(k.Id, k.Name, k.Description, k.Category, k.Unit, k.DefaultTarget, k.DefaultWeight, k.IsActive, RecordStampsDto.Of(k));
 }

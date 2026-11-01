@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type RevisionKind = 'Increment' | 'Promotion' | 'Decrement' | 'Correction';
@@ -42,6 +43,7 @@ export interface SalaryRevision {
   reason: string | null;
   byName: string | null;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
 
 export interface SaveRecurring {
@@ -62,6 +64,7 @@ export interface RecurringItem extends SaveRecurring {
   name: string;
   code: string;
   active: boolean;
+  stamps: RecordStamps;
 }
 
 export interface SalaryHold {
@@ -76,6 +79,7 @@ export interface SalaryHold {
   createdAtUtc: string;
   releasedAtUtc: string | null;
   releasedByName: string | null;
+  stamps: RecordStamps;
 }
 
 export const payChangesApi = {

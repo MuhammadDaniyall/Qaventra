@@ -16,7 +16,7 @@ public record TravelSettingsDto(int MinNoticeDays, decimal PerDiemDomestic, deci
 
 public record SaveTravelSettingsRequest(int MinNoticeDays, decimal PerDiemDomestic, decimal PerDiemInternational, int SettleWithinDays, List<Guid>? DeskIds);
 
-public record TravelReasonDto(Guid Id, string Name, bool IsActive, int Trips);
+public record TravelReasonDto(Guid Id, string Name, bool IsActive, int Trips, RecordStampsDto Stamps);
 
 public record SaveTravelReasonRequest([Required, StringLength(100)] string Name, bool IsActive = true);
 
@@ -32,7 +32,8 @@ public record SaveTravelRequest(
 public record TravelListItemDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string? Department, string Route, string Destination, TripType TripType,
     bool IsInternational, DateOnly DepartOn, DateOnly ReturnOn, string Purpose, string? Reason, TravelStatus Status, SettlementStatus Settlement,
-    bool Urgent, bool NeedsHotel, decimal? AdvanceRequested, decimal? AdvancePaid, decimal BookedCost, bool SettlementOverdue, DateTime CreatedAtUtc);
+    bool Urgent, bool NeedsHotel, decimal? AdvanceRequested, decimal? AdvancePaid, decimal BookedCost, bool SettlementOverdue, DateTime CreatedAtUtc,
+    RecordStampsDto Stamps);
 
 public record TravelLegDto(Guid Id, int Order, string From, string To, DateOnly Date, TravelMode Mode, string? Preference, string? BookingRef, decimal? BookingCost);
 
@@ -45,7 +46,7 @@ public record TravelDto(
     decimal? HotelCost, string? BookingNotes, string? BookedByName, DateTime? BookedAtUtc, decimal? AdvancePaid, DateOnly? AdvancePaidOn, string? AdvancePaidVia,
     SettlementStatus Settlement, int? PerDiemDays, decimal? PerDiemRate, decimal PerDiemRateNow, string? SettlementNote, string? SettlementDecisionNote,
     DateTime? SettledAtUtc, decimal Claimed, decimal Net, decimal BookedCost, DateOnly SettleBy, List<TravelLegDto> Legs, List<TravelExpenseDto> Expenses,
-    bool IsMine, bool IsDesk, bool IsHr, DateTime CreatedAtUtc);
+    bool IsMine, bool IsDesk, bool IsHr, DateTime CreatedAtUtc, RecordStampsDto Stamps);
 
 public record BookTravelRequest(List<LegBooking>? Legs, [StringLength(150)] string? HotelName, [StringLength(100)] string? HotelRef, decimal? HotelCost, [StringLength(2000)] string? Notes);
 
@@ -114,7 +115,8 @@ public class TravelController(HrmsDbContext db, TravelService travel, TenantCloc
     [HttpGet("reasons")]
     public async Task<List<TravelReasonDto>> Reasons() =>
         await db.TravelReasons.OrderBy(r => r.Name)
-            .Select(r => new TravelReasonDto(r.Id, r.Name, r.IsActive, db.TravelRequests.Count(t => t.ReasonId == r.Id))).ToListAsync();
+            .Select(r => new TravelReasonDto(r.Id, r.Name, r.IsActive, db.TravelRequests.Count(t => t.ReasonId == r.Id),
+                new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy))).ToListAsync();
 
     [HttpPost("reasons"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> AddReason(SaveTravelReasonRequest req)
@@ -307,7 +309,7 @@ public class TravelController(HrmsDbContext db, TravelService travel, TenantCloc
                           && t.ReturnOn.AddDays(settle) < today;
             return new TravelListItemDto(t.Id, t.EmployeeId, $"{r.FirstName} {r.LastName}", r.EmployeeCode, r.Department, TravelService.Route(t), TravelService.Destination(t),
                 t.TripType, t.IsInternational, t.DepartOn, t.ReturnOn, t.Purpose, r.Reason, t.Status, t.Settlement, t.UrgentReason is not null, t.NeedsHotel,
-                t.AdvanceRequested, t.AdvancePaid, TravelService.BookedCost(t), overdue, t.CreatedAtUtc);
+                t.AdvanceRequested, t.AdvancePaid, TravelService.BookedCost(t), overdue, t.CreatedAtUtc, RecordStampsDto.Of(t));
         }).ToList();
     }
 
@@ -324,6 +326,6 @@ public class TravelController(HrmsDbContext db, TravelService travel, TenantCloc
             t.ReturnOn.AddDays(s.SettleWithinDays),
             t.Legs.OrderBy(l => l.Order).Select(l => new TravelLegDto(l.Id, l.Order, l.From, l.To, l.Date, l.Mode, l.Preference, l.BookingRef, l.BookingCost)).ToList(),
             t.Expenses.OrderBy(e => e.Date).Select(e => new TravelExpenseDto(e.Id, e.Date, e.Category, e.Description, e.Amount)).ToList(),
-            t.EmployeeId == me.EmployeeId, desk, me.IsHr(), t.CreatedAtUtc);
+            t.EmployeeId == me.EmployeeId, desk, me.IsHr(), t.CreatedAtUtc, RecordStampsDto.Of(t));
     }
 }

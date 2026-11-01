@@ -9,6 +9,7 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -172,6 +173,7 @@ function AnnouncementList({ hr }: { hr: boolean }) {
                 Open link <ExternalLink className="size-3.5" />
               </a>
             )}
+            {hr && <RecordStamp stamps={a.stamps} className="mt-3" />}
             {(hr || a.attachments > 0) && (
               <AttachmentList owner="Announcement" ownerId={a.id} emptyText={hr ? 'No files. Attach a policy PDF or poster here.' : 'No files.'} className="mt-4" />
             )}
@@ -274,6 +276,7 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
       }
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {item && <RecordStamp stamps={item.stamps} className="sm:col-span-2" />}
         <div className="sm:col-span-2">
           <FormError message={error} />
         </div>
@@ -430,6 +433,7 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
           </Button>
         )}
       </div>
+      {hr && <RecordStamp stamps={poll.stamps} className="mt-3" />}
       <ConfirmDialog
         open={deleting}
         title="Delete this poll?"

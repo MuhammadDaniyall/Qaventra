@@ -18,7 +18,7 @@ public record SubmitPayRequest(
 public record PayRequestDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, PayRequestKind Kind, string Title, decimal Amount, bool IsTaxable,
     bool IsEarning, int Year, int Month, DateOnly? WorkDate, decimal? Hours, string? Reason, RequestStatus Status,
-    DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, DateTime? PaidAtUtc, bool InDraftPayroll);
+    DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, DateTime? PaidAtUtc, bool InDraftPayroll, RecordStampsDto Stamps);
 
 public record RequestLoanRequest(
     Guid? EmployeeId, [StringLength(150)] string? Title, decimal Amount, int Installments, int StartYear, int StartMonth, [StringLength(1000)] string? Reason);
@@ -26,7 +26,7 @@ public record RequestLoanRequest(
 public record LoanDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string Title, decimal Amount, int Installments, decimal InstallmentAmount,
     int StartYear, int StartMonth, string? Reason, RequestStatus Status, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote,
-    decimal Repaid, int InstallmentsTaken, decimal Remaining);
+    decimal Repaid, int InstallmentsTaken, decimal Remaining, RecordStampsDto Stamps);
 
 public record OvertimeQuoteDto(decimal Amount, decimal Multiplier);
 
@@ -131,7 +131,8 @@ public class PayRequestsController(HrmsDbContext db, PayRequestService pay, ICur
             r.Id, r.EmployeeId, r.Employee!.FirstName + " " + r.Employee.LastName, r.Employee.EmployeeCode, r.Kind, r.Title, r.Amount, r.IsTaxable,
             r.Kind == PayRequestKind.Allowance || r.Kind == PayRequestKind.Bonus || r.Kind == PayRequestKind.Overtime,
             r.Year, r.Month, r.WorkDate, r.Hours, r.Reason, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote, r.PaidAtUtc,
-            r.PayrollRunId != null && r.PaidAtUtc == null && r.Status == RequestStatus.Approved));
+            r.PayrollRunId != null && r.PaidAtUtc == null && r.Status == RequestStatus.Approved,
+            new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)));
 
     /// <summary>Repaid counts installments in finalized payrolls only; draft ones are still estimates.</summary>
     private IQueryable<LoanDto> ProjectLoans(IQueryable<Loan> q) =>
@@ -144,5 +145,6 @@ public class PayRequestsController(HrmsDbContext db, PayRequestService pay, ICur
             Taken = l.Repayments.Count(x => db.PayrollRuns.Any(p => p.Id == x.PayrollRunId && p.Status == PayrollRunStatus.Finalized)),
         }).Select(x => new LoanDto(
             x.l.Id, x.l.EmployeeId, x.Name, x.EmployeeCode, x.l.Title, x.l.Amount, x.l.Installments, x.l.InstallmentAmount, x.l.StartYear,
-            x.l.StartMonth, x.l.Reason, x.l.Status, x.l.CreatedAtUtc, x.l.DecidedAtUtc, x.l.DecisionNote, x.Repaid, x.Taken, x.l.Amount - x.Repaid));
+            x.l.StartMonth, x.l.Reason, x.l.Status, x.l.CreatedAtUtc, x.l.DecidedAtUtc, x.l.DecisionNote, x.Repaid, x.Taken, x.l.Amount - x.Repaid,
+            new RecordStampsDto(x.l.CreatedAtUtc, x.l.CreatedBy, x.l.ModifiedAtUtc, x.l.ModifiedBy)));
 }

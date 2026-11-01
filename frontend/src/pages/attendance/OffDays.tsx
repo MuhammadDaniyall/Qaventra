@@ -4,6 +4,7 @@ import { attendanceRulesApi } from '../../api/attendanceRules';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { Button, Card, CardHeader, Field, FormError, Input, Modal, StatusBadge, Table, TBody, Td, Textarea, Tr, useToast } from '../../components/ui';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatDate, todayIso } from '../../lib/format';
 import { DAYS_OF_WEEK, type DayOfWeek } from '../../types';
@@ -106,6 +107,9 @@ export function MyOffDays() {
               <Td className="text-sm">
                 {x.reason}
                 {x.decisionNote && <p className="text-xs text-zinc-500">“{x.decisionNote}”</p>}
+              </Td>
+              <Td>
+                <RecordStampCell stamps={x.stamps} />
               </Td>
               <Td>
                 <StatusBadge status={x.status} />

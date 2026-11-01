@@ -17,6 +17,7 @@ import {
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, ErrorState, Field, FormError, Input, Modal, PageHeader, PageSpinner, Select, StatusBadge, useToast } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { formatDate, formatTime, todayIso } from '../../lib/format';
 import { TaskList } from './shared';
 
@@ -83,6 +84,7 @@ export function OnboardingDetailPage() {
           )
         }
       />
+      <RecordStamp stamps={s.stamps} className="-mt-2 mb-4" />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card>
           <CardHeader title="Tasks" description={`${s.done} of ${s.total} done${s.overdue ? ` · ${s.overdue} late` : ''}`} />

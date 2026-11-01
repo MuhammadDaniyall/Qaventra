@@ -20,7 +20,7 @@ public record DecideAttendanceRequest([StringLength(1000)] string? Note);
 public record AttendanceRequestDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, DateOnly Date, AttendanceRequestKind Kind,
     TimeOnly CheckIn, TimeOnly? CheckOut, string Reason, RequestStatus Status, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote,
-    TimeOnly? RecordedCheckIn, TimeOnly? RecordedCheckOut);
+    TimeOnly? RecordedCheckIn, TimeOnly? RecordedCheckOut, RecordStampsDto Stamps);
 
 [ApiController]
 [Route("api/attendance/requests")]
@@ -82,6 +82,7 @@ public class AttendanceRequestsController(HrmsDbContext db, AttendanceRequestSer
         {
             r.Id, r.EmployeeId, Name = r.Employee!.FirstName + " " + r.Employee.LastName, r.Employee.EmployeeCode, r.Date, r.Kind,
             r.CheckIn, r.CheckOut, r.Reason, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
+            Stamps = new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy),
             Recorded = db.AttendanceRecords.Where(a => a.EmployeeId == r.EmployeeId && a.Date == r.Date)
                 .Select(a => new { a.CheckInUtc, a.CheckOutUtc }).FirstOrDefault(),
         }).ToListAsync();
@@ -91,6 +92,6 @@ public class AttendanceRequestsController(HrmsDbContext db, AttendanceRequestSer
             r.Id, r.EmployeeId, r.Name, r.EmployeeCode, r.Date, r.Kind, r.CheckIn, r.CheckOut, r.Reason, r.Status, r.CreatedAtUtc,
             r.DecidedAtUtc, r.DecisionNote,
             r.Recorded is null ? null : Local(r.Recorded.CheckInUtc),
-            r.Recorded?.CheckOutUtc is { } o ? Local(o) : null)).ToList();
+            r.Recorded?.CheckOutUtc is { } o ? Local(o) : null, r.Stamps)).ToList();
     }
 }

@@ -9,6 +9,8 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { ExportRangeButton } from '../../components/excel/ExcelButtons';
+import { RecordStampCell } from '../../components/RecordStamp';
+import { LeaveDetailDrawer } from './LeaveDetail';
 import {
   Avatar,
   Button,
@@ -40,6 +42,7 @@ export function LeaveApprovalsPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState<TabValue>('Pending');
   const [deciding, setDeciding] = useState<{ request: LeaveRequest; approve: boolean } | null>(null);
+  const [viewing, setViewing] = useState<LeaveRequest | null>(null);
   const list = useQuery({ queryKey: qk.leaveApprovals(status), queryFn: () => leaveApi.approvals(status) });
   const pendingCount = useQuery({ queryKey: qk.leaveApprovals('Pending'), queryFn: () => leaveApi.approvals('Pending') });
 
@@ -102,12 +105,13 @@ export function LeaveApprovalsPage() {
                 <Th className="text-end">Days</Th>
                 <Th>Reason</Th>
                 <Th>{status === 'Pending' ? 'Requested' : 'Decided'}</Th>
+                <Th>Added / modified</Th>
                 {status === 'Pending' ? <Th className="text-end">Decision</Th> : <Th>Note</Th>}
               </tr>
             </THead>
             <TBody>
               {list.data.map((r) => (
-                <Tr key={r.id}>
+                <Tr key={r.id} onClick={() => setViewing(r)}>
                   <Td>
                     <div className="flex items-center gap-3">
                       <Avatar name={r.employeeName} size="sm" />
@@ -129,8 +133,11 @@ export function LeaveApprovalsPage() {
                     {r.reason ?? '—'}
                   </Td>
                   <Td>{formatDateTimeUtc(status === 'Pending' ? r.createdAtUtc : r.decidedAtUtc)}</Td>
+                  <Td>
+                    <RecordStampCell stamps={r.stamps} />
+                  </Td>
                   {status === 'Pending' ? (
-                    <Td className="text-end">
+                    <Td className="text-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                       <div className="inline-flex gap-2">
                         <Button size="sm" variant="secondary" icon={<X className="size-3.5" />} onClick={() => setDeciding({ request: r, approve: false })}>
                           Reject
@@ -153,6 +160,7 @@ export function LeaveApprovalsPage() {
         )}
       </Card>
       {deciding && <DecisionModal {...deciding} onClose={() => setDeciding(null)} />}
+      <LeaveDetailDrawer request={viewing} onClose={() => setViewing(null)} />
     </>
   );
 }

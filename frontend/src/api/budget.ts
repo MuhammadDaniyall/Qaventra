@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type BudgetStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Closed';
 
@@ -11,6 +12,7 @@ export interface BudgetPlanListItem {
   headcount: number;
   cost: number;
   positions: number;
+  stamps: RecordStamps;
 }
 
 export interface BudgetLine {
@@ -53,6 +55,7 @@ export interface BudgetPlan {
   canEdit: boolean;
   canDecide: boolean;
   canClose: boolean;
+  stamps: RecordStamps;
 }
 
 export interface PositionInput {

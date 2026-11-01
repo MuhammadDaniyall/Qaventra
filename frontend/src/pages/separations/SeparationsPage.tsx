@@ -30,6 +30,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { formatDate, todayIso } from '../../lib/format';
 import type { SeparationSummary, SeparationType } from '../../types/workflows';
 import { SEPARATION_TYPES, typeLabel } from './shared';
@@ -93,7 +94,7 @@ export function SeparationsPage() {
       />
       <Card>
         {list.isLoading ? (
-          <SkeletonRows rows={5} cols={6} />
+          <SkeletonRows rows={5} cols={7} />
         ) : list.isError ? (
           <ErrorState error={list.error} onRetry={() => list.refetch()} />
         ) : !rows.length ? (
@@ -107,6 +108,7 @@ export function SeparationsPage() {
                 <Th>Notice given</Th>
                 <Th>Last working day</Th>
                 <Th>Clearance</Th>
+                <Th>Added / modified</Th>
                 <Th>Status</Th>
               </tr>
             </THead>
@@ -143,6 +145,9 @@ export function SeparationsPage() {
                       ) : (
                         '—'
                       )}
+                    </Td>
+                    <Td>
+                      <RecordStampCell stamps={s.stamps} />
                     </Td>
                     <Td>
                       <StatusBadge status={s.status} label={s.status === 'Requested' ? 'Needs decision' : undefined} />

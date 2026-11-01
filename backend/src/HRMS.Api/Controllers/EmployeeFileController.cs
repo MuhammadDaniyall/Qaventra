@@ -11,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record OrgLookupDto(Guid Id, LookupKind Kind, string Name, string? Code, Guid? ParentId, Guid? HeadEmployeeId, bool IsActive, int Employees);
+public record OrgLookupDto(Guid Id, LookupKind Kind, string Name, string? Code, Guid? ParentId, Guid? HeadEmployeeId, bool IsActive, int Employees,
+    RecordStampsDto Stamps);
 public record SaveOrgLookupRequest(
     LookupKind Kind, [Required, StringLength(150)] string Name, [StringLength(30)] string? Code, Guid? ParentId, Guid? HeadEmployeeId, bool IsActive = true);
 
@@ -64,7 +65,7 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
         if (kind is { } k) q = q.Where(x => x.Kind == k);
         var rows = await q.OrderBy(x => x.Kind).ThenBy(x => x.Name).ToListAsync();
         var counts = await CountsAsync();
-        return rows.Select(x => new OrgLookupDto(x.Id, x.Kind, x.Name, x.Code, x.ParentId, x.HeadEmployeeId, x.IsActive, counts.GetValueOrDefault(x.Id))).ToList();
+        return rows.Select(x => new OrgLookupDto(x.Id, x.Kind, x.Name, x.Code, x.ParentId, x.HeadEmployeeId, x.IsActive, counts.GetValueOrDefault(x.Id), RecordStampsDto.Of(x))).ToList();
     }
 
     private async Task<Dictionary<Guid, int>> CountsAsync()
@@ -83,7 +84,7 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
         await ApplyAsync(x, req);
         db.OrgLookups.Add(x);
         await db.SaveChangesAsync();
-        return new OrgLookupDto(x.Id, x.Kind, x.Name, x.Code, x.ParentId, x.HeadEmployeeId, x.IsActive, 0);
+        return new OrgLookupDto(x.Id, x.Kind, x.Name, x.Code, x.ParentId, x.HeadEmployeeId, x.IsActive, 0, RecordStampsDto.Of(x));
     }
 
     [HttpPut("lookups/{id:guid}"), Authorize(Policy = Policies.Hr)]

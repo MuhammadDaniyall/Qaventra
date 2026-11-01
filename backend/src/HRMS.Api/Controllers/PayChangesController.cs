@@ -19,16 +19,16 @@ public record ReviseSalariesRequest(DateOnly EffectiveFrom, SalaryRevisionKind K
 public record RevisionPreviewDto(Guid EmployeeId, string Name, string Code, decimal OldBasic, decimal NewBasic, decimal OldGross, decimal NewGross, decimal ChangePercent, string? Problem);
 
 public record SalaryRevisionDto(Guid Id, Guid EmployeeId, string Name, string Code, DateOnly EffectiveFrom, SalaryRevisionKind Kind, decimal OldBasic, decimal NewBasic,
-    decimal OldGross, decimal NewGross, string? Reason, string? ByName, DateTime CreatedAtUtc);
+    decimal OldGross, decimal NewGross, string? Reason, string? ByName, DateTime CreatedAtUtc, RecordStampsDto Stamps);
 
 public record RecurringItemDto(Guid Id, Guid EmployeeId, string Name, string Code, string Title, bool IsEarning, decimal Amount, bool IsTaxable, int StartYear, int StartMonth,
-    int? EndYear, int? EndMonth, string? Notes, bool Active);
+    int? EndYear, int? EndMonth, string? Notes, bool Active, RecordStampsDto Stamps);
 
 public record SaveRecurringItemRequest(Guid EmployeeId, [Required, StringLength(150)] string Title, bool IsEarning, decimal Amount, bool IsTaxable, int StartYear, int StartMonth,
     int? EndYear, int? EndMonth, [StringLength(500)] string? Notes);
 
 public record SalaryHoldDto(Guid Id, Guid EmployeeId, string Name, string Code, int Year, int Month, string Reason, string? HeldByName, DateTime CreatedAtUtc,
-    DateTime? ReleasedAtUtc, string? ReleasedByName);
+    DateTime? ReleasedAtUtc, string? ReleasedByName, RecordStampsDto Stamps);
 
 public record HoldRequest(Guid EmployeeId, int Year, int Month, [Required, StringLength(500)] string Reason);
 
@@ -105,7 +105,8 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
     public async Task<List<SalaryRevisionDto>> Revisions([FromQuery] Guid? employeeId) =>
         await db.SalaryRevisions.Where(r => employeeId == null || r.EmployeeId == employeeId).OrderByDescending(r => r.EffectiveFrom).ThenBy(r => r.Employee!.FirstName).Take(500)
             .Select(r => new SalaryRevisionDto(r.Id, r.EmployeeId, r.Employee!.FirstName + " " + r.Employee.LastName, r.Employee.EmployeeCode, r.EffectiveFrom, r.Kind,
-                r.OldBasic, r.NewBasic, r.OldGross, r.NewGross, r.Reason, r.ByName, r.CreatedAtUtc)).ToListAsync();
+                r.OldBasic, r.NewBasic, r.OldGross, r.NewGross, r.Reason, r.ByName, r.CreatedAtUtc,
+                new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy))).ToListAsync();
 
     private async Task<List<(RevisionPreviewDto Preview, EmployeeSalary Current, decimal Factor)>> PlanAsync(ReviseSalariesRequest req)
     {
@@ -178,7 +179,8 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
         return await db.RecurringPayItems.OrderBy(r => r.Employee!.FirstName).ThenBy(r => r.Title)
             .Select(r => new RecurringItemDto(r.Id, r.EmployeeId, r.Employee!.FirstName + " " + r.Employee.LastName, r.Employee.EmployeeCode, r.Title, r.IsEarning, r.Amount,
                 r.IsTaxable, r.StartYear, r.StartMonth, r.EndYear, r.EndMonth, r.Notes,
-                r.StartYear * 12 + r.StartMonth <= period && (r.EndYear == null || r.EndYear * 12 + r.EndMonth >= period)))
+                r.StartYear * 12 + r.StartMonth <= period && (r.EndYear == null || r.EndYear * 12 + r.EndMonth >= period),
+                new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)))
             .ToListAsync();
     }
 
@@ -247,7 +249,8 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
     public async Task<List<SalaryHoldDto>> Holds() =>
         await db.SalaryHolds.OrderBy(h => h.ReleasedAtUtc != null).ThenByDescending(h => h.Year * 12 + h.Month).Take(300)
             .Select(h => new SalaryHoldDto(h.Id, h.EmployeeId, h.Employee!.FirstName + " " + h.Employee.LastName, h.Employee.EmployeeCode, h.Year, h.Month, h.Reason,
-                h.HeldByName, h.CreatedAtUtc, h.ReleasedAtUtc, h.ReleasedByName)).ToListAsync();
+                h.HeldByName, h.CreatedAtUtc, h.ReleasedAtUtc, h.ReleasedByName,
+                new RecordStampsDto(h.CreatedAtUtc, h.CreatedBy, h.ModifiedAtUtc, h.ModifiedBy))).ToListAsync();
 
     /// <summary>Holds someone's pay for a month: left out of the bank advice until released.</summary>
     [HttpPost("holds")]

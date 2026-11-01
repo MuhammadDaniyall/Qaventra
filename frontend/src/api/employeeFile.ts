@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { http } from './client';
 import { qk } from './keys';
+import type { RecordStamps } from '../types';
 
 export type LookupKind = 'Division' | 'Grade' | 'CostCenter' | 'Region' | 'EmployeeGroup' | 'SubDepartment' | 'ExitType';
 
@@ -25,9 +26,10 @@ export interface OrgLookup {
   headEmployeeId: string | null;
   isActive: boolean;
   employees: number;
+  stamps: RecordStamps;
 }
 
-export type SaveOrgLookup = Omit<OrgLookup, 'id' | 'employees'>;
+export type SaveOrgLookup = Omit<OrgLookup, 'id' | 'employees' | 'stamps'>;
 
 export interface EmployeeFile {
   fatherName: string | null;

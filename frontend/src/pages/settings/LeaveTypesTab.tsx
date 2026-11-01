@@ -4,6 +4,7 @@ import { Palmtree, Plus } from 'lucide-react';
 import { setupApi } from '../../api/organization';
 import { useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, ErrorState, Field, Input, Select, SkeletonRows, StatusBadge, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
 import { formatNumber } from '../../lib/format';
 import type { Gender, LeaveAccrual, LeaveType, SaveLeaveTypeRequest } from '../../types';
@@ -42,6 +43,7 @@ export function LeaveTypesTab() {
               <Th>Pay</Th>
               <Th>Policy</Th>
               <Th>Status</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -57,6 +59,9 @@ export function LeaveTypesTab() {
                 <Td className="max-w-xs whitespace-normal text-xs text-zinc-500 dark:text-zinc-400">{policySummary(t) || '—'}</Td>
                 <Td>
                   <StatusBadge status={t.isActive ? 'Active' : 'Cancelled'} label={t.isActive ? 'Active' : 'Inactive'} />
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={t.stamps} />
                 </Td>
                 <Td>
                   <div className="flex items-center justify-end gap-1">
@@ -263,6 +268,7 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
           <Checkbox label="Active" checked={v.isActive} onChange={(e) => set({ isActive: e.target.checked })} />
         </div>
       </fieldset>
+      {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

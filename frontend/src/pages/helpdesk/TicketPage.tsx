@@ -8,6 +8,7 @@ import { qk } from '../../api/keys';
 import { schedulingApi } from '../../api/scheduling';
 import { useUser } from '../../auth/AuthContext';
 import { AttachmentList, attachmentsKey } from '../../components/attachments/AttachmentList';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Avatar,
   Button,
@@ -407,6 +408,7 @@ function SidePanel({ detail }: { detail: TicketDetail }) {
             </div>
             <p className="text-zinc-800 dark:text-zinc-200">{detail.involved.length ? detail.involved.join(', ') : <span className="text-zinc-500 dark:text-zinc-400">Nobody</span>}</p>
           </div>
+          <RecordStamp stamps={t.stamps} />
         </CardBody>
       </Card>
       {involving && <InvolveModal detail={detail} onClose={() => setInvolving(false)} />}

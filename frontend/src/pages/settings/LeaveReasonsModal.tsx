@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2 } from 'lucide-react';
 import { qk } from '../../api/keys';
+import { RecordStamp } from '../../components/RecordStamp';
 import { leaveRulesApi } from '../../api/leaveRules';
 import { Badge, Button, Checkbox, IconButton, Input, Modal, useToast } from '../../components/ui';
 import type { LeaveType } from '../../types';
@@ -38,12 +39,13 @@ export function LeaveReasonsModal({ type, onClose }: { type: LeaveType; onClose:
       <ul className="mb-4 divide-y divide-zinc-100 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
         {reasons.map((r) => (
           <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-            <span className="flex-1">
+            <div className="flex-1">
               {r.name}
               {r.maxDays != null && <span className="ms-2 text-xs text-zinc-500 dark:text-zinc-400">up to {r.maxDays} days</span>}
               {r.requiresDocument && <Badge className="ms-2">Document</Badge>}
               {!r.isActive && <Badge className="ms-2">Off</Badge>}
-            </span>
+              <RecordStamp stamps={r.stamps} className="mt-0.5" />
+            </div>
             <Button size="sm" variant="ghost" onClick={() => toggle.mutate(r)}>
               {r.isActive ? 'Turn off' : 'Turn on'}
             </Button>

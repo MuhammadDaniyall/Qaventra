@@ -15,7 +15,7 @@ namespace HRMS.Api.Controllers;
 public record ExpenseGradeRateDto(Guid GradeId, [Range(0, 10_000_000)] decimal? Rate, [Range(0, 100_000_000)] decimal? YearlyLimit);
 
 public record ExpenseTypeDto(Guid Id, string Name, ExpenseCategory Category, ExpenseCalculation Calculation, string? Unit, decimal? Rate, decimal? PerClaimLimit,
-    decimal? YearlyLimit, bool ReceiptRequired, List<Guid> GradeIds, bool IsActive, List<ExpenseGradeRateDto> GradeRates);
+    decimal? YearlyLimit, bool ReceiptRequired, List<Guid> GradeIds, bool IsActive, List<ExpenseGradeRateDto> GradeRates, RecordStampsDto Stamps);
 
 public record SaveExpenseTypeRequest([Required, StringLength(150)] string Name, ExpenseCategory Category, ExpenseCalculation Calculation, [StringLength(30)] string? Unit,
     [Range(0, 10_000_000)] decimal? Rate, [Range(0, 100_000_000)] decimal? PerClaimLimit, [Range(0, 100_000_000)] decimal? YearlyLimit, bool ReceiptRequired,
@@ -25,11 +25,11 @@ public record SaveExpenseTypeRequest([Required, StringLength(150)] string Name, 
 public record ExpenseTypeForMeDto(Guid Id, string Name, ExpenseCategory Category, ExpenseCalculation Calculation, string? Unit, decimal? Rate, decimal? PerClaimLimit,
     decimal? YearlyLimit, decimal UsedThisYear, bool ReceiptRequired);
 
-public record DistanceRouteDto(Guid Id, string FromCity, string ToCity, decimal Km);
+public record DistanceRouteDto(Guid Id, string FromCity, string ToCity, decimal Km, RecordStampsDto Stamps);
 public record SaveDistanceRouteRequest([Required, StringLength(100)] string FromCity, [Required, StringLength(100)] string ToCity, [Range(0.1, 10_000)] decimal Km);
 
 public record ExpenseAdvanceDto(Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string Purpose, decimal Amount, RequestStatus Status,
-    decimal Adjusted, decimal Outstanding, DateTime? ClosedAtUtc, decimal Recovered, DateTime CreatedAtUtc, string? DecisionNote);
+    decimal Adjusted, decimal Outstanding, DateTime? ClosedAtUtc, decimal Recovered, DateTime CreatedAtUtc, string? DecisionNote, RecordStampsDto Stamps);
 
 public record RequestAdvanceRequest([Required, StringLength(300)] string Purpose, [Range(1, 10_000_000)] decimal Amount, Guid? EmployeeId = null);
 
@@ -124,7 +124,8 @@ public class ExpenseSetupController(HrmsDbContext db, ExpenseAdvanceService adva
         (await db.ExpenseTypes.Include(t => t.GradeRates).OrderBy(t => t.Name).ToListAsync()).Select(ToDto).ToList();
 
     private static ExpenseTypeDto ToDto(ExpenseType t) => new(t.Id, t.Name, t.Category, t.Calculation, t.Unit, t.Rate, t.PerClaimLimit, t.YearlyLimit, t.ReceiptRequired,
-        t.GradeIds is { } g ? HelpdeskService.Ids(g) : [], t.IsActive, t.GradeRates.Select(r => new ExpenseGradeRateDto(r.GradeId, r.Rate, r.YearlyLimit)).ToList());
+        t.GradeIds is { } g ? HelpdeskService.Ids(g) : [], t.IsActive, t.GradeRates.Select(r => new ExpenseGradeRateDto(r.GradeId, r.Rate, r.YearlyLimit)).ToList(),
+        RecordStampsDto.Of(t));
 
     /// <summary>Types the person (or someone they file for) may claim, with their rate and what is left this year.</summary>
     [HttpGet("types/for")]
@@ -205,7 +206,8 @@ public class ExpenseSetupController(HrmsDbContext db, ExpenseAdvanceService adva
 
     [HttpGet("routes")]
     public Task<List<DistanceRouteDto>> Routes() =>
-        db.DistanceRoutes.OrderBy(r => r.FromCity).ThenBy(r => r.ToCity).Select(r => new DistanceRouteDto(r.Id, r.FromCity, r.ToCity, r.Km)).ToListAsync();
+        db.DistanceRoutes.OrderBy(r => r.FromCity).ThenBy(r => r.ToCity).Select(r => new DistanceRouteDto(r.Id, r.FromCity, r.ToCity, r.Km,
+            new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy))).ToListAsync();
 
     [HttpGet("distance")]
     public async Task<object> Distance([FromQuery] string from, [FromQuery] string to) => new { km = await ExpenseService.DistanceAsync(db, from ?? "", to ?? "") };
@@ -293,5 +295,6 @@ public class ExpenseSetupController(HrmsDbContext db, ExpenseAdvanceService adva
     private Task<List<ExpenseAdvanceDto>> ProjectAsync(IQueryable<ExpenseAdvance> q) =>
         q.OrderByDescending(a => a.CreatedAtUtc).Take(300)
             .Select(a => new ExpenseAdvanceDto(a.Id, a.EmployeeId, a.Employee!.FirstName + " " + a.Employee.LastName, a.Employee.EmployeeCode, a.Purpose, a.Amount, a.Status,
-                a.Adjusted, a.ClosedAtUtc == null ? a.Amount - a.Adjusted : 0, a.ClosedAtUtc, a.Recovered, a.CreatedAtUtc, a.DecisionNote)).ToListAsync();
+                a.Adjusted, a.ClosedAtUtc == null ? a.Amount - a.Adjusted : 0, a.ClosedAtUtc, a.Recovered, a.CreatedAtUtc, a.DecisionNote,
+                new RecordStampsDto(a.CreatedAtUtc, a.CreatedBy, a.ModifiedAtUtc, a.ModifiedBy))).ToListAsync();
 }

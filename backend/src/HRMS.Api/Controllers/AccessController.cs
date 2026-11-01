@@ -14,20 +14,21 @@ using Microsoft.Extensions.Caching.Memory;
 namespace HRMS.Api.Controllers;
 
 public record AccessModuleDto(string Key, string Label);
-public record AccessTemplateDto(Guid Id, string Name, string? Description, List<string> Modules, int Users);
+public record AccessTemplateDto(Guid Id, string Name, string? Description, List<string> Modules, int Users, RecordStampsDto Stamps);
 public record SaveAccessTemplateRequest([Required, StringLength(100)] string Name, [StringLength(300)] string? Description, List<string> Modules);
 public record AccessUserDto(Guid UserId, string Name, string Email, UserRole Role, bool IsActive, Guid? AccessTemplateId);
 public record SetUserTemplateRequest(Guid? AccessTemplateId);
 public record CopyAccessRequest(Guid FromUserId, List<Guid> ToUserIds);
 
-public record SuggestionCategoryDto(Guid Id, string Name, List<Guid> ReviewerIds, bool IsActive);
+public record SuggestionCategoryDto(Guid Id, string Name, List<Guid> ReviewerIds, bool IsActive, RecordStampsDto Stamps);
 public record SaveSuggestionCategoryRequest([Required, StringLength(100)] string Name, List<Guid>? ReviewerIds, bool IsActive = true);
 public record SuggestionDto(Guid Id, string Title, string Details, Guid? CategoryId, string? Category, bool IsAnonymous, string? From, string? FromCode,
-    SuggestionStatus Status, string? Response, string? RespondedByName, DateTime? RespondedAtUtc, DateTime CreatedAtUtc, bool Mine);
+    SuggestionStatus Status, string? Response, string? RespondedByName, DateTime? RespondedAtUtc, DateTime CreatedAtUtc, bool Mine,
+    RecordStampsDto Stamps);
 public record SubmitSuggestionRequest([Required, StringLength(150)] string Title, [Required, StringLength(4000)] string Details, Guid? CategoryId, bool IsAnonymous);
 public record RespondSuggestionRequest(SuggestionStatus Status, [StringLength(2000)] string? Response);
 
-public record HistoryEntryDto(DateTime TimestampUtc, string? UserEmail, string Action, string? Changes);
+public record HistoryEntryDto(DateTime TimestampUtc, string? UserEmail, string Action, string? Changes, string? EmployeeName, string? EmployeeCode);
 
 /// <summary>Access templates: which HR modules a user may use. Company admin only.</summary>
 [ApiController]
@@ -42,8 +43,9 @@ public class AccessController(HrmsDbContext db, IMemoryCache cache) : Controller
     [HttpGet("templates")]
     public async Task<List<AccessTemplateDto>> Templates() =>
         (await db.AccessTemplates.OrderBy(t => t.Name)
-            .Select(t => new { t.Id, t.Name, t.Description, t.Modules, Users = db.Users.Count(u => u.AccessTemplateId == t.Id) }).ToListAsync())
-        .Select(t => new AccessTemplateDto(t.Id, t.Name, t.Description, AccessModules.Parse(t.Modules), t.Users)).ToList();
+            .Select(t => new { t.Id, t.Name, t.Description, t.Modules, Users = db.Users.Count(u => u.AccessTemplateId == t.Id),
+                Stamps = new RecordStampsDto(t.CreatedAtUtc, t.CreatedBy, t.ModifiedAtUtc, t.ModifiedBy) }).ToListAsync())
+        .Select(t => new AccessTemplateDto(t.Id, t.Name, t.Description, AccessModules.Parse(t.Modules), t.Users, t.Stamps)).ToList();
 
     [HttpPost("templates")]
     public async Task<IActionResult> AddTemplate(SaveAccessTemplateRequest req)
@@ -130,7 +132,7 @@ public class SuggestionsController(HrmsDbContext db, ICurrentUser me, TenantCloc
     [HttpGet("categories")]
     public async Task<List<SuggestionCategoryDto>> Categories() =>
         (await db.SuggestionCategories.OrderBy(c => c.Name).ToListAsync())
-        .Select(c => new SuggestionCategoryDto(c.Id, c.Name, c.ReviewerIds is { } r ? HelpdeskService.Ids(r) : [], c.IsActive)).ToList();
+        .Select(c => new SuggestionCategoryDto(c.Id, c.Name, c.ReviewerIds is { } r ? HelpdeskService.Ids(r) : [], c.IsActive, RecordStampsDto.Of(c))).ToList();
 
     [HttpPost("categories"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> AddCategory(SaveSuggestionCategoryRequest req)
@@ -252,8 +254,14 @@ public class SuggestionsController(HrmsDbContext db, ICurrentUser me, TenantCloc
             }).ToListAsync();
         return rows.Select(r => new SuggestionDto(r.S.Id, r.S.Title, r.S.Details, r.S.CategoryId, r.Category, r.S.IsAnonymous,
             reviewer && r.S.IsAnonymous ? null : r.Name, reviewer && r.S.IsAnonymous ? null : r.EmployeeCode, r.S.Status, r.S.Response, r.S.RespondedByName,
-            r.S.RespondedAtUtc, r.S.CreatedAtUtc, r.S.EmployeeId == me.EmployeeId)).ToList();
+            r.S.RespondedAtUtc, r.S.CreatedAtUtc, r.S.EmployeeId == me.EmployeeId, Stamps(r.S, reviewer && r.S.IsAnonymous))).ToList();
     }
+
+    /// <summary>Reviewers must not learn who sent an anonymous suggestion, so its "added by" (and an unchanged "modified by") is hidden.</summary>
+    private static RecordStampsDto Stamps(Suggestion s, bool hideSender) => hideSender
+        ? new RecordStampsDto(s.CreatedAtUtc, null, s.ModifiedAtUtc,
+            s.RespondedAtUtc is null || s.ModifiedBy == s.CreatedBy ? null : s.ModifiedBy)
+        : RecordStampsDto.Of(s);
 }
 
 /// <summary>Change history of one record, from the audit log: who changed what and when.</summary>
@@ -312,6 +320,6 @@ public class HistoryController(HrmsDbContext db, ICurrentUser me) : ControllerBa
         return await db.AuditLogs.AsNoTracking()
             .Where(l => l.TenantId == me.TenantId && l.Category == AuditCategory.Data && l.EntityType == entityType && l.EntityId == entityId)
             .OrderByDescending(l => l.Id).Take(100)
-            .Select(l => new HistoryEntryDto(l.TimestampUtc, l.UserEmail, l.Action, l.Changes)).ToListAsync();
+            .Select(l => new HistoryEntryDto(l.TimestampUtc, l.UserEmail, l.Action, l.Changes, l.EmployeeName, l.EmployeeCode)).ToListAsync();
     }
 }

@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record PenaltyRuleDto(Guid Id, string Name, PenaltyFlag Flag, int EveryCount, int FreeCount, int MinMinutes, bool Repeat, PenaltyAction Action,
-    decimal Days, Guid? LeaveTypeId, bool IsActive);
+    decimal Days, Guid? LeaveTypeId, bool IsActive, RecordStampsDto Stamps);
 
 public record SavePenaltyRuleRequest([Required, StringLength(150)] string Name, PenaltyFlag Flag, [Range(1, 31)] int EveryCount, [Range(0, 31)] int FreeCount,
     [Range(0, 600)] int MinMinutes, bool Repeat, PenaltyAction Action, [Range(0.25, 31)] decimal Days, Guid? LeaveTypeId, bool IsActive = true);
@@ -24,7 +24,7 @@ public record PenaltyLine(Guid RuleId, string RuleName, PenaltyFlag Flag, int Oc
 public record PenaltyPreviewRow(Guid EmployeeId, string EmployeeCode, string Name, List<PenaltyLine> Lines, decimal PayDays, decimal LeaveDays);
 
 public record OffDayRequestDto(Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, DateOnly FromDate, DateOnly ToDate, List<DayOfWeek> OffDays,
-    List<DayOfWeek> UsualOffDays, string Reason, RequestStatus Status, DateTime CreatedAtUtc, string? DecisionNote);
+    List<DayOfWeek> UsualOffDays, string Reason, RequestStatus Status, DateTime CreatedAtUtc, string? DecisionNote, RecordStampsDto Stamps);
 
 public record RequestOffDayRequest(DateOnly FromDate, DateOnly ToDate, List<DayOfWeek> OffDays, [Required, StringLength(500)] string Reason);
 
@@ -260,7 +260,8 @@ public class AttendanceRulesController(HrmsDbContext db, PenaltyService penaltie
     [HttpGet("penalties")]
     public Task<List<PenaltyRuleDto>> Rules() =>
         db.PenaltyRules.OrderBy(r => r.Flag).ThenBy(r => r.Name)
-            .Select(r => new PenaltyRuleDto(r.Id, r.Name, r.Flag, r.EveryCount, r.FreeCount, r.MinMinutes, r.Repeat, r.Action, r.Days, r.LeaveTypeId, r.IsActive))
+            .Select(r => new PenaltyRuleDto(r.Id, r.Name, r.Flag, r.EveryCount, r.FreeCount, r.MinMinutes, r.Repeat, r.Action, r.Days, r.LeaveTypeId, r.IsActive,
+                new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)))
             .ToListAsync();
 
     [HttpPost("penalties"), Authorize(Policy = Policies.Hr)]
@@ -391,6 +392,6 @@ public class AttendanceRulesController(HrmsDbContext db, PenaltyService penaltie
             .Select(x => new { X = x, Name = x.Employee!.FirstName + " " + x.Employee.LastName, x.Employee.EmployeeCode, Usual = x.Employee.Shift != null ? x.Employee.Shift.WeeklyOffDays : null })
             .ToListAsync();
         return rows.Select(r => new OffDayRequestDto(r.X.Id, r.X.EmployeeId, r.Name, r.EmployeeCode, r.X.FromDate, r.X.ToDate, r.X.OffDays, r.Usual ?? [],
-            r.X.Reason, r.X.Status, r.X.CreatedAtUtc, r.X.DecisionNote)).ToList();
+            r.X.Reason, r.X.Status, r.X.CreatedAtUtc, r.X.DecisionNote, RecordStampsDto.Of(r.X))).ToList();
     }
 }

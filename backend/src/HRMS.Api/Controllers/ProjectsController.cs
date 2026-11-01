@@ -13,10 +13,11 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record ProjectMemberDto(Guid EmployeeId, string? Name, decimal? HourlyRate);
-public record ProjectTaskDto(Guid Id, string Name, Guid? AssigneeEmployeeId, string? Assignee, DateOnly? DueDate, decimal? EstimatedHours, bool IsDone, decimal LoggedHours);
+public record ProjectTaskDto(Guid Id, string Name, Guid? AssigneeEmployeeId, string? Assignee, DateOnly? DueDate, decimal? EstimatedHours, bool IsDone, decimal LoggedHours,
+    RecordStampsDto Stamps);
 public record ProjectDto(Guid Id, string Name, string? Code, string? Client, string? Description, Guid? ManagerEmployeeId, string? Manager, DateOnly? StartDate,
     DateOnly? EndDate, decimal? BudgetHours, bool Billable, bool OpenToAll, ProjectStatus Status, List<ProjectMemberDto> Members, List<ProjectTaskDto> Tasks,
-    decimal LoggedHours, decimal Cost, bool CanManage, bool CanLog);
+    decimal LoggedHours, decimal Cost, bool CanManage, bool CanLog, RecordStampsDto Stamps);
 
 public record SaveProjectRequest([Required, StringLength(150)] string Name, [StringLength(30)] string? Code, [StringLength(150)] string? Client,
     [StringLength(2000)] string? Description, Guid? ManagerEmployeeId, DateOnly? StartDate, DateOnly? EndDate, [Range(0, 1_000_000)] decimal? BudgetHours,
@@ -29,7 +30,7 @@ public record TimesheetLineDto(DateOnly Date, Guid ProjectId, Guid? TaskId, [Ran
     string? ProjectName = null, string? TaskName = null);
 
 public record TimesheetDto(Guid? Id, Guid EmployeeId, string EmployeeName, DateOnly WeekStart, TimesheetStatus Status, DateTime? SubmittedAtUtc, string? DecisionNote,
-    List<TimesheetLineDto> Lines, int TotalMinutes, Dictionary<string, int> AttendanceMinutes);
+    List<TimesheetLineDto> Lines, int TotalMinutes, Dictionary<string, int> AttendanceMinutes, RecordStampsDto? Stamps);
 
 public record SaveTimesheetRequest(DateOnly WeekStart, List<TimesheetLineDto> Lines);
 
@@ -191,11 +192,12 @@ public class ProjectsController(HrmsDbContext db, TimesheetService timesheets, A
                 p.Members.Select(x => new ProjectMemberDto(x.EmployeeId, names.GetValueOrDefault(x.EmployeeId), me.IsHr() || p.ManagerEmployeeId == me.EmployeeId ? x.HourlyRate : null)).OrderBy(x => x.Name).ToList(),
                 p.Tasks.OrderBy(t => t.IsDone).ThenBy(t => t.DueDate ?? DateOnly.MaxValue).ThenBy(t => t.Name)
                     .Select(t => new ProjectTaskDto(t.Id, t.Name, t.AssigneeEmployeeId, t.AssigneeEmployeeId is { } a ? names.GetValueOrDefault(a) : null, t.DueDate, t.EstimatedHours,
-                        t.IsDone, Math.Round(mineLogged.Where(l => l.TaskId == t.Id).Sum(l => l.Minutes) / 60m, 2))).ToList(),
+                        t.IsDone, Math.Round(mineLogged.Where(l => l.TaskId == t.Id).Sum(l => l.Minutes) / 60m, 2), RecordStampsDto.Of(t))).ToList(),
                 Math.Round(mineLogged.Sum(l => l.Minutes) / 60m, 2), me.IsHr() || p.ManagerEmployeeId == me.EmployeeId ? Math.Round(cost, 0) : 0, CanManage(p),
                 // Mirrors TimesheetService.SaveAsync, so the timesheet only offers projects the save accepts.
                 p.Status == ProjectStatus.Active && me.EmployeeId is { } mine
-                    && (p.OpenToAll || p.ManagerEmployeeId == mine || p.Members.Any(x => x.EmployeeId == mine)));
+                    && (p.OpenToAll || p.ManagerEmployeeId == mine || p.Members.Any(x => x.EmployeeId == mine)),
+                RecordStampsDto.Of(p));
         }).ToList();
     }
 
@@ -399,7 +401,7 @@ public class ProjectsController(HrmsDbContext db, TimesheetService timesheets, A
         var lines = sheet?.Lines.OrderBy(l => l.Date).Select(l => new TimesheetLineDto(l.Date, l.ProjectId, l.TaskId, l.Minutes, l.Note,
             projectNames.GetValueOrDefault(l.ProjectId), l.TaskId is { } t ? taskNames.GetValueOrDefault(t) : null)).ToList() ?? [];
         return new TimesheetDto(sheet?.Id, employeeId, name, weekStart, sheet?.Status ?? TimesheetStatus.Draft, sheet?.SubmittedAtUtc, sheet?.DecisionNote,
-            lines, lines.Sum(l => l.Minutes), attendance);
+            lines, lines.Sum(l => l.Minutes), attendance, sheet is null ? null : RecordStampsDto.Of(sheet));
     }
 
     private Guid MyId() => me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");

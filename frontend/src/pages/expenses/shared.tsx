@@ -5,6 +5,7 @@ import { expensesApi } from '../../api/expenses';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Avatar, Button, Drawer, ErrorState, Field, SkeletonRows, StatusBadge, Textarea, useToast } from '../../components/ui';
 import { formatCurrency, formatDate, formatDateTimeUtc, humanize } from '../../lib/format';
 import type { ExpenseCategory, ExpenseItem } from '../../types/workflows';
@@ -146,6 +147,7 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
         <ErrorState error={detail.error} onRetry={() => detail.refetch()} />
       ) : (
         <div className="space-y-6">
+          <RecordStamp stamps={d.claim.stamps} />
           <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-50 p-4 dark:bg-zinc-800/50">
             <div className="flex min-w-0 items-center gap-3">
               <Avatar name={d.claim.employeeName} />

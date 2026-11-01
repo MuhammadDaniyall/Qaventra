@@ -7,6 +7,7 @@ import { useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Badge, Button, Card, CardHeader, Checkbox, Field, FormError, Input, Modal, Select, Textarea, useToast } from '../../components/ui';
 import { formatDate, todayIso } from '../../lib/format';
 
@@ -54,6 +55,7 @@ export function Delegations() {
                   {d.requestTypes.length ? d.requestTypes.map((t) => REQUEST_LABELS[t]).join(', ') : 'All requests'}
                   {d.reason ? ` · ${d.reason}` : ''}
                 </p>
+                <RecordStamp stamps={d.stamps} className="mt-0.5" />
               </div>
               {d.canCancel && (
                 <Button size="sm" variant="ghost" loading={cancel.isPending && cancel.variables === d.id} onClick={() => cancel.mutate(d.id)}>

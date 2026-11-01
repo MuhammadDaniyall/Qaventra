@@ -5,6 +5,7 @@ import { Banknote, Clock3, HandCoins } from 'lucide-react';
 import { qk } from '../../api/keys';
 import { payApi, PAY_KIND_LABELS, type PayRequest } from '../../api/pay';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Badge, Button, Card, CardHeader, ConfirmDialog, EmptyState, ErrorState, PageHeader, SkeletonRows, StatusBadge, useToast } from '../../components/ui';
 import { formatCurrency, formatDate, monthLabel } from '../../lib/format';
 import { LoanModal, PayRequestModal } from './shared';
@@ -76,6 +77,7 @@ export function MyPayPage() {
                     </p>
                   </>
                 )}
+                <RecordStamp stamps={l.stamps} className="mt-2" />
                 {l.status === 'Pending' && (
                   <Button variant="ghost" size="sm" className="mt-2 -ms-2" onClick={() => setCancelling({ id: l.id, loan: true })}>
                     Cancel request
@@ -132,7 +134,8 @@ export function MyPayPage() {
                   )}
                 </div>
                 {open === r.id && (
-                  <div className="mt-3">
+                  <div className="mt-3 space-y-3">
+                    <RecordStamp stamps={r.stamps} />
                     <ApprovalTimeline type="PayRequest" subjectId={r.id} />
                   </div>
                 )}

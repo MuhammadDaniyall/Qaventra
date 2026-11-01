@@ -7,6 +7,7 @@ import { useEmployeeLookup, useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { payChangesApi, type RecurringItem, type RevisionKind, type RevisionPreview } from '../../api/paychanges';
 import { performanceApi } from '../../api/performance';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -308,6 +309,7 @@ function RecurringTab() {
               <Th>Item</Th>
               <Th className="text-end">Amount</Th>
               <Th>Months</Th>
+              <Th>Added / modified</Th>
               <Th />
             </Tr>
           </THead>
@@ -324,6 +326,9 @@ function RecurringTab() {
                 <Td className="text-end tabular-nums">{formatCurrency(r.amount)}</Td>
                 <Td className="text-sm">
                   {period(r.startYear, r.startMonth)} – {r.endYear && r.endMonth ? period(r.endYear, r.endMonth) : 'until stopped'}
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
                 </Td>
                 <Td>
                   <RowActions label={r.title} onEdit={() => setEditing(r)} onDelete={() => setDeleting(r)} />
@@ -440,6 +445,7 @@ function RecurringModal({ item, onClose }: { item: RecurringItem | null; onClose
           <Input value={f.notes} maxLength={500} onChange={(e) => set('notes', e.target.value)} />
         </Field>
       </div>
+      {item && <RecordStamp stamps={item.stamps} className="mt-3" />}
       <FormError message={save.isError ? errorMessage(save.error) : null} />
     </Modal>
   );
@@ -516,6 +522,9 @@ function HoldsTab() {
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     by {h.heldByName}, {formatDateTimeUtc(h.createdAtUtc)}
                   </p>
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={h.stamps} />
                 </Td>
                 <Td className="text-end">
                   {h.releasedAtUtc ? (
@@ -634,6 +643,7 @@ function HistoryTab() {
               <Th className="text-end">Gross before</Th>
               <Th className="text-end">Gross after</Th>
               <Th>Reason</Th>
+              <Th>Added / modified</Th>
             </Tr>
           </THead>
           <TBody>
@@ -652,6 +662,9 @@ function HistoryTab() {
                 <Td className="text-sm">
                   {r.reason ?? '—'}
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">{r.byName}</p>
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
                 </Td>
               </Tr>
             ))}

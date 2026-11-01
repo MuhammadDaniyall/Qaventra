@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
 import { qk } from '../../api/keys';
 import { onboardingApi, TASK_CATEGORY_LABELS, type OnboardingTask } from '../../api/onboarding';
 import { Badge, IconButton, useToast } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatDate } from '../../lib/format';
 
@@ -43,6 +44,7 @@ export function TaskList({ tasks, showFor, onDelete }: { tasks: OnboardingTask[]
                 {done && t.completedByName && <span>· done by {t.completedByName}</span>}
               </p>
               {t.description && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{t.description}</p>}
+              <RecordStamp stamps={t.stamps} className="mt-1" />
             </div>
             {t.isOverdue && <Badge tone="red">Late</Badge>}
             {onDelete && (

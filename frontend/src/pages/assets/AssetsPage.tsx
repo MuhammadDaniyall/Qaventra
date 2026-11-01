@@ -18,6 +18,7 @@ import { useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -175,7 +176,7 @@ function Inventory() {
         </Select>
       </div>
       {list.isLoading ? (
-        <SkeletonRows rows={5} cols={5} />
+        <SkeletonRows rows={5} cols={6} />
       ) : list.isError ? (
         <ErrorState error={list.error} onRetry={() => list.refetch()} />
       ) : !list.data?.length ? (
@@ -189,6 +190,7 @@ function Inventory() {
               <Th>With</Th>
               <Th>Condition</Th>
               <Th className="text-end">Cost</Th>
+              <Th>Added / modified</Th>
             </tr>
           </THead>
           <TBody>
@@ -219,6 +221,9 @@ function Inventory() {
                 </Td>
                 <Td className="text-sm">{a.condition}</Td>
                 <Td className="text-end text-sm tabular-nums">{a.cost ? formatCurrency(a.cost) : '—'}</Td>
+                <Td>
+                  <RecordStampCell stamps={a.stamps} />
+                </Td>
               </Tr>
             ))}
           </TBody>
@@ -249,6 +254,7 @@ function AssetDrawer({ id, onClose }: { id: string; onClose: () => void }) {
         <SkeletonRows rows={4} cols={2} />
       ) : (
         <div className="space-y-5">
+          <RecordStamp stamps={a.stamps} />
           <div className="flex flex-wrap items-center gap-2">
             <AssetStatusBadge status={a.status} />
             <Badge>{a.condition}</Badge>
@@ -320,6 +326,7 @@ function AssetDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                       {formatDate(h.assignedOn)} ({h.conditionOut.toLowerCase()}) → {h.returnedOn ? `${formatDate(h.returnedOn)} (${h.conditionIn?.toLowerCase() ?? '—'})` : 'still with them'}
                     </p>
                     {h.notes && <p className="mt-1 text-xs whitespace-pre-line text-zinc-600 dark:text-zinc-400">{h.notes}</p>}
+                    <RecordStamp stamps={h.stamps} className="mt-1" />
                   </li>
                 ))}
               </ol>
@@ -396,6 +403,7 @@ function AssetModal({ item, onClose }: { item: Asset | null; onClose: () => void
       }
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {item && <RecordStamp stamps={item.stamps} className="sm:col-span-2" />}
         <div className="sm:col-span-2">
           <FormError message={error} />
         </div>
@@ -470,7 +478,7 @@ function Requests() {
         </Select>
       </div>
       {list.isLoading ? (
-        <SkeletonRows rows={4} cols={4} />
+        <SkeletonRows rows={4} cols={5} />
       ) : !list.data?.length ? (
         <EmptyState icon={ClipboardList} title={status === 'Approved' ? 'Nothing to do' : 'Nothing yet'} description="Approved asset requests and returns appear here." />
       ) : (
@@ -480,6 +488,7 @@ function Requests() {
               <Th>For</Th>
               <Th>What</Th>
               <Th>Asked</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Action</span>
               </Th>
@@ -504,6 +513,9 @@ function Requests() {
                   </p>
                 </Td>
                 <Td className="text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(r.createdAtUtc)}</Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
+                </Td>
                 <Td className="text-end">
                   {r.canFulfill && (
                     <div className="flex justify-end gap-2">
@@ -563,6 +575,7 @@ function Types() {
               <Th>Handled by</Th>
               <Th>Rules</Th>
               <Th className="text-end">Stock</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -583,6 +596,9 @@ function Types() {
                 </Td>
                 <Td className="text-end text-sm tabular-nums">
                   {t.available} free / {t.total}
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={t.stamps} />
                 </Td>
                 <Td>
                   <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
@@ -639,6 +655,7 @@ function TypeModal({ item, onClose }: { item: AssetType | null; onClose: () => v
     >
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-4">
+          {item && <RecordStamp stamps={item.stamps} />}
           <FormError message={error} />
           <Field label="Name" required>
             <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="Laptop" />
@@ -682,6 +699,7 @@ function Kits() {
               <div>
                 <p className="font-medium text-zinc-900 dark:text-zinc-100">{k.name}</p>
                 <p className="text-xs text-zinc-500">{k.types.join(', ')}</p>
+                <RecordStamp stamps={k.stamps} className="mt-0.5" />
               </div>
               <RowActions label={k.name} onEdit={() => setEditing(k)} onDelete={() => setDeleting(k)} />
             </li>
@@ -727,6 +745,7 @@ function KitModal({ item, onClose }: { item: AssetKit | null; onClose: () => voi
       }
     >
       <div className="space-y-4">
+        {item && <RecordStamp stamps={item.stamps} />}
         <FormError message={error} />
         <Field label="Name" required>
           <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="Developer" />

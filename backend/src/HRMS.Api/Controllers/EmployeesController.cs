@@ -14,7 +14,7 @@ namespace HRMS.Api.Controllers;
 
 public record EmployeeListItemDto(
     Guid Id, string EmployeeCode, string FullName, string? Email, string? Phone,
-    string? Department, string? Designation, EmploymentStatus Status, DateOnly JoiningDate, bool HasLogin);
+    string? Department, string? Designation, EmploymentStatus Status, DateOnly JoiningDate, bool HasLogin, RecordStampsDto Stamps);
 
 /// <summary>What goes on an employee ID card.</summary>
 public record IdCardDto(Guid Id, string EmployeeCode, string Name, string? Designation, string? Department, string? BloodGroup, DateOnly JoiningDate, string? Phone);
@@ -28,7 +28,7 @@ public record EmployeeDto(
     string? Address, string? BankName, string? BankAccount, string? PersonalEmail, MaritalStatus? MaritalStatus, string? BloodGroup,
     Guid? DepartmentId, string? Department, Guid? DesignationId, string? Designation,
     Guid? ManagerId, string? Manager, Guid? ShiftId, string? Shift,
-    Guid? UserId, UserRole? LoginRole, bool? LoginActive);
+    Guid? UserId, UserRole? LoginRole, bool? LoginActive, RecordStampsDto Stamps);
 
 public record SaveEmployeeRequest(
     [Required, StringLength(100)] string FirstName,
@@ -59,7 +59,9 @@ public record UpdateLoginRequest(UserRole Role, bool IsActive);
 
 public record SalaryComponentDto([Required, StringLength(100)] string Name, SalaryComponentKind Kind, [Range(0, 100_000_000)] decimal Amount, bool IsTaxable);
 
-public record SalaryDto(Guid? Id, DateOnly EffectiveFrom, [Range(0, 100_000_000)] decimal BasicSalary, bool EobiApplicable, List<SalaryComponentDto> Components);
+/// <summary>Also the save request, so Stamps is optional and ignored on save.</summary>
+public record SalaryDto(Guid? Id, DateOnly EffectiveFrom, [Range(0, 100_000_000)] decimal BasicSalary, bool EobiApplicable, List<SalaryComponentDto> Components,
+    RecordStampsDto? Stamps = null);
 
 [ApiController]
 [Route("api/employees")]
@@ -100,7 +102,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
                 e.Department != null ? e.Department.Name : null,
                 e.Designation != null ? e.Designation.Title : null,
                 e.Status, e.JoiningDate,
-                db.Users.Any(u => u.EmployeeId == e.Id)))
+                db.Users.Any(u => u.EmployeeId == e.Id),
+                new RecordStampsDto(e.CreatedAtUtc, e.CreatedBy, e.ModifiedAtUtc, e.ModifiedBy)))
             .ToListAsync();
         return new PagedResult<EmployeeListItemDto>(items, total, page, pageSize);
     }
@@ -269,7 +272,7 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         if (s is null)
             return NoContent();
         return new SalaryDto(s.Id, s.EffectiveFrom, s.BasicSalary, s.EobiApplicable,
-            s.Components.Select(c => new SalaryComponentDto(c.Name, c.Kind, c.Amount, c.IsTaxable)).ToList());
+            s.Components.Select(c => new SalaryComponentDto(c.Name, c.Kind, c.Amount, c.IsTaxable)).ToList(), RecordStampsDto.Of(s));
     }
 
     /// <summary>Saves the salary effective from the given date. Same date replaces it; a new date keeps history.</summary>
@@ -391,7 +394,9 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
     private Task<List<JobChangeDto>> JobHistory(Guid employeeId, bool includeRecorder) =>
         db.JobChanges.Where(c => c.EmployeeId == employeeId).OrderByDescending(c => c.EffectiveDate).ThenByDescending(c => c.CreatedAtUtc)
             .Select(c => new JobChangeDto(c.Id, c.Kind, c.EffectiveDate, c.FromDepartment, c.ToDepartment, c.FromDesignation, c.ToDesignation,
-                c.FromManager, c.ToManager, c.Note, includeRecorder ? c.RecordedByName : null, c.CreatedAtUtc))
+                c.FromManager, c.ToManager, c.Note, includeRecorder ? c.RecordedByName : null, c.CreatedAtUtc,
+                // The employee's own view hides who recorded the change, so it gets no stamps either.
+                includeRecorder ? new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy) : null))
             .ToListAsync();
 
     private Guid MyId() => me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
@@ -440,7 +445,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
                 e.ShiftId, e.Shift != null ? e.Shift.Name : null,
                 db.Users.Where(u => u.EmployeeId == e.Id).Select(u => (Guid?)u.Id).FirstOrDefault(),
                 db.Users.Where(u => u.EmployeeId == e.Id).Select(u => (UserRole?)u.Role).FirstOrDefault(),
-                db.Users.Where(u => u.EmployeeId == e.Id).Select(u => (bool?)u.IsActive).FirstOrDefault()))
+                db.Users.Where(u => u.EmployeeId == e.Id).Select(u => (bool?)u.IsActive).FirstOrDefault(),
+                new RecordStampsDto(e.CreatedAtUtc, e.CreatedBy, e.ModifiedAtUtc, e.ModifiedBy)))
             .FirstOrDefaultAsync() ?? throw new NotFoundException("Employee");
     }
 }
@@ -457,7 +463,8 @@ public record SaveEmergencyContactsRequest(List<EmergencyContactDto> Contacts);
 
 public record JobChangeDto(
     Guid Id, JobChangeKind Kind, DateOnly EffectiveDate, string? FromDepartment, string? ToDepartment, string? FromDesignation,
-    string? ToDesignation, string? FromManager, string? ToManager, string? Note, string? RecordedByName, DateTime CreatedAtUtc);
+    string? ToDesignation, string? FromManager, string? ToManager, string? Note, string? RecordedByName, DateTime CreatedAtUtc,
+    RecordStampsDto? Stamps);
 
 public record RecordJobChangeRequest(
     JobChangeKind Kind, DateOnly EffectiveDate, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, [StringLength(1000)] string? Note);

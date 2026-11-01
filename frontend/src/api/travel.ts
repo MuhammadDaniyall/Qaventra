@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type TripType = 'OneWay' | 'Return' | 'MultiCity';
@@ -57,6 +58,7 @@ export interface TravelReason {
   name: string;
   isActive: boolean;
   trips: number;
+  stamps: RecordStamps;
 }
 
 export interface LegInput {
@@ -108,6 +110,7 @@ export interface TripListItem {
   bookedCost: number;
   settlementOverdue: boolean;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
 
 export interface TripLeg {
@@ -179,6 +182,7 @@ export interface Trip {
   isDesk: boolean;
   isHr: boolean;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
 
 export interface TravelReportRow {

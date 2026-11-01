@@ -4,6 +4,7 @@ import { FilePlus2 } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { lettersApi } from '../../api/letters';
 import { Button, Card, CardHeader, Field, FormError, Input, Modal, Select, StatusBadge, Table, TBody, Td, Tr, useToast } from '../../components/ui';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { formatDate } from '../../lib/format';
 
 const KEY = ['letters', 'requests'] as const;
@@ -84,6 +85,9 @@ export function MyLetterRequests() {
               <Td className="text-sm">{formatDate(l.issuedOn)}</Td>
               <Td>
                 <StatusBadge status={l.status === 'Pending' ? 'Pending' : 'Rejected'} />
+              </Td>
+              <Td>
+                <RecordStampCell stamps={l.stamps} />
               </Td>
             </Tr>
           ))}

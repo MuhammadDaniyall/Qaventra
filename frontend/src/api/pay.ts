@@ -1,4 +1,5 @@
 import type { RequestStatus } from './attendance';
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type PayRequestKind = 'Allowance' | 'Bonus' | 'Overtime' | 'Deduction' | 'AdvanceSalary' | 'Commission';
@@ -25,6 +26,7 @@ export interface PayRequest {
   paidAtUtc: string | null;
   /** Included in a payroll run that is not finalized yet. */
   inDraftPayroll: boolean;
+  stamps: RecordStamps;
 }
 
 export interface Loan {
@@ -47,6 +49,7 @@ export interface Loan {
   repaid: number;
   installmentsTaken: number;
   remaining: number;
+  stamps: RecordStamps;
 }
 
 export interface SubmitPayRequest {

@@ -42,9 +42,10 @@ public record SaveSettlementRequest(
 public record SeparationListItemDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string? Department, string? Designation,
     SeparationType Type, SeparationStatus Status, DateOnly NoticeDate, DateOnly ProposedLastDay, DateOnly? LastWorkingDay,
-    int ClearanceDone, int ClearanceTotal, DateTime CreatedAtUtc);
+    int ClearanceDone, int ClearanceTotal, DateTime CreatedAtUtc, RecordStampsDto Stamps);
 
-public record ClearanceItemDto(Guid Id, string Department, string Title, bool IsCleared, string? ClearedByName, DateTime? ClearedAtUtc, string? Note);
+public record ClearanceItemDto(Guid Id, string Department, string Title, bool IsCleared, string? ClearedByName, DateTime? ClearedAtUtc, string? Note,
+    RecordStampsDto Stamps);
 
 public record SeparationDto(
     SeparationListItemDto Summary, DateOnly JoiningDate, int NoticePeriodDays, string? Reason, string? DecisionNote, DateTime? DecidedAtUtc,
@@ -137,7 +138,7 @@ public class SeparationsController(HrmsDbContext db, SeparationService separatio
     public async Task<ClearanceItemDto> AddClearanceItem(Guid id, AddClearanceItemRequest req)
     {
         var c = await separations.AddClearanceItemAsync(id, req.Department, req.Title);
-        return new ClearanceItemDto(c.Id, c.Department, c.Title, c.IsCleared, c.ClearedByName, c.ClearedAtUtc, c.Note);
+        return new ClearanceItemDto(c.Id, c.Department, c.Title, c.IsCleared, c.ClearedByName, c.ClearedAtUtc, c.Note, RecordStampsDto.Of(c));
     }
 
     [HttpPut("{id:guid}/clearance/{itemId:guid}"), Authorize(Policy = Policies.Hr)]
@@ -191,7 +192,7 @@ public class SeparationsController(HrmsDbContext db, SeparationService separatio
             summary, joining, s.NoticePeriodDays, s.Reason, s.DecisionNote, s.DecidedAtUtc,
             s.ExitReason, s.ExitRating, s.WouldRecommend, s.ExitFeedback, s.ExitInterviewAtUtc,
             s.Clearance.OrderBy(c => c.SortOrder)
-                .Select(c => new ClearanceItemDto(c.Id, c.Department, c.Title, c.IsCleared, c.ClearedByName, c.ClearedAtUtc, c.Note)).ToList(),
+                .Select(c => new ClearanceItemDto(c.Id, c.Department, c.Title, c.IsCleared, c.ClearedByName, c.ClearedAtUtc, c.Note, RecordStampsDto.Of(c))).ToList(),
             settlement, s.CompletedAtUtc);
     }
 
@@ -201,5 +202,6 @@ public class SeparationsController(HrmsDbContext db, SeparationService separatio
             s.Employee.Department != null ? s.Employee.Department.Name : null,
             s.Employee.Designation != null ? s.Employee.Designation.Title : null,
             s.Type, s.Status, s.NoticeDate, s.ProposedLastDay, s.LastWorkingDay,
-            s.Clearance.Count(c => c.IsCleared), s.Clearance.Count, s.CreatedAtUtc));
+            s.Clearance.Count(c => c.IsCleared), s.Clearance.Count, s.CreatedAtUtc,
+            new RecordStampsDto(s.CreatedAtUtc, s.CreatedBy, s.ModifiedAtUtc, s.ModifiedBy)));
 }

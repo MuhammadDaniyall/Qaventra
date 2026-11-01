@@ -5,6 +5,7 @@ import { errorMessage } from '../../api/client';
 import { profileChangesApi } from '../../api/employees';
 import { qk } from '../../api/keys';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Button, Card, CardHeader, ConfirmDialog, Field, FormError, Input, Modal, Select, Spinner, StatusBadge, Textarea, useToast } from '../../components/ui';
 import { formatDateTimeUtc } from '../../lib/format';
 import { BLOOD_GROUPS, MARITAL_STATUSES, type Employee, type FieldChange, type ProfileChange } from '../../types';
@@ -40,6 +41,7 @@ export function ProfileChangeDetails({ id }: { id: string }) {
     <div className="space-y-2">
       <ChangeList changes={request.changes} />
       {request.reason && <p className="text-sm text-zinc-600 dark:text-zinc-400">Reason: {request.reason}</p>}
+      <RecordStamp stamps={request.stamps} />
     </div>
   );
 }
@@ -191,6 +193,7 @@ export function MyProfileChanges() {
             </div>
             <ChangeList changes={r.changes} />
             {r.decisionNote && <p className="text-sm text-zinc-600 dark:text-zinc-400">Note: {r.decisionNote}</p>}
+            <RecordStamp stamps={r.stamps} />
             {r.status === 'Pending' && <ApprovalTimeline type="ProfileChange" subjectId={r.id} />}
           </li>
         ))}

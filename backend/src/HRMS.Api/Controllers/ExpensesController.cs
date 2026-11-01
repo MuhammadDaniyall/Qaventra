@@ -33,7 +33,7 @@ public record DecideExpenseRequest([StringLength(1000)] string? Note);
 public record ExpenseClaimDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string Title, ExpenseStatus Status,
     decimal Total, int ItemCount, int ReceiptCount, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote,
-    DateTime? PaidAtUtc, string? PaidVia, decimal AdvanceAdjusted = 0);
+    DateTime? PaidAtUtc, string? PaidVia, decimal AdvanceAdjusted, RecordStampsDto Stamps);
 
 public record ExpenseItemDto(Guid Id, DateOnly Date, ExpenseCategory Category, string Description, decimal Amount, Guid? ReceiptId, string? ReceiptFileName);
 
@@ -126,5 +126,5 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
         q.OrderByDescending(c => c.CreatedAtUtc).Select(c => new ExpenseClaimDto(
             c.Id, c.EmployeeId, c.Employee!.FirstName + " " + c.Employee.LastName, c.Employee.EmployeeCode, c.Title, c.Status,
             c.Total, c.Items.Count, c.Items.Count(i => i.ReceiptId != null), c.CreatedAtUtc, c.DecidedAtUtc, c.DecisionNote,
-            c.PaidAtUtc, c.PaidVia, c.AdvanceAdjusted));
+            c.PaidAtUtc, c.PaidVia, c.AdvanceAdjusted, new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy)));
 }

@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type FundKind = 'ProvidentFund' | 'Gratuity';
@@ -36,6 +37,7 @@ export interface FundEntry {
   employeeAmount: number;
   employerAmount: number;
   note: string | null;
+  stamps: RecordStamps;
 }
 
 export interface FundWithdrawal {
@@ -50,6 +52,7 @@ export interface FundWithdrawal {
   status: 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
   createdAtUtc: string;
   decisionNote: string | null;
+  stamps: RecordStamps;
 }
 
 export interface TaxAdjustment {
@@ -61,6 +64,7 @@ export interface TaxAdjustment {
   kind: TaxAdjustmentKind;
   amount: number;
   note: string | null;
+  stamps: RecordStamps;
 }
 
 export const fundsApi = {

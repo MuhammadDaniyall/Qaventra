@@ -14,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record GlAccountDto(Guid Id, string Code, string Name);
+public record GlAccountDto(Guid Id, string Code, string Name, RecordStampsDto Stamps);
 public record SaveGlAccountRequest([Required, StringLength(50)] string Code, [Required, StringLength(150)] string Name);
 public record GlMappingDto(PayrollGlLine Line, string Label, Guid? GlAccountId);
 public record SaveGlMappingRequest(List<GlMappingItem> Items);
@@ -45,7 +45,7 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
 
     [HttpGet("gl/accounts")]
     public Task<List<GlAccountDto>> Accounts() =>
-        db.GlAccounts.OrderBy(a => a.Code).Select(a => new GlAccountDto(a.Id, a.Code, a.Name)).ToListAsync();
+        db.GlAccounts.OrderBy(a => a.Code).Select(a => new GlAccountDto(a.Id, a.Code, a.Name, new RecordStampsDto(a.CreatedAtUtc, a.CreatedBy, a.ModifiedAtUtc, a.ModifiedBy))).ToListAsync();
 
     [HttpPost("gl/accounts")]
     public async Task<GlAccountDto> AddAccount(SaveGlAccountRequest req)
@@ -56,7 +56,7 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
         var a = new GlAccount { Code = code, Name = req.Name.Trim() };
         db.GlAccounts.Add(a);
         await db.SaveChangesAsync();
-        return new(a.Id, a.Code, a.Name);
+        return new(a.Id, a.Code, a.Name, RecordStampsDto.Of(a));
     }
 
     [HttpPut("gl/accounts/{id:guid}")]
@@ -69,7 +69,7 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
         a.Code = code;
         a.Name = req.Name.Trim();
         await db.SaveChangesAsync();
-        return new(a.Id, a.Code, a.Name);
+        return new(a.Id, a.Code, a.Name, RecordStampsDto.Of(a));
     }
 
     [HttpDelete("gl/accounts/{id:guid}")]

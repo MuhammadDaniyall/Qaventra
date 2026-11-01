@@ -4,6 +4,7 @@ import { ListPlus, Plus } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { customFieldsApi, type CustomField, type CustomFieldType, type CustomValue } from '../../api/engagement';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -81,6 +82,7 @@ export function CustomFieldsTab() {
               <Th>Type</Th>
               <Th>Rules</Th>
               <Th className="text-end">Filled</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -102,6 +104,9 @@ export function CustomFieldsTab() {
                   </div>
                 </Td>
                 <Td className="text-end tabular-nums">{f.filled}</Td>
+                <Td>
+                  <RecordStampCell stamps={f.stamps} />
+                </Td>
                 <Td>
                   <RowActions label={f.label} onEdit={() => setEditing(f)} onDelete={() => setDeleting(f)} />
                 </Td>
@@ -195,6 +200,7 @@ function FieldModal({ item, onClose }: { item: CustomField | null; onClose: () =
         <Checkbox label="Required" description="HR must fill it when saving additional information." checked={required} onChange={(e) => setRequired(e.target.checked)} />
         <Checkbox label="Employee can see it" description="Shown read-only on their own profile." checked={visible} onChange={(e) => setVisible(e.target.checked)} />
         {item && <Checkbox label="In use" description="Untick to hide it everywhere without losing the values." checked={active} onChange={(e) => setActive(e.target.checked)} />}
+        {item && <RecordStamp stamps={item.stamps} />}
       </div>
     </Modal>
   );

@@ -24,6 +24,7 @@ import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
 import { accessKind, planLabel, type AccessKind } from '../../lib/billing';
 import { AccessBadge, ExpiresCell, seatsLabel } from './companyUi';
+import { RecordStampCell } from '../../components/RecordStamp';
 import type { Company, CompanyAdminCredentials } from '../../types';
 import { CreateCompanyModal, CredentialsDialog } from './CompanyDialogs';
 import { useCompanyActions, type CompanyAction } from './useCompanyActions';
@@ -134,6 +135,7 @@ export function CompaniesPage() {
                 <Th>Company Super Admin</Th>
                 <Th>Access</Th>
                 <Th>Last activity</Th>
+                <Th>Added / modified</Th>
                 <Th className="text-end">Actions</Th>
               </tr>
             </THead>
@@ -155,6 +157,9 @@ export function CompaniesPage() {
                     <AccessBadge company={c} />
                   </Td>
                   <Td>{formatDateTimeUtc(c.lastActivityUtc)}</Td>
+                  <Td>
+                    <RecordStampCell stamps={c.stamps} />
+                  </Td>
                   <Td className="text-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     <div className="inline-flex items-center gap-1">
                       <Button

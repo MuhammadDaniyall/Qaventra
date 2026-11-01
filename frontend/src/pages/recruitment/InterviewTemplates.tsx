@@ -16,6 +16,7 @@ import {
   SkeletonRows,
   useToast,
 } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { tx } from '../../lib/i18n';
 
@@ -92,6 +93,7 @@ export function InterviewTemplatesTab() {
                   ))}
                   {t.questions.length > 4 && <li className="text-xs text-zinc-500 dark:text-zinc-400">+{t.questions.length - 4}</li>}
                 </ol>
+                <RecordStamp stamps={t.stamps} className="mt-3" />
               </Card>
             );
           })}
@@ -151,6 +153,7 @@ function TemplateModal({ template, onClose }: { template: InterviewTemplate | nu
       }
     >
       <div className="space-y-4">
+        {template && <RecordStamp stamps={template.stamps} />}
         <Field label="Name" required>
           <Input value={name} maxLength={150} onChange={(e) => setName(e.target.value)} placeholder="Technical round" />
         </Field>

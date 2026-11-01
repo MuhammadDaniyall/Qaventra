@@ -23,6 +23,7 @@ import {
   type SaveJobRequest,
 } from '../../api/recruitment';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -148,6 +149,7 @@ function JobsTab({ me }: { me: RecruitmentMe }) {
                 <Th>Pipeline</Th>
                 <Th>Team</Th>
                 <Th className="text-end">Candidates</Th>
+                <Th>Added / modified</Th>
               </Tr>
             </THead>
             <TBody>
@@ -185,6 +187,9 @@ function JobsTab({ me }: { me: RecruitmentMe }) {
                     {j.hiringManager && <p>Manager: {j.hiringManager}</p>}
                   </Td>
                   <Td className="text-end tabular-nums">{j.total}</Td>
+                  <Td>
+                    <RecordStampCell stamps={j.stamps} />
+                  </Td>
                 </Tr>
               ))}
             </TBody>
@@ -299,6 +304,7 @@ function RequestsTab({ me }: { me: RecruitmentMe }) {
               <Th>Requested by</Th>
               <Th>Needed by</Th>
               <Th>Status</Th>
+              <Th>Added / modified</Th>
               <Th />
             </Tr>
           </THead>
@@ -324,6 +330,9 @@ function RequestsTab({ me }: { me: RecruitmentMe }) {
                 <Td>
                   <StatusBadge status={r.status} />
                   {r.decisionNote && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">“{r.decisionNote}”</p>}
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
                 </Td>
                 <Td className="text-end">
                   <div className="flex justify-end gap-2">
@@ -531,7 +540,7 @@ function CandidatesTab({ me }: { me: RecruitmentMe }) {
               <Th>Experience</Th>
               <Th>Source</Th>
               <Th>Latest</Th>
-              <Th>Added</Th>
+              <Th>Added / modified</Th>
             </Tr>
           </THead>
           <TBody>
@@ -563,7 +572,9 @@ function CandidatesTab({ me }: { me: RecruitmentMe }) {
                   )}
                   {c.applications > 1 && <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.applications} jobs</p>}
                 </Td>
-                <Td className="text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(c.createdAtUtc)}</Td>
+                <Td>
+                  <RecordStampCell stamps={c.stamps} />
+                </Td>
               </Tr>
             ))}
           </TBody>
@@ -619,6 +630,7 @@ function CandidateDrawer({ id, isHr, onClose, onOpen }: { id: string; isHr: bool
       ) : (
         d && (
           <div className="space-y-6">
+            <RecordStamp stamps={d.stamps} />
             {d.isBlacklisted && (
               <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-200">
                 <b>Do not hire.</b> {d.blacklistReason}

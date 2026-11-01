@@ -5,6 +5,7 @@ import { attendanceRulesApi, PENALTY_FLAGS, type PenaltyRule, type SavePenaltyRu
 import { useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Field, Input, Select, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from '../settings/shared';
 
 const flagLabel = (f: string) => PENALTY_FLAGS.find((x) => x.value === f)?.label.toLowerCase() ?? f;
@@ -48,6 +49,7 @@ export function PenaltyRulesCard() {
             <tr>
               <Th>Rule</Th>
               <Th>What happens</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -60,6 +62,9 @@ export function PenaltyRulesCard() {
                   {r.name} {!r.isActive && <Badge className="ms-1">Off</Badge>}
                 </Td>
                 <Td className="text-sm text-zinc-600 dark:text-zinc-300">{describeRule(r, leaveName(r.leaveTypeId))}</Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
+                </Td>
                 <Td>
                   <RowActions label={r.name} onEdit={() => setEditing(r)} onDelete={() => setDeleting(r)} />
                 </Td>
@@ -112,6 +117,7 @@ function RuleModal({ item, onClose }: { item: PenaltyRule | null; onClose: () =>
         if (!Object.keys(fe).length) mutation.mutate({ ...v, name: v.name.trim() });
       }}
     >
+      {item && <RecordStamp stamps={item.stamps} />}
       <Field label="Name" required error={fieldErrors.name}>
         <Input value={v.name} maxLength={150} placeholder="3 lates = half day" onChange={(e) => set({ name: e.target.value })} />
       </Field>

@@ -6,6 +6,7 @@ import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { performanceApi, POTENTIAL_LABELS, STAGE_LABELS, type Review, type ReviewItem } from '../../api/performance';
 import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, ErrorState, Field, FormError, IconButton, Input, PageHeader, PageSpinner, Select, Textarea, useToast } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatDate } from '../../lib/format';
 import { RatingPicker, StageBar } from './shared';
@@ -66,6 +67,7 @@ function ReviewView({ r }: { r: Review }) {
           )
         }
       />
+      <RecordStamp className="-mt-2 mb-4" stamps={r.stamps} />
       <StageBar stage={r.stage} selfReview={r.selfReviewEnabled} hasGoals={r.sections.some((s) => s.kind === 'Goals')} className="mb-6" />
       {goalsTurn || goalsApproval ? (
         <GoalsEditor r={r} />

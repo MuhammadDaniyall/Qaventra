@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type AlertKind = 'Birthday' | 'WorkAnniversary' | 'ProbationEnd' | 'DocumentExpiry' | 'NewJoiner' | 'LeaveStarting' | 'NotCheckedIn';
@@ -72,6 +73,7 @@ export interface SaveAlert {
 export interface ScheduledAlert extends SaveAlert {
   id: string;
   lastRunOn: string | null;
+  stamps: RecordStamps;
 }
 
 export interface SaveReport {
@@ -92,6 +94,7 @@ export interface ScheduledReport extends SaveReport {
   extraEmails: string;
   lastSentAtUtc: string | null;
   nextRunAtUtc: string | null;
+  stamps: RecordStamps;
 }
 
 export interface ReportTable {

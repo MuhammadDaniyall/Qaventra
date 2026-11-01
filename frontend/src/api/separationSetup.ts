@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type ExitQuestionKind = 'Rating' | 'YesNo' | 'Text';
@@ -13,6 +14,7 @@ export interface ClearanceTemplate {
   name: string;
   isDefault: boolean;
   items: ClearanceTemplateItem[];
+  stamps: RecordStamps;
 }
 
 export interface ExitQuestion {
@@ -26,6 +28,7 @@ export interface ExitTemplate {
   name: string;
   isDefault: boolean;
   questions: ExitQuestion[];
+  stamps: RecordStamps;
 }
 
 export interface ExitAnswer {
@@ -62,6 +65,7 @@ export interface MyClearance {
   level: number;
   isCleared: boolean;
   note: string | null;
+  stamps: RecordStamps;
 }
 
 export interface MyExitInterview {
@@ -75,12 +79,12 @@ export interface MyExitInterview {
 const base = '/separation-setup';
 export const separationSetupApi = {
   clearanceTemplates: () => http.get<ClearanceTemplate[]>(`${base}/clearance-templates`),
-  addClearanceTemplate: (b: Omit<ClearanceTemplate, 'id'>) => http.post(`${base}/clearance-templates`, b),
-  updateClearanceTemplate: (id: string, b: Omit<ClearanceTemplate, 'id'>) => http.put(`${base}/clearance-templates/${id}`, b),
+  addClearanceTemplate: (b: Omit<ClearanceTemplate, 'id' | 'stamps'>) => http.post(`${base}/clearance-templates`, b),
+  updateClearanceTemplate: (id: string, b: Omit<ClearanceTemplate, 'id' | 'stamps'>) => http.put(`${base}/clearance-templates/${id}`, b),
   deleteClearanceTemplate: (id: string) => http.del(`${base}/clearance-templates/${id}`),
   exitTemplates: () => http.get<ExitTemplate[]>(`${base}/exit-templates`),
-  addExitTemplate: (b: Omit<ExitTemplate, 'id'>) => http.post(`${base}/exit-templates`, b),
-  updateExitTemplate: (id: string, b: Omit<ExitTemplate, 'id'>) => http.put(`${base}/exit-templates/${id}`, b),
+  addExitTemplate: (b: Omit<ExitTemplate, 'id' | 'stamps'>) => http.post(`${base}/exit-templates`, b),
+  updateExitTemplate: (id: string, b: Omit<ExitTemplate, 'id' | 'stamps'>) => http.put(`${base}/exit-templates/${id}`, b),
   deleteExitTemplate: (id: string) => http.del(`${base}/exit-templates/${id}`),
   extras: (id: string) => http.get<SeparationExtras>(`${base}/separations/${id}`),
   answer: (id: string, answers: { questionId: string; answer: string | null }[]) => http.put(`${base}/separations/${id}/answers`, { answers }),

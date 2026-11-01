@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record FundEntryDto(Guid Id, FundKind Fund, FundEntryKind Kind, DateOnly Date, decimal EmployeeAmount, decimal EmployerAmount, string? Note);
+public record FundEntryDto(Guid Id, FundKind Fund, FundEntryKind Kind, DateOnly Date, decimal EmployeeAmount, decimal EmployerAmount, string? Note, RecordStampsDto Stamps);
 
 /// <summary>Provident fund and gratuity position for one person. Gratuity "accrued" is worked out from service and salary.</summary>
 public record FundSummaryDto(Guid EmployeeId, string Name, string Code, bool PfMember, decimal PfEmployeeShare, decimal PfEmployerShare, decimal PfProfit,
@@ -24,12 +24,13 @@ public record SaveFundEntryRequest(Guid EmployeeId, FundKind Fund, FundEntryKind
 public record DistributeProfitRequest(DateOnly Date, [Range(0.01, 100)] decimal RatePercent, [StringLength(300)] string? Note);
 
 public record FundWithdrawalDto(Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, FundKind Fund, decimal Amount, string Reason, bool PayWithSalary,
-    RequestStatus Status, DateTime CreatedAtUtc, string? DecisionNote);
+    RequestStatus Status, DateTime CreatedAtUtc, string? DecisionNote, RecordStampsDto Stamps);
 
 public record RequestWithdrawalRequest(FundKind Fund, [Range(1, 100_000_000)] decimal Amount, [Required, StringLength(500)] string Reason, bool PayWithSalary = true,
     Guid? EmployeeId = null);
 
-public record TaxAdjustmentDto(Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string TaxYearCode, TaxAdjustmentKind Kind, decimal Amount, string? Note);
+public record TaxAdjustmentDto(Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string TaxYearCode, TaxAdjustmentKind Kind, decimal Amount, string? Note,
+    RecordStampsDto Stamps);
 public record SaveTaxAdjustmentRequest(Guid EmployeeId, [Required, StringLength(20)] string TaxYearCode, TaxAdjustmentKind Kind, [Range(0, 1_000_000_000)] decimal Amount,
     [StringLength(300)] string? Note);
 
@@ -165,7 +166,8 @@ public class FundsController(HrmsDbContext db, FundService funds, OnBehalfServic
     {
         if (employeeId != me.EmployeeId && !me.IsHr()) throw new ForbiddenException("You can only see your own funds.");
         return await db.FundEntries.Where(f => f.EmployeeId == employeeId).OrderByDescending(f => f.Date).ThenByDescending(f => f.CreatedAtUtc)
-            .Select(f => new FundEntryDto(f.Id, f.Fund, f.Kind, f.Date, f.EmployeeAmount, f.EmployerAmount, f.Note)).ToListAsync();
+            .Select(f => new FundEntryDto(f.Id, f.Fund, f.Kind, f.Date, f.EmployeeAmount, f.EmployerAmount, f.Note,
+                new RecordStampsDto(f.CreatedAtUtc, f.CreatedBy, f.ModifiedAtUtc, f.ModifiedBy))).ToListAsync();
     }
 
     /// <summary>Opening balances (moving from another system) and corrections.</summary>
@@ -270,7 +272,8 @@ public class FundsController(HrmsDbContext db, FundService funds, OnBehalfServic
     private Task<List<FundWithdrawalDto>> ProjectAsync(IQueryable<FundWithdrawal> q) =>
         q.OrderByDescending(w => w.CreatedAtUtc).Take(300)
             .Select(w => new FundWithdrawalDto(w.Id, w.EmployeeId, w.Employee!.FirstName + " " + w.Employee.LastName, w.Employee.EmployeeCode, w.Fund, w.Amount,
-                w.Reason, w.PayWithSalary, w.Status, w.CreatedAtUtc, w.DecisionNote)).ToListAsync();
+                w.Reason, w.PayWithSalary, w.Status, w.CreatedAtUtc, w.DecisionNote,
+                new RecordStampsDto(w.CreatedAtUtc, w.CreatedBy, w.ModifiedAtUtc, w.ModifiedBy))).ToListAsync();
 
     // ---------- Tax adjustments ----------
 
@@ -278,7 +281,7 @@ public class FundsController(HrmsDbContext db, FundService funds, OnBehalfServic
     public Task<List<TaxAdjustmentDto>> TaxAdjustments([FromQuery] string? taxYear) =>
         db.TaxAdjustments.Where(t => taxYear == null || t.TaxYearCode == taxYear).OrderBy(t => t.TaxYearCode)
             .Join(db.Employees, t => t.EmployeeId, e => e.Id, (t, e) => new TaxAdjustmentDto(t.Id, t.EmployeeId, e.FirstName + " " + e.LastName, e.EmployeeCode,
-                t.TaxYearCode, t.Kind, t.Amount, t.Note))
+                t.TaxYearCode, t.Kind, t.Amount, t.Note, new RecordStampsDto(t.CreatedAtUtc, t.CreatedBy, t.ModifiedAtUtc, t.ModifiedBy)))
             .ToListAsync();
 
     [HttpGet("tax-years")]

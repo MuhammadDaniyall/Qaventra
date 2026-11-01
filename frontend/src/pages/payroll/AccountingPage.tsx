@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import { accountingApi, type GlAccount, type PayrollGlLine } from '../../api/accounting';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Button,
   Card,
@@ -146,6 +147,7 @@ function AccountModal({ account, onClose }: { account: GlAccount | null; onClose
         <Field label="Name" required>
           <Input value={name} maxLength={150} onChange={(e) => setName(e.target.value)} placeholder="Salaries and wages" />
         </Field>
+        {account && <RecordStamp stamps={account.stamps} />}
       </div>
     </Modal>
   );

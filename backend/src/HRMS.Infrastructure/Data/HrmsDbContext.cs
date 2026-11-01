@@ -1491,6 +1491,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.HasIndex(x => x.TimestampUtc);
             e.HasIndex(x => x.UserId);
             e.Property(x => x.UserEmail).HasMaxLength(256);
+            e.Property(x => x.EmployeeName).HasMaxLength(201);
+            e.Property(x => x.EmployeeCode).HasMaxLength(30);
             e.Property(x => x.Action).HasMaxLength(50);
             e.Property(x => x.EntityType).HasMaxLength(100);
             e.Property(x => x.EntityId).HasMaxLength(100);
@@ -1509,6 +1511,12 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
 
         foreach (var type in b.Model.GetEntityTypes().Where(t => typeof(ITenantEntity).IsAssignableFrom(t.ClrType)))
             b.Entity(type.ClrType).HasQueryFilter(TenantFilter(type.ClrType));
+
+        foreach (var type in b.Model.GetEntityTypes().Where(t => typeof(BaseEntity).IsAssignableFrom(t.ClrType)))
+        {
+            b.Entity(type.ClrType).Property(nameof(BaseEntity.CreatedBy)).HasMaxLength(StampMaxLength);
+            b.Entity(type.ClrType).Property(nameof(BaseEntity.ModifiedBy)).HasMaxLength(StampMaxLength);
+        }
 
         SeedTaxYears(b);
     }
@@ -1553,8 +1561,140 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             }
         }
 
+        return SaveWithStampsAsync(ct);
+    }
+
+    private async Task<int> SaveWithStampsAsync(CancellationToken ct)
+    {
+        await StampRecordsAsync(ct);
         AuditLogs.AddRange(BuildDataAuditEntries());
-        return base.SaveChangesAsync(ct);
+        await NameAuditActorsAsync(ct);
+        return await base.SaveChangesAsync(ct);
+    }
+
+    private const int StampMaxLength = 250;
+
+    private static readonly HashSet<string> StampProperties =
+        [nameof(BaseEntity.CreatedById), nameof(BaseEntity.CreatedBy), nameof(BaseEntity.ModifiedAtUtc), nameof(BaseEntity.ModifiedById), nameof(BaseEntity.ModifiedBy)];
+
+    /// <summary>Who a login is, for stamps and audit rows. Display is "Ali Raza (EMP-0042)", or "Name (Role)" without an employee record.</summary>
+    private sealed record Actor(Guid UserId, Guid? EmployeeId, string? EmployeeName, string? EmployeeCode, string Display);
+
+    /// <summary>Looked up once per context; null when the login no longer exists.</summary>
+    private readonly Dictionary<Guid, Actor?> _actors = [];
+
+    private async Task<Dictionary<Guid, Actor?>> ActorsAsync(IEnumerable<Guid> userIds, CancellationToken ct)
+    {
+        var missing = userIds.Where(id => !_actors.ContainsKey(id)).Distinct().ToList();
+        if (missing.Count > 0)
+        {
+            // The owner has no company or employee record, so inside a company they still show as the owner.
+            var rows = await Users.IgnoreQueryFilters().AsNoTracking().Where(u => missing.Contains(u.Id))
+                .Select(u => new
+                {
+                    u.Id, u.FullName, u.Email, u.Role, u.EmployeeId,
+                    FirstName = u.Employee == null ? null : u.Employee.FirstName,
+                    LastName = u.Employee == null ? null : u.Employee.LastName,
+                    Code = u.Employee == null ? null : u.Employee.EmployeeCode,
+                })
+                .ToListAsync(ct);
+            foreach (var id in missing)
+                _actors[id] = null;
+            foreach (var u in rows)
+            {
+                var employeeName = u.EmployeeId is null ? null : $"{u.FirstName} {u.LastName}".Trim();
+                var display = u.EmployeeId is null
+                    ? $"{(string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName)} ({RoleLabel(u.Role)})"
+                    : $"{employeeName} ({u.Code})";
+                _actors[u.Id] = new Actor(u.Id, u.EmployeeId, employeeName, u.Code, Truncate(display, StampMaxLength)!);
+            }
+        }
+        return _actors;
+    }
+
+    /// <summary>Same wording as the screens' role labels.</summary>
+    public static string RoleLabel(UserRole role) => role switch
+    {
+        UserRole.SuperAdmin => "Owner",
+        UserRole.CompanyAdmin => "Company Super Admin",
+        UserRole.HrManager => "HR manager",
+        UserRole.Manager => "Manager",
+        _ => "Employee",
+    };
+
+    /// <summary>Stamp written when nobody is signed in: background jobs, startup seeding, sign-in bookkeeping.</summary>
+    public const string SystemActor = "System";
+
+    /// <summary>Shown instead of the sender on an anonymous suggestion.</summary>
+    public const string AnonymousActor = "Anonymous";
+
+    /// <summary>
+    /// Sets CreatedBy/ModifiedBy (and ModifiedAtUtc) on every added or really changed row. A new row starts with
+    /// Modified equal to Created. Anonymous suggestions never name their sender, and poll votes never name the voter.
+    /// </summary>
+    private async Task StampRecordsAsync(CancellationToken ct)
+    {
+        var entries = ChangeTracker.Entries<BaseEntity>()
+            .Where(e => e.State == EntityState.Added || (e.State == EntityState.Modified && e.Properties.Any(p =>
+                p.IsModified && !StampProperties.Contains(p.Metadata.Name) && !Equals(p.OriginalValue, p.CurrentValue))))
+            .ToList();
+        if (entries.Count == 0)
+            return;
+
+        Actor? actor = null;
+        if (currentUser.UserId is { } userId)
+            actor = (await ActorsAsync([userId], ct))[userId];
+        // A signed-in login that has since been removed still gets their email on the stamp.
+        var display = actor?.Display ?? (currentUser.UserId is null ? SystemActor : Truncate(currentUser.Email, StampMaxLength) ?? SystemActor);
+        var now = DateTime.UtcNow;
+
+        foreach (var entry in entries)
+        {
+            var e = entry.Entity;
+            var hidden = e is PollVote
+                || (e is Suggestion { IsAnonymous: true } s && (entry.State == EntityState.Added || s.EmployeeId == currentUser.EmployeeId));
+            Guid? byId = hidden ? null : currentUser.UserId;
+            var by = e is PollVote ? null : e is Suggestion && hidden ? AnonymousActor : display;
+
+            if (entry.State == EntityState.Added)
+            {
+                e.CreatedById = byId;
+                e.CreatedBy = by;
+                e.ModifiedAtUtc = e.CreatedAtUtc;
+                e.ModifiedById = byId;
+                e.ModifiedBy = by;
+            }
+            else
+            {
+                e.ModifiedAtUtc = now;
+                e.ModifiedById = byId;
+                e.ModifiedBy = by;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds the actor's employee id, name and code to every new audit row that names a user (Auth, Request and Data alike).
+    /// Rows that hide their actor (anonymous suggestions) have no user, so they stay anonymous.
+    /// </summary>
+    private async Task NameAuditActorsAsync(CancellationToken ct)
+    {
+        var logs = ChangeTracker.Entries<AuditLog>()
+            .Where(e => e.State == EntityState.Added && e.Entity.UserId != null && e.Entity.EmployeeId == null)
+            .Select(e => e.Entity)
+            .ToList();
+        if (logs.Count == 0)
+            return;
+
+        var actors = await ActorsAsync(logs.Select(l => l.UserId!.Value), ct);
+        foreach (var log in logs)
+        {
+            if (actors[log.UserId!.Value] is not { EmployeeId: not null } actor)
+                continue;
+            log.EmployeeId = actor.EmployeeId;
+            log.EmployeeName = Truncate(actor.EmployeeName, 201);
+            log.EmployeeCode = actor.EmployeeCode;
+        }
     }
 
     private static readonly HashSet<string> MaskedProperties = [nameof(User.PasswordHash)];
@@ -1577,6 +1717,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             {
                 var name = p.Metadata.Name;
                 if (anonymous && name == nameof(Suggestion.EmployeeId))
+                    continue;
+                // The audit row itself already says who and when.
+                if (StampProperties.Contains(name))
                     continue;
                 if (entry.State == EntityState.Modified && !p.IsModified)
                     continue;
@@ -1673,6 +1816,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             Id = id,
             CreatedAtUtc = created,
+            CreatedBy = SystemActor,
+            ModifiedAtUtc = created,
+            ModifiedBy = SystemActor,
             Code = $"{startYear}-{next:D2}",
             StartDate = new DateOnly(startYear, 7, 1),
             EndDate = new DateOnly(startYear + 1, 6, 30),
@@ -1683,6 +1829,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             Id = new Guid($"6a1f1c2e-0002-4000-8000-00000000{yy:D2}{i + 1:D2}"),
             CreatedAtUtc = created,
+            CreatedBy = SystemActor,
+            ModifiedAtUtc = created,
+            ModifiedBy = SystemActor,
             TaxYearId = id,
             FromAmount = s.From,
             ToAmount = s.To,

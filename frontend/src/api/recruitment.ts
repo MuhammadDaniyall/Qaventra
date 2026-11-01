@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type RequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type EmploymentType = 'FullTime' | 'PartTime' | 'Contract' | 'Internship';
@@ -89,6 +90,7 @@ export interface JobRequest extends SaveJobRequest {
   createdAtUtc: string;
   decisionNote: string | null;
   jobPostId: string | null;
+  stamps: RecordStamps;
 }
 
 export interface SaveJobPost {
@@ -122,6 +124,7 @@ export interface JobPost extends SaveJobPost {
   byStage: Partial<Record<ApplicationStage, number>>;
   total: number;
   canEdit: boolean;
+  stamps: RecordStamps;
 }
 
 export interface PipelineCard {
@@ -189,6 +192,7 @@ export interface CandidateListItem {
   latestStage: ApplicationStage | null;
   createdAtUtc: string;
   hired: boolean;
+  stamps: RecordStamps;
 }
 
 export interface CandidateApplication {
@@ -222,6 +226,7 @@ export interface Candidate {
   createdAtUtc: string;
   applications: CandidateApplication[];
   possibleDuplicates: CandidateListItem[];
+  stamps: RecordStamps;
 }
 
 export interface ApplicationEvent {
@@ -259,6 +264,7 @@ export interface Interview {
   feedbackHidden: number;
   iAmInterviewer: boolean;
   iGaveFeedback: boolean;
+  stamps: RecordStamps;
 }
 
 export interface Application {
@@ -281,6 +287,7 @@ export interface Application {
   canRun: boolean;
   canOffer: boolean;
   canHire: boolean;
+  stamps: RecordStamps;
 }
 
 export interface MyInterview {
@@ -508,6 +515,7 @@ export interface InterviewTemplate {
   id: string;
   name: string;
   questions: InterviewQuestion[];
+  stamps: RecordStamps;
 }
 
 export interface QuestionMark {

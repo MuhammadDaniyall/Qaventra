@@ -31,6 +31,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDateTimeUtc, humanize, todayIso } from '../../lib/format';
 import type { ExpenseCategory, ReceiptUpload } from '../../types/workflows';
@@ -112,6 +113,7 @@ export function MyExpensesPage() {
                 <Th className="text-end">Amount</Th>
                 <Th>Status</Th>
                 <Th>Paid via</Th>
+                <Th>Added / modified</Th>
               </tr>
             </THead>
             <TBody>
@@ -129,6 +131,9 @@ export function MyExpensesPage() {
                     <StatusBadge status={c.status} />
                   </Td>
                   <Td className="text-zinc-500 dark:text-zinc-400">{c.paidVia ?? '—'}</Td>
+                  <Td>
+                    <RecordStampCell stamps={c.stamps} />
+                  </Td>
                 </Tr>
               ))}
             </TBody>

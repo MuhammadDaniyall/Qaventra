@@ -1,5 +1,5 @@
 import { http } from './client';
-import type { DayOfWeek } from '../types';
+import type { DayOfWeek, RecordStamps } from '../types';
 
 export type PenaltyFlag = 'Late' | 'EarlyLeave' | 'HalfDay' | 'ShortDay' | 'Absent' | 'MissingCheckOut';
 export type PenaltyAction = 'DeductPay' | 'DeductLeave';
@@ -25,8 +25,9 @@ export interface PenaltyRule {
   days: number;
   leaveTypeId: string | null;
   isActive: boolean;
+  stamps: RecordStamps;
 }
-export type SavePenaltyRule = Omit<PenaltyRule, 'id'>;
+export type SavePenaltyRule = Omit<PenaltyRule, 'id' | 'stamps'>;
 
 export interface PenaltyLine {
   ruleId: string;
@@ -60,6 +61,7 @@ export interface OffDayRequest {
   status: 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
   createdAtUtc: string;
   decisionNote: string | null;
+  stamps: RecordStamps;
 }
 
 export const attendanceRulesApi = {

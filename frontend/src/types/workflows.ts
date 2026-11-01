@@ -1,5 +1,7 @@
 // Letters, expense claims and separations.
 
+import type { RecordStamps } from './index';
+
 // ---- Letters ----
 export type LetterCategory =
   | 'Offer'
@@ -31,11 +33,12 @@ export interface LetterTemplate {
   marginTopMm?: number;
   marginSideMm?: number;
   footer?: string | null;
+  stamps: RecordStamps;
 }
 
 export type LetterAutoUse = 'Offer' | 'Hire' | 'JobChange' | 'SalaryRevision' | 'Exit' | 'Confirmation';
 
-export type SaveLetterTemplateRequest = Omit<LetterTemplate, 'id'>;
+export type SaveLetterTemplateRequest = Omit<LetterTemplate, 'id' | 'stamps'>;
 
 export interface LetterPreview {
   subject: string;
@@ -68,6 +71,7 @@ export interface IssuedLetter {
   requested?: boolean;
   requestReason?: string | null;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
 
 export interface LetterDocument extends IssuedLetter {
@@ -111,6 +115,7 @@ export interface ExpenseClaim {
   paidVia: string | null;
   /** Part of the total covered by an advance; payroll pays only the rest. */
   advanceAdjusted?: number;
+  stamps: RecordStamps;
 }
 
 export interface ExpenseItem {
@@ -171,6 +176,7 @@ export interface SeparationSummary {
   clearanceDone: number;
   clearanceTotal: number;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
 
 export interface ClearanceItem {
@@ -181,6 +187,7 @@ export interface ClearanceItem {
   clearedByName: string | null;
   clearedAtUtc: string | null;
   note: string | null;
+  stamps: RecordStamps;
 }
 
 export interface Settlement {

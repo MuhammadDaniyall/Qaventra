@@ -3,6 +3,7 @@ import { Plus, Tags } from 'lucide-react';
 import { employeeFileApi, LOOKUP_KINDS, useLookups, type LookupKind, type OrgLookup } from '../../api/employeeFile';
 import { useDepartments, useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -80,6 +81,7 @@ export function LookupsTab() {
                 <Th>Code</Th>
                 {kind === 'SubDepartment' && <Th>Department</Th>}
                 <Th className="text-end">Employees</Th>
+                <Th>Added / modified</Th>
                 <Th className="text-end">
                   <span className="sr-only">Actions</span>
                 </Th>
@@ -94,6 +96,9 @@ export function LookupsTab() {
                   <Td className="font-mono text-xs">{x.code}</Td>
                   {kind === 'SubDepartment' && <Td>{deptName(x.parentId)}</Td>}
                   <Td className="text-end tabular-nums">{x.employees}</Td>
+                  <Td>
+                    <RecordStampCell stamps={x.stamps} />
+                  </Td>
                   <Td>
                     <RowActions label={x.name} onEdit={() => setEditing(x)} onDelete={() => setDeleting(x)} />
                   </Td>
@@ -182,6 +187,7 @@ function LookupModal({ kind, item, onClose }: { kind: LookupKind; item: OrgLooku
         </Field>
       )}
       <Checkbox label="In use (turn off to hide it from new choices)" checked={f.isActive} onChange={(e) => setF({ ...f, isActive: e.target.checked })} />
+      {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

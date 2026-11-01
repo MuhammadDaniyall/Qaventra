@@ -27,6 +27,7 @@ import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatDateTimeUtc } from '../../lib/format';
 import type { Company } from '../../types';
 import { AccessBadge, seatsLabel } from './companyUi';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { useCompanyActions } from './useCompanyActions';
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
@@ -120,6 +121,7 @@ export function CompanyDetailPage() {
                 <Th>Method</Th>
                 <Th>Reference</Th>
                 <Th>Notes</Th>
+                <Th>Added / modified</Th>
               </tr>
             </THead>
             <TBody>
@@ -134,6 +136,9 @@ export function CompanyDetailPage() {
                   <Td className="font-mono text-xs">{p.reference ?? '—'}</Td>
                   <Td className="max-w-xs truncate" title={p.notes ?? undefined}>
                     {p.notes ?? '—'}
+                  </Td>
+                  <Td>
+                    <RecordStampCell stamps={p.stamps} />
                   </Td>
                 </Tr>
               ))}
@@ -150,6 +155,7 @@ export function CompanyDetailPage() {
             <Row label="Phone" value={c.phone} />
             <Row label="City" value={c.city} />
             <Row label="Address" value={c.address} />
+            <Row label="Added / modified" value={<RecordStamp stamps={c.stamps} />} />
           </dl>
         </Card>
         <Card>

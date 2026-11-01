@@ -1,5 +1,6 @@
 import { http } from './client';
 import { downloadFile } from './excel';
+import type { RecordStamps } from '../types';
 
 export type AssetCondition = 'New' | 'Good' | 'Fair' | 'Damaged';
 export type AssetStatus = 'Available' | 'Assigned' | 'InRepair' | 'Retired' | 'Lost';
@@ -26,6 +27,7 @@ export interface AssetType {
   total: number;
   available: number;
   assigned: number;
+  stamps: RecordStamps;
 }
 
 export interface SaveAssetType {
@@ -41,6 +43,7 @@ export interface AssetKit {
   name: string;
   typeIds: string[];
   types: string[];
+  stamps: RecordStamps;
 }
 
 export interface Asset {
@@ -63,6 +66,7 @@ export interface Asset {
   dueBack: string | null;
   isOverdue: boolean;
   canManage: boolean;
+  stamps: RecordStamps;
 }
 
 export interface SaveAsset {
@@ -97,6 +101,7 @@ export interface Assignment {
   isOverdue: boolean;
   returnOnExit: boolean;
   returnRequested: boolean;
+  stamps: RecordStamps;
 }
 
 export interface AssetRequest {
@@ -118,6 +123,7 @@ export interface AssetRequest {
   decisionNote: string | null;
   /** The signed-in user can hand it over or take it back now. */
   canFulfill: boolean;
+  stamps: RecordStamps;
 }
 
 export interface AssetSummary {

@@ -21,10 +21,12 @@ import { compOffApi, leaveApi } from '../../api/leave';
 import { lettersApi } from '../../api/letters';
 import { payApi } from '../../api/pay';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Button, Card, EmptyState, ErrorState, FormError, PageHeader, SkeletonRows, StatusBadge } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatDateTimeUtc, humanize } from '../../lib/format';
 import { tx } from '../../lib/i18n';
+import type { RecordStamps } from '../../types';
 
 /** Where each kind of request is made. */
 const NEW_REQUESTS: { label: string; hint: string; icon: LucideIcon; to: string }[] = [
@@ -48,7 +50,12 @@ interface Row {
   status: string;
   at: string;
   to: string;
+  /** Who added and last changed it, when that kind of request reports it. */
+  stamps?: RecordStamps;
 }
+
+/** The record's stamps, for request kinds whose list already carries them. */
+const stampsOf = (x: object): RecordStamps | undefined => ('stamps' in x ? (x as { stamps?: RecordStamps }).stamps : undefined);
 
 const OPEN = ['Pending', 'AwaitingColleague'];
 
@@ -74,34 +81,34 @@ export function MyRequestsPage() {
     ...(leave.data ?? []).map((l) => ({
       key: `l-${l.id}`, type: 'Leave' as const, subjectId: l.id, icon: CalendarDays, title: l.leaveType,
       detail: `${l.fromDate === l.toDate ? formatDate(l.fromDate) : `${formatDate(l.fromDate)} – ${formatDate(l.toDate)}`} · ${l.days} ${l.days === 1 ? 'day' : 'days'}`,
-      status: l.status, at: l.createdAtUtc, to: '/me/leave',
+      status: l.status, at: l.createdAtUtc, to: '/me/leave', stamps: l.stamps,
     })),
     ...(compOff.data ?? []).map((c) => ({
       key: `c-${c.id}`, type: 'CompOff' as const, subjectId: c.id, icon: CalendarPlus, title: 'Comp-off',
       detail: `Worked on ${formatDate(c.workedOn)} · ${c.days} ${c.days === 1 ? 'day' : 'days'}`,
-      status: c.status, at: c.createdAtUtc, to: '/me/leave',
+      status: c.status, at: c.createdAtUtc, to: '/me/leave', stamps: stampsOf(c),
     })),
     ...(attendance.data ?? []).map((a) => ({
       key: `a-${a.id}`, type: 'Attendance' as const, subjectId: a.id, icon: Clock, title: humanize(a.kind),
-      detail: formatDate(a.date), status: a.status, at: a.createdAtUtc, to: '/me/attendance',
+      detail: formatDate(a.date), status: a.status, at: a.createdAtUtc, to: '/me/attendance', stamps: stampsOf(a),
     })),
     ...(expenses.data ?? []).map((e) => ({
       key: `e-${e.id}`, type: 'Expense' as const, subjectId: e.id, icon: Receipt, title: e.title,
       detail: `${formatCurrency(e.total)} · ${e.itemCount} ${e.itemCount === 1 ? 'item' : 'items'}`,
-      status: e.status, at: e.createdAtUtc, to: '/me/expenses',
+      status: e.status, at: e.createdAtUtc, to: '/me/expenses', stamps: stampsOf(e),
     })),
     ...(pay.data ?? []).map((p) => ({
       key: `p-${p.id}`, type: 'PayRequest' as const, subjectId: p.id, icon: Banknote, title: p.title,
-      detail: formatCurrency(p.amount), status: p.status, at: p.createdAtUtc, to: '/me/pay',
+      detail: formatCurrency(p.amount), status: p.status, at: p.createdAtUtc, to: '/me/pay', stamps: stampsOf(p),
     })),
     ...(loans.data ?? []).map((l) => ({
       key: `n-${l.id}`, type: 'Loan' as const, subjectId: l.id, icon: Banknote, title: l.title,
       detail: `${formatCurrency(l.amount)} · ${l.installments} ${l.installments === 1 ? 'installment' : 'installments'}`,
-      status: l.status, at: l.createdAtUtc, to: '/me/pay',
+      status: l.status, at: l.createdAtUtc, to: '/me/pay', stamps: stampsOf(l),
     })),
     ...(letters.data ?? []).map((l) => ({
       key: `t-${l.id}`, type: 'Letter' as const, subjectId: l.id, icon: FileSignature, title: l.subject,
-      detail: l.referenceNo, status: l.status ?? 'Pending', at: l.createdAtUtc, to: '/me/documents',
+      detail: l.referenceNo, status: l.status ?? 'Pending', at: l.createdAtUtc, to: '/me/documents', stamps: l.stamps,
     })),
   ].sort((a, b) => b.at.localeCompare(a.at));
 
@@ -188,7 +195,8 @@ export function MyRequestsPage() {
                     <ChevronDown className={cn('size-4 shrink-0 text-zinc-500 dark:text-zinc-400 transition-transform', expanded && 'rotate-180')} aria-hidden="true" />
                   </button>
                   {expanded && (
-                    <div className="border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                    <div className="space-y-4 border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                      {r.stamps && <RecordStamp stamps={r.stamps} />}
                       <ApprovalTimeline type={r.type} subjectId={r.subjectId} />
                     </div>
                   )}

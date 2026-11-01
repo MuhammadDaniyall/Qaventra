@@ -7,6 +7,7 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { ExportRangeButton } from '../../components/excel/ExcelButtons';
+import { RecordStampCell } from '../../components/RecordStamp';
 import {
   Button,
   Avatar,
@@ -102,6 +103,7 @@ export function ExpenseApprovalsPage() {
                 <Th>Submitted</Th>
                 <Th className="text-end">Amount</Th>
                 <Th>{status === 'Paid' ? 'Paid via' : 'Status'}</Th>
+                <Th>Added / modified</Th>
               </tr>
             </THead>
             <TBody>
@@ -125,6 +127,9 @@ export function ExpenseApprovalsPage() {
                   <Td>{formatDateTimeUtc(c.createdAtUtc)}</Td>
                   <Td className="text-end font-medium tabular-nums">{formatCurrency(c.total)}</Td>
                   <Td>{status === 'Paid' ? c.paidVia : <StatusBadge status={c.status} />}</Td>
+                  <Td>
+                    <RecordStampCell stamps={c.stamps} />
+                  </Td>
                 </Tr>
               ))}
             </TBody>

@@ -14,13 +14,13 @@ namespace HRMS.Api.Controllers;
 
 public record TrainingMeDto(bool IsHr, bool HasTeam, bool IsTrainer);
 
-public record TrainingCategoryDto(Guid Id, string Name, int Programs);
+public record TrainingCategoryDto(Guid Id, string Name, int Programs, RecordStampsDto Stamps);
 
 public record SaveTrainingCategoryRequest([Required, StringLength(100)] string Name);
 
 public record TrainingProgramDto(
     Guid Id, string Title, Guid? CategoryId, string? Category, string? Description, TrainingMode Mode, decimal? DurationHours, string? Link, bool IsMandatory,
-    List<Guid> DepartmentIds, int? CompleteWithinDays, int? RepeatEveryMonths, bool IsActive, int Sessions, int Completed);
+    List<Guid> DepartmentIds, int? CompleteWithinDays, int? RepeatEveryMonths, bool IsActive, int Sessions, int Completed, RecordStampsDto Stamps);
 
 public record SaveTrainingProgramRequest(
     [Required, StringLength(150)] string Title, Guid? CategoryId, [StringLength(4000)] string? Description, TrainingMode Mode, decimal? DurationHours,
@@ -29,7 +29,7 @@ public record SaveTrainingProgramRequest(
 public record TrainingSessionDto(
     Guid Id, Guid ProgramId, string Program, TrainingMode Mode, DateTime StartsAtUtc, DateTime EndsAtUtc, string? Venue, Guid? TrainerEmployeeId, string? Trainer,
     string? ExternalTrainer, int? Capacity, decimal? Cost, TrainingSessionStatus Status, string? Notes, int Enrolled, int Completed, double? AverageRating,
-    bool CanRun);
+    bool CanRun, RecordStampsDto Stamps);
 
 public record SaveTrainingSessionRequest(
     Guid ProgramId, DateTime StartsAtUtc, DateTime EndsAtUtc, [StringLength(500)] string? Venue, Guid? TrainerEmployeeId, [StringLength(200)] string? ExternalTrainer,
@@ -37,7 +37,7 @@ public record SaveTrainingSessionRequest(
 
 public record EnrollmentDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string? Department, EnrollmentStatus Status, string? NominatedByName, int? Score,
-    DateOnly? CompletedOn, int? FeedbackRating, int? TrainerRating, bool? WouldRecommend, string? FeedbackComment);
+    DateOnly? CompletedOn, int? FeedbackRating, int? TrainerRating, bool? WouldRecommend, string? FeedbackComment, RecordStampsDto Stamps);
 
 public record SessionDetailDto(TrainingSessionDto Session, List<EnrollmentDto> Enrollments, bool CanNominate);
 
@@ -51,14 +51,14 @@ public record FeedbackRequestBody(int Rating, int? TrainerRating, bool? WouldRec
 
 public record MyTrainingDto(
     Guid EnrollmentId, Guid SessionId, string Program, TrainingMode Mode, DateTime StartsAtUtc, DateTime EndsAtUtc, string? Venue, string? Trainer,
-    EnrollmentStatus Status, int? Score, DateOnly? CompletedOn, bool FeedbackGiven, string? Link);
+    EnrollmentStatus Status, int? Score, DateOnly? CompletedOn, bool FeedbackGiven, string? Link, RecordStampsDto Stamps);
 
 public record SaveTrainingRequestBody(Guid? ProgramId, [StringLength(200)] string? CourseName, [StringLength(200)] string? Provider, DateOnly? PreferredDate, decimal? Cost,
     [Required, StringLength(2000)] string Reason);
 
 public record TrainingRequestDto(
     Guid Id, Guid EmployeeId, string EmployeeName, Guid? ProgramId, string Course, string? Provider, DateOnly? PreferredDate, decimal? Cost, string Reason,
-    RequestStatus Status, string? DecisionNote, DateOnly? CompletedOn, DateTime CreatedAtUtc);
+    RequestStatus Status, string? DecisionNote, DateOnly? CompletedOn, DateTime CreatedAtUtc, RecordStampsDto Stamps);
 
 public record CompleteRequestBody(DateOnly CompletedOn);
 
@@ -87,7 +87,8 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
 
     [HttpGet("categories")]
     public async Task<List<TrainingCategoryDto>> Categories() =>
-        await db.TrainingCategories.OrderBy(c => c.Name).Select(c => new TrainingCategoryDto(c.Id, c.Name, db.TrainingPrograms.Count(p => p.CategoryId == c.Id))).ToListAsync();
+        await db.TrainingCategories.OrderBy(c => c.Name).Select(c => new TrainingCategoryDto(c.Id, c.Name, db.TrainingPrograms.Count(p => p.CategoryId == c.Id),
+            new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy))).ToListAsync();
 
     [HttpPost("categories"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> AddCategory(SaveTrainingCategoryRequest req)
@@ -137,7 +138,7 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
             Completed = db.TrainingEnrollments.Count(x => x.Session!.ProgramId == p.Id && x.Status == EnrollmentStatus.Completed),
         }).ToListAsync();
         return list.Select(x => new TrainingProgramDto(x.P.Id, x.P.Title, x.P.CategoryId, x.Category, x.P.Description, x.P.Mode, x.P.DurationHours, x.P.Link,
-            x.P.IsMandatory, HelpdeskService.Ids(x.P.DepartmentIds), x.P.CompleteWithinDays, x.P.RepeatEveryMonths, x.P.IsActive, x.Sessions, x.Completed)).ToList();
+            x.P.IsMandatory, HelpdeskService.Ids(x.P.DepartmentIds), x.P.CompleteWithinDays, x.P.RepeatEveryMonths, x.P.IsActive, x.Sessions, x.Completed, RecordStampsDto.Of(x.P))).ToList();
     }
 
     [HttpPost("programs"), Authorize(Policy = Policies.Hr)]
@@ -193,7 +194,8 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
         var canRun = training.CanRunSession(s);
         var rows = await q.OrderBy(x => x.Employee!.FirstName).Select(x => new EnrollmentDto(x.Id, x.EmployeeId, x.Employee!.FirstName + " " + x.Employee.LastName,
             x.Employee.EmployeeCode, x.Employee.Department != null ? x.Employee.Department.Name : null, x.Status, x.NominatedByName, x.Score, x.CompletedOn,
-            canRun ? x.FeedbackRating : null, canRun ? x.TrainerRating : null, canRun ? x.WouldRecommend : null, canRun ? x.FeedbackComment : null)).ToListAsync();
+            canRun ? x.FeedbackRating : null, canRun ? x.TrainerRating : null, canRun ? x.WouldRecommend : null, canRun ? x.FeedbackComment : null,
+            new RecordStampsDto(x.CreatedAtUtc, x.CreatedBy, x.ModifiedAtUtc, x.ModifiedBy))).ToListAsync();
         return new SessionDetailDto((await SessionDtosAsync([s]))[0], rows, training.IsApprover && await training.Nominatable().AnyAsync());
     }
 
@@ -271,7 +273,8 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
             .OrderByDescending(x => x.Session!.StartsAtUtc)
             .Select(x => new MyTrainingDto(x.Id, x.SessionId, x.Session!.Program!.Title, x.Session.Program.Mode, x.Session.StartsAtUtc, x.Session.EndsAtUtc, x.Session.Venue,
                 x.Session.ExternalTrainer ?? db.Employees.Where(e => e.Id == x.Session.TrainerEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault(),
-                x.Session.Status == TrainingSessionStatus.Cancelled ? EnrollmentStatus.Withdrawn : x.Status, x.Score, x.CompletedOn, x.FeedbackAtUtc != null, x.Session.Program.Link))
+                x.Session.Status == TrainingSessionStatus.Cancelled ? EnrollmentStatus.Withdrawn : x.Status, x.Score, x.CompletedOn, x.FeedbackAtUtc != null, x.Session.Program.Link,
+                new RecordStampsDto(x.CreatedAtUtc, x.CreatedBy, x.ModifiedAtUtc, x.ModifiedBy)))
             .ToListAsync();
     }
 
@@ -299,7 +302,8 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
             q = q.Where(r => r.EmployeeId == me.EmployeeId);
         return await q.OrderByDescending(r => r.CreatedAtUtc).Take(300).Select(r => new TrainingRequestDto(r.Id, r.EmployeeId, r.Employee!.FirstName + " " + r.Employee.LastName,
             r.ProgramId, r.ProgramId != null ? db.TrainingPrograms.Where(p => p.Id == r.ProgramId).Select(p => p.Title).First() : r.CourseName ?? "", r.Provider,
-            r.PreferredDate, r.Cost, r.Reason, r.Status, r.DecisionNote, r.CompletedOn, r.CreatedAtUtc)).ToListAsync();
+            r.PreferredDate, r.Cost, r.Reason, r.Status, r.DecisionNote, r.CompletedOn, r.CreatedAtUtc,
+            new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy))).ToListAsync();
     }
 
     [HttpPost("requests")]
@@ -404,7 +408,7 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
             var c = counts.FirstOrDefault(x => x.Key == s.Id);
             return new TrainingSessionDto(s.Id, s.ProgramId, s.Program!.Title, s.Program.Mode, s.StartsAtUtc, s.EndsAtUtc, s.Venue, s.TrainerEmployeeId,
                 s.TrainerEmployeeId is { } t ? names.GetValueOrDefault(t) : null, s.ExternalTrainer, s.Capacity, training.IsHr ? s.Cost : null, s.Status, s.Notes,
-                c?.Enrolled ?? 0, c?.Completed ?? 0, c?.Rating is { } r ? Math.Round(r, 1) : null, training.CanRunSession(s));
+                c?.Enrolled ?? 0, c?.Completed ?? 0, c?.Rating is { } r ? Math.Round(r, 1) : null, training.CanRunSession(s), RecordStampsDto.Of(s));
         }).ToList();
     }
 

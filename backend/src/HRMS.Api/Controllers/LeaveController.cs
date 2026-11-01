@@ -21,7 +21,7 @@ public record LeaveRequestDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, Guid LeaveTypeId, string LeaveType,
     DateOnly FromDate, DateOnly ToDate, decimal Days, string? Reason, LeaveStatus Status,
     DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, int AttachmentCount,
-    LeaveDuration Duration, HalfDayPart? HalfDayPart, TimeOnly? StartTime, TimeOnly? EndTime);
+    LeaveDuration Duration, HalfDayPart? HalfDayPart, TimeOnly? StartTime, TimeOnly? EndTime, RecordStampsDto Stamps);
 
 /// <summary>
 /// Entitled = the year's quota; Earned = how much of it is available so far (monthly accrual);
@@ -145,5 +145,6 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
             r.LeaveTypeId, r.LeaveType!.Name, r.FromDate, r.ToDate, r.Days, r.Reason, r.Status,
             r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
             db.Attachments.Count(a => a.OwnerType == AttachmentOwner.Leave && a.OwnerId == r.Id),
-            r.Duration, r.HalfDayPart, r.StartTime, r.EndTime));
+            r.Duration, r.HalfDayPart, r.StartTime, r.EndTime,
+            new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)));
 }

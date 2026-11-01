@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarHeart, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { setupApi } from '../../api/organization';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -89,6 +90,7 @@ export function HolidaysTab() {
               <Th>Date</Th>
               <Th>Day</Th>
               <Th>Name</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -114,6 +116,7 @@ export function HolidaysTab() {
                     </span>
                   )}
                 </Td>
+                <Td>{h.stamps ? <RecordStampCell stamps={h.stamps} /> : '—'}</Td>
                 <Td>
                   <RowActions history={{ type: 'Holiday', id: h.id }} label={h.name} onEdit={() => setEditing(h)} onDelete={() => setDeleting(h)} />
                 </Td>
@@ -140,7 +143,7 @@ function HolidayModal({ year, item, onClose }: { year: number; item?: Holiday; o
   const people = useEmployeeLookup();
   const regions = (lookups.data ?? []).filter((l) => l.kind === 'Region');
   const [v, setV] = useState<SaveHolidayRequest>(
-    item ? (({ id: _id, ...rest }) => rest)(item) : { date: `${year}-01-01`, name: '', kind: 'Public', regionIds: [], religion: null, exemptEmployeeIds: [] },
+    item ? (({ id: _id, stamps: _stamps, ...rest }) => rest)(item) : { date: `${year}-01-01`, name: '', kind: 'Public', regionIds: [], religion: null, exemptEmployeeIds: [] },
   );
   const { mutation, error, fieldErrors, setFieldErrors } = useSaveMutation({
     save: (b: SaveHolidayRequest) => (item ? setupApi.updateHoliday(item.id, b) : setupApi.createHoliday(b)),
@@ -215,6 +218,7 @@ function HolidayModal({ year, item, onClose }: { year: number; item?: Holiday; o
           </Select>
         </div>
       </Field>
+      {item?.stamps && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

@@ -4,6 +4,7 @@ import { HandCoins } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { expenseSetupApi } from '../../api/expenseSetup';
 import { OnBehalfField } from '../../components/engine';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { Button, Card, CardHeader, Field, FormError, Input, Modal, StatusBadge, Table, TBody, Td, Tr, useToast } from '../../components/ui';
 import { formatDateTimeUtc, formatNumber } from '../../lib/format';
 
@@ -95,6 +96,9 @@ export function MyAdvances() {
               </Td>
               <Td>
                 <StatusBadge status={a.closedAtUtc ? 'Closed' : a.status} />
+              </Td>
+              <Td>
+                <RecordStampCell stamps={a.stamps} />
               </Td>
               <Td className="text-end">
                 {a.status === 'Pending' && (

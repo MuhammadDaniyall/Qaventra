@@ -1,4 +1,4 @@
-import type { DayOfWeek } from '../types';
+import type { DayOfWeek, RecordStamps } from '../types';
 import { http } from './client';
 
 export type ShiftAssignmentSource = 'Roster' | 'Request' | 'Swap';
@@ -67,6 +67,7 @@ export interface ShiftRequest {
   createdAtUtc: string;
   decidedAtUtc: string | null;
   decisionNote: string | null;
+  stamps: RecordStamps;
 }
 
 export interface MonthlyRow {

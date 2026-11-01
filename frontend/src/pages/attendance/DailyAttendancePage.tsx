@@ -8,6 +8,7 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { ExportRangeButton, ImportButton } from '../../components/excel/ExcelButtons';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -137,6 +138,7 @@ export function DailyAttendancePage() {
                 <Th>Check out</Th>
                 <Th>Worked</Th>
                 <Th>Office</Th>
+                <Th>Added / modified</Th>
                 {hr && <Th className="text-end">Manual entry</Th>}
               </tr>
             </THead>
@@ -161,6 +163,7 @@ export function DailyAttendancePage() {
                   <Td className="tabular-nums">{formatTime(r.record?.checkOut)}</Td>
                   <Td className="tabular-nums">{formatMinutes(r.record?.workedMinutes)}</Td>
                   <Td>{r.record?.office ?? (r.record?.source === 'Manual' ? 'Manual' : '—')}</Td>
+                  <Td>{r.record ? <RecordStampCell stamps={r.record.stamps} /> : '—'}</Td>
                   {hr && (
                     <Td className="text-end">
                       <Button
@@ -236,6 +239,7 @@ function ManualEntryModal({ row, date, onClose }: { row: DailyRow; date: string;
       }
     >
       <div className="space-y-4">
+        {row.record && <RecordStamp stamps={row.record.stamps} />}
         <FormError message={error} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Check in" required>

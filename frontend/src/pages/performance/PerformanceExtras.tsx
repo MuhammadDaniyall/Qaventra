@@ -5,6 +5,7 @@ import { BookMarked, MessageSquareQuote, NotebookPen, Pencil, Plus, Trash2, User
 import { http } from '../../api/client';
 import { employeesApi } from '../../api/employees';
 import { qk } from '../../api/keys';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -27,6 +28,7 @@ import {
 import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
 import { tx } from '../../lib/i18n';
+import type { RecordStamps } from '../../types';
 
 export interface Kpi {
   id: string;
@@ -37,6 +39,7 @@ export interface Kpi {
   defaultTarget: string | null;
   defaultWeight: number;
   isActive: boolean;
+  stamps: RecordStamps;
 }
 interface Feedback {
   id: string;
@@ -45,6 +48,7 @@ interface Feedback {
   rating: number | null;
   comment: string | null;
   submittedAtUtc: string | null;
+  stamps: RecordStamps;
 }
 interface MyFeedback {
   id: string;
@@ -55,6 +59,7 @@ interface MyFeedback {
   rating: number | null;
   comment: string | null;
   submittedAtUtc: string | null;
+  stamps: RecordStamps;
 }
 interface CheckIn {
   id: string;
@@ -64,8 +69,9 @@ interface CheckIn {
   progress: number | null;
   note: string;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
-type KpiBody = Omit<Kpi, 'id'>;
+type KpiBody = Omit<Kpi, 'id' | 'stamps'>;
 
 const api = {
   kpis: () => http.get<Kpi[]>('/performance/kpis'),
@@ -162,6 +168,7 @@ export function KpiLibraryTab() {
                       <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
                         {[k.defaultTarget && `${tx('Target')}: ${k.defaultTarget}${k.unit ? ` ${k.unit}` : ''}`, `${tx('Weight')} ${k.defaultWeight}`].filter(Boolean).join(' · ')}
                       </span>
+                      <RecordStamp stamps={k.stamps} />
                     </span>
                     <IconButton label="Edit" onClick={() => setEditing(k)}>
                       <Pencil className="size-4" />
@@ -223,6 +230,7 @@ function KpiModal({ kpi, onClose }: { kpi: Kpi | null; onClose: () => void }) {
         </>
       }
     >
+      {kpi && <RecordStamp className="mb-4" stamps={kpi.stamps} />}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" required className="sm:col-span-2">
           <Input value={v.name} maxLength={200} onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="On-time delivery" />
@@ -306,6 +314,7 @@ export function FeedbackRequestsTab() {
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">{f.employee}</span>
                 <span className="block text-xs text-zinc-500 dark:text-zinc-400">{[f.designation, f.cycle].filter(Boolean).join(' · ')}</span>
+                <RecordStamp stamps={f.stamps} />
               </span>
               {f.submittedAtUtc && <Stars value={f.rating ?? 0} />}
               <Button size="sm" variant={f.submittedAtUtc ? 'ghost' : 'primary'} onClick={() => setGiving(f)}>
@@ -352,6 +361,7 @@ function GiveFeedbackModal({ f, onClose }: { f: MyFeedback; onClose: () => void 
       }
     >
       <div className="space-y-4">
+        <RecordStamp stamps={f.stamps} />
         <Field label="Overall">
           <Stars value={rating} onChange={setRating} />
         </Field>
@@ -437,6 +447,7 @@ function CheckInsCard({ reviewId }: { reviewId: string }) {
                 <span className="ms-auto text-xs text-zinc-500 dark:text-zinc-400">{formatDateTimeUtc(c.createdAtUtc)}</span>
               </div>
               <p className="mt-1 text-sm whitespace-pre-line text-zinc-700 dark:text-zinc-300">{c.note}</p>
+              <RecordStamp className="mt-1" stamps={c.stamps} />
             </li>
           ))}
         </ul>
@@ -494,6 +505,7 @@ function FeedbackCard({ reviewId }: { reviewId: string }) {
                 {f.submittedAtUtc ? <Stars value={f.rating ?? 0} /> : <Badge tone="amber">{tx('Waiting')}</Badge>}
               </div>
               {f.comment && <p className="mt-1 text-sm whitespace-pre-line text-zinc-700 dark:text-zinc-300">{f.comment}</p>}
+              <RecordStamp className="mt-1" stamps={f.stamps} />
             </li>
           ))}
         </ul>

@@ -6,6 +6,8 @@ import { ATTACHMENT_ACCEPT, attachmentProblem, attachmentsApi } from '../../api/
 import { leaveApi } from '../../api/leave';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { ClaimCompOffModal, MyCompOffClaims } from './CompOff';
+import { LeaveDetailDrawer } from './LeaveDetail';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { errorMessage } from '../../api/client';
 import { useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -47,6 +49,7 @@ export function MyLeavePage() {
   const [applyOpen, setApplyOpen] = useState(false);
   const [cancelling, setCancelling] = useState<LeaveRequest | null>(null);
   const [filesFor, setFilesFor] = useState<LeaveRequest | null>(null);
+  const [viewing, setViewing] = useState<LeaveRequest | null>(null);
   const [claiming, setClaiming] = useState(false);
   const balances = useQuery({ queryKey: qk.leaveBalances, queryFn: () => leaveApi.balances() });
   const requests = useQuery({ queryKey: qk.leaveMy, queryFn: leaveApi.my });
@@ -130,6 +133,7 @@ export function MyLeavePage() {
                 <Th>Reason</Th>
                 <Th>Decision note</Th>
                 <Th>Files</Th>
+                <Th>Added / modified</Th>
                 <Th className="text-end">
                   <span className="sr-only">Actions</span>
                 </Th>
@@ -137,7 +141,7 @@ export function MyLeavePage() {
             </THead>
             <TBody>
               {requests.data.map((r) => (
-                <Tr key={r.id}>
+                <Tr key={r.id} onClick={() => setViewing(r)}>
                   <Td className="font-medium text-zinc-900 dark:text-zinc-100">{r.leaveType}</Td>
                   <Td>
                     {formatDate(r.fromDate)}
@@ -150,14 +154,17 @@ export function MyLeavePage() {
                   </Td>
                   <Td className="max-w-xs truncate" title={r.reason ?? undefined}>{r.reason ?? '—'}</Td>
                   <Td className="max-w-xs truncate" title={r.decisionNote ?? undefined}>{r.decisionNote ?? '—'}</Td>
-                  <Td>
+                  <Td onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     {(r.attachmentCount > 0 || r.status === 'Pending') && (
                       <Button variant="ghost" size="sm" icon={<Paperclip className="size-3.5" />} onClick={() => setFilesFor(r)}>
                         {r.attachmentCount > 0 ? r.attachmentCount : 'Add'}
                       </Button>
                     )}
                   </Td>
-                  <Td className="text-end">
+                  <Td>
+                    <RecordStampCell stamps={r.stamps} />
+                  </Td>
+                  <Td className="text-end" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     {r.status === 'Pending' && (
                       <Button variant="ghost" size="sm" onClick={() => setCancelling(r)}>
                         Cancel
@@ -172,6 +179,7 @@ export function MyLeavePage() {
       </Card>
 
       <MyCompOffClaims />
+      <LeaveDetailDrawer request={viewing} onClose={() => setViewing(null)} />
       {applyOpen && <ApplyLeaveModal balances={balances.data ?? []} onClose={() => setApplyOpen(false)} />}
       {claiming && <ClaimCompOffModal onClose={() => setClaiming(false)} />}
       {filesFor && (

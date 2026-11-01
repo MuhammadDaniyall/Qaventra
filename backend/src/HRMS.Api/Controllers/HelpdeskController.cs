@@ -13,12 +13,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record TicketTypeDto(Guid Id, string Name, int? TargetHours, List<Guid> AgentIds, List<string> Agents, bool IsActive);
+public record TicketTypeDto(Guid Id, string Name, int? TargetHours, List<Guid> AgentIds, List<string> Agents, bool IsActive, RecordStampsDto Stamps);
 
 public record TicketCategoryDto(
     Guid Id, string Name, string? Description, int TargetHours, List<Guid> AgentIds, List<string> Agents, bool IsActive, int OpenTickets,
     Guid? LeadEmployeeId, string? Lead, TicketAssignment AssignmentMode, bool AgentCanClose, int AutoCloseDays, int ReopenDays,
-    List<TicketTypeDto> Types);
+    List<TicketTypeDto> Types, RecordStampsDto Stamps);
 
 public record SaveTicketCategoryRequest(
     [Required, StringLength(100)] string Name, [StringLength(500)] string? Description, [Range(1, 2000)] int TargetHours,
@@ -50,7 +50,7 @@ public record HelpdeskLabelsDto(Dictionary<string, string> Statuses, Dictionary<
 public record TicketListItemDto(
     Guid Id, string Code, string Subject, Guid CategoryId, string Category, Guid? TypeId, string? Type, TicketPriority Priority, TicketStatus Status,
     Guid EmployeeId, string EmployeeName, string EmployeeCode, string? Department, Guid? AssigneeEmployeeId, string? Assignee,
-    DateTime CreatedAtUtc, DateTime DueAtUtc, DateTime LastActivityAtUtc, bool IsOverdue, int Replies, int? Rating);
+    DateTime CreatedAtUtc, DateTime DueAtUtc, DateTime LastActivityAtUtc, bool IsOverdue, int Replies, int? Rating, RecordStampsDto Stamps);
 
 public record TicketCommentDto(
     Guid Id, Guid? AuthorEmployeeId, string AuthorName, string Body, bool IsInternal, bool IsSystem, DateTime CreatedAtUtc,
@@ -99,11 +99,11 @@ public class HelpdeskController(HrmsDbContext db, HelpdeskService helpdesk, Tena
             var typeDtos = types[c.Id].Select(t =>
             {
                 var tIds = HelpdeskService.Ids(t.AgentIds);
-                return new TicketTypeDto(t.Id, t.Name, t.TargetHours, tIds, Names(tIds), t.IsActive);
+                return new TicketTypeDto(t.Id, t.Name, t.TargetHours, tIds, Names(tIds), t.IsActive, RecordStampsDto.Of(t));
             }).ToList();
             return new TicketCategoryDto(c.Id, c.Name, c.Description, c.TargetHours, ids, Names(ids), c.IsActive, open.GetValueOrDefault(c.Id),
                 c.LeadEmployeeId, c.LeadEmployeeId is { } lead ? names.GetValueOrDefault(lead) : null, c.AssignmentMode, c.AgentCanClose,
-                c.AutoCloseDays, c.ReopenDays, typeDtos);
+                c.AutoCloseDays, c.ReopenDays, typeDtos, RecordStampsDto.Of(c));
         }).ToList();
     }
 
@@ -469,12 +469,13 @@ public class HelpdeskController(HrmsDbContext db, HelpdeskService helpdesk, Tena
             t.AssigneeEmployeeId,
             Assignee = db.Employees.Where(e => e.Id == t.AssigneeEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault(),
             t.CreatedAtUtc, t.DueAtUtc, t.LastActivityAtUtc, t.Rating,
+            Stamps = new RecordStampsDto(t.CreatedAtUtc, t.CreatedBy, t.ModifiedAtUtc, t.ModifiedBy),
             Replies = db.TicketComments.Count(c => c.TicketId == t.Id && !c.IsSystem && !c.IsInternal && !c.IsDeleted),
         }).ToListAsync();
         return rows.Select(r => new TicketListItemDto(r.Id, HelpdeskService.Code(r.Number), r.Subject, r.CategoryId, r.Category, r.TypeId, r.Type,
             r.Priority, r.Status, r.EmployeeId, $"{r.FirstName} {r.LastName}", r.EmployeeCode, r.Department, r.AssigneeEmployeeId, r.Assignee,
             r.CreatedAtUtc, r.DueAtUtc, r.LastActivityAtUtc,
-            r.DueAtUtc < now && r.Status is TicketStatus.Open or TicketStatus.InProgress or TicketStatus.WaitingOnEmployee, r.Replies, r.Rating)).ToList();
+            r.DueAtUtc < now && r.Status is TicketStatus.Open or TicketStatus.InProgress or TicketStatus.WaitingOnEmployee, r.Replies, r.Rating, r.Stamps)).ToList();
     }
 
     private async Task<List<Guid>> ValidAgentsAsync(List<Guid>? ids)

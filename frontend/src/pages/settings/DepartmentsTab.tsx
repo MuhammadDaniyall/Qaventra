@@ -3,6 +3,7 @@ import { Layers, Plus } from 'lucide-react';
 import { orgApi } from '../../api/organization';
 import { useDepartments, useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { Button, Card, CardHeader, EmptyState, ErrorState, Field, Input, Select, SkeletonRows, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
 import type { Department } from '../../types';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from './shared';
@@ -41,6 +42,7 @@ export function DepartmentsTab() {
               <Th>Code</Th>
               <Th>Head</Th>
               <Th className="text-end">Employees</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -53,6 +55,9 @@ export function DepartmentsTab() {
                 <Td className="font-mono text-xs">{d.code ?? '—'}</Td>
                 <Td>{d.head ?? <span className="text-zinc-500 dark:text-zinc-400">—</span>}</Td>
                 <Td className="text-end tabular-nums">{d.employees}</Td>
+                <Td>
+                  <RecordStampCell stamps={d.stamps} />
+                </Td>
                 <Td>
                   <RowActions history={{ type: 'Department', id: d.id }} label={d.name} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
                 </Td>
@@ -115,6 +120,7 @@ function DepartmentModal({ item, onClose }: { item: Department | null; onClose: 
           ))}
         </Select>
       </Field>
+      {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

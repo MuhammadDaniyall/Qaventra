@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type ApprovalRequestType =
@@ -34,6 +35,7 @@ export interface InboxItem {
   actingFor: string | null;
   /** Someone filed it on the employee's behalf. */
   filedBy: string | null;
+  stamps: RecordStamps;
 }
 
 export interface Delegation {
@@ -50,6 +52,7 @@ export interface Delegation {
   isActive: boolean;
   createdByName: string | null;
   canCancel: boolean;
+  stamps: RecordStamps;
 }
 
 export interface ApprovalStep {

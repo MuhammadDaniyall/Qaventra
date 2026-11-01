@@ -14,7 +14,8 @@ namespace HRMS.Api.Controllers;
 
 public record ScheduledAlertDto(
     Guid Id, string Name, AlertKind Kind, int DaysBefore, int ProbationMonths, int SendHour, bool ToEmployee, bool ToManager, bool ToHr, bool ToEveryone,
-    List<Guid> ExtraRecipientIds, List<Guid> DepartmentIds, string TitleTemplate, string? BodyTemplate, bool SendEmail, bool IsActive, DateOnly? LastRunOn);
+    List<Guid> ExtraRecipientIds, List<Guid> DepartmentIds, string TitleTemplate, string? BodyTemplate, bool SendEmail, bool IsActive, DateOnly? LastRunOn,
+    RecordStampsDto Stamps);
 
 public record SaveAlertRequest(
     [Required, StringLength(150)] string Name, AlertKind Kind, int DaysBefore, int ProbationMonths, int SendHour, bool ToEmployee, bool ToManager, bool ToHr,
@@ -25,7 +26,7 @@ public record AlertPreviewDto(int Count, List<string> Titles);
 
 public record ScheduledReportDto(
     Guid Id, string Name, ReportKind Kind, ReportFrequency Frequency, int Day, int SendHour, List<Guid> RecipientIds, List<string> Recipients, string ExtraEmails,
-    List<Guid> DepartmentIds, bool IsActive, DateTime? LastSentAtUtc, DateTime? NextRunAtUtc);
+    List<Guid> DepartmentIds, bool IsActive, DateTime? LastSentAtUtc, DateTime? NextRunAtUtc, RecordStampsDto Stamps);
 
 public record SaveReportRequest(
     [StringLength(150)] string Name, ReportKind Kind, ReportFrequency Frequency, int Day, int SendHour, List<Guid>? RecipientIds,
@@ -175,13 +176,13 @@ public class ScheduledController(HrmsDbContext db, ScheduledService scheduled, I
 
     private static ScheduledAlertDto ToDto(ScheduledAlert a) => new(a.Id, a.Name, a.Kind, a.DaysBefore, a.ProbationMonths, a.SendHour, a.ToEmployee, a.ToManager,
         a.ToHr, a.ToEveryone, HelpdeskService.Ids(a.ExtraRecipientIds), HelpdeskService.Ids(a.DepartmentIds), a.TitleTemplate, a.BodyTemplate, a.SendEmail,
-        a.IsActive, a.LastRunOn);
+        a.IsActive, a.LastRunOn, RecordStampsDto.Of(a));
 
     private static ScheduledReportDto ToDto(ScheduledReport r, Dictionary<Guid, string> names)
     {
         var ids = HelpdeskService.Ids(r.RecipientIds);
         return new ScheduledReportDto(r.Id, r.Name, r.Kind, r.Frequency, r.Day, r.SendHour, ids, ids.Select(i => names.GetValueOrDefault(i) ?? "").ToList(),
-            r.ExtraEmails, HelpdeskService.Ids(r.DepartmentIds), r.IsActive, r.LastSentAtUtc, r.NextRunAtUtc);
+            r.ExtraEmails, HelpdeskService.Ids(r.DepartmentIds), r.IsActive, r.LastSentAtUtc, r.NextRunAtUtc, RecordStampsDto.Of(r));
     }
 
     private async Task ApplyAsync(ScheduledAlert a, SaveAlertRequest r)

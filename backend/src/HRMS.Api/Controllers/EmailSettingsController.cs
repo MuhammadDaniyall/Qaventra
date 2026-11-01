@@ -9,7 +9,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record EmailTemplateDto(NotificationKind Kind, string Label, string? Subject, string? Intro, bool Enabled, bool IsCustom);
+public record EmailTemplateDto(NotificationKind Kind, string Label, string? Subject, string? Intro, bool Enabled, bool IsCustom,
+    RecordStampsDto? Stamps = null);
 public record SaveEmailTemplateRequest([Required, StringLength(200)] string Subject, [StringLength(2000)] string? Intro, bool Enabled = true);
 public record EmailLogDto(Guid Id, DateTime CreatedAtUtc, string To, string Subject, string? Kind, EmailLogStatus Status, string? Error);
 public record EmailUsageDto(int SentThisMonth, int FailedThisMonth, int? QuotaPerMonth);
@@ -47,7 +48,7 @@ public class EmailSettingsController(HrmsDbContext db) : ControllerBase
     {
         var saved = await db.EmailTemplates.ToDictionaryAsync(t => t.Kind);
         return Labels.Select(l => saved.TryGetValue(l.Key, out var t)
-            ? new EmailTemplateDto(l.Key, l.Value, t.Subject, t.Intro, t.Enabled, true)
+            ? new EmailTemplateDto(l.Key, l.Value, t.Subject, t.Intro, t.Enabled, true, RecordStampsDto.Of(t))
             : new EmailTemplateDto(l.Key, l.Value, null, null, true, false)).ToList();
     }
 

@@ -37,6 +37,7 @@ import {
   Textarea,
   useToast,
 } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate, formatDateTimeUtc, todayIso } from '../../lib/format';
 import { RejectModal } from './JobPage';
@@ -133,6 +134,7 @@ function ApplicationView({ a }: { a: Application }) {
           )
         }
       />
+      <RecordStamp stamps={a.stamps} className="-mt-2 mb-4" />
 
       {c.isBlacklisted && c.blacklistReason && (
         <div className="mb-4 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-200">
@@ -347,6 +349,7 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
           </p>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">With {i.interviewers.join(', ')}</p>
           {i.notes && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{i.notes}</p>}
+          <RecordStamp stamps={i.stamps} className="mt-1" />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone={statusTone}>{i.status === 'NoShow' ? 'No-show' : i.status}</Badge>

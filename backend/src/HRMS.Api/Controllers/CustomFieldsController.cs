@@ -13,7 +13,8 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record CustomFieldDto(
-    Guid Id, string Label, CustomFieldType Type, List<string> Options, bool IsRequired, bool VisibleToEmployee, int Order, bool IsActive, int Filled);
+    Guid Id, string Label, CustomFieldType Type, List<string> Options, bool IsRequired, bool VisibleToEmployee, int Order, bool IsActive, int Filled,
+    RecordStampsDto Stamps);
 
 public record SaveCustomFieldRequest(
     [Required, StringLength(100)] string Label, CustomFieldType Type, List<string>? Options, bool IsRequired, bool VisibleToEmployee, bool IsActive = true);
@@ -32,7 +33,7 @@ public class CustomFieldsController(HrmsDbContext db, ICurrentUser me) : Control
     {
         var filled = await db.CustomFieldValues.GroupBy(v => v.FieldId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
         return (await db.CustomFields.OrderBy(f => f.Order).ThenBy(f => f.Label).ToListAsync())
-            .Select(f => new CustomFieldDto(f.Id, f.Label, f.Type, OptionsOf(f), f.IsRequired, f.VisibleToEmployee, f.Order, f.IsActive, filled.GetValueOrDefault(f.Id)))
+            .Select(f => new CustomFieldDto(f.Id, f.Label, f.Type, OptionsOf(f), f.IsRequired, f.VisibleToEmployee, f.Order, f.IsActive, filled.GetValueOrDefault(f.Id), RecordStampsDto.Of(f)))
             .ToList();
     }
 

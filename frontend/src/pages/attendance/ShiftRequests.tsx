@@ -7,6 +7,7 @@ import { qk } from '../../api/keys';
 import { schedulingApi, type ShiftRequest } from '../../api/scheduling';
 import { useUser } from '../../auth/AuthContext';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Badge, Button, Card, CardHeader, ConfirmDialog, Field, FormError, Input, Modal, Select, StatusBadge, Textarea, useToast } from '../../components/ui';
 import { formatDate, toIsoDate } from '../../lib/format';
 
@@ -186,6 +187,7 @@ export function MyShiftRequests() {
                   </Button>
                 )}
               </div>
+              <RecordStamp stamps={r.stamps} className="ms-7" />
               {mine && r.status === 'Pending' && <ApprovalTimeline type="ShiftChange" subjectId={r.id} />}
             </li>
           );

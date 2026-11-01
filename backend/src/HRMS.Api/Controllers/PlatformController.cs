@@ -18,7 +18,8 @@ public record CompanyDto(
     Guid Id, string Name, bool IsActive, TenantAccess Access, DateTime CreatedAtUtc,
     string? Phone, string? City, string? Address, int? MaxEmployees,
     BillingCycle? BillingCycle, decimal? PlanPrice, decimal? PricePerEmployee, decimal? AmountPerCycle, DateOnly? SubscriptionEndsOn, int? DaysLeft,
-    int Employees, int Users, string? AdminName, string? AdminEmail, DateTime? LastActivityUtc, DateOnly? LastPaymentOn, int? EmailQuotaPerMonth = null);
+    int Employees, int Users, string? AdminName, string? AdminEmail, DateTime? LastActivityUtc, DateOnly? LastPaymentOn, int? EmailQuotaPerMonth,
+    RecordStampsDto Stamps);
 
 public record PlatformStatsDto(
     int Companies, int ActiveCompanies, int InactiveCompanies, int ExpiredCompanies, int ExpiringSoon,
@@ -70,7 +71,8 @@ public record RecordPaymentRequest(
     [StringLength(100)] string? Reference = null,
     [StringLength(1000)] string? Notes = null);
 
-public record PaymentDto(Guid Id, decimal Amount, DateOnly PaidOn, DateOnly PeriodFrom, DateOnly PeriodTo, string? Method, string? Reference, string? Notes, DateTime CreatedAtUtc);
+public record PaymentDto(Guid Id, decimal Amount, DateOnly PaidOn, DateOnly PeriodFrom, DateOnly PeriodTo, string? Method, string? Reference, string? Notes, DateTime CreatedAtUtc,
+    RecordStampsDto Stamps);
 
 public record DeleteCompanyRequest([Required] string ConfirmName);
 
@@ -217,7 +219,8 @@ public class PlatformController(
     [HttpGet("companies/{id:guid}/payments")]
     public Task<List<PaymentDto>> Payments(Guid id) =>
         db.TenantPayments.Where(p => p.TenantId == id).OrderByDescending(p => p.PaidOn).ThenByDescending(p => p.CreatedAtUtc)
-            .Select(p => new PaymentDto(p.Id, p.Amount, p.PaidOn, p.PeriodFrom, p.PeriodTo, p.Method, p.Reference, p.Notes, p.CreatedAtUtc))
+            .Select(p => new PaymentDto(p.Id, p.Amount, p.PaidOn, p.PeriodFrom, p.PeriodTo, p.Method, p.Reference, p.Notes, p.CreatedAtUtc,
+                new RecordStampsDto(p.CreatedAtUtc, p.CreatedBy, p.ModifiedAtUtc, p.ModifiedBy)))
             .ToListAsync();
 
     /// <summary>Records a payment and extends the subscription by the given number of billing cycles.</summary>
@@ -286,7 +289,8 @@ public class PlatformController(
                 t.Id, t.Name, t.IsActive, t.AccessOn(today), t.CreatedAtUtc, t.Phone, t.City, t.Address, t.MaxEmployees,
                 t.BillingCycle, t.PlanPrice, t.PricePerEmployee, t.AmountPerCycle(r.Employees), t.SubscriptionEndsOn,
                 t.SubscriptionEndsOn is { } end ? end.DayNumber - today.DayNumber : null,
-                r.Employees, r.Users, r.Admin?.FullName, r.Admin?.Email, r.LastActivity, r.LastPayment, t.EmailQuotaPerMonth);
+                r.Employees, r.Users, r.Admin?.FullName, r.Admin?.Email, r.LastActivity, r.LastPayment, t.EmailQuotaPerMonth,
+                RecordStampsDto.Of(t));
         }).ToList();
     }
 }

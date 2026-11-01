@@ -20,7 +20,7 @@ public record SaveAnnouncementRequest(
 public record AnnouncementDto(
     Guid Id, string Title, string Body, AnnouncementKind Kind, DateOnly PublishFrom, DateOnly? PublishTo, List<Guid> DepartmentIds,
     List<string> Departments, bool IsPinned, string? LinkUrl, string? CreatedByName, DateTime CreatedAtUtc, bool IsRead, int Attachments,
-    int? ReadCount, int? AudienceCount);
+    int? ReadCount, int? AudienceCount, RecordStampsDto Stamps);
 
 public record CreatePollRequest(
     [Required, StringLength(300)] string Question, [StringLength(2000)] string? Description, DateOnly OpensOn, DateOnly ClosesOn,
@@ -34,7 +34,7 @@ public record PollOptionDto(Guid Id, string Text, int? Votes, List<string>? Vote
 public record PollDto(
     Guid Id, string Question, string? Description, DateOnly OpensOn, DateOnly ClosesOn, bool IsOpen, bool IsAnonymous,
     PollResultsVisibility ResultsVisibility, List<string> Departments, string? CreatedByName, List<PollOptionDto> Options,
-    Guid? MyOptionId, bool ResultsShown, int? TotalVotes, int? AudienceCount);
+    Guid? MyOptionId, bool ResultsShown, int? TotalVotes, int? AudienceCount, RecordStampsDto Stamps);
 
 [ApiController]
 [Route("api/announcements")]
@@ -158,7 +158,8 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
             int? audience = stats ? depts.Count == 0 ? everyone : depts.Sum(d => perDept.GetValueOrDefault(d)) : null;
             return new AnnouncementDto(a.Id, a.Title, a.Body, a.Kind, a.PublishFrom, a.PublishTo, depts,
                 depts.Select(d => names.GetValueOrDefault(d) ?? "Removed department").ToList(), a.IsPinned, a.LinkUrl, a.CreatedByName,
-                a.CreatedAtUtc, read.Contains(a.Id), files.GetValueOrDefault(a.Id), stats ? reads.GetValueOrDefault(a.Id) : null, audience);
+                a.CreatedAtUtc, read.Contains(a.Id), files.GetValueOrDefault(a.Id), stats ? reads.GetValueOrDefault(a.Id) : null, audience,
+                RecordStampsDto.Of(a));
         }).ToList();
     }
 
@@ -194,7 +195,7 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
                 hr && !p.IsAnonymous ? pollVotes.Where(v => v.OptionId == o.Id).Select(v => voterNames.GetValueOrDefault(v.EmployeeId) ?? "").OrderBy(n => n).ToList() : null)).ToList();
             return new PollDto(p.Id, p.Question, p.Description, p.OpensOn, p.ClosesOn, open, p.IsAnonymous, p.ResultsVisibility,
                 AnnouncementService.Departments(p.DepartmentIds).Select(d => names.GetValueOrDefault(d) ?? "Removed department").ToList(),
-                p.CreatedByName, options, mine, shown, shown ? pollVotes.Count : null, manage ? audienceSizes[p.Id] : null);
+                p.CreatedByName, options, mine, shown, shown ? pollVotes.Count : null, manage ? audienceSizes[p.Id] : null, RecordStampsDto.Of(p));
         }).ToList();
     }
 }

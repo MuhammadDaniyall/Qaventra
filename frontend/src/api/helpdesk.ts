@@ -1,4 +1,4 @@
-import type { Lookup } from '../types';
+import type { Lookup, RecordStamps } from '../types';
 import { http } from './client';
 import { downloadFile } from './excel';
 
@@ -27,6 +27,7 @@ export interface TicketType {
   agentIds: string[];
   agents: string[];
   isActive: boolean;
+  stamps: RecordStamps;
 }
 
 export interface SaveTicketType {
@@ -80,6 +81,7 @@ export interface TicketCategory {
   autoCloseDays: number;
   reopenDays: number;
   types: TicketType[];
+  stamps: RecordStamps;
 }
 
 export interface SaveTicketCategory {
@@ -117,6 +119,7 @@ export interface TicketListItem {
   isOverdue: boolean;
   replies: number;
   rating: number | null;
+  stamps: RecordStamps;
 }
 
 export interface TicketComment {

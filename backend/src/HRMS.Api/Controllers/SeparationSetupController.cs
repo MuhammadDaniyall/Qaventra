@@ -15,11 +15,11 @@ namespace HRMS.Api.Controllers;
 
 public record ClearanceTemplateItemDto([Required, StringLength(100)] string Department, [Required, StringLength(200)] string Title, [Range(1, 10)] int Level,
     Guid? ResponsibleEmployeeId);
-public record ClearanceTemplateDto(Guid Id, string Name, bool IsDefault, List<ClearanceTemplateItemDto> Items);
+public record ClearanceTemplateDto(Guid Id, string Name, bool IsDefault, List<ClearanceTemplateItemDto> Items, RecordStampsDto Stamps);
 public record SaveClearanceTemplateRequest([Required, StringLength(150)] string Name, bool IsDefault, List<ClearanceTemplateItemDto> Items);
 
 public record ExitQuestionDto(Guid? Id, [Required, StringLength(500)] string Text, [StringLength(100)] string? Category, ExitQuestionKind Kind);
-public record ExitTemplateDto(Guid Id, string Name, bool IsDefault, List<ExitQuestionDto> Questions);
+public record ExitTemplateDto(Guid Id, string Name, bool IsDefault, List<ExitQuestionDto> Questions, RecordStampsDto Stamps);
 public record SaveExitTemplateRequest([Required, StringLength(150)] string Name, bool IsDefault, List<ExitQuestionDto> Questions);
 
 public record ExitAnswer(Guid QuestionId, string Question, ExitQuestionKind Kind, string? Category, string? Answer);
@@ -31,7 +31,7 @@ public record SeparationExtrasDto(Guid SeparationId, List<ClearanceLevelDto> Cle
 public record ClearanceLevelDto(Guid ItemId, int Level, Guid? ResponsibleEmployeeId, string? Responsible, bool Open);
 
 public record MyClearanceDto(Guid SeparationId, Guid ItemId, string EmployeeName, string EmployeeCode, DateOnly? LastWorkingDay, string Department, string Title,
-    int Level, bool IsCleared, string? Note);
+    int Level, bool IsCleared, string? Note, RecordStampsDto Stamps);
 
 public record MyExitInterviewDto(Guid SeparationId, string EmployeeName, string EmployeeCode, DateOnly? LastWorkingDay, DateTime? InterviewScheduledUtc);
 
@@ -94,7 +94,7 @@ public class SeparationSetupController(HrmsDbContext db, SeparationService separ
     public async Task<List<ClearanceTemplateDto>> ClearanceTemplates() =>
         (await db.ClearanceTemplates.Include(t => t.Items).OrderBy(t => t.Name).ToListAsync())
         .Select(t => new ClearanceTemplateDto(t.Id, t.Name, t.IsDefault,
-            t.Items.OrderBy(i => i.Level).ThenBy(i => i.Order).Select(i => new ClearanceTemplateItemDto(i.Department, i.Title, i.Level, i.ResponsibleEmployeeId)).ToList()))
+            t.Items.OrderBy(i => i.Level).ThenBy(i => i.Order).Select(i => new ClearanceTemplateItemDto(i.Department, i.Title, i.Level, i.ResponsibleEmployeeId)).ToList(), RecordStampsDto.Of(t)))
         .ToList();
 
     [HttpPost("clearance-templates"), Authorize(Policy = Policies.Hr)]
@@ -150,7 +150,7 @@ public class SeparationSetupController(HrmsDbContext db, SeparationService separ
     public async Task<List<ExitTemplateDto>> ExitTemplates() =>
         (await db.ExitInterviewTemplates.Include(t => t.Questions).OrderBy(t => t.Name).ToListAsync())
         .Select(t => new ExitTemplateDto(t.Id, t.Name, t.IsDefault,
-            t.Questions.OrderBy(q => q.Order).Select(q => new ExitQuestionDto(q.Id, q.Text, q.Category, q.Kind)).ToList()))
+            t.Questions.OrderBy(q => q.Order).Select(q => new ExitQuestionDto(q.Id, q.Text, q.Category, q.Kind)).ToList(), RecordStampsDto.Of(t)))
         .ToList();
 
     [HttpPost("exit-templates"), Authorize(Policy = Policies.Hr)]
@@ -310,7 +310,7 @@ public class SeparationSetupController(HrmsDbContext db, SeparationService separ
         var open = await db.Separations.Include(s => s.Clearance).Include(s => s.Employee)
             .Where(s => s.Status == SeparationStatus.InProgress && s.Clearance.Any(c => c.ResponsibleEmployeeId == mine)).ToListAsync();
         return open.SelectMany(s => s.Clearance.Where(c => c.ResponsibleEmployeeId == mine && !s.Clearance.Any(x => x.Level < c.Level && !x.IsCleared))
-                .Select(c => new MyClearanceDto(s.Id, c.Id, s.Employee!.FullName, s.Employee.EmployeeCode, s.LastWorkingDay, c.Department, c.Title, c.Level, c.IsCleared, c.Note)))
+                .Select(c => new MyClearanceDto(s.Id, c.Id, s.Employee!.FullName, s.Employee.EmployeeCode, s.LastWorkingDay, c.Department, c.Title, c.Level, c.IsCleared, c.Note, RecordStampsDto.Of(c))))
             .OrderBy(x => x.LastWorkingDay).ToList();
     }
 

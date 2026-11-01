@@ -8,6 +8,7 @@ import { qk } from '../../api/keys';
 import { pieceApi, type PieceCategory, type PieceEntry, type PieceItem, type PieceReport } from '../../api/piecework';
 import { useUser } from '../../auth/AuthContext';
 import { isApprover, isHr } from '../../auth/roles';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -105,6 +106,7 @@ function EntriesTable({ rows, showPerson, select }: { rows: PieceEntry[]; showPe
             <Th className="text-end">Qty</Th>
             <Th className="text-end">Amount</Th>
             <Th>Status</Th>
+            <Th>Added / modified</Th>
             <Th />
           </Tr>
         </THead>
@@ -144,6 +146,9 @@ function EntriesTable({ rows, showPerson, select }: { rows: PieceEntry[]; showPe
               <Td>
                 {e.paid ? <Badge tone="green">Paid</Badge> : <StatusBadge status={e.status} />}
                 {e.decisionNote && <p className="text-xs text-zinc-500 dark:text-zinc-400">“{e.decisionNote}”</p>}
+              </Td>
+              <Td>
+                <RecordStampCell stamps={e.stamps} />
               </Td>
               <Td className="text-end">
                 {e.canDelete && (
@@ -538,6 +543,7 @@ function SetupTab() {
                 <Th className="text-end">Rate</Th>
                 <Th className="text-end">Daily target</Th>
                 <Th>Own rates</Th>
+                <Th>Added / modified</Th>
                 <Th />
               </Tr>
             </THead>
@@ -558,6 +564,9 @@ function SetupTab() {
                     <Button size="sm" variant="ghost" onClick={() => setRates(i)}>
                       {i.specialRates ? `${i.specialRates} people` : 'Set'}
                     </Button>
+                  </Td>
+                  <Td>
+                    <RecordStampCell stamps={i.stamps} />
                   </Td>
                   <Td>
                     <RowActions label={i.name} onEdit={() => setEditing(i)} onDelete={() => setDeleting(i)} />
@@ -651,6 +660,7 @@ function ItemModal({ item, onClose }: { item: PieceItem | null; onClose: () => v
         </>
       }
     >
+      {item && <RecordStamp className="mb-3" stamps={item.stamps} />}
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="Name" required className="sm:col-span-2">
           <Input value={f.name} maxLength={150} onChange={(e) => set('name', e.target.value)} placeholder="Collar stitching" />
@@ -707,7 +717,10 @@ function RatesModal({ item, onClose }: { item: PieceItem; onClose: () => void })
       <ul className="mb-3 divide-y divide-zinc-100 rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
         {rates.data?.map((r) => (
           <li key={r.id} className="flex items-center justify-between px-3 py-2 text-sm">
-            <span>{r.employeeName}</span>
+            <span>
+              {r.employeeName}
+              <RecordStamp stamps={r.stamps} />
+            </span>
             <span className="flex items-center gap-2 tabular-nums">
               {formatCurrency(r.rate)}
               <IconButton label="Remove" onClick={() => remove.mutate(r.id)}>

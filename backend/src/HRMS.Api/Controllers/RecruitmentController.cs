@@ -26,7 +26,8 @@ public record SaveJobRequestRequest(
 public record JobRequestDto(
     Guid Id, string Title, Guid? DepartmentId, string? Department, Guid? DesignationId, string? Designation, int Positions, string? Replaces,
     decimal? SalaryMin, decimal? SalaryMax, int? ExperienceMinYears, string? Qualification, string? Skills, DateOnly? NeededBy, string Reason,
-    RequestStatus Status, string RequestedBy, Guid RequestedByEmployeeId, DateTime CreatedAtUtc, string? DecisionNote, Guid? JobPostId);
+    RequestStatus Status, string RequestedBy, Guid RequestedByEmployeeId, DateTime CreatedAtUtc, string? DecisionNote, Guid? JobPostId,
+    RecordStampsDto Stamps);
 
 public record SaveJobPostRequest(
     [Required, StringLength(150)] string Title, Guid? JobRequestId, Guid? DepartmentId, Guid? DesignationId, [StringLength(150)] string? Location,
@@ -39,7 +40,7 @@ public record JobPostDto(
     Guid Id, string Title, string Slug, Guid? JobRequestId, Guid? DepartmentId, string? Department, Guid? DesignationId, string? Designation,
     string? Location, EmploymentType EmploymentType, string Description, string? Requirements, decimal? SalaryMin, decimal? SalaryMax, bool ShowSalary,
     int Positions, DateOnly? ClosesOn, JobPostStatus Status, Guid? RecruiterEmployeeId, string? Recruiter, Guid? HiringManagerEmployeeId,
-    string? HiringManager, DateTime? PublishedAtUtc, DateTime CreatedAtUtc, Dictionary<string, int> ByStage, int Total, bool CanEdit);
+    string? HiringManager, DateTime? PublishedAtUtc, DateTime CreatedAtUtc, Dictionary<string, int> ByStage, int Total, bool CanEdit, RecordStampsDto Stamps);
 
 public record PipelineCardDto(
     Guid Id, Guid CandidateId, string Name, string Email, string? CurrentTitle, decimal? ExperienceYears, CandidateSource Source, ApplicationStage Stage,
@@ -95,7 +96,7 @@ public record SaveCandidateRequest(
 
 public record CandidateListItemDto(
     Guid Id, string Name, string Email, string? Phone, string? City, string? CurrentTitle, decimal? ExperienceYears, CandidateSource Source,
-    bool IsBlacklisted, int Applications, string? LatestJob, ApplicationStage? LatestStage, DateTime CreatedAtUtc, bool Hired);
+    bool IsBlacklisted, int Applications, string? LatestJob, ApplicationStage? LatestStage, DateTime CreatedAtUtc, bool Hired, RecordStampsDto Stamps);
 
 public record CandidateApplicationDto(Guid Id, Guid JobPostId, string Job, ApplicationStage Stage, DateTime AppliedAtUtc);
 
@@ -103,7 +104,7 @@ public record CandidateDto(
     Guid Id, string FirstName, string LastName, string Email, string? Phone, string? Cnic, string? City, string? CurrentTitle, string? CurrentCompany,
     decimal? ExperienceYears, decimal? ExpectedSalary, int? NoticeDays, string? LinkedInUrl, string? Skills, CandidateSource Source, string? ReferredBy,
     bool IsBlacklisted, string? BlacklistReason, Guid? EmployeeId, DateTime CreatedAtUtc, List<CandidateApplicationDto> Applications,
-    List<CandidateListItemDto> PossibleDuplicates);
+    List<CandidateListItemDto> PossibleDuplicates, RecordStampsDto Stamps);
 
 public record BlacklistRequest(bool On, [StringLength(500)] string? Reason);
 
@@ -114,12 +115,12 @@ public record FeedbackDto(Guid InterviewerEmployeeId, string Interviewer, int Ra
 public record InterviewDto(
     Guid Id, Guid ApplicationId, int Round, string Title, DateTime StartsAtUtc, int DurationMinutes, InterviewMode Mode, string? Where,
     List<Guid> InterviewerIds, List<string> Interviewers, InterviewStatus Status, string? Notes, List<FeedbackDto> Feedback, int FeedbackHidden,
-    bool IAmInterviewer, bool IGaveFeedback);
+    bool IAmInterviewer, bool IGaveFeedback, RecordStampsDto Stamps);
 
 public record ApplicationDto(
     Guid Id, CandidateDto Candidate, Guid JobPostId, string Job, Guid? HiringManagerEmployeeId, ApplicationStage Stage, string? CoverLetter, int? Rating,
     string? RejectionReason, decimal? OfferedSalary, DateOnly? OfferedJoiningDate, string? OfferNote, OfferStatus? OfferStatus, DateTime AppliedAtUtc,
-    List<ApplicationEventDto> Events, List<InterviewDto> Interviews, bool CanRun, bool CanOffer, bool CanHire);
+    List<ApplicationEventDto> Events, List<InterviewDto> Interviews, bool CanRun, bool CanOffer, bool CanHire, RecordStampsDto Stamps);
 
 public record MoveRequest(ApplicationStage Stage, [StringLength(500)] string? Reason, bool EmailCandidate);
 
@@ -400,7 +401,7 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
         return new ApplicationDto(app.Id, await CandidateDtoAsync(app.Candidate!, canRun), post.Id, post.Title, post.HiringManagerEmployeeId, app.Stage,
             app.CoverLetter, canRun ? app.Rating : null, canRun ? app.RejectionReason : null, canOffer ? app.OfferedSalary : null, app.OfferedJoiningDate,
             canOffer ? app.OfferNote : null, app.OfferStatus, app.CreatedAtUtc, canRun ? events : events.Where(e => e.IsNote).ToList(), interviews,
-            canRun, canRun && canOffer, me.IsHr());
+            canRun, canRun && canOffer, me.IsHr(), RecordStampsDto.Of(app));
     }
 
     [HttpPost("applications/{id:guid}/move")]
@@ -542,7 +543,8 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
         r.SalaryMin, r.SalaryMax, r.ExperienceMinYears, r.Qualification, r.Skills, r.NeededBy, r.Reason, r.Status,
         db.Employees.Where(e => e.Id == r.RequestedByEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault() ?? "",
         r.RequestedByEmployeeId, r.CreatedAtUtc, r.DecisionNote,
-        db.JobPosts.Where(p => p.JobRequestId == r.Id).Select(p => (Guid?)p.Id).FirstOrDefault()));
+        db.JobPosts.Where(p => p.JobRequestId == r.Id).Select(p => (Guid?)p.Id).FirstOrDefault(),
+        new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)));
 
     private async Task<List<JobPostDto>> ToDtosAsync(List<JobPost> posts)
     {
@@ -562,7 +564,7 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
             return new JobPostDto(p.Id, p.Title, p.Slug, p.JobRequestId, p.DepartmentId, N(p.DepartmentId, depts), p.DesignationId, N(p.DesignationId, designations),
                 p.Location, p.EmploymentType, p.Description, p.Requirements, p.SalaryMin, p.SalaryMax, p.ShowSalary, p.Positions, p.ClosesOn, p.Status,
                 p.RecruiterEmployeeId, N(p.RecruiterEmployeeId, names), p.HiringManagerEmployeeId, N(p.HiringManagerEmployeeId, names), p.PublishedAtUtc,
-                p.CreatedAtUtc, c.ToDictionary(x => x.Stage.ToString(), x => x.Count), c.Sum(x => x.Count), me.IsHr());
+                p.CreatedAtUtc, c.ToDictionary(x => x.Stage.ToString(), x => x.Count), c.Sum(x => x.Count), me.IsHr(), RecordStampsDto.Of(p));
         }).ToList();
     }
 
@@ -578,7 +580,7 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
         db.JobApplications.Count(a => a.CandidateId == c.Id),
         db.JobApplications.Where(a => a.CandidateId == c.Id).OrderByDescending(a => a.CreatedAtUtc).Select(a => a.JobPost!.Title).FirstOrDefault(),
         db.JobApplications.Where(a => a.CandidateId == c.Id).OrderByDescending(a => a.CreatedAtUtc).Select(a => (ApplicationStage?)a.Stage).FirstOrDefault(),
-        c.CreatedAtUtc, c.EmployeeId != null));
+        c.CreatedAtUtc, c.EmployeeId != null, new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy)));
 
     /// <summary>Full details for the hiring team; interviewers get the professional profile without salary or ID.</summary>
     private async Task<CandidateDto> CandidateDtoAsync(Candidate c, bool full)
@@ -603,7 +605,7 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
         }
         return new CandidateDto(c.Id, c.FirstName, c.LastName, c.Email, c.Phone, full ? c.Cnic : null, c.City, c.CurrentTitle, c.CurrentCompany, c.ExperienceYears,
             full ? c.ExpectedSalary : null, c.NoticeDays, c.LinkedInUrl, c.Skills, c.Source, c.ReferredBy, full && c.IsBlacklisted, full ? c.BlacklistReason : null,
-            c.EmployeeId, c.CreatedAtUtc, full ? apps : [], duplicates);
+            c.EmployeeId, c.CreatedAtUtc, full ? apps : [], duplicates, RecordStampsDto.Of(c));
     }
 
     /// <summary>
@@ -629,7 +631,7 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
                 interviewers.Select(x => names.GetValueOrDefault(x) ?? "").ToList(), i.Status, i.Notes,
                 visible.Select(f => new FeedbackDto(f.InterviewerEmployeeId, names.GetValueOrDefault(f.InterviewerEmployeeId) ?? "", f.Rating, f.Recommendation,
                     f.Strengths, f.Concerns, f.CreatedAtUtc)).ToList(),
-                all.Count - visible.Count, interviewers.Contains(mine), gave);
+                all.Count - visible.Count, interviewers.Contains(mine), gave, RecordStampsDto.Of(i));
         }).Where(i => canRun || i.IAmInterviewer).ToList();
     }
 }

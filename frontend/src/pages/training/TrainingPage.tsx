@@ -16,6 +16,7 @@ import {
   type TrainingProgram,
 } from '../../api/training';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -157,6 +158,7 @@ function MineTab() {
                   <Th>Course</Th>
                   <Th>Date</Th>
                   <Th>Result</Th>
+                  <Th>Added / modified</Th>
                   <Th />
                 </Tr>
               </THead>
@@ -168,6 +170,9 @@ function MineTab() {
                     <Td>
                       <StatusBadge status={x.status} label={ENROLLMENT_LABELS[x.status]} />
                       {x.score != null && <span className="ms-2 text-xs text-zinc-500 dark:text-zinc-400">{x.score}%</span>}
+                    </Td>
+                    <Td>
+                      <RecordStampCell stamps={x.stamps} />
                     </Td>
                     <Td className="text-end">
                       {(x.status === 'Attended' || x.status === 'Completed' || x.status === 'Failed') &&
@@ -305,7 +310,7 @@ function SessionsTab({ me }: { me: TrainingMe }) {
         }
       />
       {sessions.isLoading ? (
-        <SkeletonRows rows={4} cols={5} />
+        <SkeletonRows rows={4} cols={6} />
       ) : sessions.isError ? (
         <ErrorState error={sessions.error} onRetry={() => sessions.refetch()} />
       ) : !sessions.data?.length ? (
@@ -322,6 +327,7 @@ function SessionsTab({ me }: { me: TrainingMe }) {
               <Th>When</Th>
               <Th>Trainer</Th>
               <Th>Seats</Th>
+              <Th>Added / modified</Th>
               <Th>Status</Th>
             </Tr>
           </THead>
@@ -340,6 +346,9 @@ function SessionsTab({ me }: { me: TrainingMe }) {
                 <Td className="text-sm tabular-nums">
                   {s.enrolled}
                   {s.capacity ? ` / ${s.capacity}` : ''}
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={s.stamps} />
                 </Td>
                 <Td>
                   <StatusBadge status={s.status} />
@@ -423,6 +432,7 @@ export function SessionModal({ session, onClose }: { session?: import('../../api
         </>
       }
     >
+      {session && <RecordStamp stamps={session.stamps} className="mb-4" />}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Course" required className="sm:col-span-2">
           <Select value={f.programId} onChange={(e) => set('programId', e.target.value)}>
@@ -547,6 +557,11 @@ function CatalogTab({ me, onAsk }: { me: TrainingMe; onAsk: (p: TrainingProgram)
                     </a>
                   )}
                 </div>
+                {me.isHr && (
+                  <div className="hidden sm:block">
+                    <RecordStampCell stamps={p.stamps} />
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   {p.isActive && (
                     <Button size="sm" variant="secondary" onClick={() => onAsk(p)}>
@@ -649,6 +664,7 @@ function ProgramModal({ item, onClose }: { item: TrainingProgram | null; onClose
         </>
       }
     >
+      {item && <RecordStamp stamps={item.stamps} className="mb-4" />}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Title" required className="sm:col-span-2">
           <Input value={f.title} maxLength={150} onChange={(e) => set('title', e.target.value)} placeholder="Fire safety" />
@@ -871,6 +887,7 @@ function RequestsTab({ all }: { all: boolean }) {
                   </p>
                   <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-300">{r.reason}</p>
                   {r.decisionNote && <p className="text-xs text-zinc-500 dark:text-zinc-400">“{r.decisionNote}”</p>}
+                  <RecordStamp stamps={r.stamps} className="mt-0.5" />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {r.completedOn ? <Badge tone="green">Completed {formatDate(r.completedOn)}</Badge> : <StatusBadge status={r.status} />}

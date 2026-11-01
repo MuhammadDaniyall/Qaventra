@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type SpaceKind = 'Desk' | 'MeetingRoom' | 'Cabin';
 export type BookingStatus = 'Booked' | 'CheckedIn' | 'Cancelled' | 'Released';
@@ -20,6 +21,7 @@ export interface Floor {
   order: number;
   desks: number;
   rooms: number;
+  stamps: RecordStamps;
 }
 
 export interface Space {
@@ -32,6 +34,7 @@ export interface Space {
   assignedEmployeeId: string | null;
   assignedTo: string | null;
   isActive: boolean;
+  stamps: RecordStamps;
 }
 
 export interface Slot {
@@ -81,6 +84,7 @@ export interface MyBooking {
   attendees: number;
   status: BookingStatus;
   canCheckIn: boolean;
+  stamps: RecordStamps;
 }
 
 export interface InOffice {
@@ -108,8 +112,8 @@ export const desksApi = {
   updateFloor: (id: string, b: { officeLocationId: string; name: string; order: number }) => http.put(`/desks/floors/${id}`, b),
   deleteFloor: (id: string) => http.del(`/desks/floors/${id}`),
   spaces: (floorId: string) => http.get<Space[]>(`/desks/floors/${floorId}/spaces`),
-  addSpace: (b: Omit<Space, 'id' | 'assignedTo'>) => http.post('/desks/spaces', b),
-  updateSpace: (id: string, b: Omit<Space, 'id' | 'assignedTo'>) => http.put(`/desks/spaces/${id}`, b),
+  addSpace: (b: Omit<Space, 'id' | 'assignedTo' | 'stamps'>) => http.post('/desks/spaces', b),
+  updateSpace: (id: string, b: Omit<Space, 'id' | 'assignedTo' | 'stamps'>) => http.put(`/desks/spaces/${id}`, b),
   deleteSpace: (id: string) => http.del(`/desks/spaces/${id}`),
   bulk: (b: { floorId: string; prefix: string; from: number; to: number; features: string | null }) =>
     http.post<{ added: number; skipped: number }>('/desks/spaces/bulk', b),

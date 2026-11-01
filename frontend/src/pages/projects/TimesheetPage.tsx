@@ -6,6 +6,7 @@ import { qk } from '../../api/keys';
 import { projectsApi, type Timesheet, type TimesheetLine } from '../../api/projects';
 import { useUser } from '../../auth/AuthContext';
 import { isApprover } from '../../auth/roles';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -154,6 +155,7 @@ function MyWeek() {
           </>
         )}
       </div>
+      {week.data?.stamps && <RecordStamp className="border-b border-zinc-100 px-5 py-2 dark:border-zinc-800" stamps={week.data.stamps} />}
       {week.data?.decisionNote && (
         <p className="border-b border-zinc-100 px-5 py-2 text-sm text-amber-700 dark:border-zinc-800 dark:text-amber-300">“{week.data.decisionNote}”</p>
       )}
@@ -299,6 +301,7 @@ function ToApprove() {
               description={`${hours(t.totalMinutes)} h logged${atWork ? ` · ${hours(atWork)} h at work by attendance` : ''}`}
             />
             <div className="space-y-3 px-5 pb-4">
+              {t.stamps && <RecordStamp stamps={t.stamps} />}
               <div className="flex flex-wrap gap-2">
                 {byProject.map(([name, min]) => (
                   <Badge key={name}>

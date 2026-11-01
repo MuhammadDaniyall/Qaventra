@@ -18,7 +18,7 @@ public record TemplateTaskDto(
     OnboardingAssignee AssigneeKind, Guid? AssigneeEmployeeId, [Range(-60, 365)] int DueOffsetDays);
 
 public record OnboardingTemplateDto(
-    Guid Id, string Name, string? Description, bool IsDefault, Guid? AssetKitId, string? WelcomeMessage, List<TemplateTaskDto> Tasks);
+    Guid Id, string Name, string? Description, bool IsDefault, Guid? AssetKitId, string? WelcomeMessage, List<TemplateTaskDto> Tasks, RecordStampsDto Stamps);
 
 public record SaveOnboardingTemplateRequest(
     [Required, StringLength(100)] string Name, [StringLength(500)] string? Description, bool IsDefault, Guid? AssetKitId,
@@ -37,11 +37,11 @@ public record IntroduceRequest([Required] Dictionary<string, string?> Answers);
 public record OnboardingTaskDto(
     Guid Id, Guid OnboardingId, string Title, string? Description, OnboardingTaskCategory Category, OnboardingAssignee AssigneeKind,
     Guid? AssigneeEmployeeId, string? Assignee, DateOnly DueOn, bool IsOverdue, DateTime? CompletedAtUtc, string? CompletedByName, string? Note, bool CanDo,
-    string? ForEmployee);
+    string? ForEmployee, RecordStampsDto Stamps);
 
 public record OnboardingListItemDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string? Department, string? Designation, DateOnly JoiningDate, string TemplateName,
-    OnboardingStatus Status, int Total, int Done, int Overdue, bool Introduced);
+    OnboardingStatus Status, int Total, int Done, int Overdue, bool Introduced, RecordStampsDto Stamps);
 
 public record OnboardingDetailDto(
     OnboardingListItemDto Summary, TimeOnly? ReportingTime, string? ReportingPlace, Guid? BuddyEmployeeId, string? Buddy, string? BuddyPhone,
@@ -189,7 +189,8 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
     // ---------- Helpers ----------
 
     private static OnboardingTemplateDto ToDto(OnboardingTemplate t) => new(t.Id, t.Name, t.Description, t.IsDefault, t.AssetKitId, t.WelcomeMessage,
-        t.Tasks.OrderBy(x => x.Order).Select(x => new TemplateTaskDto(x.Id, x.Title, x.Description, x.Category, x.AssigneeKind, x.AssigneeEmployeeId, x.DueOffsetDays)).ToList());
+        t.Tasks.OrderBy(x => x.Order).Select(x => new TemplateTaskDto(x.Id, x.Title, x.Description, x.Category, x.AssigneeKind, x.AssigneeEmployeeId, x.DueOffsetDays)).ToList(),
+        RecordStampsDto.Of(t));
 
     private async Task ApplyAsync(OnboardingTemplate t, SaveOnboardingTemplateRequest req)
     {
@@ -235,7 +236,8 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
         return await q.Select(o => new OnboardingListItemDto(o.Id, o.EmployeeId, o.Employee!.FirstName + " " + o.Employee.LastName, o.Employee.EmployeeCode,
             o.Employee.Department != null ? o.Employee.Department.Name : null, o.Employee.Designation != null ? o.Employee.Designation.Title : null,
             o.JoiningDate, o.TemplateName, o.Status, o.Tasks.Count, o.Tasks.Count(t => t.CompletedAtUtc != null),
-            o.Tasks.Count(t => t.CompletedAtUtc == null && t.DueOn < today), o.IntroducedAtUtc != null)).ToListAsync();
+            o.Tasks.Count(t => t.CompletedAtUtc == null && t.DueOn < today), o.IntroducedAtUtc != null,
+            new RecordStampsDto(o.CreatedAtUtc, o.CreatedBy, o.ModifiedAtUtc, o.ModifiedBy))).ToListAsync();
     }
 
     private async Task<List<OnboardingTaskDto>> ProjectTasksAsync(IQueryable<OnboardingTask> q, bool withEmployee)
@@ -250,7 +252,7 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
         return rows.Select(r => new OnboardingTaskDto(r.Task.Id, r.Task.OnboardingId, r.Task.Title, r.Task.Description, r.Task.Category, r.Task.AssigneeKind,
             r.Task.AssigneeEmployeeId, r.Assignee ?? (r.Task.AssigneeEmployeeId is null ? "HR" : null), r.Task.DueOn,
             r.Task.CompletedAtUtc is null && r.Task.DueOn < today, r.Task.CompletedAtUtc, r.Task.CompletedByName, r.Task.Note, onboarding.CanDo(r.Task),
-            withEmployee ? r.For : null)).ToList();
+            withEmployee ? r.For : null, RecordStampsDto.Of(r.Task))).ToList();
     }
 
     private async Task<OnboardingDetailDto> DetailAsync(Guid id)

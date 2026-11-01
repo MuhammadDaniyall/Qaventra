@@ -31,9 +31,26 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Modules")
                         .IsRequired()
@@ -67,6 +84,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("CreatedByName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -85,6 +109,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("LinkUrl")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("NotifiedAtUtc")
                         .HasColumnType("datetime2");
@@ -122,7 +156,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("ReadAtUtc")
@@ -148,6 +199,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("CreatedByName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -157,6 +215,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime?>("LastUsedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -203,8 +271,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsNote")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -230,6 +315,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("CreatedByName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -242,6 +334,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(500)
@@ -279,6 +381,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("RequestType")
                         .HasColumnType("int");
 
@@ -305,11 +424,28 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -335,6 +471,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("CurrentStep")
                         .HasColumnType("int");
 
@@ -347,6 +490,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("Forced")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("RequestType")
                         .HasColumnType("int");
@@ -392,6 +545,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -404,6 +564,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
@@ -439,6 +609,23 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -506,6 +693,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly?>("DueBack")
                         .HasColumnType("date");
 
@@ -515,6 +709,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("HandedOverByName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -551,6 +755,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -584,6 +805,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -599,6 +827,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateOnly?>("NeededBy")
                         .HasColumnType("date");
@@ -645,6 +883,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("HandlerIds")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -652,6 +897,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -689,6 +944,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly?>("ExpiresOn")
                         .HasColumnType("date");
 
@@ -696,6 +958,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)
@@ -737,9 +1009,26 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("Data")
                         .IsRequired()
                         .HasColumnType("varbinary(max)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -761,6 +1050,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -772,6 +1068,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("StartUtc")
                         .HasColumnType("datetime2");
@@ -799,6 +1105,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -814,6 +1127,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Flag")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
                         .IsRequired()
@@ -850,6 +1173,23 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Month")
                         .HasColumnType("int");
@@ -898,6 +1238,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -909,6 +1256,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("LateMinutes")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(300)
@@ -952,6 +1309,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -967,6 +1331,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
                         .IsRequired()
@@ -997,6 +1371,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("ExemptionWithinDays")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -1006,6 +1387,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(2);
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -1043,6 +1434,17 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int?>("DurationMs")
                         .HasColumnType("int");
+
+                    b.Property<string>("EmployeeCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<Guid?>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EmployeeName")
+                        .HasMaxLength(201)
+                        .HasColumnType("nvarchar(201)");
 
                     b.Property<string>("EntityId")
                         .HasMaxLength(100)
@@ -1103,11 +1505,28 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<DateTime?>("LastSeenAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1154,6 +1573,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1167,6 +1593,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateOnly>("FromDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1205,6 +1641,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1216,6 +1659,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Headcount")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("MonthlyCost")
                         .HasPrecision(18, 2)
@@ -1262,6 +1715,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("CurrentCompany")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -1302,6 +1762,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("LinkedInUrl")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("NoticeDays")
                         .HasColumnType("int");
@@ -1363,6 +1833,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Footer")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1379,6 +1856,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("MarginTopMm")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReferenceNo")
                         .IsRequired()
@@ -1412,6 +1899,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -1423,6 +1917,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -1450,6 +1954,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Department")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1460,6 +1971,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Level")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)
@@ -1495,8 +2016,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1520,6 +2058,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Department")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1527,6 +2072,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Level")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -1561,6 +2116,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("Days")
                         .HasPrecision(4, 2)
                         .HasColumnType("decimal(4,2)");
@@ -1573,6 +2135,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
@@ -1605,6 +2177,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -1615,6 +2194,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Options")
                         .HasMaxLength(2000)
@@ -1646,10 +2235,27 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("FieldId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
@@ -1683,7 +2289,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("HeadEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
@@ -1720,6 +2343,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly?>("DateOfBirth")
                         .HasColumnType("date");
 
@@ -1731,6 +2361,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsNominee")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1768,6 +2408,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1793,6 +2450,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("DayStartsAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -1802,6 +2466,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(14);
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("ReleaseAfterMinutes")
                         .ValueGeneratedOnAdd()
@@ -1831,6 +2505,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("FromCity")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1839,6 +2520,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<decimal>("Km")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -1865,6 +2556,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Error")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -1872,6 +2570,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("Kind")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -1905,6 +2613,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
 
@@ -1914,6 +2629,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Subject")
                         .IsRequired()
@@ -1944,7 +2669,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
@@ -2044,6 +2786,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly?>("DateOfBirth")
                         .HasColumnType("date");
 
@@ -2131,6 +2880,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int?>("MaritalStatus")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Nationality")
                         .HasMaxLength(100)
@@ -2278,6 +3037,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("EffectiveFrom")
                         .HasColumnType("date");
 
@@ -2286,6 +3052,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("EobiApplicable")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -2307,8 +3083,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2336,8 +3129,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -2380,6 +3190,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -2388,6 +3205,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Purpose")
@@ -2428,6 +3255,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -2439,6 +3273,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("PaidAtUtc")
@@ -2493,6 +3337,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -2510,6 +3361,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("FromCity")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("Quantity")
                         .HasPrecision(10, 2)
@@ -2547,6 +3408,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<byte[]>("Data")
                         .IsRequired()
                         .HasColumnType("varbinary(max)");
@@ -2558,6 +3426,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -2584,12 +3462,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("GradeIds")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2632,10 +3527,27 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("ExpenseTypeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("GradeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("Rate")
@@ -2666,6 +3578,23 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2698,6 +3627,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -2717,6 +3653,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(300)
@@ -2750,6 +3696,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -2762,6 +3715,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Fund")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("PayWithSalary")
                         .HasColumnType("bit");
@@ -2798,6 +3761,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -2822,6 +3802,23 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PriorityLabels")
                         .IsRequired()
@@ -2853,6 +3850,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -2861,6 +3865,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2896,6 +3910,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("int");
 
@@ -2906,6 +3927,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Mode")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(2000)
@@ -2957,6 +3988,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("InterviewId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2968,6 +4006,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int?>("MaxMarks")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Rating")
                         .HasColumnType("int");
@@ -3011,8 +4059,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("MaxMarks")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -3044,6 +4109,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -3073,6 +4155,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("DecisionNote")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -3099,6 +4188,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("MarginTopMm")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReferenceNo")
                         .IsRequired()
@@ -3155,10 +4254,27 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("HiredAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<Guid>("JobPostId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("OfferNote")
@@ -3217,6 +4333,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("EffectiveDate")
                         .HasColumnType("date");
 
@@ -3237,6 +4360,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
@@ -3286,6 +4419,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -3309,6 +4449,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("Location")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Positions")
                         .HasColumnType("int");
@@ -3395,6 +4545,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -3410,6 +4567,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int?>("ExperienceMinYears")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateOnly?>("NeededBy")
                         .HasColumnType("date");
@@ -3483,6 +4650,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("DefaultTarget")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -3497,6 +4671,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -3539,6 +4723,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("Credited")
                         .HasPrecision(6, 2)
                         .HasColumnType("decimal(6,2)");
@@ -3551,6 +4742,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(6,2)");
 
                     b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
@@ -3582,6 +4783,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -3591,6 +4799,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<decimal?>("MaxDays")
                         .HasPrecision(6, 1)
                         .HasColumnType("decimal(6,1)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -3619,6 +4837,13 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Days")
                         .HasPrecision(6, 2)
@@ -3650,6 +4875,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<Guid>("LeaveTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
@@ -3719,6 +4954,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal?>("DocumentAfterDays")
                         .HasPrecision(6, 1)
                         .HasColumnType("decimal(6,1)");
@@ -3737,6 +4979,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("MinNoticeDays")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -3763,8 +5015,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Last")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Prefix")
                         .IsRequired()
@@ -3801,6 +5070,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Footer")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -3813,6 +5089,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("MarginTopMm")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -3851,6 +5137,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -3867,6 +5160,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Installments")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
                         .HasMaxLength(1000)
@@ -3911,7 +5214,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("LoanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("PayrollRunId")
@@ -3940,12 +5260,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Kind")
                         .HasColumnType("int");
 
                     b.Property<string>("Link")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("ReadAtUtc")
                         .HasColumnType("datetime2");
@@ -3977,6 +5314,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -3989,6 +5333,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateOnly>("FromDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.PrimitiveCollection<string>("OffDays")
                         .IsRequired()
@@ -4024,11 +5378,28 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<double>("Latitude")
                         .HasColumnType("float");
 
                     b.Property<double>("Longitude")
                         .HasColumnType("float");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4061,6 +5432,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -4077,6 +5455,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateOnly>("JoiningDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ReportingPlace")
                         .HasMaxLength(300)
@@ -4136,12 +5524,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateOnly>("DueOn")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
@@ -4179,12 +5584,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4226,12 +5648,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("DueOffsetDays")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -4264,6 +5703,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("HeadEmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -4272,6 +5718,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4304,6 +5760,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -4323,6 +5786,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Month")
                         .HasColumnType("int");
@@ -4374,11 +5847,28 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("GlAccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Line")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -4413,6 +5903,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DisbursedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -4425,6 +5922,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Frequency")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Month")
                         .HasColumnType("int");
@@ -4489,6 +5996,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("DeductAbsentDays")
                         .HasColumnType("bit");
 
@@ -4530,6 +6044,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("LatesPerPenalty")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("OffDayOvertimeMultiplier")
                         .HasPrecision(18, 2)
@@ -4603,6 +6127,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("DaysInMonth")
                         .HasColumnType("int");
 
@@ -4624,6 +6155,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<decimal>("IncomeTax")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("NetPay")
                         .HasPrecision(18, 2)
@@ -4698,8 +6239,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4725,6 +6283,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -4733,6 +6298,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(6,2)");
 
                     b.Property<Guid?>("LeaveTypeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Month")
@@ -4780,6 +6355,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("Days")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
@@ -4801,6 +6383,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("MinMinutes")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4832,6 +6424,13 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("CycleId")
                         .HasColumnType("uniqueidentifier");
@@ -4870,6 +6469,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime?>("ManagerSubmittedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("Potential")
                         .HasColumnType("int");
@@ -4930,6 +6539,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("RaiseSlabsJson")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -4960,9 +6586,26 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4996,6 +6639,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -5025,6 +6685,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -5047,6 +6714,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<Guid>("ItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
@@ -5098,12 +6775,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal?>("DailyTarget")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -5141,10 +6835,27 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Rate")
@@ -5176,6 +6887,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("CreatedByName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -5191,6 +6909,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateOnly>("OpensOn")
                         .HasColumnType("date");
@@ -5222,6 +6950,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Order")
                         .HasColumnType("int");
 
@@ -5249,7 +6994,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("OptionId")
@@ -5284,6 +7046,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -5292,6 +7061,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
@@ -5337,6 +7116,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -5345,6 +7131,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("date");
 
                     b.Property<Guid?>("ManagerEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
@@ -5380,12 +7176,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("HourlyRate")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uniqueidentifier");
@@ -5415,6 +7228,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly?>("DueDate")
                         .HasColumnType("date");
 
@@ -5424,6 +7244,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsDone")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -5451,6 +7281,23 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("PrivateKey")
                         .IsRequired()
@@ -5481,10 +7328,27 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Endpoint")
                         .IsRequired()
                         .HasMaxLength(800)
                         .HasColumnType("nvarchar(800)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("P256dh")
                         .IsRequired()
@@ -5516,6 +7380,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Degree")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -5542,6 +7413,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsHighest")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -5572,6 +7453,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -5586,6 +7474,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsTaxable")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(500)
@@ -5621,6 +7519,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Signatures")
                         .IsRequired()
                         .HasMaxLength(400)
@@ -5648,6 +7563,23 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .IsRequired()
@@ -5687,6 +7619,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("DepartmentIds")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -5700,6 +7639,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateOnly?>("ManagerReviewDue")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -5753,7 +7702,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("FromEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("Rating")
@@ -5790,6 +7756,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -5800,6 +7773,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int?>("ManagerScore")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -5850,6 +7833,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeSalaryId")
                         .HasColumnType("uniqueidentifier");
 
@@ -5858,6 +7848,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -5880,12 +7880,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("HeldByName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Month")
                         .HasColumnType("int");
@@ -5929,6 +7946,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("EffectiveFrom")
                         .HasColumnType("date");
 
@@ -5937,6 +7961,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("NewBasic")
                         .HasPrecision(18, 2)
@@ -5980,7 +8014,24 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Percent")
@@ -6012,6 +8063,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("DaysBefore")
                         .HasColumnType("int");
 
@@ -6033,6 +8091,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateOnly?>("LastRunOn")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6086,6 +8154,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Day")
                         .HasColumnType("int");
 
@@ -6110,6 +8185,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime?>("LastSentAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6151,11 +8236,28 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Items")
                         .HasColumnType("int");
 
                     b.Property<bool>("Manual")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6193,6 +8295,13 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
@@ -6255,6 +8364,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<decimal>("LeaveEncashmentAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("NetSettlement")
                         .HasPrecision(18, 2)
@@ -6345,6 +8464,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int?>("EarliestCheckInMinutes")
                         .HasColumnType("int");
 
@@ -6362,6 +8488,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6395,6 +8531,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -6403,6 +8546,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsOff")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ShiftId")
                         .HasColumnType("uniqueidentifier");
@@ -6437,6 +8590,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -6452,6 +8612,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Reason")
                         .IsRequired()
@@ -6498,6 +8668,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Features")
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
@@ -6510,6 +8687,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6547,6 +8734,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -6555,6 +8749,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<TimeOnly?>("From")
                         .HasColumnType("time");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("SpaceId")
                         .HasColumnType("uniqueidentifier");
@@ -6593,6 +8797,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Details")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -6603,6 +8814,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("RespondedAtUtc")
                         .HasColumnType("datetime2");
@@ -6644,8 +8865,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -6677,11 +8915,28 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Kind")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(300)
@@ -6713,6 +8968,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("FixedTax")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -6720,6 +8982,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<decimal>("FromAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Rate")
                         .HasPrecision(9, 4)
@@ -6743,8 +9015,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002501"),
                             CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 0m,
                             FromAmount = 0m,
+                            ModifiedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002526"),
                             ToAmount = 600000m
@@ -6753,8 +9028,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002502"),
                             CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 0m,
                             FromAmount = 600000m,
+                            ModifiedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.01m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002526"),
                             ToAmount = 1200000m
@@ -6763,8 +9041,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002503"),
                             CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 6000m,
                             FromAmount = 1200000m,
+                            ModifiedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.11m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002526"),
                             ToAmount = 2200000m
@@ -6773,8 +9054,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002504"),
                             CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 116000m,
                             FromAmount = 2200000m,
+                            ModifiedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.23m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002526"),
                             ToAmount = 3200000m
@@ -6783,8 +9067,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002505"),
                             CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 346000m,
                             FromAmount = 3200000m,
+                            ModifiedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.30m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002526"),
                             ToAmount = 4100000m
@@ -6793,8 +9080,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002506"),
                             CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 616000m,
                             FromAmount = 4100000m,
+                            ModifiedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.35m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002526")
                         },
@@ -6802,8 +9092,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002601"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 0m,
                             FromAmount = 0m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             ToAmount = 600000m
@@ -6812,8 +9105,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002602"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 0m,
                             FromAmount = 600000m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.01m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             ToAmount = 1200000m
@@ -6822,8 +9118,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002603"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 6000m,
                             FromAmount = 1200000m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.11m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             ToAmount = 2200000m
@@ -6832,8 +9131,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002604"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 116000m,
                             FromAmount = 2200000m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.20m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             ToAmount = 3200000m
@@ -6842,8 +9144,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002605"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 316000m,
                             FromAmount = 3200000m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.25m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             ToAmount = 4100000m
@@ -6852,8 +9157,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002606"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 541000m,
                             FromAmount = 4100000m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.29m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             ToAmount = 5600000m
@@ -6862,8 +9170,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002607"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 976000m,
                             FromAmount = 5600000m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.32m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             ToAmount = 7000000m
@@ -6872,8 +9183,11 @@ namespace HRMS.Infrastructure.Data.Migrations
                         {
                             Id = new Guid("6a1f1c2e-0002-4000-8000-000000002608"),
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             FixedTax = 1424000m,
                             FromAmount = 7000000m,
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             Rate = 0.35m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627")
                         });
@@ -6893,8 +9207,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("EndDate")
                         .HasColumnType("date");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("date");
@@ -6920,7 +9251,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                             Id = new Guid("6a1f1c2e-0001-4000-8000-000000002526"),
                             Code = "2025-26",
                             CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             EndDate = new DateOnly(2026, 6, 30),
+                            ModifiedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             StartDate = new DateOnly(2025, 7, 1),
                             SurchargeRate = 0.09m,
                             SurchargeThreshold = 10000000m
@@ -6930,7 +9264,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                             Id = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
                             Code = "2026-27",
                             CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            CreatedBy = "System",
                             EndDate = new DateOnly(2027, 6, 30),
+                            ModifiedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            ModifiedBy = "System",
                             StartDate = new DateOnly(2026, 7, 1),
                             SurchargeRate = 0m,
                             SurchargeThreshold = 10000000m
@@ -6964,6 +9301,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int?>("EmailQuotaPerMonth")
                         .HasColumnType("int");
 
@@ -6972,6 +9316,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int?>("MaxEmployees")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -7020,9 +9374,26 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Method")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -7072,6 +9443,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(8000)
@@ -7103,6 +9481,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<DateTime>("LastActivityAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Number")
                         .HasColumnType("int");
@@ -7176,6 +9564,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -7184,6 +9579,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<Guid?>("LeadEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
@@ -7232,6 +9637,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("EditedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -7243,6 +9655,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsSystem")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -7274,8 +9696,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -7305,6 +9744,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -7313,6 +9759,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Status")
@@ -7346,6 +9802,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -7355,6 +9818,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Minutes")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
                         .HasMaxLength(500)
@@ -7392,6 +9865,23 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -7420,6 +9910,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -7432,6 +9929,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int?>("FeedbackRating")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("NominatedByName")
                         .HasMaxLength(200)
@@ -7480,6 +9987,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("DepartmentIds")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -7508,6 +10022,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Mode")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("RepeatEveryMonths")
                         .HasColumnType("int");
@@ -7550,6 +10074,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -7558,6 +10089,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateOnly?>("PreferredDate")
@@ -7608,12 +10149,29 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("EndsAtUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ExternalTrainer")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(2000)
@@ -7665,6 +10223,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -7672,6 +10237,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("TravelRequestId")
                         .HasColumnType("uniqueidentifier");
@@ -7700,6 +10275,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
@@ -7710,6 +10292,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Mode")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");
@@ -7742,8 +10334,25 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -7802,6 +10411,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("DecidedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -7837,6 +10453,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsInternational")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("NeedsHotel")
                         .HasColumnType("bit");
@@ -7923,6 +10549,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("DeskIds")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -7932,6 +10565,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(3);
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("PerDiemDomestic")
                         .HasPrecision(18, 2)
@@ -7969,6 +10612,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -7987,6 +10637,16 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("MustChangePassword")
                         .HasColumnType("bit");
@@ -8023,6 +10683,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Designation")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -8037,6 +10704,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<decimal?>("LastSalary")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ModifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModifiedBy")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<Guid?>("ModifiedById")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Order")
                         .HasColumnType("int");

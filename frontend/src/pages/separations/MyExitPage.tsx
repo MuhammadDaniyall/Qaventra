@@ -6,6 +6,7 @@ import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { separationsApi } from '../../api/separations';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Button,
   Card,
@@ -154,6 +155,7 @@ function ExitStatus({ s }: { s: Separation }) {
             </div>
           </div>
           <SeparationSteps s={s} />
+          <RecordStamp stamps={s.summary.stamps} />
           {s.decisionNote && status !== 'Requested' && (
             <p className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">HR: “{s.decisionNote}”</p>
           )}

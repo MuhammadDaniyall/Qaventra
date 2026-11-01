@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record ExemptionDto(Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, DateOnly Date, AttendanceStatus Flag, string Reason, RequestStatus Status,
-    DateTime CreatedAtUtc, string? DecisionNote, string? CheckIn);
+    DateTime CreatedAtUtc, string? DecisionNote, string? CheckIn, RecordStampsDto Stamps);
 
 public record RequestExemptionRequest(DateOnly Date, [Required, StringLength(500)] string Reason);
 
@@ -208,7 +208,7 @@ public class ExemptionsController(HrmsDbContext db, ExemptionService exemptions,
         var list = new List<ExemptionDto>();
         foreach (var r in rows)
             list.Add(new ExemptionDto(r.X.Id, r.X.EmployeeId, r.Name, r.EmployeeCode, r.X.Date, r.X.Flag, r.X.Reason, r.X.Status, r.X.CreatedAtUtc, r.X.DecisionNote,
-                r.In is { } t ? (await clock.ToLocalAsync(t)).ToString("HH:mm") : null));
+                r.In is { } t ? (await clock.ToLocalAsync(t)).ToString("HH:mm") : null, RecordStampsDto.Of(r.X)));
         return list;
     }
 }

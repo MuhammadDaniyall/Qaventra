@@ -13,6 +13,10 @@ public class AuditLog
     public Guid? UserId { get; set; }
     public string? UserEmail { get; set; }
     public UserRole? Role { get; set; }
+    /// <summary>The actor's employee record, when they have one. Filled by HrmsDbContext for every entry that names a user.</summary>
+    public Guid? EmployeeId { get; set; }
+    public string? EmployeeName { get; set; }
+    public string? EmployeeCode { get; set; }
 
     /// <summary>For Auth: LoginSucceeded, LoginFailed... For Data: Created, Updated, Deleted. For Request: the HTTP method.</summary>
     public string Action { get; set; } = "";

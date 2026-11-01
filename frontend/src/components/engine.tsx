@@ -5,6 +5,7 @@ import { historyApi } from '../api/engine';
 import { useEmployeeLookup } from '../api/hooks';
 import { useUser } from '../auth/AuthContext';
 import { isApprover } from '../auth/roles';
+import { actorLabel, auditActionLabel, STAMP_FIELDS } from '../lib/audit';
 import { formatDateTimeUtc, humanize } from '../lib/format';
 import { EmptyState, Field, IconButton, Modal, Select, Skeleton } from './ui';
 
@@ -65,11 +66,11 @@ function HistoryModal({ entityType, entityId, onClose }: { entityType: string; e
           {history.data.map((h, i) => (
             <li key={i} className="border-s-2 border-zinc-200 ps-3 dark:border-zinc-700">
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {formatDateTimeUtc(h.timestampUtc)} · {h.userEmail ?? 'System'} · {humanize(h.action)}
+                {formatDateTimeUtc(h.timestampUtc)} · {actorLabel(h)} · {auditActionLabel(h.action)}
               </p>
               <ul className="mt-1 space-y-0.5 text-sm">
                 {parse(h.changes)
-                  .filter(([k]) => !['UpdatedAtUtc', 'CreatedAtUtc', 'TenantId', 'Id'].includes(k))
+                  .filter(([k]) => !['UpdatedAtUtc', 'CreatedAtUtc', 'TenantId', 'Id', ...STAMP_FIELDS].includes(k))
                   .map(([k, v]) => (
                     <li key={k}>
                       <span className="font-medium">{humanize(k)}</span>: <span className="text-zinc-500 dark:text-zinc-400 line-through">{show(v.old)}</span> → {show(v.new)}

@@ -7,6 +7,7 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isCompanyAdmin } from '../../auth/roles';
 import { ExportButton } from '../../components/excel/ExcelButtons';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -184,6 +185,7 @@ export function PayrollRunPage() {
           </>
         }
       />
+      {run.stamps && <RecordStamp stamps={run.stamps} className="-mt-3 mb-4" />}
 
       <RunStepper run={run} needsApproval={needsApproval} />
 

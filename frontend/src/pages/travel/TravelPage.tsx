@@ -43,6 +43,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { formatCurrency, formatDate, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import { DeleteConfirm, RowActions } from '../settings/shared';
@@ -96,6 +97,7 @@ function TripTable({ trips, showPerson }: { trips: TripListItem[]; showPerson: b
           <Th>Dates</Th>
           <Th>Status</Th>
           <Th className="text-end">Cost</Th>
+          <Th>Added / modified</Th>
         </Tr>
       </THead>
       <TBody>
@@ -137,6 +139,9 @@ function TripTable({ trips, showPerson }: { trips: TripListItem[]; showPerson: b
               )}
             </Td>
             <Td className="text-end tabular-nums">{t.bookedCost ? formatCurrency(t.bookedCost) : '—'}</Td>
+            <Td>
+              <RecordStampCell stamps={t.stamps} />
+            </Td>
           </Tr>
         ))}
       </TBody>
@@ -641,6 +646,7 @@ function ReasonModal({ item, onClose }: { item: TravelReason | null; onClose: ()
       }
     >
       <div className="space-y-3">
+        {item && <RecordStamp stamps={item.stamps} />}
         <Field label="Name" required>
           <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="Client visit" />
         </Field>

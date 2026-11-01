@@ -9,6 +9,7 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { ExportButton, ImportButton } from '../../components/excel/ExcelButtons';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { todayIso } from '../../lib/format';
 import {
   Avatar,
@@ -199,6 +200,7 @@ export function EmployeesPage() {
                   <Th>Status</Th>
                   <Th>Joined</Th>
                   <Th>Login</Th>
+                  <Th>Added / modified</Th>
                 </tr>
               </THead>
               <TBody>
@@ -226,6 +228,9 @@ export function EmployeesPage() {
                       ) : (
                         <span className="text-zinc-500 dark:text-zinc-400">—</span>
                       )}
+                    </Td>
+                    <Td>
+                      <RecordStampCell stamps={e.stamps} />
                     </Td>
                   </Tr>
                 ))}

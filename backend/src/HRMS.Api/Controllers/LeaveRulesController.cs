@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record LeaveReasonDto(Guid Id, Guid LeaveTypeId, string Name, decimal? MaxDays, bool RequiresDocument, bool IsActive);
+public record LeaveReasonDto(Guid Id, Guid LeaveTypeId, string Name, decimal? MaxDays, bool RequiresDocument, bool IsActive, RecordStampsDto Stamps);
 
 public record SaveLeaveReasonRequest(Guid LeaveTypeId, [Required, StringLength(100)] string Name, [Range(0.5, 365)] decimal? MaxDays, bool RequiresDocument, bool IsActive = true);
 
@@ -32,7 +32,8 @@ public class LeaveRulesController(HrmsDbContext db, LeaveService leave) : Contro
     /// <summary>Everyone reads the reasons (the leave form needs them).</summary>
     [HttpGet("reasons")]
     public async Task<List<LeaveReasonDto>> Reasons() =>
-        await db.LeaveReasons.OrderBy(r => r.Name).Select(r => new LeaveReasonDto(r.Id, r.LeaveTypeId, r.Name, r.MaxDays, r.RequiresDocument, r.IsActive)).ToListAsync();
+        await db.LeaveReasons.OrderBy(r => r.Name).Select(r => new LeaveReasonDto(r.Id, r.LeaveTypeId, r.Name, r.MaxDays, r.RequiresDocument, r.IsActive,
+            new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy))).ToListAsync();
 
     [HttpPost("reasons"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> AddReason(SaveLeaveReasonRequest req)

@@ -12,24 +12,24 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record OfficeLocationDto(Guid Id, string Name, double Latitude, double Longitude, int RadiusMeters);
+public record OfficeLocationDto(Guid Id, string Name, double Latitude, double Longitude, int RadiusMeters, RecordStampsDto Stamps);
 public record SaveOfficeLocationRequest([Required, StringLength(150)] string Name, [Range(-90, 90)] double Latitude, [Range(-180, 180)] double Longitude, [Range(20, 5000)] int RadiusMeters);
 
 public record ShiftDto(Guid Id, string Name, TimeOnly StartTime, TimeOnly EndTime, int GraceMinutes, List<DayOfWeek> WeeklyOffDays, bool IsDefault,
-    int EarlyLeaveGraceMinutes = 15, int? HalfDayMinutes = null, int? ShortDayMinutes = null, int? EarliestCheckInMinutes = null, int BreakMinutes = 0);
+    int EarlyLeaveGraceMinutes = 15, int? HalfDayMinutes = null, int? ShortDayMinutes = null, int? EarliestCheckInMinutes = null, int BreakMinutes = 0, RecordStampsDto? Stamps = null);
 public record SaveShiftRequest([Required, StringLength(100)] string Name, TimeOnly StartTime, TimeOnly EndTime, [Range(0, 180)] int GraceMinutes, List<DayOfWeek> WeeklyOffDays, bool IsDefault,
     [Range(0, 240)] int EarlyLeaveGraceMinutes = 15, [Range(0, 1440)] int? HalfDayMinutes = null, [Range(0, 1440)] int? ShortDayMinutes = null,
     [Range(0, 720)] int? EarliestCheckInMinutes = null, [Range(0, 240)] int BreakMinutes = 0);
 
 public record HolidayDto(Guid Id, DateOnly Date, string Name, HolidayKind Kind = HolidayKind.Public, List<Guid>? RegionIds = null, string? Religion = null,
-    List<Guid>? ExemptEmployeeIds = null);
+    List<Guid>? ExemptEmployeeIds = null, RecordStampsDto? Stamps = null);
 public record SaveHolidayRequest(DateOnly Date, [Required, StringLength(150)] string Name, HolidayKind Kind = HolidayKind.Public, List<Guid>? RegionIds = null,
     [StringLength(100)] string? Religion = null, List<Guid>? ExemptEmployeeIds = null);
 
 public record LeaveTypeDto(
     Guid Id, string Name, string Code, decimal AnnualQuota, bool IsPaid, bool IsActive,
     LeaveAccrual Accrual, decimal CarryForwardMax, int? MaxConsecutiveDays, int MinNoticeDays, Gender? ApplicableGender,
-    bool AllowedOnProbation, bool AllowHalfDay, bool AllowShortLeave, bool IsCompensatory, bool Sandwich, decimal? DocumentAfterDays);
+    bool AllowedOnProbation, bool AllowHalfDay, bool AllowShortLeave, bool IsCompensatory, bool Sandwich, decimal? DocumentAfterDays, RecordStampsDto Stamps);
 public record SaveLeaveTypeRequest(
     [Required, StringLength(100)] string Name, [Required, StringLength(10)] string Code, [Range(0, 365)] decimal AnnualQuota, bool IsPaid, bool IsActive,
     LeaveAccrual Accrual = LeaveAccrual.Upfront, [Range(0, 365)] decimal CarryForwardMax = 0, [Range(1, 365)] int? MaxConsecutiveDays = null,
@@ -44,7 +44,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
 {
     [HttpGet("office-locations")]
     public Task<List<OfficeLocationDto>> Offices() =>
-        db.OfficeLocations.OrderBy(o => o.Name).Select(o => new OfficeLocationDto(o.Id, o.Name, o.Latitude, o.Longitude, o.RadiusMeters)).ToListAsync();
+        db.OfficeLocations.OrderBy(o => o.Name).Select(o => new OfficeLocationDto(o.Id, o.Name, o.Latitude, o.Longitude, o.RadiusMeters,
+            new RecordStampsDto(o.CreatedAtUtc, o.CreatedBy, o.ModifiedAtUtc, o.ModifiedBy))).ToListAsync();
 
     [HttpPost("office-locations"), Authorize(Policy = Policies.Hr)]
     public async Task<OfficeLocationDto> CreateOffice(SaveOfficeLocationRequest req)
@@ -53,7 +54,7 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         Apply(o, req);
         db.OfficeLocations.Add(o);
         await db.SaveChangesAsync();
-        return new OfficeLocationDto(o.Id, o.Name, o.Latitude, o.Longitude, o.RadiusMeters);
+        return new OfficeLocationDto(o.Id, o.Name, o.Latitude, o.Longitude, o.RadiusMeters, RecordStampsDto.Of(o));
     }
 
     [HttpPut("office-locations/{id:guid}"), Authorize(Policy = Policies.Hr)]
@@ -86,7 +87,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
     [HttpGet("shifts")]
     public Task<List<ShiftDto>> Shifts() =>
         db.Shifts.OrderBy(s => s.Name).Select(s => new ShiftDto(s.Id, s.Name, s.StartTime, s.EndTime, s.GraceMinutes, s.WeeklyOffDays, s.IsDefault,
-            s.EarlyLeaveGraceMinutes, s.HalfDayMinutes, s.ShortDayMinutes, s.EarliestCheckInMinutes, s.BreakMinutes)).ToListAsync();
+            s.EarlyLeaveGraceMinutes, s.HalfDayMinutes, s.ShortDayMinutes, s.EarliestCheckInMinutes, s.BreakMinutes,
+            new RecordStampsDto(s.CreatedAtUtc, s.CreatedBy, s.ModifiedAtUtc, s.ModifiedBy))).ToListAsync();
 
     [HttpPost("shifts"), Authorize(Policy = Policies.Hr)]
     public async Task<ShiftDto> CreateShift(SaveShiftRequest req)
@@ -96,7 +98,7 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         db.Shifts.Add(s);
         await db.SaveChangesAsync();
         return new ShiftDto(s.Id, s.Name, s.StartTime, s.EndTime, s.GraceMinutes, s.WeeklyOffDays, s.IsDefault,
-            s.EarlyLeaveGraceMinutes, s.HalfDayMinutes, s.ShortDayMinutes, s.EarliestCheckInMinutes, s.BreakMinutes);
+            s.EarlyLeaveGraceMinutes, s.HalfDayMinutes, s.ShortDayMinutes, s.EarliestCheckInMinutes, s.BreakMinutes, RecordStampsDto.Of(s));
     }
 
     [HttpPut("shifts/{id:guid}"), Authorize(Policy = Policies.Hr)]
@@ -153,7 +155,7 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         (await db.Holidays.Where(h => year == null || h.Date.Year == year).OrderBy(h => h.Date).ToListAsync()).Select(ToDto).ToList();
 
     private static HolidayDto ToDto(Holiday h) => new(h.Id, h.Date, h.Name, h.Kind,
-        h.RegionIds is { } r ? HelpdeskService.Ids(r) : [], h.Religion, h.ExemptEmployeeIds is { } x ? HelpdeskService.Ids(x) : []);
+        h.RegionIds is { } r ? HelpdeskService.Ids(r) : [], h.Religion, h.ExemptEmployeeIds is { } x ? HelpdeskService.Ids(x) : [], RecordStampsDto.Of(h));
 
     [HttpPost("holidays"), Authorize(Policy = Policies.Hr)]
     public async Task<HolidayDto> CreateHoliday(SaveHolidayRequest req)
@@ -206,7 +208,7 @@ public class SetupController(HrmsDbContext db) : ControllerBase
     public Task<List<LeaveTypeDto>> LeaveTypes() =>
         db.LeaveTypes.OrderBy(t => t.Name).Select(t => new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive,
             t.Accrual, t.CarryForwardMax, t.MaxConsecutiveDays, t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay,
-            t.AllowShortLeave, t.IsCompensatory, t.Sandwich, t.DocumentAfterDays)).ToListAsync();
+            t.AllowShortLeave, t.IsCompensatory, t.Sandwich, t.DocumentAfterDays, new RecordStampsDto(t.CreatedAtUtc, t.CreatedBy, t.ModifiedAtUtc, t.ModifiedBy))).ToListAsync();
 
     [HttpPost("leave-types"), Authorize(Policy = Policies.Hr)]
     public async Task<LeaveTypeDto> CreateLeaveType(SaveLeaveTypeRequest req)
@@ -216,7 +218,8 @@ public class SetupController(HrmsDbContext db) : ControllerBase
         db.LeaveTypes.Add(t);
         await db.SaveChangesAsync();
         return new LeaveTypeDto(t.Id, t.Name, t.Code, t.AnnualQuota, t.IsPaid, t.IsActive, t.Accrual, t.CarryForwardMax, t.MaxConsecutiveDays,
-            t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay, t.AllowShortLeave, t.IsCompensatory, t.Sandwich, t.DocumentAfterDays);
+            t.MinNoticeDays, t.ApplicableGender, t.AllowedOnProbation, t.AllowHalfDay, t.AllowShortLeave, t.IsCompensatory, t.Sandwich, t.DocumentAfterDays,
+            RecordStampsDto.Of(t));
     }
 
     /// <summary>Quota changes apply to balances created from now on; existing balances keep their entitlement.</summary>

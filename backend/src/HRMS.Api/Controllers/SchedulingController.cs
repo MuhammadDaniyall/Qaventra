@@ -33,7 +33,7 @@ public record DecideShiftRequest([StringLength(1000)] string? Note);
 public record ShiftRequestDto(
     Guid Id, ShiftRequestKind Kind, Guid EmployeeId, string EmployeeName, string EmployeeCode, DateOnly FromDate, DateOnly ToDate,
     string? ShiftName, Guid? SwapWithEmployeeId, string? SwapWithName, string Reason, ShiftRequestStatus Status,
-    DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote);
+    DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, RecordStampsDto Stamps);
 
 public record MonthlyRowDto(
     Guid EmployeeId, string EmployeeCode, string Name, string? Department, int WorkingDays, int Present, int Late, int HalfDay,
@@ -282,8 +282,9 @@ public class SchedulingController(
             r.SwapWithEmployeeId,
             SwapWith = db.Employees.Where(e => e.Id == r.SwapWithEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault(),
             r.Reason, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
+            Stamps = new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy),
         }).ToListAsync();
         return rows.Select(r => new ShiftRequestDto(r.Id, r.Kind, r.EmployeeId, $"{r.FirstName} {r.LastName}", r.EmployeeCode, r.FromDate, r.ToDate,
-            r.ShiftName, r.SwapWithEmployeeId, r.SwapWith, r.Reason, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote)).ToList();
+            r.ShiftName, r.SwapWithEmployeeId, r.SwapWith, r.Reason, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote, r.Stamps)).ToList();
     }
 }

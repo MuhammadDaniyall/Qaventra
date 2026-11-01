@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Layers, Package, PackageCheck } from 'lucide-react';
 import { assetsApi, type Assignment } from '../../api/assets';
 import { qk } from '../../api/keys';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Select, Spinner, useToast } from '../../components/ui';
 import { AssignmentCards, requestLabel, TakeBackModal } from './shared';
 
@@ -68,9 +69,10 @@ export function EmployeeAssetsTab({ employeeId, hr }: { employeeId: string; hr: 
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {d.open.map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-                <span className="text-zinc-900 dark:text-zinc-100">
+                <div className="text-zinc-900 dark:text-zinc-100">
                   {r.kind === 'Return' ? `Return ${r.assetLabel}` : r.type} <span className="text-zinc-500">· {r.reason}</span>
-                </span>
+                  <RecordStamp stamps={r.stamps} className="mt-0.5" />
+                </div>
                 <Badge tone="amber">{requestLabel(r)}</Badge>
               </li>
             ))}

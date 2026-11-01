@@ -14,11 +14,12 @@ namespace HRMS.Api.Controllers;
 
 public record DeskSettingsDto(int MaxDaysAhead, bool RequireCheckIn, int ReleaseAfterMinutes, int DayStartsAt);
 
-public record FloorDto(Guid Id, Guid OfficeLocationId, string Office, string Name, int Order, int Desks, int Rooms);
+public record FloorDto(Guid Id, Guid OfficeLocationId, string Office, string Name, int Order, int Desks, int Rooms, RecordStampsDto Stamps);
 
 public record SaveFloorRequest(Guid OfficeLocationId, [Required, StringLength(100)] string Name, int Order);
 
-public record SpaceDto(Guid Id, Guid FloorId, string Name, SpaceKind Kind, int Seats, string? Features, Guid? AssignedEmployeeId, string? AssignedTo, bool IsActive);
+public record SpaceDto(Guid Id, Guid FloorId, string Name, SpaceKind Kind, int Seats, string? Features, Guid? AssignedEmployeeId, string? AssignedTo, bool IsActive,
+    RecordStampsDto Stamps);
 
 public record SaveSpaceRequest(Guid FloorId, [Required, StringLength(100)] string Name, SpaceKind Kind, int Seats, [StringLength(300)] string? Features, Guid? AssignedEmployeeId,
     bool IsActive = true);
@@ -34,7 +35,7 @@ public record FloorDayDto(DateOnly Date, Guid FloorId, string Floor, string Offi
 public record BookRequest(Guid SpaceId, DateOnly Date, TimeOnly? From, TimeOnly? To, [StringLength(200)] string? Title, int Attendees = 1, Guid? ForEmployeeId = null);
 
 public record MyBookingDto(Guid Id, Guid SpaceId, string Space, SpaceKind Kind, string Floor, string Office, DateOnly Date, TimeOnly? From, TimeOnly? To, string? Title,
-    int Attendees, BookingStatus Status, bool CanCheckIn);
+    int Attendees, BookingStatus Status, bool CanCheckIn, RecordStampsDto Stamps);
 
 public record InOfficeDto(Guid EmployeeId, string Name, string? Department, string Space, string Floor);
 
@@ -80,7 +81,8 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
         await db.Floors.OrderBy(f => f.Office!.Name).ThenBy(f => f.Order).ThenBy(f => f.Name)
             .Select(f => new FloorDto(f.Id, f.OfficeLocationId, f.Office!.Name, f.Name, f.Order,
                 db.Spaces.Count(s => s.FloorId == f.Id && s.IsActive && s.Kind == SpaceKind.Desk),
-                db.Spaces.Count(s => s.FloorId == f.Id && s.IsActive && s.Kind != SpaceKind.Desk)))
+                db.Spaces.Count(s => s.FloorId == f.Id && s.IsActive && s.Kind != SpaceKind.Desk),
+                new RecordStampsDto(f.CreatedAtUtc, f.CreatedBy, f.ModifiedAtUtc, f.ModifiedBy)))
             .ToListAsync();
 
     [HttpPost("floors"), Authorize(Policy = Policies.Hr)]
@@ -117,7 +119,8 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
     public async Task<List<SpaceDto>> Spaces(Guid id) =>
         await db.Spaces.Where(s => s.FloorId == id).OrderBy(s => s.Kind).ThenBy(s => s.Name)
             .Select(s => new SpaceDto(s.Id, s.FloorId, s.Name, s.Kind, s.Seats, s.Features, s.AssignedEmployeeId,
-                db.Employees.Where(e => e.Id == s.AssignedEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault(), s.IsActive))
+                db.Employees.Where(e => e.Id == s.AssignedEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault(), s.IsActive,
+                new RecordStampsDto(s.CreatedAtUtc, s.CreatedBy, s.ModifiedAtUtc, s.ModifiedBy)))
             .ToListAsync();
 
     [HttpPost("spaces"), Authorize(Policy = Policies.Hr)]
@@ -239,10 +242,11 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
         var mine = me.EmployeeId ?? Guid.Empty;
         var rows = await db.SpaceBookings.Where(b => b.EmployeeId == mine && b.Date >= today.AddDays(-14))
             .OrderBy(b => b.Date).ThenBy(b => b.From)
-            .Select(b => new { b.Id, b.SpaceId, Space = b.Space!.Name, b.Space.Kind, Floor = b.Space.Floor!.Name, Office = b.Space.Floor.Office!.Name, b.Date, b.From, b.To, b.Title, b.Attendees, b.Status })
+            .Select(b => new { b.Id, b.SpaceId, Space = b.Space!.Name, b.Space.Kind, Floor = b.Space.Floor!.Name, Office = b.Space.Floor.Office!.Name, b.Date, b.From, b.To, b.Title, b.Attendees, b.Status,
+                Stamps = new RecordStampsDto(b.CreatedAtUtc, b.CreatedBy, b.ModifiedAtUtc, b.ModifiedBy) })
             .ToListAsync();
         return rows.Select(b => new MyBookingDto(b.Id, b.SpaceId, b.Space, b.Kind, b.Floor, b.Office, b.Date, b.From, b.To, b.Title, b.Attendees, b.Status,
-            settings.RequireCheckIn && b.Status == BookingStatus.Booked && b.Date == today)).ToList();
+            settings.RequireCheckIn && b.Status == BookingStatus.Booked && b.Date == today, b.Stamps)).ToList();
     }
 
     /// <summary>Colleagues with a desk booked in the office on a day.</summary>

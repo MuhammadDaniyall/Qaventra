@@ -1,5 +1,5 @@
 import { http } from './client';
-import type { UserRole } from '../types';
+import type { RecordStamps, UserRole } from '../types';
 
 export interface AccessModule {
   key: string;
@@ -12,6 +12,7 @@ export interface AccessTemplate {
   description: string | null;
   modules: string[];
   users: number;
+  stamps: RecordStamps;
 }
 
 export interface AccessUser {
@@ -30,6 +31,7 @@ export interface SuggestionCategory {
   name: string;
   reviewerIds: string[];
   isActive: boolean;
+  stamps: RecordStamps;
 }
 
 export interface Suggestion {
@@ -47,6 +49,8 @@ export interface Suggestion {
   respondedAtUtc: string | null;
   createdAtUtc: string;
   mine: boolean;
+  /** For an anonymous suggestion seen by a reviewer, createdBy is null. */
+  stamps: RecordStamps;
 }
 
 export interface HistoryEntry {
@@ -55,6 +59,8 @@ export interface HistoryEntry {
   action: string;
   /** JSON: { Field: { old, new } } */
   changes: string | null;
+  employeeName: string | null;
+  employeeCode: string | null;
 }
 
 export const accessApi = {
@@ -69,8 +75,8 @@ export const accessApi = {
 
 export const suggestionsApi = {
   categories: () => http.get<SuggestionCategory[]>('/suggestions/categories'),
-  addCategory: (b: Omit<SuggestionCategory, 'id'>) => http.post('/suggestions/categories', b),
-  updateCategory: (id: string, b: Omit<SuggestionCategory, 'id'>) => http.put(`/suggestions/categories/${id}`, b),
+  addCategory: (b: Omit<SuggestionCategory, 'id' | 'stamps'>) => http.post('/suggestions/categories', b),
+  updateCategory: (id: string, b: Omit<SuggestionCategory, 'id' | 'stamps'>) => http.put(`/suggestions/categories/${id}`, b),
   deleteCategory: (id: string) => http.del(`/suggestions/categories/${id}`),
   my: () => http.get<Suggestion[]>('/suggestions/my'),
   submit: (b: { title: string; details: string; categoryId: string | null; isAnonymous: boolean }) => http.post('/suggestions', b),

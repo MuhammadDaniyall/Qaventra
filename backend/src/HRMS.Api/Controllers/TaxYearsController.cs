@@ -15,7 +15,7 @@ namespace HRMS.Api.Controllers;
 public record TaxSlabDto(decimal FromAmount, decimal? ToAmount, decimal FixedTax, decimal Rate);
 
 public record TaxYearDto(Guid Id, string Code, DateOnly StartDate, DateOnly EndDate, decimal SurchargeThreshold, decimal SurchargeRate,
-    List<TaxSlabDto> Slabs, int Payrolls);
+    List<TaxSlabDto> Slabs, int Payrolls, RecordStampsDto Stamps);
 
 public record SaveTaxYearRequest(
     [Required, StringLength(10)] string Code,
@@ -131,5 +131,6 @@ public class TaxYearsController(HrmsDbContext db) : ControllerBase
         db.PayrollRuns.IgnoreQueryFilters().GroupBy(r => r.TaxYearCode).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count);
 
     private static TaxYearDto ToDto(TaxYear t, int payrolls) => new(t.Id, t.Code, t.StartDate, t.EndDate, t.SurchargeThreshold, t.SurchargeRate,
-        t.Slabs.OrderBy(s => s.FromAmount).Select(s => new TaxSlabDto(s.FromAmount, s.ToAmount, s.FixedTax, s.Rate)).ToList(), payrolls);
+        t.Slabs.OrderBy(s => s.FromAmount).Select(s => new TaxSlabDto(s.FromAmount, s.ToAmount, s.FixedTax, s.Rate)).ToList(), payrolls,
+        RecordStampsDto.Of(t));
 }

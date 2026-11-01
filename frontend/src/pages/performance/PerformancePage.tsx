@@ -16,6 +16,7 @@ import {
 } from '../../api/performance';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -106,6 +107,7 @@ function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; qu
             <Th className="text-end">Self</Th>
             <Th className="text-end">Manager</Th>
             <Th className="text-end">Final</Th>
+            <Th>Added / modified</Th>
           </tr>
         </THead>
         <TBody>
@@ -121,6 +123,9 @@ function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; qu
               <Td className="text-end tabular-nums">{r.selfScore ?? '—'}</Td>
               <Td className="text-end tabular-nums">{r.managerScore ?? '—'}</Td>
               <Td className="text-end font-medium tabular-nums">{r.finalRating ?? '—'}</Td>
+              <Td>
+                <RecordStampCell stamps={r.stamps} />
+              </Td>
             </Tr>
           ))}
         </TBody>
@@ -166,6 +171,7 @@ function Cycles() {
               <Th>Cycle</Th>
               <Th>Status</Th>
               <Th>Progress</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -189,6 +195,9 @@ function Cycles() {
                     {c.status === 'Draft'
                       ? '—'
                       : `${done}/${c.reviews} released · ${c.byStage.Calibration ?? 0} with HR · ${(c.byStage.ManagerReview ?? 0) + (c.byStage.SelfReview ?? 0) + (c.byStage.Goals ?? 0) + (c.byStage.GoalsSubmitted ?? 0)} in progress`}
+                  </Td>
+                  <Td>
+                    <RecordStampCell stamps={c.stamps} />
                   </Td>
                   <Td className="text-end" onClick={(e) => e.stopPropagation()}>
                     {c.status === 'Draft' ? (
@@ -269,6 +278,7 @@ function CycleModal({ item, onClose }: { item: ReviewCycle | null; onClose: () =
       }
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {item && <RecordStamp className="sm:col-span-2" stamps={item.stamps} />}
         <div className="sm:col-span-2">
           <FormError message={error} />
         </div>
@@ -336,6 +346,7 @@ function Templates() {
                   {t.sections.map((s) => `${s.name} ${s.weight}%`).join(' · ')}
                   {t.selfReview ? ' · with self review' : ''}
                 </p>
+                <RecordStamp stamps={t.stamps} />
               </div>
               <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={t.cycles ? undefined : () => setDeleting(t)} />
             </li>
@@ -394,6 +405,7 @@ function TemplateModal({ item, onClose }: { item: PerformanceTemplate | null; on
       }
     >
       <div className="space-y-4">
+        {item && <RecordStamp stamps={item.stamps} />}
         <FormError message={error} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name" required>

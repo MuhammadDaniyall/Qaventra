@@ -12,7 +12,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record BudgetPlanListDto(Guid Id, string Name, DateOnly FromDate, DateOnly ToDate, BudgetStatus Status, int Headcount, decimal Cost, int Positions);
+public record BudgetPlanListDto(Guid Id, string Name, DateOnly FromDate, DateOnly ToDate, BudgetStatus Status, int Headcount, decimal Cost, int Positions,
+    RecordStampsDto Stamps);
 
 public record SaveBudgetPlanRequest([Required, StringLength(150)] string Name, DateOnly FromDate, DateOnly ToDate, [StringLength(2000)] string? Notes);
 
@@ -29,7 +30,7 @@ public record UnplannedDto(Guid? DepartmentId, string Department, Guid? Designat
 public record BudgetPlanDto(
     Guid Id, string Name, DateOnly FromDate, DateOnly ToDate, BudgetStatus Status, string? Notes, DateTime? SubmittedAtUtc, string? DecidedByName, DateTime? DecidedAtUtc,
     string? DecisionNote, List<BudgetLineDto> Lines, List<UnplannedDto> Unplanned, int Headcount, int OnRoll, int Vacant, int Hiring, decimal BudgetCost, decimal ActualCost,
-    bool CanEdit, bool CanDecide, bool CanClose);
+    bool CanEdit, bool CanDecide, bool CanClose, RecordStampsDto Stamps);
 
 public record BudgetDecisionRequest(bool Approve, [StringLength(1000)] string? Note);
 
@@ -50,7 +51,7 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
     public async Task<List<BudgetPlanListDto>> Plans() =>
         await db.BudgetPlans.OrderByDescending(p => p.FromDate)
             .Select(p => new BudgetPlanListDto(p.Id, p.Name, p.FromDate, p.ToDate, p.Status, p.Positions.Sum(x => x.Headcount),
-                p.Positions.Sum(x => x.Headcount * x.MonthlyCost), p.Positions.Count)).ToListAsync();
+                p.Positions.Sum(x => x.Headcount * x.MonthlyCost), p.Positions.Count, new RecordStampsDto(p.CreatedAtUtc, p.CreatedBy, p.ModifiedAtUtc, p.ModifiedBy))).ToListAsync();
 
     [HttpGet("plans/{id:guid}"), Authorize(Policy = Policies.Hr)]
     public async Task<BudgetPlanDto> Plan(Guid id)
@@ -71,7 +72,8 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
         foreach (var x in p.Positions)
             db.BudgetPositions.Add(x);
         await db.SaveChangesAsync();
-        return new BudgetPlanListDto(p.Id, p.Name, p.FromDate, p.ToDate, p.Status, p.Positions.Sum(x => x.Headcount), p.Positions.Sum(x => x.Headcount * x.MonthlyCost), p.Positions.Count);
+        return new BudgetPlanListDto(p.Id, p.Name, p.FromDate, p.ToDate, p.Status, p.Positions.Sum(x => x.Headcount), p.Positions.Sum(x => x.Headcount * x.MonthlyCost), p.Positions.Count,
+            RecordStampsDto.Of(p));
     }
 
     [HttpPut("plans/{id:guid}"), Authorize(Policy = Policies.Hr)]
@@ -222,7 +224,8 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
         var editable = Editable.Contains(p.Status);
         return new BudgetPlanDto(p.Id, p.Name, p.FromDate, p.ToDate, p.Status, p.Notes, p.SubmittedAtUtc, p.DecidedByName, p.DecidedAtUtc, p.DecisionNote, lines, unplanned,
             lines.Sum(l => l.Headcount), lines.Sum(l => l.OnRoll), lines.Sum(l => l.Vacant), lines.Sum(l => l.Hiring), lines.Sum(l => l.BudgetCost), lines.Sum(l => l.ActualCost),
-            editable, p.Status == BudgetStatus.Submitted && me.IsCompanyAdmin(), p.Status == BudgetStatus.Approved && me.IsCompanyAdmin());
+            editable, p.Status == BudgetStatus.Submitted && me.IsCompanyAdmin(), p.Status == BudgetStatus.Approved && me.IsCompanyAdmin(),
+            RecordStampsDto.Of(p));
     }
 
     private record StaffGroup(Guid? DepartmentId, Guid? DesignationId, int Count, decimal Total, decimal Average);

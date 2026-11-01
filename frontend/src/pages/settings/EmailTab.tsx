@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Mail, Pencil } from 'lucide-react';
 import { http } from '../../api/client';
-import type { PagedResult } from '../../types';
+import type { PagedResult, RecordStamps } from '../../types';
 import {
   Badge,
   Button,
@@ -26,6 +26,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { formatDateTimeUtc, humanize } from '../../lib/format';
 import { tx } from '../../lib/i18n';
 
@@ -36,6 +37,8 @@ interface EmailTemplate {
   intro: string | null;
   enabled: boolean;
   isCustom: boolean;
+  /** Only for wording the company saved; standard wording has none. */
+  stamps: RecordStamps | null;
 }
 type LogStatus = 'Sent' | 'Failed' | 'OverQuota' | 'NotConfigured';
 interface EmailLog {
@@ -153,6 +156,7 @@ function TemplateModal({ template, onClose }: { template: EmailTemplate; onClose
         <Field label="Opening line" hint="Shown above the details, e.g. Dear {name},">
           <Textarea rows={3} value={intro} maxLength={2000} onChange={(e) => setIntro(e.target.value)} dir="auto" />
         </Field>
+        {template.stamps && <RecordStamp stamps={template.stamps} />}
       </div>
     </Modal>
   );

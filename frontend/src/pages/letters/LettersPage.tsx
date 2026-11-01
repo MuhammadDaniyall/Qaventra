@@ -35,6 +35,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { formatDate, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import type { LetterAutoUse, LetterCategory, LetterTemplate, SaveLetterTemplateRequest } from '../../types/workflows';
@@ -120,6 +121,7 @@ function IssuedList() {
               <Th>Subject</Th>
               <Th>Issued</Th>
               <Th>Visible to employee</Th>
+              <Th>Added / modified</Th>
             </tr>
           </THead>
           <TBody>
@@ -148,6 +150,9 @@ function IssuedList() {
                   ) : (
                     <Badge>HR only</Badge>
                   )}
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={l.stamps} />
                 </Td>
               </Tr>
             ))}
@@ -218,6 +223,7 @@ function TemplatesGrid({ onUse }: { onUse: (t: LetterTemplate) => void }) {
                 <p className="mt-2 line-clamp-3 flex-1 font-serif text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
                   <Highlighted text={t.body} />
                 </p>
+                <RecordStamp stamps={t.stamps} className="mt-3" />
                 <Button variant="secondary" size="sm" className="mt-4 self-start" disabled={!t.isActive} onClick={() => onUse(t)}>
                   Use template
                 </Button>
@@ -284,6 +290,7 @@ function TemplateModal({ template, onClose }: { template: LetterTemplate | null;
       }
     >
       <form id="template-form" onSubmit={submit} className="space-y-4">
+        {template && <RecordStamp stamps={template.stamps} />}
         <FormError message={error} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Template name" required>

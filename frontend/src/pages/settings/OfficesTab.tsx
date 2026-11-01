@@ -4,6 +4,7 @@ import { Crosshair, ExternalLink, MapPin, Plus } from 'lucide-react';
 import { setupApi } from '../../api/organization';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { Button, Card, CardHeader, EmptyState, ErrorState, Field, Input, SkeletonRows, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
 import { getCurrentPosition } from '../../lib/geo';
 import type { OfficeLocation } from '../../types';
@@ -43,6 +44,7 @@ export function OfficesTab() {
               <Th>Name</Th>
               <Th>Coordinates</Th>
               <Th className="text-end">Radius</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -64,6 +66,9 @@ export function OfficesTab() {
                   </a>
                 </Td>
                 <Td className="text-end tabular-nums">{o.radiusMeters} m</Td>
+                <Td>
+                  <RecordStampCell stamps={o.stamps} />
+                </Td>
                 <Td>
                   <RowActions history={{ type: 'OfficeLocation', id: o.id }} label={o.name} onEdit={() => setEditing(o)} onDelete={() => setDeleting(o)} />
                 </Td>
@@ -91,7 +96,7 @@ function OfficeModal({ item, onClose }: { item: OfficeLocation | null; onClose: 
   const [radius, setRadius] = useState(item ? String(item.radiusMeters) : '150');
   const [locating, setLocating] = useState(false);
   const { mutation, error, setError, fieldErrors, setFieldErrors } = useSaveMutation({
-    save: (b: Omit<OfficeLocation, 'id'>) => (item ? setupApi.updateOffice(item.id, b) : setupApi.createOffice(b)),
+    save: (b: Omit<OfficeLocation, 'id' | 'stamps'>) => (item ? setupApi.updateOffice(item.id, b) : setupApi.createOffice(b)),
     invalidate: [qk.offices, qk.attendanceToday],
     successMessage: item ? 'Office updated' : 'Office added',
     onSuccess: onClose,
@@ -148,6 +153,7 @@ function OfficeModal({ item, onClose }: { item: OfficeLocation | null; onClose: 
       <Field label="Radius (metres)" required hint="How far from this point a check-in is accepted (20–5000)." error={fieldErrors.radiusMeters}>
         <Input type="number" min={20} max={5000} value={radius} onChange={(e) => setRadius(e.target.value)} />
       </Field>
+      {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

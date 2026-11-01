@@ -5,6 +5,7 @@ import { Boxes, Package, Plus, Undo2 } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { assetsApi, type AssetRequest, type Assignment } from '../../api/assets';
 import { qk } from '../../api/keys';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Badge, Button, Card, CardHeader, ConfirmDialog, EmptyState, ErrorState, Field, FormError, Modal, PageHeader, SkeletonRows, Textarea, useToast } from '../../components/ui';
 import { formatDate, formatDateTimeUtc } from '../../lib/format';
 import { AssignmentCards, RequestAssetModal, requestLabel } from './shared';
@@ -104,6 +105,7 @@ function MyRequests({ requests }: { requests: AssetRequest[] }) {
                 {r.reason} · {formatDateTimeUtc(r.createdAtUtc)}
                 {r.decisionNote ? ` · ${r.decisionNote}` : ''}
               </p>
+              <RecordStamp stamps={r.stamps} className="mt-0.5" />
             </div>
             <Badge tone={r.status === 'Fulfilled' ? 'green' : r.status === 'Rejected' ? 'red' : r.status === 'Cancelled' ? 'gray' : 'amber'}>{requestLabel(r)}</Badge>
             {(r.status === 'Pending' || r.status === 'Approved') && (

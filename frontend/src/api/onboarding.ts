@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type OnboardingTaskCategory = 'Paperwork' | 'ItSetup' | 'Workspace' | 'Training' | 'Introduction' | 'Other';
 export type OnboardingAssignee = 'NewJoiner' | 'LineManager' | 'Buddy' | 'Hr' | 'SpecificEmployee';
@@ -40,9 +41,10 @@ export interface OnboardingTemplate {
   assetKitId: string | null;
   welcomeMessage: string | null;
   tasks: TemplateTask[];
+  stamps: RecordStamps;
 }
 
-export type SaveOnboardingTemplate = Omit<OnboardingTemplate, 'id'>;
+export type SaveOnboardingTemplate = Omit<OnboardingTemplate, 'id' | 'stamps'>;
 
 export interface OnboardingTask {
   id: string;
@@ -61,6 +63,7 @@ export interface OnboardingTask {
   canDo: boolean;
   /** "My tasks" only: who is being onboarded. */
   forEmployee: string | null;
+  stamps: RecordStamps;
 }
 
 export interface OnboardingSummary {
@@ -77,6 +80,7 @@ export interface OnboardingSummary {
   done: number;
   overdue: number;
   introduced: boolean;
+  stamps: RecordStamps;
 }
 
 export interface OnboardingDetail {

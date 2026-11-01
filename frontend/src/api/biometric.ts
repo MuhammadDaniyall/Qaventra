@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export interface BiometricDevice {
@@ -10,6 +11,7 @@ export interface BiometricDevice {
   isActive: boolean;
   lastSeenAtUtc: string | null;
   punchesReceived: number;
+  stamps: RecordStamps;
 }
 
 export interface SaveBiometricDevice {

@@ -19,7 +19,8 @@ public record PayrollRunDto(
     Guid Id, int Year, int Month, PayrollRunStatus Status, string TaxYearCode, DateTime ProcessedAtUtc, DateTime? FinalizedAtUtc,
     int Employees, decimal TotalGross, decimal TotalDeductions, decimal TotalNet, DateTime? SubmittedAtUtc, string? ApprovedByName, DateTime? ApprovedAtUtc,
     string? ApprovalNote, DateTime? DisbursedAtUtc, string? DisbursedVia, int Held,
-    PayFrequency Frequency = PayFrequency.Monthly, DateOnly PeriodStart = default, DateOnly PeriodEnd = default, string Label = "");
+    PayFrequency Frequency = PayFrequency.Monthly, DateOnly PeriodStart = default, DateOnly PeriodEnd = default, string Label = "",
+    RecordStampsDto? Stamps = null);
 
 /// <summary>A weekly, bi-weekly or semi-monthly period: any day inside it picks it.</summary>
 public record ProcessPeriodRequest(PayFrequency Frequency, DateOnly Date);
@@ -251,7 +252,7 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         r.Id, r.Year, r.Month, r.Status, r.TaxYearCode, r.ProcessedAtUtc, r.FinalizedAtUtc,
         r.Payslips.Count, r.TotalGross, r.TotalDeductions, r.TotalNet, r.SubmittedAtUtc, r.ApprovedByName, r.ApprovedAtUtc, r.ApprovalNote,
         r.DisbursedAtUtc, r.DisbursedVia, db.SalaryHolds.Count(h => h.Year == r.Year && h.Month == r.Month && h.ReleasedAtUtc == null),
-        r.Frequency, r.PeriodStart, r.PeriodEnd, "");
+        r.Frequency, r.PeriodStart, r.PeriodEnd, "", new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy));
 
     private static System.Linq.Expressions.Expression<Func<Payslip, PayslipSummaryDto>> SummaryDto() => p => new PayslipSummaryDto(
         p.Id, p.PayrollRun!.Year, p.PayrollRun.Month, p.PayrollRun.Status, p.EmployeeId, p.Employee!.EmployeeCode, p.Employee.FirstName + " " + p.Employee.LastName,

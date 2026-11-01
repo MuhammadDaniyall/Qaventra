@@ -34,6 +34,7 @@ import {
   Textarea,
   useToast,
 } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { relative } from '../helpdesk/shared';
@@ -196,6 +197,7 @@ export function JobPage() {
           </div>
         }
       />
+      <RecordStamp stamps={j.stamps} className="-mt-2 mb-4" />
 
       {j.status === 'Draft' && hr && (
         <div className="mb-4 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">

@@ -15,7 +15,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record InterviewQuestionDto(Guid? Id, [Required, StringLength(500)] string Text, [StringLength(100)] string? Category, [Range(1, 100)] int MaxMarks);
-public record InterviewTemplateDto(Guid Id, string Name, List<InterviewQuestionDto> Questions);
+public record InterviewTemplateDto(Guid Id, string Name, List<InterviewQuestionDto> Questions, RecordStampsDto Stamps);
 public record SaveInterviewTemplateRequest([Required, StringLength(150)] string Name, List<InterviewQuestionDto> Questions);
 
 public record QuestionMark(Guid QuestionId, int Marks);
@@ -45,7 +45,8 @@ public class RecruitmentExtrasController(HrmsDbContext db, RecruitmentService hi
     [HttpGet("interview-templates")]
     public async Task<List<InterviewTemplateDto>> Templates() =>
         (await db.InterviewTemplates.Include(t => t.Questions).OrderBy(t => t.Name).ToListAsync())
-        .Select(t => new InterviewTemplateDto(t.Id, t.Name, t.Questions.OrderBy(q => q.Order).Select(q => new InterviewQuestionDto(q.Id, q.Text, q.Category, q.MaxMarks)).ToList()))
+        .Select(t => new InterviewTemplateDto(t.Id, t.Name, t.Questions.OrderBy(q => q.Order).Select(q => new InterviewQuestionDto(q.Id, q.Text, q.Category, q.MaxMarks)).ToList(),
+            new RecordStampsDto(t.CreatedAtUtc, t.CreatedBy, t.ModifiedAtUtc, t.ModifiedBy)))
         .ToList();
 
     [HttpPost("interview-templates")]

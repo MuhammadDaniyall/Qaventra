@@ -6,6 +6,7 @@ import { errorMessage } from '../../api/client';
 import { useEmployeeLookup } from '../../api/hooks';
 import { helpdeskApi, PRIORITIES, TICKET_STATUS_LABELS, type TicketListItem, type TicketPriority, type TicketStatus } from '../../api/helpdesk';
 import { qk } from '../../api/keys';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { Badge, Button, Field, FormError, Input, Modal, Select, Table, TBody, Td, Textarea, Th, THead, Tr, useToast } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
@@ -64,6 +65,7 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
           <Th>Status</Th>
           <Th>Assignee</Th>
           <Th>Due</Th>
+          <Th>Added / modified</Th>
           <Th className="text-end">Updated</Th>
         </tr>
       </THead>
@@ -108,6 +110,9 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
               ) : (
                 <span className="text-zinc-500 dark:text-zinc-400">—</span>
               )}
+            </Td>
+            <Td>
+              <RecordStampCell stamps={t.stamps} />
             </Td>
             <Td className="text-end text-xs text-zinc-500" title={formatDateTimeUtc(t.lastActivityAtUtc)}>
               {relative(t.lastActivityAtUtc)}

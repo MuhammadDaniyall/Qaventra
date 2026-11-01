@@ -19,6 +19,7 @@ import {
   Switch,
   useToast,
 } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { formatCurrency, formatDate, todayIso } from '../../lib/format';
 import type { Salary, SalaryComponent, SalaryComponentKind } from '../../types';
 
@@ -111,6 +112,7 @@ function SalaryForm({ employeeId, current }: { employeeId: string; current: Sala
             }
           />
           <CardBody className="grid gap-4 sm:grid-cols-2">
+            {current?.stamps && <RecordStamp stamps={current.stamps} className="sm:col-span-2" />}
             <Field label="Basic salary (PKR / month)" required error={fieldErrors.basicSalary}>
               <Input type="number" min={0} step="1" inputMode="numeric" value={basic} onChange={(e) => setBasic(e.target.value)} />
             </Field>

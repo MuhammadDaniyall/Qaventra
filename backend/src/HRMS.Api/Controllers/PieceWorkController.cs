@@ -12,23 +12,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record PieceCategoryDto(Guid Id, string Name, int Items);
+public record PieceCategoryDto(Guid Id, string Name, int Items, RecordStampsDto Stamps);
 
 public record SavePieceCategoryRequest([Required, StringLength(100)] string Name);
 
-public record PieceItemDto(Guid Id, Guid? CategoryId, string? Category, string Name, string Unit, decimal Rate, decimal? DailyTarget, bool IsActive, int SpecialRates);
+public record PieceItemDto(Guid Id, Guid? CategoryId, string? Category, string Name, string Unit, decimal Rate, decimal? DailyTarget, bool IsActive, int SpecialRates, RecordStampsDto Stamps);
 
 public record SavePieceItemRequest(Guid? CategoryId, [Required, StringLength(150)] string Name, [Required, StringLength(30)] string Unit, decimal Rate, decimal? DailyTarget,
     bool IsActive = true);
 
-public record PieceRateDto(Guid Id, Guid EmployeeId, string EmployeeName, decimal Rate);
+public record PieceRateDto(Guid Id, Guid EmployeeId, string EmployeeName, decimal Rate, RecordStampsDto Stamps);
 
 public record SavePieceRateRequest(Guid EmployeeId, decimal Rate);
 
 public record PieceEntryDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, Guid ItemId, string Item, string Unit, DateOnly Date, decimal Quantity, decimal Rate,
     decimal Amount, decimal? Efficiency, string? Notes, string? EnteredByName, RequestStatus Status, string? DecidedByName, string? DecisionNote, bool Paid,
-    bool CanDecide, bool CanDelete);
+    bool CanDecide, bool CanDelete, RecordStampsDto Stamps);
 
 public record PieceLineRequest(Guid EmployeeId, decimal Quantity, [StringLength(500)] string? Notes);
 
@@ -54,7 +54,8 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
 
     [HttpGet("categories")]
     public async Task<List<PieceCategoryDto>> Categories() =>
-        await db.PieceCategories.OrderBy(c => c.Name).Select(c => new PieceCategoryDto(c.Id, c.Name, db.PieceItems.Count(i => i.CategoryId == c.Id))).ToListAsync();
+        await db.PieceCategories.OrderBy(c => c.Name).Select(c => new PieceCategoryDto(c.Id, c.Name, db.PieceItems.Count(i => i.CategoryId == c.Id),
+            new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy))).ToListAsync();
 
     [HttpPost("categories"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> AddCategory(SavePieceCategoryRequest req)
@@ -81,7 +82,8 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
     [HttpGet("items")]
     public async Task<List<PieceItemDto>> Items() =>
         await db.PieceItems.OrderBy(i => i.Name).Select(i => new PieceItemDto(i.Id, i.CategoryId, db.PieceCategories.Where(c => c.Id == i.CategoryId).Select(c => c.Name).FirstOrDefault(),
-            i.Name, i.Unit, i.Rate, i.DailyTarget, i.IsActive, db.PieceRates.Count(r => r.ItemId == i.Id))).ToListAsync();
+            i.Name, i.Unit, i.Rate, i.DailyTarget, i.IsActive, db.PieceRates.Count(r => r.ItemId == i.Id),
+            new RecordStampsDto(i.CreatedAtUtc, i.CreatedBy, i.ModifiedAtUtc, i.ModifiedBy))).ToListAsync();
 
     [HttpPost("items"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> AddItem(SavePieceItemRequest req)
@@ -116,7 +118,8 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
     [HttpGet("items/{id:guid}/rates"), Authorize(Policy = Policies.Hr)]
     public async Task<List<PieceRateDto>> Rates(Guid id) =>
         await db.PieceRates.Where(r => r.ItemId == id)
-            .Select(r => new PieceRateDto(r.Id, r.EmployeeId, db.Employees.Where(e => e.Id == r.EmployeeId).Select(e => e.FirstName + " " + e.LastName).First(), r.Rate)).ToListAsync();
+            .Select(r => new PieceRateDto(r.Id, r.EmployeeId, db.Employees.Where(e => e.Id == r.EmployeeId).Select(e => e.FirstName + " " + e.LastName).First(), r.Rate,
+                new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy))).ToListAsync();
 
     [HttpPut("items/{id:guid}/rates"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> SetRate(Guid id, SavePieceRateRequest req)
@@ -306,7 +309,8 @@ public class PieceWorkController(HrmsDbContext db, TenantClock clock, ICurrentUs
             var inTeam = team.Contains(e.EmployeeId);
             return new PieceEntryDto(e.Id, e.EmployeeId, r.Name, r.EmployeeCode, e.ItemId, r.Item, r.Unit, e.Date, e.Quantity, e.Rate, e.Amount,
                 r.DailyTarget is > 0 ? Math.Round(100 * e.Quantity / r.DailyTarget.Value, 0) : null, e.Notes, e.EnteredByName, e.Status, e.DecidedByName, e.DecisionNote,
-                e.PaidAtUtc != null, e.Status == RequestStatus.Pending && inTeam && e.EmployeeId != me.EmployeeId, CanDelete(e.EmployeeId, e.Status, e.PayrollRunId, inTeam));
+                e.PaidAtUtc != null, e.Status == RequestStatus.Pending && inTeam && e.EmployeeId != me.EmployeeId, CanDelete(e.EmployeeId, e.Status, e.PayrollRunId, inTeam),
+                RecordStampsDto.Of(e));
         }).ToList();
     }
 

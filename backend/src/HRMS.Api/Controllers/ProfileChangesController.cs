@@ -19,7 +19,7 @@ public record DecideProfileChangeRequest([StringLength(1000)] string? Note);
 
 public record ProfileChangeDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, IReadOnlyList<FieldChange> Changes, string? Reason,
-    RequestStatus Status, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote);
+    RequestStatus Status, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, RecordStampsDto Stamps);
 
 [ApiController]
 [Route("api/employees/profile-changes")]
@@ -79,9 +79,10 @@ public class ProfileChangesController(HrmsDbContext db, ProfileChangeService cha
         {
             r.Id, r.EmployeeId, r.Employee!.FirstName, r.Employee.LastName, r.Employee.EmployeeCode, r.ChangesJson, r.Reason,
             r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
+            Stamps = new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy),
         }).ToListAsync();
         return rows.Select(r => new ProfileChangeDto(
             r.Id, r.EmployeeId, $"{r.FirstName} {r.LastName}", r.EmployeeCode, ProfileChangeService.Read(r.ChangesJson), r.Reason,
-            r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote)).ToList();
+            r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote, r.Stamps)).ToList();
     }
 }

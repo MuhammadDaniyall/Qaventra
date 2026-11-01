@@ -27,6 +27,7 @@ import {
   Tabs,
   useToast,
 } from '../../components/ui';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { formatNumber, humanize } from '../../lib/format';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from '../settings/shared';
 import { EXPENSE_CATEGORIES } from './shared';
@@ -91,6 +92,7 @@ function Types() {
               <Th>Worked out</Th>
               <Th className="text-end">Per item</Th>
               <Th className="text-end">A year</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -112,6 +114,9 @@ function Types() {
                 <Td className="text-end tabular-nums">{t.perClaimLimit != null ? formatNumber(t.perClaimLimit) : '—'}</Td>
                 <Td className="text-end tabular-nums">{t.yearlyLimit != null ? formatNumber(t.yearlyLimit) : '—'}</Td>
                 <Td>
+                  <RecordStampCell stamps={t.stamps} />
+                </Td>
+                <Td>
                   <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
                 </Td>
               </Tr>
@@ -130,7 +135,7 @@ function TypeModal({ item, onClose }: { item: ExpenseType | null; onClose: () =>
   const grades = (lookups.data ?? []).filter((l) => l.kind === 'Grade');
   const [v, setV] = useState<SaveExpenseType>(
     item
-      ? (({ id: _id, ...rest }) => rest)(item)
+      ? (({ id: _id, stamps: _stamps, ...rest }) => rest)(item)
       : {
           name: '',
           category: 'Travel',
@@ -173,6 +178,7 @@ function TypeModal({ item, onClose }: { item: ExpenseType | null; onClose: () =>
         if (!Object.keys(fe).length) mutation.mutate(undefined);
       }}
     >
+      {item && <RecordStamp stamps={item.stamps} />}
       <div className="grid grid-cols-2 gap-3">
         <Field label="Name" required error={fieldErrors.name}>
           <Input value={v.name} maxLength={150} placeholder="Mileage, Hotel, Meals" onChange={(e) => set({ name: e.target.value })} />
@@ -285,6 +291,9 @@ function Distances() {
                 {r.fromCity} ↔ {r.toCity}
               </Td>
               <Td className="text-end tabular-nums">{formatNumber(r.km)} km</Td>
+              <Td>
+                <RecordStampCell stamps={r.stamps} />
+              </Td>
               <Td className="text-end">
                 <IconButton label="Delete" onClick={() => remove.mutate(r.id)}>
                   <Trash2 className="size-4" />
@@ -329,6 +338,7 @@ function Advances() {
             <Th className="text-end">Claimed</Th>
             <Th className="text-end">Open</Th>
             <Th>Status</Th>
+            <Th>Added / modified</Th>
             <Th />
           </tr>
         </THead>
@@ -344,6 +354,9 @@ function Advances() {
               <Td className="text-end tabular-nums">{a.closedAtUtc ? `recovered ${formatNumber(a.recovered)}` : formatNumber(a.outstanding)}</Td>
               <Td>
                 <StatusBadge status={a.closedAtUtc ? 'Closed' : a.status} />
+              </Td>
+              <Td>
+                <RecordStampCell stamps={a.stamps} />
               </Td>
               <Td className="text-end">
                 {a.status === 'Pending' && (

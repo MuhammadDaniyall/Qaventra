@@ -6,6 +6,7 @@ import { lettersApi } from '../../api/letters';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Button, Card, ConfirmDialog, ErrorState, PageHeader, PageSpinner, useToast } from '../../components/ui';
 import { formatDate } from '../../lib/format';
 import { useDocumentTitle } from '../../lib/hooks';
@@ -90,6 +91,7 @@ function LetterView({ l, back, hr }: { l: LetterDocument; back: { to: string; la
             </>
           }
         />
+        <RecordStamp stamps={l.stamps} className="mx-auto mb-3 max-w-[21cm]" />
       </div>
 
       <article

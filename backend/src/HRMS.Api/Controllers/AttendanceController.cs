@@ -17,7 +17,7 @@ public record ManualAttendanceRequest(Guid EmployeeId, DateOnly Date, TimeOnly C
 
 /// <summary>Times are company-local.</summary>
 public record AttendanceDto(Guid Id, Guid EmployeeId, DateOnly Date, DateTime CheckIn, DateTime? CheckOut, AttendanceStatus Status, AttendanceSource Source, int WorkedMinutes, string? Office, string? Note,
-    int LateMinutes = 0, int EarlyLeaveMinutes = 0, int BreakMinutes = 0);
+    int LateMinutes, int EarlyLeaveMinutes, int BreakMinutes, RecordStampsDto Stamps);
 
 /// <summary>Times are company-local; End is empty while the break is on.</summary>
 public record BreakDto(Guid Id, BreakKind Kind, DateTime Start, DateTime? End, int Minutes);
@@ -163,6 +163,7 @@ public class AttendanceController(HrmsDbContext db, AttendanceService attendance
     {
         var office = r.OfficeLocationId is { } id ? await db.OfficeLocations.Where(o => o.Id == id).Select(o => o.Name).FirstOrDefaultAsync() : null;
         return new AttendanceDto(r.Id, r.EmployeeId, r.Date, await clock.ToLocalAsync(r.CheckInUtc),
-            r.CheckOutUtc is { } o ? await clock.ToLocalAsync(o) : null, r.Status, r.Source, r.WorkedMinutes, office, r.Note, r.LateMinutes, r.EarlyLeaveMinutes, r.BreakMinutes);
+            r.CheckOutUtc is { } o ? await clock.ToLocalAsync(o) : null, r.Status, r.Source, r.WorkedMinutes, office, r.Note, r.LateMinutes, r.EarlyLeaveMinutes, r.BreakMinutes,
+            RecordStampsDto.Of(r));
     }
 }

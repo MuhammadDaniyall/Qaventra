@@ -30,6 +30,7 @@ import {
 import { formatCurrency, formatDateTimeUtc, monthLabel, monthName } from '../../lib/format';
 import type { PayFrequency, PayPeriod, PayrollRunDetail } from '../../types';
 import { WarningsPanel } from './WarningsPanel';
+import { RecordStampCell } from '../../components/RecordStamp';
 
 export function PayrollRunsPage() {
   const navigate = useNavigate();
@@ -92,6 +93,7 @@ export function PayrollRunsPage() {
                 <Th className="text-end">Deductions</Th>
                 <Th className="text-end">Net pay</Th>
                 <Th>Processed</Th>
+                <Th>Added / modified</Th>
               </tr>
             </THead>
             <TBody>
@@ -114,6 +116,7 @@ export function PayrollRunsPage() {
                   <Td className="text-end tabular-nums">{formatCurrency(r.totalDeductions)}</Td>
                   <Td className="text-end font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(r.totalNet)}</Td>
                   <Td>{formatDateTimeUtc(r.processedAtUtc)}</Td>
+                  <Td>{r.stamps ? <RecordStampCell stamps={r.stamps} /> : '—'}</Td>
                 </Tr>
               ))}
             </TBody>

@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type AnnouncementKind = 'News' | 'Policy' | 'Event';
 export type PollResultsVisibility = 'AfterVoting' | 'AfterClose' | 'HrOnly';
@@ -22,6 +23,7 @@ export interface Announcement {
   /** HR only. */
   readCount: number | null;
   audienceCount: number | null;
+  stamps: RecordStamps;
 }
 
 export interface SaveAnnouncement {
@@ -61,6 +63,7 @@ export interface Poll {
   resultsShown: boolean;
   totalVotes: number | null;
   audienceCount: number | null;
+  stamps: RecordStamps;
 }
 
 export interface CreatePoll {
@@ -85,6 +88,7 @@ export interface CustomField {
   isActive: boolean;
   /** How many employees have a value. */
   filled: number;
+  stamps: RecordStamps;
 }
 
 export interface SaveCustomField {

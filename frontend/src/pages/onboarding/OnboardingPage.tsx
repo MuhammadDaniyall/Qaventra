@@ -42,6 +42,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatDate, timeFromInput } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
@@ -114,6 +115,7 @@ function List({ status }: { status: 'InProgress' | 'Completed' }) {
             <Th>Joins</Th>
             <Th>Progress</Th>
             <Th>Template</Th>
+            <Th>Added / modified</Th>
           </tr>
         </THead>
         <TBody>
@@ -139,6 +141,9 @@ function List({ status }: { status: 'InProgress' | 'Completed' }) {
                   </div>
                 </Td>
                 <Td className="text-sm text-zinc-600 dark:text-zinc-300">{o.templateName}</Td>
+                <Td>
+                  <RecordStampCell stamps={o.stamps} />
+                </Td>
               </Tr>
             );
           })}
@@ -294,6 +299,7 @@ function Templates() {
                   {t.tasks.length} task{t.tasks.length === 1 ? '' : 's'}
                   {t.description ? ` · ${t.description}` : ''}
                 </p>
+                <RecordStamp stamps={t.stamps} className="mt-0.5" />
               </div>
               <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
             </li>
@@ -358,6 +364,7 @@ function TemplateModal({ item, onClose }: { item: OnboardingTemplate | null; onC
       }
     >
       <div className="space-y-5">
+        {item && <RecordStamp stamps={item.stamps} />}
         <FormError message={error} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Name" required>

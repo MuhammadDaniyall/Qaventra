@@ -9,6 +9,7 @@ import { qk } from '../../api/keys';
 import { setupApi } from '../../api/organization';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -315,6 +316,9 @@ function MineTab() {
       <Td>
         <StatusBadge status={b.status} label={b.status === 'CheckedIn' ? 'Checked in' : b.status === 'Released' ? 'Released (no check-in)' : undefined} />
       </Td>
+      <Td>
+        <RecordStampCell stamps={b.stamps} />
+      </Td>
       <Td className="text-end">
         {actions && (
           <div className="flex justify-end gap-2">
@@ -336,7 +340,7 @@ function MineTab() {
       <Card>
         <CardHeader title="Coming up" />
         {my.isLoading ? (
-          <SkeletonRows rows={3} cols={4} />
+          <SkeletonRows rows={3} cols={5} />
         ) : !upcoming.length ? (
           <EmptyState icon={CalendarCheck} title="No bookings" description="Pick a desk or room on the Book tab." />
         ) : (
@@ -560,6 +564,7 @@ function FloorModal({ item, onClose }: { item: Floor | null; onClose: () => void
       }
     >
       <div className="space-y-3">
+        {item && <RecordStamp stamps={item.stamps} />}
         <Field label="Office">
           <Select value={office} onChange={(e) => setOffice(e.target.value)}>
             {offices.data?.map((o) => (
@@ -631,7 +636,7 @@ function SpacesCard({ floor }: { floor: Floor }) {
         </Button>
       </div>
       {spaces.isLoading ? (
-        <SkeletonRows rows={4} cols={4} />
+        <SkeletonRows rows={4} cols={5} />
       ) : !spaces.data?.length ? (
         <EmptyState icon={Armchair} title="No desks or rooms yet" />
       ) : (
@@ -642,6 +647,7 @@ function SpacesCard({ floor }: { floor: Floor }) {
               <Th>Type</Th>
               <Th>Features</Th>
               <Th>Permanent for</Th>
+              <Th>Added / modified</Th>
               <Th />
             </Tr>
           </THead>
@@ -657,6 +663,9 @@ function SpacesCard({ floor }: { floor: Floor }) {
                 </Td>
                 <Td className="text-sm">{s.features ?? '—'}</Td>
                 <Td className="text-sm">{s.assignedTo ?? '—'}</Td>
+                <Td>
+                  <RecordStampCell stamps={s.stamps} />
+                </Td>
                 <Td>
                   <RowActions label={s.name} onEdit={() => setEditing(s)} onDelete={() => setDeleting(s)} />
                 </Td>
@@ -720,6 +729,7 @@ function SpaceModal({ floorId, item, onClose }: { floorId: string; item: Space |
       }
     >
       <div className="grid gap-3 sm:grid-cols-2">
+        {item && <RecordStamp stamps={item.stamps} className="sm:col-span-2" />}
         <Field label="Type">
           <Select value={f.kind} onChange={(e) => set('kind', e.target.value as SpaceKind)}>
             {(Object.keys(KIND_LABELS) as SpaceKind[]).map((k) => (

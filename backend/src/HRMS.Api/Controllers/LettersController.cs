@@ -14,7 +14,8 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record LetterTemplateDto(Guid Id, string Name, LetterCategory Category, string Subject, string Body, bool IsActive,
-    bool RequiresApproval = false, bool SelfService = false, LetterAutoUse? AutoUse = null, int MarginTopMm = 25, int MarginSideMm = 20, string? Footer = null);
+    bool RequiresApproval = false, bool SelfService = false, LetterAutoUse? AutoUse = null, int MarginTopMm = 25, int MarginSideMm = 20, string? Footer = null,
+    RecordStampsDto? Stamps = null);
 
 public record SaveLetterTemplateRequest(
     [Required, StringLength(150)] string Name,
@@ -52,13 +53,15 @@ public record IssueLetterRequest(
 public record IssuedLetterDto(
     Guid Id, string ReferenceNo, LetterCategory Category, string Subject, DateOnly IssuedOn,
     Guid EmployeeId, string EmployeeName, string EmployeeCode, string? IssuedByName, bool SharedWithEmployee,
-    LetterStatus Status = LetterStatus.Issued, bool Requested = false, string? RequestReason = null, DateTime CreatedAtUtc = default);
+    LetterStatus Status = LetterStatus.Issued, bool Requested = false, string? RequestReason = null, DateTime CreatedAtUtc = default,
+    RecordStampsDto? Stamps = null);
 
 public record LetterDocumentDto(
     Guid Id, string ReferenceNo, LetterCategory Category, string Subject, string Body, DateOnly IssuedOn,
     Guid EmployeeId, string EmployeeName, string EmployeeCode, string? Designation, string? IssuedByName,
     bool SharedWithEmployee, string CompanyName, string? CompanyAddress, string? CompanyPhone,
-    LetterStatus Status = LetterStatus.Issued, int MarginTopMm = 25, int MarginSideMm = 20, string? Footer = null);
+    LetterStatus Status = LetterStatus.Issued, int MarginTopMm = 25, int MarginSideMm = 20, string? Footer = null,
+    RecordStampsDto? Stamps = null);
 
 [ApiController]
 [Route("api/letters")]
@@ -74,7 +77,8 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
         await letters.EnsureDefaultTemplatesAsync();
         return await db.LetterTemplates.OrderBy(t => t.Category).ThenBy(t => t.Name)
             .Select(t => new LetterTemplateDto(t.Id, t.Name, t.Category, t.Subject, t.Body, t.IsActive, t.RequiresApproval, t.SelfService, t.AutoUse,
-                t.MarginTopMm, t.MarginSideMm, t.Footer)).ToListAsync();
+                t.MarginTopMm, t.MarginSideMm, t.Footer,
+                new RecordStampsDto(t.CreatedAtUtc, t.CreatedBy, t.ModifiedAtUtc, t.ModifiedBy))).ToListAsync();
     }
 
     [HttpPost("templates"), Authorize(Policy = Policies.Hr)]
@@ -85,7 +89,8 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
         await ApplyExtrasAsync(t, req);
         db.LetterTemplates.Add(t);
         await db.SaveChangesAsync();
-        return new LetterTemplateDto(t.Id, t.Name, t.Category, t.Subject, t.Body, t.IsActive);
+        return new LetterTemplateDto(t.Id, t.Name, t.Category, t.Subject, t.Body, t.IsActive, t.RequiresApproval, t.SelfService, t.AutoUse,
+            t.MarginTopMm, t.MarginSideMm, t.Footer, RecordStampsDto.Of(t));
     }
 
     [HttpPut("templates/{id:guid}"), Authorize(Policy = Policies.Hr)]
@@ -160,7 +165,8 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
         return new LetterDocumentDto(
             l.Id, l.ReferenceNo, l.Category, l.Subject, l.Body, l.IssuedOn, l.EmployeeId, l.Employee!.FullName,
             l.Employee.EmployeeCode, l.Employee.Designation?.Title, l.IssuedByName, l.SharedWithEmployee,
-            company.Name, LetterService.FullAddress(company.Address, company.City), company.Phone, l.Status, l.MarginTopMm, l.MarginSideMm, l.Footer);
+            company.Name, LetterService.FullAddress(company.Address, company.City), company.Phone, l.Status, l.MarginTopMm, l.MarginSideMm, l.Footer,
+            RecordStampsDto.Of(l));
     }
 
     // ---------- Self-service requests and approvals ----------
@@ -269,5 +275,6 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
     private static IQueryable<IssuedLetterDto> Project(IQueryable<IssuedLetter> q) =>
         q.OrderByDescending(l => l.IssuedOn).ThenByDescending(l => l.CreatedAtUtc).Select(l => new IssuedLetterDto(
             l.Id, l.ReferenceNo, l.Category, l.Subject, l.IssuedOn, l.EmployeeId,
-            l.Employee!.FirstName + " " + l.Employee.LastName, l.Employee.EmployeeCode, l.IssuedByName, l.SharedWithEmployee, l.Status, l.Requested, l.RequestReason, l.CreatedAtUtc));
+            l.Employee!.FirstName + " " + l.Employee.LastName, l.Employee.EmployeeCode, l.IssuedByName, l.SharedWithEmployee, l.Status, l.Requested, l.RequestReason, l.CreatedAtUtc,
+            new RecordStampsDto(l.CreatedAtUtc, l.CreatedBy, l.ModifiedAtUtc, l.ModifiedBy)));
 }

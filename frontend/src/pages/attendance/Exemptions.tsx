@@ -4,6 +4,7 @@ import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { exemptionsApi } from '../../api/leaveRules';
 import { Button, Card, CardHeader, Field, FormError, Input, Modal, StatusBadge, Table, TBody, Td, Textarea, Tr, useToast } from '../../components/ui';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { formatDate } from '../../lib/format';
 
 /** "Excuse" button for a late or half day, with the month's quota. */
@@ -83,6 +84,9 @@ export function MyExemptions() {
               <Td className="text-sm">
                 {x.reason}
                 {x.decisionNote && <p className="text-xs text-zinc-500 dark:text-zinc-400">“{x.decisionNote}”</p>}
+              </Td>
+              <Td>
+                <RecordStampCell stamps={x.stamps} />
               </Td>
               <Td>
                 <StatusBadge status={x.status} />

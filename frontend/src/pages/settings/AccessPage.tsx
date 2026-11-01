@@ -22,6 +22,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { roleLabel } from '../../lib/format';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from './shared';
 
@@ -72,6 +73,7 @@ export function AccessPage() {
                 <Th>Template</Th>
                 <Th>Modules</Th>
                 <Th className="text-end">Users</Th>
+                <Th>Added / modified</Th>
                 <Th className="text-end">
                   <span className="sr-only">Actions</span>
                 </Th>
@@ -92,6 +94,9 @@ export function AccessPage() {
                     </div>
                   </Td>
                   <Td className="text-end tabular-nums">{t.users}</Td>
+                  <Td>
+                    <RecordStampCell stamps={t.stamps} />
+                  </Td>
                   <Td>
                     <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
                   </Td>
@@ -196,6 +201,7 @@ function TemplateModal({ item, onClose }: { item: AccessTemplate | null; onClose
           ))}
         </div>
       </Field>
+      {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

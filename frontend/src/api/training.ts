@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type TrainingMode = 'Classroom' | 'Online' | 'OnTheJob' | 'External';
@@ -27,6 +28,7 @@ export interface TrainingCategory {
   id: string;
   name: string;
   programs: number;
+  stamps: RecordStamps;
 }
 
 export interface SaveProgram {
@@ -48,6 +50,7 @@ export interface TrainingProgram extends SaveProgram {
   category: string | null;
   sessions: number;
   completed: number;
+  stamps: RecordStamps;
 }
 
 export interface SaveSession {
@@ -81,6 +84,7 @@ export interface TrainingSession {
   completed: number;
   averageRating: number | null;
   canRun: boolean;
+  stamps: RecordStamps;
 }
 
 export interface Enrollment {
@@ -97,6 +101,7 @@ export interface Enrollment {
   trainerRating: number | null;
   wouldRecommend: boolean | null;
   feedbackComment: string | null;
+  stamps: RecordStamps;
 }
 
 export interface SessionDetail {
@@ -119,6 +124,7 @@ export interface MyTraining {
   completedOn: string | null;
   feedbackGiven: boolean;
   link: string | null;
+  stamps: RecordStamps;
 }
 
 export interface ComplianceCell {
@@ -153,6 +159,7 @@ export interface TrainingRequest {
   decisionNote: string | null;
   completedOn: string | null;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
 
 export interface TrainingReportRow {

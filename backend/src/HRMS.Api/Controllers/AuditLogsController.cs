@@ -9,7 +9,7 @@ namespace HRMS.Api.Controllers;
 
 public record AuditLogDto(
     long Id, DateTime TimestampUtc, AuditCategory Category, Guid? TenantId, string? CompanyName,
-    Guid? UserId, string? UserEmail, UserRole? Role, string Action, string? EntityType, string? EntityId,
+    Guid? UserId, string? UserEmail, UserRole? Role, Guid? EmployeeId, string? EmployeeName, string? EmployeeCode, string Action, string? EntityType, string? EntityId,
     string? Changes, string? Path, int? StatusCode, int? DurationMs, string? IpAddress, string? UserAgent, string? CorrelationId);
 
 public record PagedResult<T>(IReadOnlyList<T> Items, int Total, int Page, int PageSize);
@@ -25,6 +25,7 @@ public class AuditLogsController(HrmsDbContext db, ICurrentUser me) : Controller
         [FromQuery] AuditCategory? category,
         [FromQuery] Guid? tenantId,
         [FromQuery] string? user,
+        [FromQuery] string? employee,
         [FromQuery] string? action,
         [FromQuery] string? entityType,
         [FromQuery] DateTime? fromUtc,
@@ -49,6 +50,12 @@ public class AuditLogsController(HrmsDbContext db, ICurrentUser me) : Controller
 
         if (category is not null) q = q.Where(l => l.Category == category);
         if (!string.IsNullOrWhiteSpace(user)) q = q.Where(l => l.UserEmail!.Contains(user));
+        // Name or employee code, e.g. "Ali Raza" or "EMP-0042".
+        if (!string.IsNullOrWhiteSpace(employee))
+        {
+            employee = employee.Trim();
+            q = q.Where(l => l.EmployeeName!.Contains(employee) || l.EmployeeCode!.Contains(employee));
+        }
         if (!string.IsNullOrWhiteSpace(action)) q = q.Where(l => l.Action.Contains(action));
         if (!string.IsNullOrWhiteSpace(entityType)) q = q.Where(l => l.EntityType == entityType);
         if (fromUtc is not null) q = q.Where(l => l.TimestampUtc >= fromUtc);
@@ -62,7 +69,7 @@ public class AuditLogsController(HrmsDbContext db, ICurrentUser me) : Controller
             .Select(l => new AuditLogDto(
                 l.Id, l.TimestampUtc, l.Category, l.TenantId,
                 db.Tenants.Where(t => t.Id == l.TenantId).Select(t => t.Name).FirstOrDefault(),
-                l.UserId, l.UserEmail, l.Role, l.Action, l.EntityType, l.EntityId, l.Changes,
+                l.UserId, l.UserEmail, l.Role, l.EmployeeId, l.EmployeeName, l.EmployeeCode, l.Action, l.EntityType, l.EntityId, l.Changes,
                 l.Path, l.StatusCode, l.DurationMs, l.IpAddress, l.UserAgent, l.CorrelationId))
             .ToListAsync();
 

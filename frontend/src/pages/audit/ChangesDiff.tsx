@@ -10,8 +10,11 @@ function render(value: unknown) {
   return <span className="break-all">{String(value)}</span>;
 }
 
-/** Renders the audit `changes` JSON ({"Field":{"old":x,"new":y}}) as an old -> new table. */
-export function ChangesDiff({ changes }: { changes: string }) {
+/**
+ * Renders the audit `changes` JSON ({"Field":{"old":x,"new":y}}): an old -> new table for a modified record, and a
+ * single value column for an added (new values) or deleted (last values) one.
+ */
+export function ChangesDiff({ changes, action }: { changes: string; action?: string }) {
   const parsed = useMemo(() => {
     try {
       const obj = JSON.parse(changes) as Record<string, Change>;
@@ -27,6 +30,40 @@ export function ChangesDiff({ changes }: { changes: string }) {
     );
   }
   if (parsed.length === 0) return <p className="text-sm text-zinc-500 dark:text-zinc-400">No field changes recorded.</p>;
+
+  if (action === 'Created' || action === 'Deleted') {
+    const added = action === 'Created';
+    return (
+      <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+        <table className="w-full text-start text-sm">
+          <thead className="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+            <tr>
+              <th className="px-3 py-2 font-medium">Field</th>
+              <th className="px-3 py-2 font-medium">{added ? 'Value added' : 'Value when deleted'}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {parsed.map(([field, c]) => (
+              <tr key={field} className="align-top">
+                <td className="px-3 py-2 font-medium text-zinc-800 dark:text-zinc-200">{field}</td>
+                <td className="px-3 py-2">
+                  <span
+                    className={
+                      added
+                        ? 'rounded bg-emerald-50 px-1 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                        : 'rounded bg-red-50 px-1 text-red-700 dark:bg-red-500/10 dark:text-red-300'
+                    }
+                  >
+                    {render(c && typeof c === 'object' ? (added ? c.new : c.old) : undefined)}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return (
     <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">

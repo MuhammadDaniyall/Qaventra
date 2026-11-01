@@ -29,6 +29,7 @@ import { tx } from '../../lib/i18n';
 import type { Attendance, AttendanceStatus } from '../../types';
 import { MyAttendanceRequests, RequestAttendanceModal } from './AttendanceRequests';
 import { CheckInCard } from './CheckInCard';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { MyShiftRequests, ShiftRequestModal } from './ShiftRequests';
 
 const DOT: Record<AttendanceStatus, string> = {
@@ -135,6 +136,7 @@ export function MyAttendancePage() {
                       <Th>Worked</Th>
                       <Th>Office</Th>
                       <Th>Source</Th>
+                      <Th>Added / modified</Th>
                       <Th />
                     </tr>
                   </THead>
@@ -150,6 +152,9 @@ export function MyAttendancePage() {
                         <Td className="tabular-nums">{formatMinutes(r.workedMinutes)}</Td>
                         <Td>{r.office ?? '—'}</Td>
                         <Td title={r.note ?? undefined}>{r.source === 'Request' ? 'Approved request' : r.source}</Td>
+                        <Td>
+                          <RecordStampCell stamps={r.stamps} />
+                        </Td>
                         <Td className="text-end">
                           <ExcuseButton date={r.date} flag={r.status} early={r.earlyLeaveMinutes} />
                         </Td>

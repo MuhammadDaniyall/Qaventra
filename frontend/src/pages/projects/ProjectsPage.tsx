@@ -8,6 +8,7 @@ import { qk } from '../../api/keys';
 import { projectsApi, type Project, type ProjectStatus, type SaveProject, type SaveTask } from '../../api/projects';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -71,7 +72,7 @@ export function ProjectsPage() {
           <Checkbox label="Show closed" checked={showClosed} onChange={(e) => setShowClosed(e.target.checked)} />
         </div>
         {list.isLoading ? (
-          <SkeletonRows rows={5} cols={6} />
+          <SkeletonRows rows={5} cols={7} />
         ) : list.isError ? (
           <ErrorState error={list.error} onRetry={() => list.refetch()} />
         ) : !list.data?.length ? (
@@ -86,6 +87,7 @@ export function ProjectsPage() {
                 <Th>Tasks</Th>
                 <Th className="w-56">Hours</Th>
                 <Th>Status</Th>
+                <Th>Added / modified</Th>
               </tr>
             </THead>
             <TBody>
@@ -116,6 +118,9 @@ export function ProjectsPage() {
                     </Td>
                     <Td>
                       <Badge tone={STATUS_TONE[p.status]}>{p.status === 'OnHold' ? 'On hold' : p.status}</Badge>
+                    </Td>
+                    <Td>
+                      <RecordStampCell stamps={p.stamps} />
                     </Td>
                   </Tr>
                 );
@@ -213,6 +218,7 @@ function ProjectDrawer({ project, onClose, onCreated }: { project: Project | nul
         )
       }
     >
+      {project && <RecordStamp className="mb-4" stamps={project.stamps} />}
       <fieldset disabled={!editable} className="space-y-4">
         <FormError message={save.isError ? errorMessage(save.error) : null} />
         <div className="grid grid-cols-[1fr_8rem] gap-3">
@@ -359,7 +365,10 @@ function Tasks({ project }: { project: Project }) {
               >
                 {t.isDone ? <CheckCircle2 className="size-4 text-emerald-500" /> : <Circle className="size-4 text-zinc-500 dark:text-zinc-400" />}
               </button>
-              <span className={cn('flex-1', t.isDone && 'text-zinc-500 dark:text-zinc-400 line-through')}>{t.name}</span>
+              <span className="flex-1">
+                <span className={cn(t.isDone && 'text-zinc-500 dark:text-zinc-400 line-through')}>{t.name}</span>
+                <RecordStamp stamps={t.stamps} />
+              </span>
               <span className="text-xs text-zinc-500 dark:text-zinc-400">{t.assignee}</span>
               {t.dueDate && <span className="text-xs text-zinc-500 dark:text-zinc-400">due {formatDate(t.dueDate)}</span>}
               <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">

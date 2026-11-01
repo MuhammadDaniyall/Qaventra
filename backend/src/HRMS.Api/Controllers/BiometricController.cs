@@ -16,7 +16,7 @@ namespace HRMS.Api.Controllers;
 
 public record BiometricDeviceDto(
     Guid Id, string Name, string? SerialNumber, Guid? OfficeLocationId, string? Office, string TokenPrefix, bool IsActive,
-    DateTime? LastSeenAtUtc, int PunchesReceived);
+    DateTime? LastSeenAtUtc, int PunchesReceived, RecordStampsDto Stamps);
 
 /// <summary>The token is only ever returned here, when a device is added or its token is replaced.</summary>
 public record BiometricDeviceWithTokenDto(BiometricDeviceDto Device, string Token);
@@ -158,5 +158,6 @@ public class BiometricController(HrmsDbContext db, AttendanceService attendance,
         q.Select(d => new BiometricDeviceDto(
             d.Id, d.Name, d.SerialNumber, d.OfficeLocationId,
             db.OfficeLocations.Where(o => o.Id == d.OfficeLocationId).Select(o => o.Name).FirstOrDefault(),
-            d.TokenPrefix, d.IsActive, d.LastSeenAtUtc, d.PunchesReceived));
+            d.TokenPrefix, d.IsActive, d.LastSeenAtUtc, d.PunchesReceived,
+            new RecordStampsDto(d.CreatedAtUtc, d.CreatedBy, d.ModifiedAtUtc, d.ModifiedBy)));
 }

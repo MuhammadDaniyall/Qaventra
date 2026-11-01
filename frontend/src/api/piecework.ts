@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type PieceStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 
@@ -6,6 +7,7 @@ export interface PieceCategory {
   id: string;
   name: string;
   items: number;
+  stamps: RecordStamps;
 }
 
 export interface SavePieceItem {
@@ -21,6 +23,7 @@ export interface PieceItem extends SavePieceItem {
   id: string;
   category: string | null;
   specialRates: number;
+  stamps: RecordStamps;
 }
 
 export interface PieceRate {
@@ -28,6 +31,7 @@ export interface PieceRate {
   employeeId: string;
   employeeName: string;
   rate: number;
+  stamps: RecordStamps;
 }
 
 export interface PieceEntry {
@@ -51,6 +55,7 @@ export interface PieceEntry {
   paid: boolean;
   canDecide: boolean;
   canDelete: boolean;
+  stamps: RecordStamps;
 }
 
 export interface PieceSummaryRow {

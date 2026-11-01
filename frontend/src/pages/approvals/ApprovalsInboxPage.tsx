@@ -48,6 +48,7 @@ import { payApi } from '../../api/pay';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Avatar,
   Badge,
@@ -273,6 +274,7 @@ export function ApprovalsInboxPage() {
                   </div>
                   {expanded && (
                     <div className="space-y-4 border-t border-zinc-100 bg-zinc-50/60 px-5 py-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+                      <RecordStamp stamps={item.stamps} />
                       {item.requestType === 'ProfileChange' && <ProfileChangeDetails id={item.subjectId} />}
                       <ApprovalTimeline type={item.requestType} subjectId={item.subjectId} />
                     </div>

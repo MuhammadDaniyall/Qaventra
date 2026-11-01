@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Lock, Send } from 'lucide-react';
 import { qk } from '../../api/keys';
 import { performanceApi, POTENTIAL_LABELS, STAGE_LABELS } from '../../api/performance';
+import { RecordStampCell } from '../../components/RecordStamp';
 import { Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, Table, TBody, Td, Th, THead, Tr, useToast } from '../../components/ui';
 import { NineBox } from './shared';
 
@@ -106,6 +107,7 @@ export function CalibrationPage() {
               <Th className="text-end">Final</Th>
               <Th>Potential</Th>
               <Th className="text-end">Raise</Th>
+              <Th>Added / modified</Th>
             </tr>
           </THead>
           <TBody>
@@ -124,6 +126,9 @@ export function CalibrationPage() {
                 <Td className="text-end font-semibold tabular-nums">{r.finalRating ?? '—'}</Td>
                 <Td className="text-sm">{r.potential ? POTENTIAL_LABELS[r.potential] : '—'}</Td>
                 <Td className="text-end tabular-nums">{r.suggestedRaise !== null ? `${r.suggestedRaise}%` : '—'}</Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
+                </Td>
               </Tr>
             ))}
           </TBody>

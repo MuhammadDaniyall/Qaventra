@@ -26,6 +26,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { RecordStamp } from '../../components/RecordStamp';
 import { formatCurrency, formatDate } from '../../lib/format';
 
 /** Fraction to a percent string without float noise (0.11 → "11"). */
@@ -118,6 +119,7 @@ export function TaxYearsPage() {
                   ))}
                 </TBody>
               </Table>
+              <RecordStamp stamps={y.stamps} className="border-t border-zinc-100 px-5 py-3 dark:border-zinc-800" />
             </Card>
           ))}
         </div>
@@ -246,6 +248,7 @@ function TaxYearModal({ year, onClose }: { year: TaxYear | null; onClose: () => 
         }}
       >
         <FormError message={error} />
+        {year && <RecordStamp stamps={year.stamps} />}
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Code" hint="e.g. 2026-27" required>
             <Input value={code} onChange={(e) => setCode(e.target.value)} maxLength={10} />

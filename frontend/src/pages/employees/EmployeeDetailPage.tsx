@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, FolderOpen, GraduationCap, History, IdCard, KeyRound, Laptop, Palmtree, Phone, UserRound, UserRoundCheck, Wallet } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { RecordStamp } from '../../components/RecordStamp';
 import { ApiError, errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
@@ -81,6 +82,7 @@ export function EmployeeDetailPage() {
                 </div>
               ))}
             </dl>
+            <RecordStamp stamps={e.stamps} className="mt-4" />
           </div>
           {hr && (
             <div className="flex flex-wrap gap-2 sm:justify-end">

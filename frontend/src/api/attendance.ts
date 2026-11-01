@@ -1,4 +1,4 @@
-import type { Attendance, AttendanceBreak, BreakDay, BreakKind, DailyRow, ManualAttendanceRequest, PunchRequest, Today } from '../types';
+import type { Attendance, AttendanceBreak, BreakDay, BreakKind, DailyRow, ManualAttendanceRequest, PunchRequest, RecordStamps, Today } from '../types';
 import { http } from './client';
 
 export const attendanceApi = {
@@ -32,6 +32,7 @@ export interface AttendanceRequest {
   decisionNote: string | null;
   recordedCheckIn: string | null;
   recordedCheckOut: string | null;
+  stamps: RecordStamps;
 }
 
 export const attendanceRequestsApi = {

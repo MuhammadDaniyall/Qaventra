@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type PayrollGlLine =
@@ -14,6 +15,7 @@ export interface GlAccount {
   id: string;
   code: string;
   name: string;
+  stamps: RecordStamps;
 }
 
 export interface GlMapping {

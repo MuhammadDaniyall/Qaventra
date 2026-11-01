@@ -60,6 +60,17 @@ export interface ChangePasswordRequest {
 }
 
 // ---- Common ----
+/**
+ * Who added and last changed a record (RecordStampsDto on the API). The names are snapshots such as
+ * "Ali Raza (EMP-0042)", "Sara Khan (Owner)" or "System"; null on records older than the stamps.
+ */
+export interface RecordStamps {
+  createdAtUtc: string;
+  createdBy: string | null;
+  modifiedAtUtc: string | null;
+  modifiedBy: string | null;
+}
+
 export interface PagedResult<T> {
   items: T[];
   total: number;
@@ -104,6 +115,7 @@ export interface Company {
   adminName: string | null;
   adminEmail: string | null;
   lastActivityUtc: string | null;
+  stamps: RecordStamps;
 }
 
 export interface CompanyPlan {
@@ -126,6 +138,7 @@ export interface Payment {
   reference: string | null;
   notes: string | null;
   createdAtUtc: string;
+  stamps: RecordStamps;
 }
 
 export interface RecordPaymentRequest {
@@ -192,6 +205,10 @@ export interface AuditLog {
   userId: string | null;
   userEmail: string | null;
   role: UserRole | null;
+  /** The actor's employee record, when the login has one. */
+  employeeId: string | null;
+  employeeName: string | null;
+  employeeCode: string | null;
   action: string;
   entityType: string | null;
   entityId: string | null;
@@ -208,6 +225,8 @@ export interface AuditLogQuery {
   category?: AuditCategory | '';
   tenantId?: string;
   user?: string;
+  /** Employee name or code contains. */
+  employee?: string;
   action?: string;
   entityType?: string;
   fromUtc?: string;
@@ -224,6 +243,7 @@ export interface Department {
   employees: number;
   headEmployeeId: string | null;
   head: string | null;
+  stamps: RecordStamps;
 }
 export interface SaveDepartmentRequest {
   name: string;
@@ -235,6 +255,7 @@ export interface Designation {
   id: string;
   title: string;
   employees: number;
+  stamps: RecordStamps;
 }
 export interface SaveDesignationRequest {
   title: string;
@@ -247,8 +268,9 @@ export interface OfficeLocation {
   latitude: number;
   longitude: number;
   radiusMeters: number;
+  stamps: RecordStamps;
 }
-export type SaveOfficeLocationRequest = Omit<OfficeLocation, 'id'>;
+export type SaveOfficeLocationRequest = Omit<OfficeLocation, 'id' | 'stamps'>;
 
 export interface Shift {
   id: string;
@@ -267,8 +289,9 @@ export interface Shift {
   /** How early before the start check-in opens (null: any time). */
   earliestCheckInMinutes: number | null;
   breakMinutes: number;
+  stamps: RecordStamps;
 }
-export type SaveShiftRequest = Omit<Shift, 'id'>;
+export type SaveShiftRequest = Omit<Shift, 'id' | 'stamps'>;
 
 export interface Holiday {
   id: string;
@@ -280,8 +303,10 @@ export interface Holiday {
   religion: string | null;
   /** People who work that day anyway. */
   exemptEmployeeIds: string[];
+  /** Missing on the dashboard's upcoming-holidays list. */
+  stamps?: RecordStamps | null;
 }
-export type SaveHolidayRequest = Omit<Holiday, 'id'>;
+export type SaveHolidayRequest = Omit<Holiday, 'id' | 'stamps'>;
 
 export type LeaveAccrual = 'Upfront' | 'Monthly';
 export type LeaveDuration = 'FullDay' | 'HalfDay' | 'ShortLeave';
@@ -309,8 +334,9 @@ export interface LeaveType {
   sandwich: boolean;
   /** Longer requests need a supporting document before approval. */
   documentAfterDays: number | null;
+  stamps: RecordStamps;
 }
-export type SaveLeaveTypeRequest = Omit<LeaveType, 'id'>;
+export type SaveLeaveTypeRequest = Omit<LeaveType, 'id' | 'stamps'>;
 
 // ---- Employees ----
 export interface EmployeeListItem {
@@ -324,6 +350,7 @@ export interface EmployeeListItem {
   status: EmploymentStatus;
   joiningDate: string;
   hasLogin: boolean;
+  stamps: RecordStamps;
 }
 
 export interface Employee {
@@ -356,6 +383,7 @@ export interface Employee {
   userId: string | null;
   loginRole: UserRole | null;
   loginActive: boolean | null;
+  stamps: RecordStamps;
 }
 
 export interface SaveEmployeeRequest {
@@ -417,6 +445,8 @@ export interface JobChange {
   note: string | null;
   recordedByName: string | null;
   createdAtUtc: string;
+  /** Null on the employee's own view, which hides who recorded the change. */
+  stamps: RecordStamps | null;
 }
 
 export interface IssuedLogin {
@@ -451,6 +481,7 @@ export interface ProfileChange {
   createdAtUtc: string;
   decidedAtUtc: string | null;
   decisionNote: string | null;
+  stamps: RecordStamps;
 }
 
 export interface CreateLoginRequest {
@@ -477,6 +508,8 @@ export interface Salary {
   basicSalary: number;
   eobiApplicable: boolean;
   components: SalaryComponent[];
+  /** Sent by the API only; not part of the save request. */
+  stamps?: RecordStamps;
 }
 
 // ---- Attendance ----
@@ -496,6 +529,7 @@ export interface Attendance {
   lateMinutes: number;
   earlyLeaveMinutes: number;
   breakMinutes: number;
+  stamps: RecordStamps;
 }
 
 export type BreakKind = 'Lunch' | 'Prayer' | 'Tea' | 'Personal';
@@ -578,6 +612,7 @@ export interface LeaveRequest {
   /** Short leave only, "HH:mm:ss". */
   startTime: string | null;
   endTime: string | null;
+  stamps: RecordStamps;
 }
 
 export interface LeaveBalance {
@@ -640,6 +675,8 @@ export interface PayrollRun {
   periodEnd: string;
   /** "October 2026", or "Week 12–18 Oct 2026" for shorter periods. */
   label: string;
+  /** Null on the dashboard's last-payroll summary. */
+  stamps: RecordStamps | null;
 }
 
 export type PayFrequency = 'Monthly' | 'SemiMonthly' | 'BiWeekly' | 'Weekly';

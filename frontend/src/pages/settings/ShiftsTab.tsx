@@ -3,6 +3,7 @@ import { Clock, Plus } from 'lucide-react';
 import { setupApi } from '../../api/organization';
 import { useShifts } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -64,6 +65,7 @@ export function ShiftsTab() {
               <Th>Hours</Th>
               <Th className="text-end">Grace</Th>
               <Th>Weekly off</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -84,6 +86,9 @@ export function ShiftsTab() {
                 <Td className="text-end tabular-nums">{s.graceMinutes} min</Td>
                 <Td>{s.weeklyOffDays.length ? s.weeklyOffDays.map((d) => d.slice(0, 3)).join(', ') : 'None'}</Td>
                 <Td>
+                  <RecordStampCell stamps={s.stamps} />
+                </Td>
+                <Td>
                   <RowActions history={{ type: 'Shift', id: s.id }} label={s.name} onEdit={() => setEditing(s)} onDelete={s.isDefault ? undefined : () => setDeleting(s)} />
                 </Td>
               </Tr>
@@ -100,7 +105,7 @@ export function ShiftsTab() {
 function ShiftModal({ item, onClose }: { item: Shift | null; onClose: () => void }) {
   const [v, setV] = useState<SaveShiftRequest>(
     item
-      ? (({ id: _id, ...rest }) => rest)(item)
+      ? (({ id: _id, stamps: _stamps, ...rest }) => rest)(item)
       : {
           name: '',
           startTime: '09:00:00',
@@ -235,6 +240,7 @@ function ShiftModal({ item, onClose }: { item: Shift | null; onClose: () => void
         disabled={item?.isDefault}
         onChange={(e) => setV({ ...v, isDefault: e.target.checked })}
       />
+      {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

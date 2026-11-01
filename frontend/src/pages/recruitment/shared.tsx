@@ -20,6 +20,7 @@ import {
 } from '../../api/recruitment';
 import { Badge, Button, Checkbox, Field, FormError, Input, Modal, Select, Textarea, useToast } from '../../components/ui';
 import type { Tone } from '../../components/ui/Badge';
+import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { errorMessage } from '../../api/client';
 
@@ -283,6 +284,7 @@ export function JobPostModal({
       }
     >
       <div className="grid gap-4 sm:grid-cols-2">
+        {post && <RecordStamp stamps={post.stamps} className="sm:col-span-2" />}
         <Field label="Job title" required className="sm:col-span-2">
           <Input value={f.title} maxLength={150} onChange={(e) => set('title', e.target.value)} placeholder="Senior accountant" />
         </Field>

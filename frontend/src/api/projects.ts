@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type ProjectStatus = 'Active' | 'OnHold' | 'Closed';
 export type TimesheetStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected';
@@ -18,6 +19,7 @@ export interface ProjectTask {
   estimatedHours: number | null;
   isDone: boolean;
   loggedHours: number;
+  stamps: RecordStamps;
 }
 
 export interface Project {
@@ -41,6 +43,7 @@ export interface Project {
   canManage: boolean;
   /** Active, and open to all or the caller is on the team: the timesheet save accepts it. */
   canLog: boolean;
+  stamps: RecordStamps;
 }
 
 export interface SaveProject {
@@ -89,6 +92,8 @@ export interface Timesheet {
   totalMinutes: number;
   /** Minutes at work per day (yyyy-mm-dd) from attendance. */
   attendanceMinutes: Record<string, number>;
+  /** Null for a week with nothing saved yet. */
+  stamps: RecordStamps | null;
 }
 
 export const projectsApi = {

@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 
 export type ReviewSectionKind = 'Goals' | 'Competencies';
 export type ReviewStage = 'Goals' | 'GoalsSubmitted' | 'SelfReview' | 'ManagerReview' | 'Calibration' | 'SignOff' | 'Done';
@@ -37,6 +38,7 @@ export interface PerformanceTemplate {
   sections: ReviewSection[];
   selfReview: boolean;
   cycles: number;
+  stamps: RecordStamps;
 }
 
 export interface ReviewCycle {
@@ -54,6 +56,7 @@ export interface ReviewCycle {
   status: ReviewCycleStatus;
   reviews: number;
   byStage: Partial<Record<ReviewStage, number>>;
+  stamps: RecordStamps;
 }
 
 export interface SaveCycle {
@@ -114,6 +117,7 @@ export interface Review {
   isEmployee: boolean;
   isReviewer: boolean;
   isHr: boolean;
+  stamps: RecordStamps;
 }
 
 export interface ReviewListItem {
@@ -132,6 +136,7 @@ export interface ReviewListItem {
   potential: number | null;
   employeeAgrees: boolean | null;
   suggestedRaise: number | null;
+  stamps: RecordStamps;
 }
 
 export interface Calibration {

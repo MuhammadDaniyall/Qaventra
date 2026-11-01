@@ -8,6 +8,7 @@ import { useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -248,6 +249,7 @@ function Categories() {
               <Th>Types</Th>
               <Th className="text-end">Target</Th>
               <Th className="text-end">Open</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -276,6 +278,9 @@ function Categories() {
                 </Td>
                 <Td className="text-end tabular-nums">{c.targetHours} h</Td>
                 <Td className="text-end tabular-nums">{c.openTickets}</Td>
+                <Td>
+                  <RecordStampCell stamps={c.stamps} />
+                </Td>
                 <Td>
                   <RowActions label={c.name} onEdit={() => setEditing(c)} onDelete={() => setDeleting(c)} />
                 </Td>
@@ -359,6 +364,7 @@ function CategoryModal({ item, onClose }: { item: TicketCategory | null; onClose
     >
       <div className="grid gap-5 md:grid-cols-2">
         <div className="space-y-4">
+          {item && <RecordStamp stamps={item.stamps} />}
           <FormError message={error} />
           <Field label="Name" required>
             <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="IT support" />
@@ -446,6 +452,9 @@ function TypesModal({ category, onClose }: { category: TicketCategory; onClose: 
                     {t.agents.length ? t.agents.join(', ') : 'Category agents'}
                   </p>
                 </div>
+                <div className="ms-auto shrink-0">
+                  <RecordStampCell stamps={t.stamps} />
+                </div>
                 <RowActions label={t.name} onEdit={() => setEditing(t)} onDelete={() => setDeleting(t)} />
               </li>
             ))}
@@ -499,6 +508,7 @@ function TypeModal({ categoryId, item, onClose }: { categoryId: string; item: Ti
       }
     >
       <div className="space-y-4">
+        {item && <RecordStamp stamps={item.stamps} />}
         <FormError message={error} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Name" required>

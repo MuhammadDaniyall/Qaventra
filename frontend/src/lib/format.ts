@@ -39,6 +39,26 @@ export function formatDateTimeUtc(value: string | null | undefined): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const pkDateTime = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Karachi',
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+/** "3 Nov 2026, 10:42" for UTC timestamps, always in Pakistan time whatever the browser's timezone. */
+export function formatDateTimePk(value: string | null | undefined): string {
+  if (!value) return '—';
+  const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return value;
+  const p = Object.fromEntries(pkDateTime.formatToParts(d).map((x) => [x.type, x.value]));
+  return `${p.day} ${p.month} ${p.year}, ${p.hour}:${p.minute}`;
+}
+
 /** "09:14" from a company-local date-time ("2026-10-20T09:14:33") or a TimeOnly ("09:14:00"). */
 export function formatTime(value: string | null | undefined): string {
   if (!value) return '—';

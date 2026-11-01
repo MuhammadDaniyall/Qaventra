@@ -13,11 +13,11 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record AssetTypeDto(Guid Id, string Name, bool AllowMultiple, bool ReturnOnExit, List<Guid> HandlerIds, List<string> Handlers, bool IsActive,
-    int Total, int Available, int Assigned);
+    int Total, int Available, int Assigned, RecordStampsDto Stamps);
 
 public record SaveAssetTypeRequest([Required, StringLength(100)] string Name, bool AllowMultiple, bool ReturnOnExit, List<Guid>? HandlerIds, bool IsActive = true);
 
-public record AssetKitDto(Guid Id, string Name, List<Guid> TypeIds, List<string> Types);
+public record AssetKitDto(Guid Id, string Name, List<Guid> TypeIds, List<string> Types, RecordStampsDto Stamps);
 
 public record SaveAssetKitRequest([Required, StringLength(100)] string Name, [Required] List<Guid> TypeIds);
 
@@ -42,17 +42,17 @@ public record FulfillAssetRequest(Guid? AssetId, DateOnly On, AssetCondition Con
 public record AssetDto(
     Guid Id, string Tag, string Name, Guid TypeId, string Type, string? SerialNumber, DateOnly? PurchasedOn, decimal? Cost, DateOnly? WarrantyUntil,
     AssetCondition Condition, AssetStatus Status, string? Notes, Guid? HolderEmployeeId, string? Holder, Guid? AssignmentId, DateOnly? AssignedOn,
-    DateOnly? DueBack, bool IsOverdue, bool CanManage);
+    DateOnly? DueBack, bool IsOverdue, bool CanManage, RecordStampsDto Stamps);
 
 public record AssignmentDto(
     Guid Id, Guid AssetId, string Tag, string AssetName, string Type, string? SerialNumber, Guid EmployeeId, string EmployeeName, DateOnly AssignedOn,
     DateOnly? DueBack, DateOnly? ReturnedOn, AssetCondition ConditionOut, AssetCondition? ConditionIn, string? HandedOverByName, string? ReceivedByName,
-    string? Notes, bool IsOverdue, bool ReturnOnExit, bool ReturnRequested);
+    string? Notes, bool IsOverdue, bool ReturnOnExit, bool ReturnRequested, RecordStampsDto Stamps);
 
 public record AssetRequestDto(
     Guid Id, AssetRequestKind Kind, Guid EmployeeId, string EmployeeName, string EmployeeCode, Guid TypeId, string Type, Guid? AssignmentId,
     string? AssetLabel, string Reason, DateOnly? NeededBy, DateOnly? ReturnBy, AssetRequestStatus Status, DateTime CreatedAtUtc,
-    DateTime? DecidedAtUtc, string? DecisionNote, bool CanFulfill);
+    DateTime? DecidedAtUtc, string? DecisionNote, bool CanFulfill, RecordStampsDto Stamps);
 
 public record AssetDetailDto(AssetDto Asset, List<AssignmentDto> History);
 
@@ -82,7 +82,7 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
             var ids = HelpdeskService.Ids(t.HandlerIds);
             var c = counts.Where(x => x.TypeId == t.Id).ToList();
             return new AssetTypeDto(t.Id, t.Name, t.AllowMultiple, t.ReturnOnExit, ids, ids.Select(i => names.GetValueOrDefault(i) ?? "").ToList(), t.IsActive,
-                c.Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Available).Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Assigned).Sum(x => x.Count));
+                c.Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Available).Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Assigned).Sum(x => x.Count), RecordStampsDto.Of(t));
         }).ToList();
     }
 
@@ -124,7 +124,7 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
         return kits.Select(k =>
         {
             var ids = HelpdeskService.Ids(k.TypeIds).Where(types.ContainsKey).ToList();
-            return new AssetKitDto(k.Id, k.Name, ids, ids.Select(i => types[i]).ToList());
+            return new AssetKitDto(k.Id, k.Name, ids, ids.Select(i => types[i]).ToList(), RecordStampsDto.Of(k));
         }).ToList();
     }
 
@@ -352,9 +352,10 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
             a.Id, a.Tag, a.Name, a.TypeId, Type = a.Type!.Name, a.SerialNumber, a.PurchasedOn, a.Cost, a.WarrantyUntil, a.Condition, a.Status, a.Notes,
             Open = db.AssetAssignments.Where(x => x.AssetId == a.Id && x.ReturnedOn == null)
                 .Select(x => new { x.Id, x.EmployeeId, Name = x.Employee!.FirstName + " " + x.Employee.LastName, x.AssignedOn, x.DueBack }).FirstOrDefault(),
+            Stamps = new RecordStampsDto(a.CreatedAtUtc, a.CreatedBy, a.ModifiedAtUtc, a.ModifiedBy),
         }).ToListAsync();
         return rows.Select(r => new AssetDto(r.Id, r.Tag, r.Name, r.TypeId, r.Type, r.SerialNumber, r.PurchasedOn, r.Cost, r.WarrantyUntil, r.Condition, r.Status,
-            r.Notes, r.Open?.EmployeeId, r.Open?.Name, r.Open?.Id, r.Open?.AssignedOn, r.Open?.DueBack, r.Open?.DueBack < today, handled.Contains(r.TypeId))).ToList();
+            r.Notes, r.Open?.EmployeeId, r.Open?.Name, r.Open?.Id, r.Open?.AssignedOn, r.Open?.DueBack, r.Open?.DueBack < today, handled.Contains(r.TypeId), r.Stamps)).ToList();
     }
 
     private async Task<List<AssignmentDto>> ProjectAssignmentsAsync(IQueryable<AssetAssignment> q)
@@ -366,10 +367,11 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
             EmployeeName = a.Employee!.FirstName + " " + a.Employee.LastName, a.AssignedOn, a.DueBack, a.ReturnedOn, a.ConditionOut, a.ConditionIn,
             a.HandedOverByName, a.ReceivedByName, a.Notes, a.Asset.Type.ReturnOnExit,
             Requested = db.AssetRequests.Any(r => r.AssignmentId == a.Id && (r.Status == AssetRequestStatus.Pending || r.Status == AssetRequestStatus.Approved)),
+            Stamps = new RecordStampsDto(a.CreatedAtUtc, a.CreatedBy, a.ModifiedAtUtc, a.ModifiedBy),
         }).ToListAsync();
         return rows.Select(r => new AssignmentDto(r.Id, r.AssetId, r.Tag, r.Name, r.Type, r.SerialNumber, r.EmployeeId, r.EmployeeName, r.AssignedOn, r.DueBack,
             r.ReturnedOn, r.ConditionOut, r.ConditionIn, r.HandedOverByName, r.ReceivedByName, r.Notes, r.ReturnedOn == null && r.DueBack < today,
-            r.ReturnOnExit, r.Requested)).ToList();
+            r.ReturnOnExit, r.Requested, r.Stamps)).ToList();
     }
 
     private async Task<List<AssetRequestDto>> ProjectRequestsAsync(IQueryable<AssetRequest> q)
@@ -382,10 +384,11 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
             r.AssignmentId,
             Asset = db.AssetAssignments.Where(a => a.Id == r.AssignmentId).Select(a => a.Asset!.Name + " (" + a.Asset.Tag + ")").FirstOrDefault(),
             r.Reason, r.NeededBy, r.ReturnBy, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
+            Stamps = new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy),
         }).ToListAsync();
         return rows.Select(r => new AssetRequestDto(r.Id, r.Kind, r.EmployeeId, $"{r.FirstName} {r.LastName}", r.EmployeeCode, r.TypeId, r.Type ?? "", r.AssignmentId,
             r.Asset, r.Reason, r.NeededBy, r.ReturnBy, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
-            r.Status == AssetRequestStatus.Approved && handled.Contains(r.TypeId))).ToList();
+            r.Status == AssetRequestStatus.Approved && handled.Contains(r.TypeId), r.Stamps)).ToList();
     }
 
     private async Task ApplyAssetAsync(Asset a, SaveAssetRequest req)

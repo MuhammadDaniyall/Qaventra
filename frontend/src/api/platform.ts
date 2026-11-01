@@ -8,6 +8,7 @@ import type {
   Payment,
   PlatformStats,
   RecordPaymentRequest,
+  RecordStamps,
   Session,
   UpdateCompanyRequest,
 } from '../types';
@@ -49,9 +50,10 @@ export interface TaxYear {
   slabs: TaxSlab[];
   /** Payroll runs (all companies) that used this year. */
   payrolls: number;
+  stamps: RecordStamps;
 }
 
-export type SaveTaxYearRequest = Omit<TaxYear, 'id' | 'payrolls'>;
+export type SaveTaxYearRequest = Omit<TaxYear, 'id' | 'payrolls' | 'stamps'>;
 
 /** Salaried income tax years shared by every company; platform owner only. */
 export const taxYearsApi = {

@@ -7,6 +7,7 @@ import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { separationsApi } from '../../api/separations';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
   Avatar,
   Button,
@@ -83,6 +84,7 @@ export function SeparationDetailPage() {
             <Fact label="Notice period" value={`${s.noticePeriodDays} days`} />
             <Fact label="Reason" value={s.reason || '—'} />
           </dl>
+          <RecordStamp stamps={s.summary.stamps} />
         </CardBody>
       </Card>
 
@@ -297,6 +299,7 @@ function ClearanceCard({ s }: { s: Separation }) {
                   </>
                 )}
               </p>
+              <RecordStamp stamps={c.stamps} className="mt-0.5" />
             </div>
             {editable && (
               <IconButton

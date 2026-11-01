@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, HandCoins, Plus, Wallet } from 'lucide-react';
 import { qk } from '../../api/keys';
 import { payApi, PAY_KIND_LABELS, type PayRequest } from '../../api/pay';
+import { RecordStampCell } from '../../components/RecordStamp';
 import {
   Badge,
   Button,
@@ -125,6 +126,7 @@ function MonthItems() {
               <Th>Item</Th>
               <Th className="text-end">Amount</Th>
               <Th>Status</Th>
+              <Th>Added / modified</Th>
               <Th>
                 <span className="sr-only">Actions</span>
               </Th>
@@ -161,6 +163,9 @@ function MonthItems() {
                   ) : (
                     <StatusBadge status={r.status} />
                   )}
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={r.stamps} />
                 </Td>
                 <Td className="text-end">
                   {!r.paidAtUtc && (r.status === 'Approved' || r.status === 'Pending') && (
@@ -216,6 +221,7 @@ function Loans() {
               <Th>Repaid</Th>
               <Th className="text-end">Left</Th>
               <Th>Status</Th>
+              <Th>Added / modified</Th>
             </tr>
           </THead>
           <TBody>
@@ -244,6 +250,9 @@ function Loans() {
                 <Td className="text-end font-medium tabular-nums">{formatCurrency(l.remaining)}</Td>
                 <Td>
                   <StatusBadge status={l.status} label={l.status === 'Approved' && l.remaining <= 0 ? 'Repaid' : undefined} />
+                </Td>
+                <Td>
+                  <RecordStampCell stamps={l.stamps} />
                 </Td>
               </Tr>
             ))}

@@ -1,4 +1,5 @@
 import { http } from './client';
+import type { RecordStamps } from '../types';
 import type { ExpenseCategory } from '../types/workflows';
 
 export type ExpenseCalculation = 'Amount' | 'PerUnit' | 'Distance';
@@ -22,8 +23,9 @@ export interface ExpenseType {
   gradeIds: string[];
   isActive: boolean;
   gradeRates: ExpenseGradeRate[];
+  stamps: RecordStamps;
 }
-export type SaveExpenseType = Omit<ExpenseType, 'id'>;
+export type SaveExpenseType = Omit<ExpenseType, 'id' | 'stamps'>;
 
 export interface ExpenseTypeForMe {
   id: string;
@@ -43,6 +45,7 @@ export interface DistanceRoute {
   fromCity: string;
   toCity: string;
   km: number;
+  stamps: RecordStamps;
 }
 
 export interface ExpenseAdvance {
@@ -59,6 +62,7 @@ export interface ExpenseAdvance {
   recovered: number;
   createdAtUtc: string;
   decisionNote: string | null;
+  stamps: RecordStamps;
 }
 
 export const expenseSetupApi = {

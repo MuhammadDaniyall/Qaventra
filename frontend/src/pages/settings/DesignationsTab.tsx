@@ -3,6 +3,7 @@ import { Briefcase, Plus } from 'lucide-react';
 import { orgApi } from '../../api/organization';
 import { useDesignations } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
 import { Button, Card, CardHeader, EmptyState, ErrorState, Field, Input, SkeletonRows, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
 import type { Designation } from '../../types';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from './shared';
@@ -39,6 +40,7 @@ export function DesignationsTab() {
             <tr>
               <Th>Title</Th>
               <Th className="text-end">Employees</Th>
+              <Th>Added / modified</Th>
               <Th className="text-end">
                 <span className="sr-only">Actions</span>
               </Th>
@@ -49,6 +51,9 @@ export function DesignationsTab() {
               <Tr key={d.id}>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{d.title}</Td>
                 <Td className="text-end tabular-nums">{d.employees}</Td>
+                <Td>
+                  <RecordStampCell stamps={d.stamps} />
+                </Td>
                 <Td>
                   <RowActions history={{ type: 'Designation', id: d.id }} label={d.title} onEdit={() => setEditing(d)} onDelete={() => setDeleting(d)} />
                 </Td>
@@ -92,6 +97,7 @@ function DesignationModal({ item, onClose }: { item: Designation | null; onClose
       <Field label="Title" required error={fieldErrors.title}>
         <Input value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} placeholder="Software Engineer" />
       </Field>
+      {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>
   );
 }

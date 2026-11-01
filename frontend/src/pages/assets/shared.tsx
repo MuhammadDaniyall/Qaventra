@@ -5,6 +5,7 @@ import { errorMessage } from '../../api/client';
 import { ASSET_STATUS_LABELS, assetsApi, CONDITIONS, type AssetCondition, type AssetRequest, type AssetStatus, type Assignment } from '../../api/assets';
 import { useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { RecordStamp } from '../../components/RecordStamp';
 import { Badge, Button, Field, FormError, Input, Modal, Select, Textarea, useToast } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatDate, todayIso } from '../../lib/format';
@@ -95,6 +96,7 @@ export function AssignmentCards({ items, action }: { items: Assignment[]; action
             )}
             {a.notes && <div className="whitespace-pre-line text-zinc-500 dark:text-zinc-400">{a.notes}</div>}
           </dl>
+          <RecordStamp stamps={a.stamps} className="mt-2" />
           {(a.returnRequested || action) && (
             <div className="mt-3 flex items-center justify-between gap-2">
               {a.returnRequested ? <Badge tone="amber">Return requested</Badge> : <span />}

@@ -1,3 +1,4 @@
+import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export interface LeaveReason {
@@ -7,6 +8,7 @@ export interface LeaveReason {
   maxDays: number | null;
   requiresDocument: boolean;
   isActive: boolean;
+  stamps: RecordStamps;
 }
 
 export interface OpeningBalance {
@@ -36,12 +38,13 @@ export interface Exemption {
   createdAtUtc: string;
   decisionNote: string | null;
   checkIn: string | null;
+  stamps: RecordStamps;
 }
 
 export const leaveRulesApi = {
   reasons: () => http.get<LeaveReason[]>('/leave-rules/reasons'),
-  addReason: (b: Omit<LeaveReason, 'id'>) => http.post('/leave-rules/reasons', b),
-  updateReason: (id: string, b: Omit<LeaveReason, 'id'>) => http.put(`/leave-rules/reasons/${id}`, b),
+  addReason: (b: Omit<LeaveReason, 'id' | 'stamps'>) => http.post('/leave-rules/reasons', b),
+  updateReason: (id: string, b: Omit<LeaveReason, 'id' | 'stamps'>) => http.put(`/leave-rules/reasons/${id}`, b),
   deleteReason: (id: string) => http.del(`/leave-rules/reasons/${id}`),
   balances: (year: number) => http.get<OpeningBalance[]>('/leave-rules/balances', { year }),
   saveBalances: (year: number, lines: Array<{ employeeId: string; leaveTypeId: string; carriedForward: number; adjustment: number }>, note: string | null) =>
