@@ -63,6 +63,7 @@ const PayrollSettingsPage = lazy(() => import('./pages/payroll/PayrollSettingsPa
 const PayslipPage = lazy(() => import('./pages/payroll/PayslipPage').then((m) => ({ default: m.PayslipPage })));
 const CompanyDetailPage = lazy(() => import('./pages/platform/CompanyDetailPage').then((m) => ({ default: m.CompanyDetailPage })));
 const CompaniesPage = lazy(() => import('./pages/platform/CompaniesPage').then((m) => ({ default: m.CompaniesPage })));
+const TaxYearsPage = lazy(() => import('./pages/platform/TaxYearsPage').then((m) => ({ default: m.TaxYearsPage })));
 const PlatformDashboardPage = lazy(() => import('./pages/platform/PlatformDashboardPage').then((m) => ({ default: m.PlatformDashboardPage })));
 const MyPayPage = lazy(() => import('./pages/pay/MyPayPage').then((m) => ({ default: m.MyPayPage })));
 const PayAdjustmentsPage = lazy(() => import('./pages/pay/PayAdjustmentsPage').then((m) => ({ default: m.PayAdjustmentsPage })));
@@ -121,6 +122,7 @@ export default function App() {
               <Route path="/platform/companies" element={<CompaniesPage />} />
               <Route path="/platform/companies/:id" element={<CompanyDetailPage />} />
               <Route path="/platform/audit-logs" element={<AuditLogsPage />} />
+              <Route path="/platform/tax-years" element={<TaxYearsPage />} />
             </Route>
 
             {/* Company area */}

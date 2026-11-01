@@ -36,6 +36,37 @@ public class TaxCalculatorTests
         Assert.Equal(expected, TaxCalculator.AnnualTax(TaxYear2025_26(), income));
     }
 
+    /// <summary>Tax year 2026-27 salaried slabs, same as the seeded data (Finance Act 2026, no surcharge).</summary>
+    internal static TaxYear TaxYear2026_27() => new()
+    {
+        Code = "2026-27",
+        SurchargeThreshold = 10_000_000m,
+        SurchargeRate = 0m,
+        Slabs =
+        [
+            new() { FromAmount = 0, ToAmount = 600_000, FixedTax = 0, Rate = 0 },
+            new() { FromAmount = 600_000, ToAmount = 1_200_000, FixedTax = 0, Rate = 0.01m },
+            new() { FromAmount = 1_200_000, ToAmount = 2_200_000, FixedTax = 6_000, Rate = 0.11m },
+            new() { FromAmount = 2_200_000, ToAmount = 3_200_000, FixedTax = 116_000, Rate = 0.20m },
+            new() { FromAmount = 3_200_000, ToAmount = 4_100_000, FixedTax = 316_000, Rate = 0.25m },
+            new() { FromAmount = 4_100_000, ToAmount = 5_600_000, FixedTax = 541_000, Rate = 0.29m },
+            new() { FromAmount = 5_600_000, ToAmount = 7_000_000, FixedTax = 976_000, Rate = 0.32m },
+            new() { FromAmount = 7_000_000, ToAmount = null, FixedTax = 1_424_000, Rate = 0.35m },
+        ],
+    };
+
+    [Theory]
+    [InlineData(600_000, 0)]
+    [InlineData(2_000_000, 94_000)]
+    [InlineData(3_200_000, 316_000)]
+    [InlineData(5_000_000, 802_000)]
+    [InlineData(7_000_000, 1_424_000)]
+    [InlineData(12_000_000, 3_174_000)]
+    public void AnnualTax_follows_the_2026_27_slabs_without_surcharge(decimal income, decimal expected)
+    {
+        Assert.Equal(expected, TaxCalculator.AnnualTax(TaxYear2026_27(), income));
+    }
+
     [Fact]
     public void AnnualTax_adds_surcharge_above_ten_million()
     {

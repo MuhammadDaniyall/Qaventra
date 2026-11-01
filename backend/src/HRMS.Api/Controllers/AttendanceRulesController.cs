@@ -142,6 +142,7 @@ public class PenaltyService(HrmsDbContext db, ScheduleService schedules, TenantC
                     {
                         balance.Adjustment -= take;
                         balance.AdjustmentNote = $"Attendance penalty {monthStart:MMM yyyy}: {l.RuleName}";
+                        await leave.RefreshCarryForwardAsync(id, typeId, year);
                     }
                     charge.LeaveDays = take;
                     charge.PayDays = l.Days - take;
@@ -161,7 +162,10 @@ public class PenaltyService(HrmsDbContext db, ScheduleService schedules, TenantC
         {
             var balance = await db.LeaveBalances.FirstOrDefaultAsync(b => b.EmployeeId == c.EmployeeId && b.LeaveTypeId == c.LeaveTypeId && b.Year == year);
             if (balance is not null)
+            {
                 balance.Adjustment += c.LeaveDays;
+                await leave.RefreshCarryForwardAsync(c.EmployeeId, balance.LeaveTypeId, year);
+            }
         }
         db.PenaltyCharges.RemoveRange(charges);
         await db.SaveChangesAsync();

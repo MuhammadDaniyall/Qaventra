@@ -86,6 +86,7 @@ public class TimesheetService(HrmsDbContext db, ICurrentUser me, TenantClock clo
             {
                 TimesheetId = sheet.Id, Date = l.Date, ProjectId = l.ProjectId, TaskId = l.TaskId, Minutes = l.Minutes,
                 Note = string.IsNullOrWhiteSpace(l.Note) ? null : l.Note.Trim(),
+                HourlyRate = projects.First(x => x.Id == l.ProjectId).Members.FirstOrDefault(m => m.EmployeeId == employeeId)?.HourlyRate,
             });
         await db.SaveChangesAsync();
         return sheet;
@@ -174,7 +175,7 @@ public class ProjectsController(HrmsDbContext db, TimesheetService timesheets, A
     {
         var ids = list.Select(p => p.Id).ToList();
         var logged = await db.TimesheetLines.Where(l => ids.Contains(l.ProjectId))
-            .Join(db.Timesheets.Where(t => t.Status == TimesheetStatus.Submitted || t.Status == TimesheetStatus.Approved), l => l.TimesheetId, t => t.Id, (l, t) => new { l.ProjectId, l.TaskId, l.Minutes, t.EmployeeId })
+            .Join(db.Timesheets.Where(t => t.Status == TimesheetStatus.Submitted || t.Status == TimesheetStatus.Approved), l => l.TimesheetId, t => t.Id, (l, t) => new { l.ProjectId, l.TaskId, l.Minutes, l.HourlyRate, t.EmployeeId })
             .ToListAsync();
         var people = list.SelectMany(p => p.Members.Select(m => m.EmployeeId).Concat(p.Tasks.Where(t => t.AssigneeEmployeeId != null).Select(t => t.AssigneeEmployeeId!.Value))
                 .Concat(p.ManagerEmployeeId is { } m ? [m] : [])).Distinct().ToList();
@@ -182,8 +183,9 @@ public class ProjectsController(HrmsDbContext db, TimesheetService timesheets, A
         return list.Select(p =>
         {
             var mineLogged = logged.Where(l => l.ProjectId == p.Id).ToList();
+            // The rate saved with each line; lines saved without one use the person's current rate on the team.
             var rates = p.Members.ToDictionary(m => m.EmployeeId, m => m.HourlyRate ?? 0);
-            var cost = mineLogged.Sum(l => l.Minutes / 60m * rates.GetValueOrDefault(l.EmployeeId));
+            var cost = mineLogged.Sum(l => l.Minutes / 60m * (l.HourlyRate ?? rates.GetValueOrDefault(l.EmployeeId)));
             return new ProjectDto(p.Id, p.Name, p.Code, p.Client, p.Description, p.ManagerEmployeeId,
                 p.ManagerEmployeeId is { } m ? names.GetValueOrDefault(m) : null, p.StartDate, p.EndDate, p.BudgetHours, p.Billable, p.OpenToAll, p.Status,
                 p.Members.Select(x => new ProjectMemberDto(x.EmployeeId, names.GetValueOrDefault(x.EmployeeId), me.IsHr() || p.ManagerEmployeeId == me.EmployeeId ? x.HourlyRate : null)).OrderBy(x => x.Name).ToList(),

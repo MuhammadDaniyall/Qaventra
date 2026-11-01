@@ -177,7 +177,12 @@ static async Task SeedSuperAdminAsync(WebApplication app)
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<HrmsDbContext>();
     if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+    {
+        // Some migrations backfill from the audit trail, which can take longer than the default 30 seconds on a big table.
+        db.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
         await db.Database.MigrateAsync();
+        db.Database.SetCommandTimeout(null);
+    }
 
     var email = app.Configuration["SuperAdmin:Email"]?.Trim().ToLowerInvariant();
     var password = app.Configuration["SuperAdmin:Password"];

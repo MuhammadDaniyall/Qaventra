@@ -37,6 +37,16 @@ public class CandidateLetter : TenantEntity
     public string? Footer { get; set; }
 }
 
+/// <summary>
+/// The last reference number given for a prefix (e.g. HR/EXP/2026/). It only goes up, so a deleted letter's number
+/// is never given to another letter.
+/// </summary>
+public class LetterSequence : TenantEntity
+{
+    public string Prefix { get; set; } = "";
+    public int Last { get; set; }
+}
+
 /// <summary>A letter issued to one employee. Subject and body are stored as issued and never re-rendered.</summary>
 public class IssuedLetter : TenantEntity
 {

@@ -72,6 +72,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ExpenseType> ExpenseTypes => Set<ExpenseType>();
     public DbSet<ClearanceTemplate> ClearanceTemplates => Set<ClearanceTemplate>();
     public DbSet<CandidateLetter> CandidateLetters => Set<CandidateLetter>();
+    public DbSet<LetterSequence> LetterSequences => Set<LetterSequence>();
     public DbSet<InterviewTemplate> InterviewTemplates => Set<InterviewTemplate>();
     public DbSet<InterviewQuestion> InterviewQuestions => Set<InterviewQuestion>();
     public DbSet<ClearanceTemplateItem> ClearanceTemplateItems => Set<ClearanceTemplateItem>();
@@ -274,6 +275,13 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.IssuedByName).HasMaxLength(150);
             e.Property(x => x.Footer).HasMaxLength(500);
             e.HasOne<JobApplication>().WithMany().HasForeignKey(x => x.ApplicationId);
+            e.HasIndex(x => new { x.TenantId, x.ReferenceNo }).IsUnique();
+        });
+
+        b.Entity<LetterSequence>(e =>
+        {
+            e.Property(x => x.Prefix).HasMaxLength(40);
+            e.HasIndex(x => new { x.TenantId, x.Prefix }).IsUnique();
         });
 
         b.Entity<ClearanceTemplate>(e =>
@@ -416,6 +424,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         b.Entity<TimesheetLine>(e =>
         {
             e.Property(x => x.Note).HasMaxLength(500);
+            e.Property(x => x.HourlyRate).HasPrecision(18, 2);
             e.HasOne<Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.NoAction);
             e.HasOne<ProjectTask>().WithMany().HasForeignKey(x => x.TaskId).OnDelete(DeleteBehavior.NoAction);
         });
@@ -1440,6 +1449,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             e.HasIndex(x => new { x.JobPostId, x.CandidateId }).IsUnique();
             e.HasIndex(x => new { x.TenantId, x.Stage });
+            e.HasIndex(x => x.ReferredByEmployeeId);
             e.Property(x => x.CoverLetter).HasMaxLength(4000);
             e.Property(x => x.RejectionReason).HasMaxLength(500);
             e.Property(x => x.OfferNote).HasMaxLength(2000);
@@ -1621,40 +1631,63 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     private static string? Truncate(string? value, int max) => value is { Length: > 0 } && value.Length > max ? value[..max] : value;
 
     /// <summary>
-    /// Salaried slabs for tax year 2025-26 (Finance Act 2025), including the 9% surcharge above Rs 10 million.
-    /// Add each new tax year's slabs after the federal budget; payroll uses the latest year that has started.
+    /// Salaried income tax years and slabs, one <see cref="SeedTaxYear"/> call per year. Add each new year after the
+    /// federal budget with a new migration (the platform owner can also add one under Tax years); payroll uses the latest
+    /// year that has started.
     /// </summary>
     private static void SeedTaxYears(ModelBuilder b)
     {
-        var ty2526 = new Guid("6a1f1c2e-0001-4000-8000-000000002526");
+        // 2025-26, Finance Act 2025: 9% surcharge above Rs 10 million.
+        SeedTaxYear(b, 2025, surchargeThreshold: 10_000_000m, surchargeRate: 0.09m,
+            (0m, 600_000m, 0m, 0m),
+            (600_000m, 1_200_000m, 0m, 0.01m),
+            (1_200_000m, 2_200_000m, 6_000m, 0.11m),
+            (2_200_000m, 3_200_000m, 116_000m, 0.23m),
+            (3_200_000m, 4_100_000m, 346_000m, 0.30m),
+            (4_100_000m, null, 616_000m, 0.35m));
+
+        // 2026-27, Finance Act 2026: the surcharge for salaried individuals is abolished.
+        SeedTaxYear(b, 2026, surchargeThreshold: 10_000_000m, surchargeRate: 0m,
+            (0m, 600_000m, 0m, 0m),
+            (600_000m, 1_200_000m, 0m, 0.01m),
+            (1_200_000m, 2_200_000m, 6_000m, 0.11m),
+            (2_200_000m, 3_200_000m, 116_000m, 0.20m),
+            (3_200_000m, 4_100_000m, 316_000m, 0.25m),
+            (4_100_000m, 5_600_000m, 541_000m, 0.29m),
+            (5_600_000m, 7_000_000m, 976_000m, 0.32m),
+            (7_000_000m, null, 1_424_000m, 0.35m));
+    }
+
+    /// <summary>
+    /// One July–June tax year starting in <paramref name="startYear"/>, with its slabs in order (To is null for the top
+    /// slab; Rate is a fraction of the income above From). Ids are fixed from the year, e.g. 2025-26 is
+    /// 6a1f1c2e-0001-4000-8000-000000002526 and its slabs 6a1f1c2e-0002-4000-8000-0000000025NN.
+    /// </summary>
+    private static void SeedTaxYear(ModelBuilder b, int startYear, decimal surchargeThreshold, decimal surchargeRate,
+        params (decimal From, decimal? To, decimal FixedTax, decimal Rate)[] slabs)
+    {
+        var (yy, next) = (startYear % 100, (startYear + 1) % 100);
+        var id = new Guid($"6a1f1c2e-0001-4000-8000-00000000{yy:D2}{next:D2}");
+        var created = new DateTime(startYear, 7, 1, 0, 0, 0, DateTimeKind.Utc);
         b.Entity<TaxYear>().HasData(new
         {
-            Id = ty2526,
-            CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc),
-            Code = "2025-26",
-            StartDate = new DateOnly(2025, 7, 1),
-            EndDate = new DateOnly(2026, 6, 30),
-            SurchargeThreshold = 10_000_000m,
-            SurchargeRate = 0.09m,
+            Id = id,
+            CreatedAtUtc = created,
+            Code = $"{startYear}-{next:D2}",
+            StartDate = new DateOnly(startYear, 7, 1),
+            EndDate = new DateOnly(startYear + 1, 6, 30),
+            SurchargeThreshold = surchargeThreshold,
+            SurchargeRate = surchargeRate,
         });
-
-        object Slab(int n, decimal from, decimal? to, decimal fixedTax, decimal rate) => new
+        b.Entity<TaxSlab>().HasData(slabs.Select((s, i) => new
         {
-            Id = new Guid($"6a1f1c2e-0002-4000-8000-0000000025{n:D2}"),
-            CreatedAtUtc = new DateTime(2025, 7, 1, 0, 0, 0, DateTimeKind.Utc),
-            TaxYearId = ty2526,
-            FromAmount = from,
-            ToAmount = to,
-            FixedTax = fixedTax,
-            Rate = rate,
-        };
-
-        b.Entity<TaxSlab>().HasData(
-            Slab(1, 0m, 600_000m, 0m, 0m),
-            Slab(2, 600_000m, 1_200_000m, 0m, 0.01m),
-            Slab(3, 1_200_000m, 2_200_000m, 6_000m, 0.11m),
-            Slab(4, 2_200_000m, 3_200_000m, 116_000m, 0.23m),
-            Slab(5, 3_200_000m, 4_100_000m, 346_000m, 0.30m),
-            Slab(6, 4_100_000m, null, 616_000m, 0.35m));
+            Id = new Guid($"6a1f1c2e-0002-4000-8000-00000000{yy:D2}{i + 1:D2}"),
+            CreatedAtUtc = created,
+            TaxYearId = id,
+            FromAmount = s.From,
+            ToAmount = s.To,
+            FixedTax = s.FixedTax,
+            Rate = s.Rate,
+        }).ToArray<object>());
     }
 }

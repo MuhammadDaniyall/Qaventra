@@ -55,7 +55,7 @@ SuperAdmin sees all companies' logs; a CompanyAdmin sees only their own company'
 
 ## Payroll rules (verify before going live)
 
-- Salaried income tax slabs for **tax year 2025-26** are seeded, including the 9% surcharge above Rs 10 million. Add each new year's slabs after the federal budget (`TaxYears` / `TaxSlabs` tables). If a month has no matching tax year, payroll uses the latest one and shows a warning.
+- Salaried income tax slabs for **tax years 2025-26** (with the 9% surcharge above Rs 10 million) and **2026-27** (Finance Act 2026, surcharge abolished for salaried individuals) are seeded. Add each new year's slabs after the federal budget: the SuperAdmin does it under **Tax years** (`/platform/tax-years`), or a developer seeds it in `HrmsDbContext.SeedTaxYears`. If a month has no matching tax year, payroll uses the latest slabs and shows a warning, but still counts year-to-date tax and adjustments within the month's own July–June year.
 - EOBI defaults to Rs 400 employee / Rs 2,000 employer per month. Change them in Payroll settings to match the current EOBI notification.
 - Earnings are prorated by calendar days; unpaid leave (and optionally absent days) reduce paid days. Fixed deductions such as loans are not prorated.
 - Tax is withheld monthly as the annualised tax on the month's taxable earnings divided by 12. It does not yet adjust for tax already deducted earlier in the year.

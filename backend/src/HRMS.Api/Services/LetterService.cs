@@ -48,14 +48,12 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         var (renderedSubject, renderedBody) = await RenderAsync(employeeId, subject, body, extra);
         var date = issuedOn ?? await clock.TodayAsync();
         var prefix = $"HR/{LetterRenderer.CategoryCode(category)}/{date.Year}/";
-        var taken = await db.IssuedLetters.Where(l => l.ReferenceNo.StartsWith(prefix)).Select(l => l.ReferenceNo).ToListAsync();
-        var next = taken.Select(r => int.TryParse(r[prefix.Length..], out var n) ? n : 0).DefaultIfEmpty(0).Max() + 1;
 
         var letter = new IssuedLetter
         {
             EmployeeId = employeeId,
             Category = category,
-            ReferenceNo = $"{prefix}{next:D4}",
+            ReferenceNo = await NextReferenceAsync(prefix, db.IssuedLetters.Select(l => l.ReferenceNo)),
             Subject = renderedSubject.Trim(),
             Body = renderedBody.Trim(),
             IssuedOn = date,
@@ -150,18 +148,34 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             ["Today"] = LongDate(today),
         };
         db.CandidateLetters.RemoveRange(await db.CandidateLetters.Where(c => c.ApplicationId == app.Id).ToListAsync());
-        var prefix = $"HR/OFR/{today.Year}/C";
-        // Highest number so far (not a count), so a re-issued offer never repeats another's number.
-        var taken = (await db.CandidateLetters.Where(l => l.ReferenceNo.StartsWith(prefix)).Select(l => l.ReferenceNo).ToListAsync())
-            .Select(r => int.TryParse(r[prefix.Length..], out var n) ? n : 0).DefaultIfEmpty(0).Max();
         var letter = new CandidateLetter
         {
-            ApplicationId = app.Id, CandidateName = values["CandidateName"]!, ReferenceNo = $"{prefix}{taken + 1:D4}",
+            ApplicationId = app.Id, CandidateName = values["CandidateName"]!,
+            ReferenceNo = await NextReferenceAsync($"HR/OFR/{today.Year}/C", db.CandidateLetters.Select(l => l.ReferenceNo)),
             Subject = LetterRenderer.Render(t.Subject, values).Trim(), Body = LetterRenderer.Render(t.Body, values).Trim(), IssuedOn = today,
             IssuedByName = await CurrentUserNameAsync(db, me), MarginTopMm = t.MarginTopMm, MarginSideMm = t.MarginSideMm, Footer = t.Footer,
         };
         db.CandidateLetters.Add(letter);
         return letter;
+    }
+
+    /// <summary>
+    /// The next reference for the prefix: one past the highest ever given (the company's counter) or still on file,
+    /// so the number of a deleted or replaced letter is never given again. The counter is saved with the letter.
+    /// </summary>
+    private async Task<string> NextReferenceAsync(string prefix, IQueryable<string> references)
+    {
+        var highest = (await references.Where(r => r.StartsWith(prefix)).ToListAsync())
+            .Select(r => int.TryParse(r[prefix.Length..], out var n) ? n : 0).DefaultIfEmpty(0).Max();
+        var sequence = db.LetterSequences.Local.FirstOrDefault(s => s.Prefix == prefix)
+            ?? await db.LetterSequences.FirstOrDefaultAsync(s => s.Prefix == prefix);
+        if (sequence is null)
+        {
+            sequence = new LetterSequence { Prefix = prefix };
+            db.LetterSequences.Add(sequence);
+        }
+        sequence.Last = Math.Max(sequence.Last, highest) + 1;
+        return $"{prefix}{sequence.Last:D4}";
     }
 
     private async Task<Dictionary<string, string?>> ValuesForAsync(Guid employeeId)

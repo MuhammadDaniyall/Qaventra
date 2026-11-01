@@ -44,6 +44,26 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         await db.SaveChangesAsync();
     }
 
+    /// <summary>
+    /// After a year's balance changes (leave approved or cancelled, an adjustment, a comp-off), brings the carry-forward
+    /// of the years after it up to date. Stops at a year HR set by hand, or at the first year with no row yet.
+    /// Call it before SaveChanges; it works on the tracked rows.
+    /// </summary>
+    public async Task RefreshCarryForwardAsync(Guid employeeId, Guid leaveTypeId, int year)
+    {
+        var max = await db.LeaveTypes.Where(t => t.Id == leaveTypeId).Select(t => t.CarryForwardMax).FirstOrDefaultAsync();
+        var previous = await db.LeaveBalances.FirstOrDefaultAsync(b => b.EmployeeId == employeeId && b.LeaveTypeId == leaveTypeId && b.Year == year);
+        while (previous is not null)
+        {
+            var nextYear = previous.Year + 1;
+            var next = await db.LeaveBalances.FirstOrDefaultAsync(b => b.EmployeeId == employeeId && b.LeaveTypeId == leaveTypeId && b.Year == nextYear);
+            if (next is null || next.CarryForwardOverridden)
+                return;
+            next.CarriedForward = LeavePolicy.CarryForward(previous.Remaining, max);
+            previous = next;
+        }
+    }
+
     public record BalanceView(LeaveBalance Balance, LeaveType Type, decimal Earned, decimal Pending, decimal Available);
 
     /// <summary>Balances with what is earned so far (monthly accrual), pending requests and what can still be applied for.</summary>
@@ -247,6 +267,7 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             await EnsureBalancesAsync(request.EmployeeId, request.FromDate.Year);
             var balance = await db.LeaveBalances.FirstAsync(b => b.EmployeeId == request.EmployeeId && b.LeaveTypeId == request.LeaveTypeId && b.Year == request.FromDate.Year);
             balance.Used += request.Days;
+            await RefreshCarryForwardAsync(request.EmployeeId, request.LeaveTypeId, request.FromDate.Year);
         }
         await db.SaveChangesAsync();
     }
@@ -272,6 +293,7 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             {
                 var balance = await db.LeaveBalances.FirstAsync(b => b.EmployeeId == request.EmployeeId && b.LeaveTypeId == request.LeaveTypeId && b.Year == request.FromDate.Year);
                 balance.Used -= request.Days;
+                await RefreshCarryForwardAsync(request.EmployeeId, request.LeaveTypeId, request.FromDate.Year);
             }
         }
         else

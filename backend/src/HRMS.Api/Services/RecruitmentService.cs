@@ -292,7 +292,8 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
     /// Adds a person to a job's pipeline. The same email reuses the existing candidate record and fills in what was
     /// blank. Used by the careers page (no one signed in), referrals and HR adding people by hand.
     /// </summary>
-    public async Task<JobApplication> ApplyAsync(JobPost post, CandidateInput input, CandidateSource source, string? coverLetter, CvFile? cv)
+    public async Task<JobApplication> ApplyAsync(JobPost post, CandidateInput input, CandidateSource source, string? coverLetter, CvFile? cv,
+        Guid? referredByEmployeeId = null)
     {
         var email = (input.Email ?? "").Trim().ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(input.FirstName))
@@ -359,6 +360,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
             CandidateId = candidate.Id,
             CoverLetter = Clean(coverLetter, 4000),
             StageChangedAtUtc = clock.UtcNow,
+            ReferredByEmployeeId = referredByEmployeeId,
         };
         db.JobApplications.Add(app);
         var by = await MyNameAsync();
@@ -391,7 +393,7 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         var employeeId = MyId();
         var post = await db.JobPosts.FirstOrDefaultAsync(p => p.Id == postId && p.Status == JobPostStatus.Open) ?? throw new NotFoundException("Open job");
         var name = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.FirstName + " " + e.LastName).FirstAsync();
-        return await ApplyAsync(post, input with { ReferredBy = name }, CandidateSource.Referral, note, cv);
+        return await ApplyAsync(post, input with { ReferredBy = name }, CandidateSource.Referral, note, cv, employeeId);
     }
 
     public async Task<JobApplication> AddToPipelineAsync(Guid postId, Guid candidateId)
@@ -608,7 +610,8 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
             throw new DomainException("Say whether you would hire.");
 
         var feedback = await db.InterviewFeedback.FirstOrDefaultAsync(f => f.InterviewId == interviewId && f.InterviewerEmployeeId == mine);
-        var isNew = feedback is null;
+        // A row with scorecard marks only is not a verdict yet: the first verdict is logged and notified.
+        var isNew = feedback is not { VerdictGiven: true };
         if (feedback is null)
         {
             feedback = new InterviewFeedback { InterviewId = interviewId, InterviewerEmployeeId = mine };
@@ -618,8 +621,9 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         feedback.Recommendation = input.Recommendation;
         feedback.Strengths = Clean(input.Strengths, 2000);
         feedback.Concerns = Clean(input.Concerns, 2000);
+        feedback.VerdictGiven = true;
 
-        var given = await db.InterviewFeedback.Where(f => f.InterviewId == interviewId).Select(f => f.InterviewerEmployeeId).ToListAsync();
+        var given = await db.InterviewFeedback.Where(f => f.InterviewId == interviewId && f.VerdictGiven).Select(f => f.InterviewerEmployeeId).ToListAsync();
         if (isNew)
             given.Add(mine);
         if (interviewers.All(given.Contains))

@@ -154,4 +154,26 @@ public class TrainingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Empty((await Ok(await hr.GetAsync("/api/training/requests"))).EnumerateArray());
         Assert.Equal(HttpStatusCode.Forbidden, (await hr.PostAsync($"/api/training/requests/{id}/cancel", null)).StatusCode);
     }
+
+    [Fact]
+    public async Task The_completion_window_counts_from_when_a_course_became_mandatory()
+    {
+        var (admin, person) = await CompanyAsync("Learning Since");
+        await person("Sana", null);
+        var course = await ProgramAsync(admin, "Data protection");
+        // The course has been in the catalog for a year before HR makes it mandatory.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<HRMS.Infrastructure.Data.HrmsDbContext>();
+            var p = await db.TrainingPrograms.IgnoreQueryFilters().FirstAsync(x => x.Id == course);
+            p.CreatedAtUtc = DateTime.UtcNow.AddYears(-1);
+            await db.SaveChangesAsync();
+        }
+        await Ok(await admin.PutAsJsonAsync($"/api/training/programs/{course}", new { title = "Data protection", mode = "Classroom", durationHours = 3, isMandatory = true, completeWithinDays = 30 }, ApiFactory.Json));
+
+        var compliance = await Ok(await admin.GetAsync("/api/training/compliance"));
+        Assert.Equal(0, compliance.GetProperty("overdue").GetInt32());
+        var cell = compliance.GetProperty("rows")[0].GetProperty("cells")[0];
+        Assert.Equal(Today.AddDays(30).ToString("yyyy-MM-dd"), cell.GetProperty("dueOn").GetString());
+    }
 }

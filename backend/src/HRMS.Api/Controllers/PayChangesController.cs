@@ -312,6 +312,7 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
         var amount = Math.Round(rate * req.Days, 0);
         balance.Adjustment -= req.Days;
         balance.AdjustmentNote = $"Encashed {req.Days:0.#} days on {today:d MMM yyyy}" + (Clean(req.Note) is { } n ? $": {n}" : "");
+        await leave.RefreshCarryForwardAsync(req.EmployeeId, req.LeaveTypeId, balance.Year);
         db.PayRequests.Add(new PayRequest
         {
             EmployeeId = req.EmployeeId, Kind = PayRequestKind.Allowance, Title = $"Leave encashment: {req.Days:0.#} days {type}", Amount = amount, IsTaxable = true,

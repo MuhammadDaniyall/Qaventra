@@ -146,4 +146,23 @@ public class AttendanceDepthTests(ApiFactory factory) : IClassFixture<ApiFactory
         Assert.Equal("6", report.GetProperty("rows")[0][3].GetString());
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.DeleteAsync($"/api/projects/{projectId}")).StatusCode);
     }
+
+    [Fact]
+    public async Task Project_cost_keeps_the_rate_hours_were_logged_at()
+    {
+        var (admin, worker, workerClient, _, _) = await CompanyAsync("Timesheet Rates");
+        object Team(params object[] members) => new { name = "Portal", billable = true, openToAll = false, status = "Active", members };
+        var projectId = (await Ok(await admin.PostAsJsonAsync("/api/projects", Team(new { employeeId = worker, hourlyRate = 1000 }), ApiFactory.Json))).GetProperty("id").GetGuid();
+        var monday = Today.AddDays(-(((int)Today.DayOfWeek + 6) % 7));
+        await Ok(await workerClient.PutAsJsonAsync("/api/timesheets/week", new { weekStart = Iso(monday), lines = new[] { new { date = Iso(monday), projectId, minutes = 120 } } }, ApiFactory.Json));
+        await Ok(await workerClient.PostAsync($"/api/timesheets/week/submit?start={Iso(monday)}", null));
+        Assert.Equal(2000m, (await Ok(await admin.GetAsync($"/api/projects/{projectId}"))).GetProperty("cost").GetDecimal());
+
+        // A new rate, then leaving the team, does not change what the logged hours cost.
+        await Ok(await admin.PutAsJsonAsync($"/api/projects/{projectId}", Team(new { employeeId = worker, hourlyRate = 5000 }), ApiFactory.Json));
+        await Ok(await admin.PutAsJsonAsync($"/api/projects/{projectId}", Team(), ApiFactory.Json));
+        Assert.Equal(2000m, (await Ok(await admin.GetAsync($"/api/projects/{projectId}"))).GetProperty("cost").GetDecimal());
+        var report = await Ok(await admin.PostAsJsonAsync("/api/reports/projects.hours", new { from = Iso(monday), to = Iso(monday.AddDays(6)) }, ApiFactory.Json));
+        Assert.Equal("2000", report.GetProperty("rows")[0][4].GetString());
+    }
 }

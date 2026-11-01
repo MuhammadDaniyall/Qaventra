@@ -3,6 +3,7 @@ export const qk = {
   dashboard: ['dashboard'] as const,
   platformStats: ['platform', 'stats'] as const,
   companies: ['platform', 'companies'] as const,
+  taxYears: ['platform', 'tax-years'] as const,
   audit: ['audit'] as const,
   departments: ['departments'] as const,
   designations: ['designations'] as const,

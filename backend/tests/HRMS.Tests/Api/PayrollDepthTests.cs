@@ -49,7 +49,7 @@ public class PayrollDepthTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         // Amna's previous employer already took a lot of tax this year: no more tax for her.
         var month = new DateOnly(Today.Year, Today.Month, 1).AddMonths(-1);
-        var taxYear = (await Ok(await admin.GetAsync("/api/funds/tax-years")))[0].GetString();
+        var taxYear = await TaxYearTests.EnsureTaxYearAsync(factory, month);
         await Ok(await admin.PostAsJsonAsync("/api/funds/tax-adjustments", new { employeeId = a, taxYearCode = taxYear, kind = "PreviousTax", amount = 5_000_000 }, ApiFactory.Json));
 
         var run = await Ok(await admin.PostAsJsonAsync("/api/payroll/runs", new { year = month.Year, month = month.Month }, ApiFactory.Json));

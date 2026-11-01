@@ -64,6 +64,7 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
             ?? throw new Infrastructure.NotFoundException("Leave balance");
         balance.Adjustment = req.Adjustment;
         balance.AdjustmentNote = req.Note.Trim();
+        await leave.RefreshCarryForwardAsync(employeeId, leaveTypeId, year);
         await db.SaveChangesAsync();
         return NoContent();
     }

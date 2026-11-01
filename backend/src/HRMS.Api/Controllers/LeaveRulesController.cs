@@ -120,9 +120,13 @@ public class LeaveRulesController(HrmsDbContext db, LeaveService leave) : Contro
                     ?? throw new NotFoundException("Leave balance");
             if (b.CarriedForward == l.CarriedForward && b.Adjustment == l.Adjustment)
                 continue;
+            // A hand-set carry-forward is kept when last year's balance changes later.
+            if (b.CarriedForward != l.CarriedForward)
+                b.CarryForwardOverridden = true;
             b.CarriedForward = l.CarriedForward;
             b.Adjustment = l.Adjustment;
             b.AdjustmentNote = string.IsNullOrWhiteSpace(req.Note) ? "Opening balance" : req.Note.Trim();
+            await leave.RefreshCarryForwardAsync(l.EmployeeId, l.LeaveTypeId, req.Year);
             changed++;
         }
         await db.SaveChangesAsync();

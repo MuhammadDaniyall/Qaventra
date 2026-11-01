@@ -162,17 +162,13 @@ public class RecruitmentExtrasController(HrmsDbContext db, RecruitmentService hi
         var feedback = await db.InterviewFeedback.FirstOrDefaultAsync(f => f.InterviewId == id && f.InterviewerEmployeeId == mine);
         if (feedback is null)
         {
-            // Marks first: the 1–5 rating follows from the share of marks until the interviewer gives their verdict.
-            feedback = new InterviewFeedback { InterviewId = id, InterviewerEmployeeId = mine, Recommendation = HireRecommendation.Yes };
+            // Marks first: no verdict yet, so the row does not count as feedback until the interviewer gives one.
+            feedback = new InterviewFeedback { InterviewId = id, InterviewerEmployeeId = mine };
             db.InterviewFeedback.Add(feedback);
         }
-        var total = marks.Sum(m => m.Marks);
-        var max = questions.Sum(q => q.MaxMarks);
         feedback.MarksJson = JsonSerializer.Serialize(marks);
-        feedback.TotalMarks = total;
-        feedback.MaxMarks = max;
-        if (feedback.Rating == 0)
-            feedback.Rating = max == 0 ? 3 : Math.Clamp((int)Math.Round(total * 5m / max), 1, 5);
+        feedback.TotalMarks = marks.Sum(m => m.Marks);
+        feedback.MaxMarks = questions.Sum(q => q.MaxMarks);
         await db.SaveChangesAsync();
         return NoContent();
     }

@@ -209,7 +209,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 var staff = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToListAsync();
                 var ids = staff.Select(s => s.Id).ToList();
                 var logged = await db.TimesheetLines.Where(l => l.Date >= from && l.Date <= to)
-                    .Join(db.Timesheets.Where(t => (t.Status == TimesheetStatus.Submitted || t.Status == TimesheetStatus.Approved) && ids.Contains(t.EmployeeId)), l => l.TimesheetId, t => t.Id, (l, t) => new { t.EmployeeId, l.ProjectId, l.Minutes })
+                    .Join(db.Timesheets.Where(t => (t.Status == TimesheetStatus.Submitted || t.Status == TimesheetStatus.Approved) && ids.Contains(t.EmployeeId)), l => l.TimesheetId, t => t.Id, (l, t) => new { t.EmployeeId, l.ProjectId, l.Minutes, l.HourlyRate })
                     .ToListAsync();
                 var projectNames = await db.Projects.ToDictionaryAsync(p => p.Id, p => p.Name);
                 var rates = await db.ProjectMembers.ToDictionaryAsync(m => (m.ProjectId, m.EmployeeId), m => m.HourlyRate ?? 0);
@@ -219,7 +219,9 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     var s = staff.First(x => x.Id == g.Key.EmployeeId);
                     var hours = g.Sum(x => x.Minutes) / 60m;
                     var row = L(s.EmployeeCode, s.Name, projectNames.GetValueOrDefault(g.Key.ProjectId) ?? "", hours.ToString("0.##"));
-                    if (hr) row.Add((hours * rates.GetValueOrDefault((g.Key.ProjectId, g.Key.EmployeeId))).ToString("0"));
+                    // The rate saved with each line, else the current one (as on the project page).
+                    var cost = g.Sum(x => x.Minutes / 60m * (x.HourlyRate ?? rates.GetValueOrDefault((g.Key.ProjectId, g.Key.EmployeeId))));
+                    if (hr) row.Add(cost.ToString("0"));
                     return row;
                 }).OrderBy(r => r[1]).ThenBy(r => r[2]).ToList();
                 return T(def, range, hr ? ["Code", "Name", "Project", "Hours", "Cost"] : ["Code", "Name", "Project", "Hours"], hr ? [3, 4] : [3], rows, totals: true);

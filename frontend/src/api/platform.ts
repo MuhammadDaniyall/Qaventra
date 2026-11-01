@@ -31,6 +31,36 @@ export const platformApi = {
   enterCompany: (id: string) => http.post<Session>(`/platform/companies/${id}/enter`),
 };
 
+/** Rates are fractions (0.11 = 11%). toAmount is null for the top slab. */
+export interface TaxSlab {
+  fromAmount: number;
+  toAmount: number | null;
+  fixedTax: number;
+  rate: number;
+}
+
+export interface TaxYear {
+  id: string;
+  code: string;
+  startDate: string;
+  endDate: string;
+  surchargeThreshold: number;
+  surchargeRate: number;
+  slabs: TaxSlab[];
+  /** Payroll runs (all companies) that used this year. */
+  payrolls: number;
+}
+
+export type SaveTaxYearRequest = Omit<TaxYear, 'id' | 'payrolls'>;
+
+/** Salaried income tax years shared by every company; platform owner only. */
+export const taxYearsApi = {
+  list: () => http.get<TaxYear[]>('/platform/tax-years'),
+  create: (b: SaveTaxYearRequest) => http.post<TaxYear>('/platform/tax-years', b),
+  update: (id: string, b: SaveTaxYearRequest) => http.put<TaxYear>(`/platform/tax-years/${id}`, b),
+  remove: (id: string) => http.del(`/platform/tax-years/${id}`),
+};
+
 export const auditApi = {
   list: (q: AuditLogQuery) => http.get<PagedResult<AuditLog>>('/audit-logs', { ...q }),
 };

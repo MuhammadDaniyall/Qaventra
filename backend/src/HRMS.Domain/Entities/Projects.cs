@@ -62,4 +62,9 @@ public class TimesheetLine : TenantEntity
     public Guid? TaskId { get; set; }
     public int Minutes { get; set; }
     public string? Note { get; set; }
+    /// <summary>
+    /// The person's hourly rate on the project when the line was saved, so project cost does not change when the rate
+    /// changes or they leave the team. Null when they had no rate (e.g. not on the team of an open project).
+    /// </summary>
+    public decimal? HourlyRate { get; set; }
 }

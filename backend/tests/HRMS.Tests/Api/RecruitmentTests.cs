@@ -195,4 +195,58 @@ public class RecruitmentTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.DeleteAsync($"/api/recruitment/jobs/{postA}")).StatusCode);
         _ = wali;
     }
+
+    [Fact]
+    public async Task Scorecard_marks_are_not_a_verdict()
+    {
+        var (admin, person) = await CompanyAsync("Scorecards");
+        var (ivan, ivanClient) = await person("Ivan", null);
+        var (omar, omarClient) = await person("Omar", null);
+        var postId = await OpenPostAsync(admin, "Analyst", null, null);
+        await Ok(await ivanClient.PostAsync($"/api/recruitment/openings/{postId}/refer", Form("Hina", "hina@mail.test")));
+        var appId = Assert.Single((await Ok(await admin.GetAsync($"/api/recruitment/jobs/{postId}/pipeline"))).EnumerateArray()).GetProperty("id").GetGuid();
+        await Ok(await admin.PostAsJsonAsync($"/api/recruitment/applications/{appId}/interviews", new
+        {
+            title = "Case study", startsAtUtc = DateTime.UtcNow.AddMinutes(-30), durationMinutes = 60, mode = "Online", interviewerIds = new[] { ivan, omar },
+        }, ApiFactory.Json));
+        var interviewId = Assert.Single((await Ok(await ivanClient.GetAsync("/api/recruitment/interviews/mine"))).EnumerateArray()).GetProperty("id").GetGuid();
+        await Ok(await admin.PostAsJsonAsync("/api/recruitment-extras/interview-templates", new { name = "Analyst case", questions = new[] { new { text = "Structure", maxMarks = 10 } } }, ApiFactory.Json));
+        var template = (await Ok(await admin.GetAsync("/api/recruitment-extras/interview-templates"))).EnumerateArray().Single();
+        await Ok(await admin.PutAsJsonAsync($"/api/recruitment-extras/interviews/{interviewId}/template", new { templateId = template.GetProperty("id").GetGuid() }, ApiFactory.Json));
+
+        // Ivan only marks the scorecard: no verdict yet, so he still owes feedback and sees no one else's.
+        var question = template.GetProperty("questions")[0].GetProperty("id").GetGuid();
+        await Ok(await ivanClient.PutAsJsonAsync($"/api/recruitment-extras/interviews/{interviewId}/marks", new { marks = new[] { new { questionId = question, marks = 7 } } }, ApiFactory.Json));
+        Assert.False(Assert.Single((await Ok(await ivanClient.GetAsync("/api/recruitment/interviews/mine"))).EnumerateArray()).GetProperty("feedbackGiven").GetBoolean());
+        await Ok(await omarClient.PostAsJsonAsync($"/api/recruitment/interviews/{interviewId}/feedback", new { rating = 4, recommendation = "Yes" }, ApiFactory.Json));
+        var iv = (await Ok(await ivanClient.GetAsync($"/api/recruitment/applications/{appId}"))).GetProperty("interviews")[0];
+        Assert.False(iv.GetProperty("iGaveFeedback").GetBoolean());
+        Assert.Empty(iv.GetProperty("feedback").EnumerateArray());
+        Assert.NotEqual("Completed", iv.GetProperty("status").GetString());
+
+        // His verdict is logged like any first verdict and completes the interview.
+        await Ok(await ivanClient.PostAsJsonAsync($"/api/recruitment/interviews/{interviewId}/feedback", new { rating = 2, recommendation = "No" }, ApiFactory.Json));
+        var app = await Ok(await admin.GetAsync($"/api/recruitment/applications/{appId}"));
+        iv = app.GetProperty("interviews")[0];
+        Assert.Equal("Completed", iv.GetProperty("status").GetString());
+        Assert.Contains(iv.GetProperty("feedback").EnumerateArray(), f => f.GetProperty("interviewerEmployeeId").GetGuid() == ivan && f.GetProperty("recommendation").GetString() == "No");
+        Assert.Equal(2, app.GetProperty("events").EnumerateArray().Count(e => e.GetProperty("text").GetString()!.StartsWith("Feedback from")));
+    }
+
+    [Fact]
+    public async Task Referrals_belong_to_the_employee_who_made_them()
+    {
+        var (admin, person) = await CompanyAsync("ReferralOwners");
+        // Two people with the same name refer the same candidate to different jobs.
+        var (_, first) = await person("Wali", null);
+        var (_, second) = await person("Wali", null);
+        var postA = await OpenPostAsync(admin, "Driver", null, null);
+        var postB = await OpenPostAsync(admin, "Dispatcher", null, null);
+        await Ok(await first.PostAsync($"/api/recruitment/openings/{postA}/refer", Form("Fahad", "fahad@mail.test")));
+        await Ok(await second.PostAsync($"/api/recruitment/openings/{postB}/refer", Form("Fahad", "fahad@mail.test")));
+
+        Assert.Equal(postA, Assert.Single((await Ok(await first.GetAsync("/api/recruitment/referrals"))).EnumerateArray()).GetProperty("jobPostId").GetGuid());
+        Assert.Equal(postB, Assert.Single((await Ok(await second.GetAsync("/api/recruitment/referrals"))).EnumerateArray()).GetProperty("jobPostId").GetGuid());
+        Assert.Empty((await Ok(await admin.GetAsync("/api/recruitment/referrals"))).EnumerateArray());
+    }
 }

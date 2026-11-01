@@ -187,6 +187,8 @@ public class EmployeeService(
         var previous = $"Previously worked {employee.JoiningDate:d MMM yyyy} – {employee.LeavingDate?.ToString("d MMM yyyy") ?? "unknown"}.";
         var change = await StartChangeAsync(employee, JobChangeKind.Rehire, input.JoiningDate,
             string.IsNullOrWhiteSpace(input.Note) ? previous : $"{previous} {input.Note.Trim()}");
+        change.PreviousJoiningDate = employee.JoiningDate;
+        change.PreviousLeavingDate = employee.LeavingDate;
         employee.JoiningDate = input.JoiningDate;
         employee.LeavingDate = null;
         employee.Status = input.Status;

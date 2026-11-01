@@ -74,4 +74,25 @@ public class OrgChartAndTrendsTests(ApiFactory factory) : IClassFixture<ApiFacto
         Assert.Equal(HttpStatusCode.Unauthorized, res.StatusCode);
         Assert.True((await admin.GetAsync("/api/dashboard/trends")).IsSuccessStatusCode);
     }
+
+    [Fact]
+    public async Task A_rehire_keeps_the_earlier_tenure_in_past_months()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Trends Rehire Co");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(5));
+        var left = new DateOnly(today.Year, today.Month, 1).AddMonths(-3).AddDays(9);
+        var id = await CreateEmployee(admin, "Returning", status: "Resigned", joiningDate: "2020-01-01", leavingDate: left.ToString("yyyy-MM-dd"));
+        var before = (await Read(await admin.GetAsync("/api/dashboard/trends"))).EnumerateArray().ToList();
+
+        await Read(await admin.PostAsJsonAsync($"/api/employees/{id}/rehire", new { joiningDate = today.ToString("yyyy-MM-dd"), status = "Active" }, ApiFactory.Json));
+        var after = (await Read(await admin.GetAsync("/api/dashboard/trends"))).EnumerateArray().ToList();
+
+        // Earlier months read the same (the old tenure and its leaving still count); this month gains a joiner.
+        int N(JsonElement m, string p) => m.GetProperty(p).GetInt32();
+        for (var i = 0; i < 11; i++)
+            foreach (var p in new[] { "headcount", "joiners", "leavers" })
+                Assert.Equal(N(before[i], p), N(after[i], p));
+        Assert.Equal(N(before[11], "joiners") + 1, N(after[11], "joiners"));
+        Assert.Equal(N(before[11], "headcount") + 1, N(after[11], "headcount"));
+    }
 }

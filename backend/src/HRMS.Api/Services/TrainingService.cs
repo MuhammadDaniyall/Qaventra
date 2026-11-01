@@ -286,8 +286,8 @@ public class TrainingService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
         foreach (var p in programs)
         {
             var depts = HelpdeskService.Ids(p.DepartmentIds);
-            // The window counts from joining, but not from before the course existed (else everyone is overdue on day one).
-            var since = DateOnly.FromDateTime(await clock.ToLocalAsync(p.CreatedAtUtc));
+            // The window counts from joining, but not from before the course became mandatory (else everyone is overdue on day one).
+            var since = p.MandatorySince ?? DateOnly.FromDateTime(await clock.ToLocalAsync(p.CreatedAtUtc));
             foreach (var s in staff.Where(s => depts.Count == 0 || (s.DepartmentId is { } d && depts.Contains(d))))
             {
                 var last = done.Where(x => x.EmployeeId == s.Id && x.ProgramId == p.Id).Select(x => (DateOnly?)x.Date).Max();

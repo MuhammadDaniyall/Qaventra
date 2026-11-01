@@ -169,4 +169,29 @@ public class LeavePolicyApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Ok(await admin.PostAsync($"/api/attendance/periods/{lastMonth.Year}/{lastMonth.Month}/close", null));
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/leave/{id}/cancel", null)).StatusCode);
     }
+
+    [Fact]
+    public async Task Carry_forward_follows_last_year_unless_hr_set_it()
+    {
+        var (admin, _, workerId, types) = await SetupAsync("Carry");
+        var al = types["AL"];
+        var alId = al.GetProperty("id").GetGuid();
+        await Ok(await admin.PutAsJsonAsync($"/api/setup/leave-types/{alId}", Policy(al, p => p["carryForwardMax"] = 10), ApiFactory.Json));
+        var (year, next) = (Today.Year, Today.Year + 1);
+        async Task<decimal> Carried(int y) => (await Ok(await admin.GetAsync($"/api/leave/balances/{workerId}?year={y}"))).EnumerateArray()
+            .Single(b => b.GetProperty("code").GetString() == "AL").GetProperty("carriedForward").GetDecimal();
+
+        // Next year's row exists early (e.g. December leave for January); it brings 10 of this year's unused days.
+        await Carried(year);
+        Assert.Equal(10m, await Carried(next));
+
+        // This year changes afterwards (24 days with last year's 10, minus 20): next year follows.
+        await Ok(await admin.PutAsJsonAsync($"/api/leave/balances/{workerId}/{alId}?year={year}", new { adjustment = -20, note = "Correction" }));
+        Assert.Equal(4m, await Carried(next));
+
+        // HR types next year's carry-forward in; later changes to this year leave it alone.
+        await Ok(await admin.PutAsJsonAsync("/api/leave-rules/balances", new { year = next, lines = new[] { new { employeeId = workerId, leaveTypeId = alId, carriedForward = 3m, adjustment = 0m } } }, ApiFactory.Json));
+        await Ok(await admin.PutAsJsonAsync($"/api/leave/balances/{workerId}/{alId}?year={year}", new { adjustment = 0, note = "Undo" }));
+        Assert.Equal(3m, await Carried(next));
+    }
 }

@@ -44,8 +44,17 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             .OrderByDescending(t => t.StartDate)
             .FirstOrDefaultAsync()
             ?? throw new DomainException("No tax year is configured for this period.");
+        // The tax year the period falls in. With no slabs set up for it yet the latest slabs are used, but year-to-date
+        // tax, months left and adjustments still follow the period's own year, not the old one.
+        var yearStart = new DateOnly(taxYear.StartDate.Year, taxYear.StartDate.Month, 1);
+        var taxYearCode = taxYear.Code;
         if (monthStart > taxYear.EndDate)
-            warnings.Add($"No tax slabs exist for this period; tax year {taxYear.Code} slabs were used. Add the current tax year's slabs.");
+        {
+            while (yearStart.AddYears(1) <= monthStart)
+                yearStart = yearStart.AddYears(1);
+            taxYearCode = $"{yearStart.Year}-{(yearStart.Year + 1) % 100:D2}";
+            warnings.Add($"Tax year {taxYearCode} is not set up yet, so the {taxYear.Code} slabs were used. Ask the platform owner to add {taxYearCode}, then reprocess.");
+        }
 
         var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
 
@@ -84,6 +93,9 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                         && r.Year * 12 + r.Month <= period)
             .ToListAsync();
         foreach (var r in payItems)
+            r.PayrollRunId = null;
+        // Items cancelled after the last process stay linked until now, so the run could not go ahead with them.
+        foreach (var r in await db.PayRequests.Where(r => r.PayrollRunId == run.Id && r.Status == RequestStatus.Cancelled).ToListAsync())
             r.PayrollRunId = null;
 
         // Approved piece work for this month or earlier that no finalized payroll has paid; same re-linking as pay items.
@@ -148,9 +160,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             ? await services.GetRequiredService<HRMS.Api.Controllers.PenaltyService>().PayDaysAsync(employeeIds, penaltyMonth.Year, penaltyMonth.Month)
             : [];
         // Tax adjustments for the tax year (previous employer, credits) and what this employer already withheld this year.
-        var adjustments = (await db.TaxAdjustments.Where(a => a.TaxYearCode == taxYear.Code && employeeIds.Contains(a.EmployeeId)).ToListAsync())
+        var adjustments = (await db.TaxAdjustments.Where(a => a.TaxYearCode == taxYearCode && employeeIds.Contains(a.EmployeeId)).ToListAsync())
             .ToLookup(a => a.EmployeeId);
-        var yearStart = new DateOnly(taxYear.StartDate.Year, taxYear.StartDate.Month, 1);
         var monthsLeft = Math.Max(1, 12 - ((monthStart.Year - yearStart.Year) * 12 + monthStart.Month - yearStart.Month));
         var startPeriod = yearStart.Year * 12 + yearStart.Month;
         var yearToDate = (await db.Payslips.Where(p => employeeIds.Contains(p.EmployeeId) && p.PayrollRun!.Status == PayrollRunStatus.Finalized
@@ -375,6 +386,13 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         Components = s.Components.Select(c => new SalaryComponent { Name = c.Name, Kind = c.Kind, IsTaxable = c.IsTaxable, Amount = Math.Round(c.Amount * share, 0, MidpointRounding.AwayFromZero) }).ToList(),
     };
 
+    /// <summary>A pay item cancelled after the run was processed is still on its payslips; the run must be reprocessed first.</summary>
+    private async Task EnsureCurrentAsync(PayrollRun run)
+    {
+        if (await db.PayRequests.AnyAsync(r => r.PayrollRunId == run.Id && r.Status == RequestStatus.Cancelled))
+            throw new DomainException("A pay item was removed after this payroll was processed. Reprocess it first.");
+    }
+
     public static string Label(PayrollRun run) => PayPeriods.Label(run.Frequency, run.PeriodStart, run.PeriodEnd);
 
     /// <summary>HR sends a processed month to the company admins to approve.</summary>
@@ -383,6 +401,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Id == runId) ?? throw new NotFoundException("Payroll run");
         if (run.Status != PayrollRunStatus.Draft)
             throw new DomainException("Only a draft payroll can be sent for approval.");
+        await EnsureCurrentAsync(run);
         run.Status = PayrollRunStatus.Submitted;
         run.SubmittedAtUtc = clock.UtcNow;
         run.ApprovalNote = null;
@@ -402,6 +421,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             throw new DomainException("This payroll is not waiting for approval.");
         if (!approve && string.IsNullOrWhiteSpace(note))
             throw new DomainException("Say what needs checking.");
+        if (approve)
+            await EnsureCurrentAsync(run);
         run.Status = approve ? PayrollRunStatus.Approved : PayrollRunStatus.Draft;
         run.ApprovedByName = approve ? await LetterService.CurrentUserNameAsync(db, me) : null;
         run.ApprovedAtUtc = approve ? clock.UtcNow : null;
@@ -442,6 +463,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
         if (settings.RequireApproval && run.Status != PayrollRunStatus.Approved)
             throw new DomainException(run.Status == PayrollRunStatus.Submitted ? "This payroll is waiting for approval." : "Send this payroll for approval first.");
+        await EnsureCurrentAsync(run);
         run.Status = PayrollRunStatus.Finalized;
         run.FinalizedAtUtc = clock.UtcNow;
 

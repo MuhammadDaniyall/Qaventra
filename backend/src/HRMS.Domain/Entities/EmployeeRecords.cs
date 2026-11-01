@@ -45,4 +45,7 @@ public class JobChange : TenantEntity
     public string? ToManager { get; set; }
     public string? Note { get; set; }
     public string? RecordedByName { get; set; }
+    /// <summary>On a re-hire: the earlier employment period, so Insights can still count it after the employee's dates are overwritten.</summary>
+    public DateOnly? PreviousJoiningDate { get; set; }
+    public DateOnly? PreviousLeavingDate { get; set; }
 }

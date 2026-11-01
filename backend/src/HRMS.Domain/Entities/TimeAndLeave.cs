@@ -169,6 +169,8 @@ public class LeaveBalance : TenantEntity
     public decimal Used { get; set; }
     /// <summary>Unused days brought from last year.</summary>
     public decimal CarriedForward { get; set; }
+    /// <summary>HR set CarriedForward by hand; later changes to last year's balance leave it alone.</summary>
+    public bool CarryForwardOverridden { get; set; }
     /// <summary>Days added (or removed, negative) by HR or approved comp-offs.</summary>
     public decimal Adjustment { get; set; }
     public string? AdjustmentNote { get; set; }

@@ -144,6 +144,11 @@ public class DashboardController(HrmsDbContext db, TenantClock clock, ICurrentUs
         var people = await db.Employees.AsNoTracking()
             .Where(e => e.LeavingDate != null || (e.Status != EmploymentStatus.Resigned && e.Status != EmploymentStatus.Terminated))
             .Select(e => new { e.JoiningDate, e.LeavingDate }).ToListAsync();
+        // A re-hire overwrites the employee's dates; their earlier periods are kept on the Rehire job change.
+        people.AddRange(await db.JobChanges.AsNoTracking()
+            .Where(c => c.Kind == JobChangeKind.Rehire && c.PreviousJoiningDate != null && c.PreviousLeavingDate != null)
+            .Select(c => new { JoiningDate = c.PreviousJoiningDate!.Value, LeavingDate = c.PreviousLeavingDate })
+            .ToListAsync());
         var leave = await db.LeaveRequests.AsNoTracking()
             .Where(r => r.Status == LeaveStatus.Approved && r.FromDate >= first)
             .Select(r => new { r.FromDate, r.Days }).ToListAsync();

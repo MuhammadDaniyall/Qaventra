@@ -324,10 +324,9 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
     [HttpGet("referrals")]
     public async Task<List<CandidateApplicationDto>> MyReferrals()
     {
-        var name = await db.Employees.Where(e => e.Id == me.EmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefaultAsync();
-        if (name is null)
+        if (me.EmployeeId is not { } mine)
             return [];
-        return await db.JobApplications.Where(a => a.Candidate!.ReferredBy == name && a.Candidate.Source == CandidateSource.Referral)
+        return await db.JobApplications.Where(a => a.ReferredByEmployeeId == mine)
             .OrderByDescending(a => a.CreatedAtUtc)
             .Select(a => new CandidateApplicationDto(a.Id, a.JobPostId, a.Candidate!.FirstName + " " + a.Candidate.LastName + " · " + a.JobPost!.Title,
                 a.Stage, a.CreatedAtUtc))
@@ -466,7 +465,7 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
             .OrderBy(i => i.StartsAtUtc)
             .Select(i => new MyInterviewDto(i.Id, i.ApplicationId, i.Application!.Candidate!.FirstName + " " + i.Application.Candidate.LastName,
                 i.Application.JobPost!.Title, i.Title, i.Round, i.StartsAtUtc, i.DurationMinutes, i.Mode, i.Where, i.Status,
-                db.InterviewFeedback.Any(f => f.InterviewId == i.Id && f.InterviewerEmployeeId == mine)))
+                db.InterviewFeedback.Any(f => f.InterviewId == i.Id && f.InterviewerEmployeeId == mine && f.VerdictGiven)))
             .ToListAsync();
     }
 
@@ -571,7 +570,7 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
         new PipelineCardDto(a.Id, a.CandidateId, a.Candidate!.FirstName + " " + a.Candidate.LastName, a.Candidate.Email, a.Candidate.CurrentTitle,
             a.Candidate.ExperienceYears, a.Candidate.Source, a.Stage, a.Rating, a.Candidate.IsBlacklisted,
             db.Interviews.Count(i => i.ApplicationId == a.Id && i.Status != InterviewStatus.Cancelled),
-            db.InterviewFeedback.Where(f => db.Interviews.Any(i => i.Id == f.InterviewId && i.ApplicationId == a.Id)).Average(f => (decimal?)f.Rating),
+            db.InterviewFeedback.Where(f => f.VerdictGiven && db.Interviews.Any(i => i.Id == f.InterviewId && i.ApplicationId == a.Id)).Average(f => (decimal?)f.Rating),
             a.OfferStatus, a.CreatedAtUtc, a.StageChangedAtUtc));
 
     private IQueryable<CandidateListItemDto> ProjectCandidates(IQueryable<Candidate> q) => q.Select(c => new CandidateListItemDto(
@@ -616,7 +615,8 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
         var mine = me.EmployeeId ?? Guid.Empty;
         var list = await db.Interviews.Where(i => i.ApplicationId == applicationId).OrderBy(i => i.StartsAtUtc).ToListAsync();
         var ids = list.Select(i => i.Id).ToList();
-        var feedback = await db.InterviewFeedback.Where(f => ids.Contains(f.InterviewId)).ToListAsync();
+        // Scorecard marks without a verdict are not feedback yet.
+        var feedback = await db.InterviewFeedback.Where(f => ids.Contains(f.InterviewId) && f.VerdictGiven).ToListAsync();
         var people = list.SelectMany(i => HelpdeskService.Ids(i.InterviewerIds)).Distinct().ToList();
         var names = await db.Employees.Where(e => people.Contains(e.Id)).ToDictionaryAsync(e => e.Id, e => e.FirstName + " " + e.LastName);
         return list.Select(i =>

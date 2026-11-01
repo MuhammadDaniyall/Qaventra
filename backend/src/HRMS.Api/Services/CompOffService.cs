@@ -84,6 +84,7 @@ public class CompOffService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             await leave.EnsureBalancesAsync(request.EmployeeId, request.WorkedOn.Year);
             var balance = await db.LeaveBalances.FirstAsync(b => b.EmployeeId == request.EmployeeId && b.LeaveTypeId == type.Id && b.Year == request.WorkedOn.Year);
             balance.Credited += request.Days;
+            await leave.RefreshCarryForwardAsync(request.EmployeeId, type.Id, request.WorkedOn.Year);
         }
         await db.SaveChangesAsync();
     }

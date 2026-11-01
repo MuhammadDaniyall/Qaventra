@@ -131,7 +131,7 @@ public class PayRequestsController(HrmsDbContext db, PayRequestService pay, ICur
             r.Id, r.EmployeeId, r.Employee!.FirstName + " " + r.Employee.LastName, r.Employee.EmployeeCode, r.Kind, r.Title, r.Amount, r.IsTaxable,
             r.Kind == PayRequestKind.Allowance || r.Kind == PayRequestKind.Bonus || r.Kind == PayRequestKind.Overtime,
             r.Year, r.Month, r.WorkDate, r.Hours, r.Reason, r.Status, r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote, r.PaidAtUtc,
-            r.PayrollRunId != null && r.PaidAtUtc == null));
+            r.PayrollRunId != null && r.PaidAtUtc == null && r.Status == RequestStatus.Approved));
 
     /// <summary>Repaid counts installments in finalized payrolls only; draft ones are still estimates.</summary>
     private IQueryable<LoanDto> ProjectLoans(IQueryable<Loan> q) =>

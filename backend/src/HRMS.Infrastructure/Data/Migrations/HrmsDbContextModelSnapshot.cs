@@ -1397,6 +1397,9 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.HasIndex("ApplicationId");
 
+                    b.HasIndex("TenantId", "ReferenceNo")
+                        .IsUnique();
+
                     b.ToTable("CandidateLetters");
                 });
 
@@ -2982,6 +2985,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int?>("TotalMarks")
                         .HasColumnType("int");
 
+                    b.Property<bool>("VerdictGiven")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.HasIndex("InterviewerEmployeeId");
@@ -3172,6 +3178,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int?>("Rating")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ReferredByEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -3188,6 +3197,8 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CandidateId");
+
+                    b.HasIndex("ReferredByEmployeeId");
 
                     b.HasIndex("JobPostId", "CandidateId")
                         .IsUnique();
@@ -3230,6 +3241,12 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateOnly?>("PreviousJoiningDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("PreviousLeavingDate")
+                        .HasColumnType("date");
 
                     b.Property<string>("RecordedByName")
                         .HasMaxLength(200)
@@ -3516,6 +3533,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasPrecision(6, 2)
                         .HasColumnType("decimal(6,2)");
 
+                    b.Property<bool>("CarryForwardOverridden")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -3732,6 +3752,34 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("LeaveTypes");
+                });
+
+            modelBuilder.Entity("HRMS.Domain.Entities.LetterSequence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Last")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Prefix")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId", "Prefix")
+                        .IsUnique();
+
+                    b.ToTable("LetterSequences");
                 });
 
             modelBuilder.Entity("HRMS.Domain.Entities.LetterTemplate", b =>
@@ -6749,6 +6797,85 @@ namespace HRMS.Infrastructure.Data.Migrations
                             FromAmount = 4100000m,
                             Rate = 0.35m,
                             TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002526")
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002601"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 0m,
+                            FromAmount = 0m,
+                            Rate = 0m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            ToAmount = 600000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002602"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 0m,
+                            FromAmount = 600000m,
+                            Rate = 0.01m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            ToAmount = 1200000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002603"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 6000m,
+                            FromAmount = 1200000m,
+                            Rate = 0.11m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            ToAmount = 2200000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002604"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 116000m,
+                            FromAmount = 2200000m,
+                            Rate = 0.20m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            ToAmount = 3200000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002605"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 316000m,
+                            FromAmount = 3200000m,
+                            Rate = 0.25m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            ToAmount = 4100000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002606"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 541000m,
+                            FromAmount = 4100000m,
+                            Rate = 0.29m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            ToAmount = 5600000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002607"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 976000m,
+                            FromAmount = 5600000m,
+                            Rate = 0.32m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            ToAmount = 7000000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0002-4000-8000-000000002608"),
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FixedTax = 1424000m,
+                            FromAmount = 7000000m,
+                            Rate = 0.35m,
+                            TaxYearId = new Guid("6a1f1c2e-0001-4000-8000-000000002627")
                         });
                 });
 
@@ -6796,6 +6923,16 @@ namespace HRMS.Infrastructure.Data.Migrations
                             EndDate = new DateOnly(2026, 6, 30),
                             StartDate = new DateOnly(2025, 7, 1),
                             SurchargeRate = 0.09m,
+                            SurchargeThreshold = 10000000m
+                        },
+                        new
+                        {
+                            Id = new Guid("6a1f1c2e-0001-4000-8000-000000002627"),
+                            Code = "2026-27",
+                            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            EndDate = new DateOnly(2027, 6, 30),
+                            StartDate = new DateOnly(2026, 7, 1),
+                            SurchargeRate = 0m,
                             SurchargeThreshold = 10000000m
                         });
                 });
@@ -7212,6 +7349,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
 
+                    b.Property<decimal?>("HourlyRate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("Minutes")
                         .HasColumnType("int");
 
@@ -7361,6 +7502,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("Link")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateOnly?>("MandatorySince")
+                        .HasColumnType("date");
 
                     b.Property<int>("Mode")
                         .HasColumnType("int");

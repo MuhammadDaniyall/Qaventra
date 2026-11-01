@@ -95,4 +95,22 @@ public class LetterDepthTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Ok(await admin.DeleteAsync($"/api/letters/{pendingId}"));
         Assert.DoesNotContain((await Ok(await admin.GetAsync("/api/approvals/inbox"))).EnumerateArray(), i => i.GetProperty("subjectId").GetGuid() == pendingId);
     }
+
+    [Fact]
+    public async Task A_deleted_letters_reference_number_is_not_given_again()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("Letter Numbers");
+        var id = (await Ok(await admin.PostAsJsonAsync("/api/employees", new { firstName = "Nida", lastName = "L", joiningDate = "2024-01-01", status = "Active" }, ApiFactory.Json)))
+            .GetProperty("id").GetGuid();
+        async Task<JsonElement> Issue() => await Ok(await admin.PostAsJsonAsync("/api/letters", new
+        {
+            employeeId = id, category = "Experience", subject = "Experience", body = "{{EmployeeName}} works here.", issuedOn = "2026-03-01", shareWithEmployee = false,
+        }, ApiFactory.Json));
+
+        Assert.Equal("HR/EXP/2026/0001", (await Issue()).GetProperty("referenceNo").GetString());
+        var second = await Issue();
+        Assert.Equal("HR/EXP/2026/0002", second.GetProperty("referenceNo").GetString());
+        await Ok(await admin.DeleteAsync($"/api/letters/{second.GetProperty("id").GetGuid()}"));
+        Assert.Equal("HR/EXP/2026/0003", (await Issue()).GetProperty("referenceNo").GetString());
+    }
 }

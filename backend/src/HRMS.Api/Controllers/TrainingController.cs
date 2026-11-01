@@ -428,6 +428,8 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
         p.Mode = r.Mode;
         p.DurationHours = r.DurationHours;
         p.Link = string.IsNullOrWhiteSpace(r.Link) ? null : r.Link.Trim();
+        // Kept while it stays mandatory; switching it on (again) starts the window from today.
+        p.MandatorySince = !r.IsMandatory ? null : p.IsMandatory ? p.MandatorySince : await clock.TodayAsync();
         p.IsMandatory = r.IsMandatory;
         p.DepartmentIds = r.IsMandatory ? string.Join(',', depts) : "";
         p.CompleteWithinDays = r.IsMandatory ? r.CompleteWithinDays : null;

@@ -134,7 +134,7 @@ function LetterView({ l, back, hr }: { l: LetterDocument; back: { to: string; la
       <ConfirmDialog
         open={deleting}
         title="Delete this letter?"
-        message={<>{l.referenceNo} will be removed for everyone. If it is the latest letter of its kind this year, the next letter may get the same reference number.</>}
+        message={<>{l.referenceNo} will be removed for everyone. Its reference number will not be reused.</>}
         confirmLabel="Delete letter"
         tone="danger"
         loading={remove.isPending}

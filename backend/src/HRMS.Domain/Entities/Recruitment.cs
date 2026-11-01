@@ -104,6 +104,8 @@ public class JobApplication : TenantEntity
     public OfferStatus? OfferStatus { get; set; }
     public DateTime? StageChangedAtUtc { get; set; }
     public DateTime? HiredAtUtc { get; set; }
+    /// <summary>The employee who referred the candidate for this job. Candidate.ReferredBy is display text only.</summary>
+    public Guid? ReferredByEmployeeId { get; set; }
 }
 
 /// <summary>A note or stage change on an application (the hiring log).</summary>
@@ -163,4 +165,6 @@ public class InterviewFeedback : TenantEntity
     public string? MarksJson { get; set; }
     public int? TotalMarks { get; set; }
     public int? MaxMarks { get; set; }
+    /// <summary>The interviewer gave their verdict (rating and recommendation). A row with scorecard marks only has not.</summary>
+    public bool VerdictGiven { get; set; }
 }

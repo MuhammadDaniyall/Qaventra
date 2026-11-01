@@ -161,7 +161,10 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         else if (!(request.Status == RequestStatus.Approved && me.IsHr()))
             throw new ForbiddenException("This request cannot be cancelled.");
         request.Status = RequestStatus.Cancelled;
-        request.PayrollRunId = null;
+        // A draft payroll still has it on its payslips: keep the link so that payroll can't go ahead until it is
+        // reprocessed, which drops the item and the link.
+        if (request.PayrollRunId is { } runId && !await db.PayrollRuns.AnyAsync(p => p.Id == runId && p.Status != PayrollRunStatus.Finalized))
+            request.PayrollRunId = null;
         await db.SaveChangesAsync();
     }
 

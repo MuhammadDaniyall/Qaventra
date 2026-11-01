@@ -114,4 +114,31 @@ public class PayRequestTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var fourth = await Ok(await admin.PostAsJsonAsync("/api/payroll/runs", new { year = after.Year, month = after.Month }));
         Assert.DoesNotContain((await SlipLines(admin, fourth, workerId)).EnumerateArray(), l => l.GetProperty("name").GetString()!.Contains("Motorbike"));
     }
+
+    [Fact]
+    public async Task An_item_removed_from_a_draft_payroll_needs_a_reprocess_and_is_not_paid()
+    {
+        var (admin, _, _, workerId) = await TeamAsync("Removed");
+        var (y, m) = (Today.Year, Today.Month);
+        var bonus = await Ok(await admin.PostAsJsonAsync("/api/pay/requests", new { employeeId = workerId, kind = "Bonus", title = "Festival bonus", amount = 15000, isTaxable = true, year = y, month = m }, ApiFactory.Json));
+        var bonusId = bonus.GetProperty("id").GetGuid();
+        var run = await Ok(await admin.PostAsJsonAsync("/api/payroll/runs", new { year = y, month = m }));
+        var runId = run.GetProperty("run").GetProperty("id").GetGuid();
+        Assert.Contains((await SlipLines(admin, run, workerId)).EnumerateArray(), l => l.GetProperty("name").GetString() == "Festival bonus");
+
+        // Removed while the payroll is a draft: it can't be finalized until reprocessed, and is no longer shown as in it.
+        await Ok(await admin.PostAsync($"/api/pay/requests/{bonusId}/cancel", null));
+        var item = (await Ok(await admin.GetAsync($"/api/pay/requests?employeeId={workerId}"))).EnumerateArray().Single(r => r.GetProperty("id").GetGuid() == bonusId);
+        Assert.False(item.GetProperty("inDraftPayroll").GetBoolean());
+        var refused = await admin.PostAsync($"/api/payroll/runs/{runId}/finalize", null);
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("Reprocess", await refused.Content.ReadAsStringAsync());
+
+        run = await Ok(await admin.PostAsJsonAsync("/api/payroll/runs", new { year = y, month = m }));
+        Assert.DoesNotContain((await SlipLines(admin, run, workerId)).EnumerateArray(), l => l.GetProperty("name").GetString() == "Festival bonus");
+        await Ok(await admin.PostAsync($"/api/payroll/runs/{runId}/finalize", null));
+        item = (await Ok(await admin.GetAsync($"/api/pay/requests?employeeId={workerId}"))).EnumerateArray().Single(r => r.GetProperty("id").GetGuid() == bonusId);
+        Assert.Equal("Cancelled", item.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, item.GetProperty("paidAtUtc").ValueKind);
+    }
 }

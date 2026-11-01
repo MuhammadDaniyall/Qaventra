@@ -18,6 +18,8 @@ public class TrainingProgram : TenantEntity
     /// <summary>Course page, video or material.</summary>
     public string? Link { get; set; }
     public bool IsMandatory { get; set; }
+    /// <summary>When the course last became mandatory; the completion window does not start before it.</summary>
+    public DateOnly? MandatorySince { get; set; }
     /// <summary>Mandatory only: departments it applies to; empty means everyone.</summary>
     public string DepartmentIds { get; set; } = "";
     /// <summary>Mandatory only: new joiners must complete it within this many days.</summary>
