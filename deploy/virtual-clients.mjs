@@ -1,30 +1,49 @@
 #!/usr/bin/env node
-// Virtual clients: simulates ordinary working days inside companies that seed-demo.mjs filled, acting through the
-// public API as the company's own people, and reports every call the app got wrong.
+// Virtual clients: the people of companies that seed-demo.mjs filled use the product through the public API the way they
+// would during a working day, and every call the app gets wrong is reported.
 //
-//   node deploy/virtual-clients.mjs --logins deploy/secrets/demo-logins.txt
-//   node deploy/virtual-clients.mjs --base http://localhost:5080 --logins a.txt --logins b.txt --days 3
+//   node deploy/virtual-clients.mjs --logins deploy/secrets/logins-a.txt,deploy/secrets/logins-b.txt      (a run: what is due now)
+//   node deploy/virtual-clients.mjs --base http://localhost:5080 --logins a.txt --days 3                 (backfill past days)
+//
+// Working hours mode (the default, meant to be started every 30 minutes through the day)
+//   Each person gets a plan for the day, worked out again identically on every run (seeded by company + person + date):
+//   arrival (shift start with jitter, now and then late), breaks (lunch/Zuhr, Asr prayer, tea), departure (shift end with
+//   jitter, some overtime, a few leave early or forget to check out), a few absences and sick days, and daytime work
+//   spread over the hours in the office (leave, expenses, helpdesk, letters, timesheets, training, suggestions, manager
+//   approvals, HR work: joiners, attendance fixes, announcements, recruitment, payroll near the month end). Shifts, off
+//   days and holidays come from the roster (/attendance/roster), as on the app's Roster screen.
+//   A run does every action whose time has come and that is not done yet, then waits for the actions due in the next
+//   --lookahead minutes so punches land on their planned minute. What has been done is kept per day in the state file,
+//   so nothing runs twice. Punches are live (the server stamps them with its own clock), so a punch more than --late-ok
+//   minutes overdue (the Mac slept) is not made late; the person asks for a missed-punch fix on their next working day,
+//   as a real person would.
 //
 // Flags
-//   --base <url>      API server (default https://qaventra.runasp.net)
-//   --logins <file>   a demo-logins.txt written by seed-demo.mjs; repeat the flag (or comma-separate) for several companies
-//   --days <n>        simulate the n calendar days ending on --date (default 1)
-//   --date <y-m-d>    last simulated day (default: today in Pakistan). Live punches (check-in/out, breaks) only happen on
-//                     the real today; earlier days are worked through missed-punch and work-from-home requests instead.
-//   --force           simulate days that an earlier run already simulated for that company
-//   --seed <text>     changes the day's random choices (default: none; the same day always plays out the same way)
+//   --base <url>       API server (default https://qaventra.runasp.net)
+//   --logins <file>    a demo-logins.txt written by seed-demo.mjs; repeat the flag (or comma-separate) for several companies
+//   --now <time>       pretend the current time is this (ISO; without a zone it is Pakistan time), for testing. The server
+//                      stamps punches with its own clock, so when --now is more than 5 minutes from the real time punches
+//                      are only logged ("dry"), never sent; all other actions are sent as usual.
+//   --lookahead <min>  also do what falls due in the next <min> minutes, waiting for each (default 25; 0 with --now)
+//   --late-ok <min>    a punch up to this many minutes overdue is still made now (default 40)
+//   --plan             print today's plan for everyone and stop
+//   --days <n> / --date <y-m-d>   backfill: play whole past days ending on --date (default today) the old way, through
+//                      missed-punch and work-from-home requests; today, if in the range, is played as a normal run.
+//   --force            backfill days that were already played
+//   --seed <text>      changes the random choices (default none: the same day always plays out the same way)
+//   --state-dir <dir>  where the state file and reports go (default deploy/secrets)
 //
 // Who acts: the HR manager, the line manager and the employees from the logins file. On the first run HR also gives
 // logins (same shared password) to a few more of the manager's team and to an IT helpdesk agent, and every new joiner
-// HR adds gets one too, so the cast grows over time. Logins and their tokens are kept in
-// deploy/secrets/virtual-clients-state.json (git-ignored) so sign-in, which is rate limited, is rarely needed.
+// HR adds gets one too, so the cast grows over time. Logins and their tokens are kept in the state file
+// (virtual-clients-state.json, git-ignored) so sign-in, which is rate limited, is rarely needed.
 //
 // Outcome of every call: ok; "refused" when the app turned the request down for a business reason a real user can run
 // into (no leave balance, overlapping dates, ...); "failed" for 5xx, network errors and any other 4xx. Failures are
-// what to look at: each is an app bug or something this script got wrong. The report is written to
-// deploy/secrets/virtual-clients-report-<date>.md.
+// what to look at: each is an app bug or something this script got wrong. Each run appends a section to that day's
+// report, virtual-clients-report-<date>.md, and prints one line per company.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -39,14 +58,16 @@ const flag = (name) => argv.includes(`--${name}`);
 
 const BASE = arg('base', 'https://qaventra.runasp.net').replace(/\/$/, '');
 const LOGIN_FILES = args('logins');
+const BACKFILL = argv.includes('--days') || argv.includes('--date');
 const DAYS = Math.max(1, Number(arg('days', '1')) || 1);
 const FORCE = flag('force');
 const SEED = arg('seed', '');
-const SECRETS = join(here, 'secrets');
+const PLAN_ONLY = flag('plan');
+const SECRETS = resolve(arg('state-dir', join(here, 'secrets')));
 const STATE_FILE = join(SECRETS, 'virtual-clients-state.json');
 
 if (!LOGIN_FILES.length) {
-  const fallback = join(SECRETS, 'demo-logins.txt');
+  const fallback = join(here, 'secrets', 'demo-logins.txt');
   if (existsSync(fallback)) LOGIN_FILES.push(fallback);
   else {
     console.error('Give at least one --logins file (the demo-logins.txt that seed-demo.mjs writes).');
@@ -54,26 +75,45 @@ if (!LOGIN_FILES.length) {
   }
 }
 
-// ---------- Dates (company-local, Pakistan UTC+5) ----------
+// ---------- Dates and the clock (company-local, Pakistan UTC+5) ----------
 
 const pad = (n) => String(n).padStart(2, '0');
 const iso = (d) => d.toISOString().slice(0, 10);
 const addDays = (d, n) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + n));
 const parseDate = (s) => new Date(`${s}T00:00:00Z`);
-const localNow = () => new Date(Date.now() + 5 * 3600_000);
-const REAL_TODAY = (() => {
-  const n = localNow();
+const dayOf = (ms) => {
+  const n = new Date(ms + 5 * 3600_000);
   return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()));
-})();
-const LAST_DAY = arg('date') ? parseDate(arg('date')) : REAL_TODAY;
-if (LAST_DAY > REAL_TODAY) {
+};
+const minuteOf = (ms) => {
+  const n = new Date(ms + 5 * 3600_000);
+  return n.getUTCHours() * 60 + n.getUTCMinutes();
+};
+
+// The script's clock: the real time, or --now moving on at the real pace.
+const NOW_ARG = arg('now');
+const START_REAL = Date.now();
+const START = NOW_ARG ? Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(NOW_ARG) ? NOW_ARG : `${NOW_ARG}+05:00`) : START_REAL;
+if (Number.isNaN(START)) {
+  console.error(`--now ${NOW_ARG} is not a date and time.`);
+  process.exit(1);
+}
+const clock = () => Date.now() - START_REAL + START;
+/** Punches are stamped by the server's clock: only send them when ours agrees with it. */
+const DRY_PUNCHES = Math.abs(START - START_REAL) > 5 * 60_000;
+const LOOKAHEAD = Math.max(0, Number(arg('lookahead', NOW_ARG ? '0' : '25')) || 0);
+const LATE_OK = Math.max(0, Number(arg('late-ok', '40')) || 0);
+const TODAY = dayOf(START); // the simulated today
+const REAL_TODAY = dayOf(START_REAL); // the server's today: requests cannot be dated after it
+const LAST_DAY = arg('date') ? parseDate(arg('date')) : TODAY;
+if (LAST_DAY > TODAY) {
   console.error('--date cannot be in the future.');
   process.exit(1);
 }
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const minutesOf = (t) => (t ? Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)) : null);
 const hhmm = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}:00`;
-const nowMinutes = () => localNow().getUTCHours() * 60 + localNow().getUTCMinutes();
+const hm = (m) => hhmm(m).slice(0, 5);
 
 // ---------- Randomness (same day, same company → same choices) ----------
 
@@ -112,7 +152,7 @@ function rng(seedText) {
 
 const events = []; // { company, date, persona, kind: 'did'|'refused'|'failed', text, intent, method, path, status, body }
 const ctx = { company: '', date: '' };
-const record = (e) => events.push({ company: ctx.company, date: ctx.date, ...e });
+const record = (e) => events.push({ company: ctx.company, date: ctx.date, at: hm(minuteOf(clock())), ...e });
 
 // ---------- HTTP ----------
 
@@ -156,7 +196,8 @@ const REFUSALS = {
   attendanceRequest: [/already have a pending request for this day/, /on approved leave that day/, /Requests can go back at most/, /is closed\. Ask HR to reopen/,
     /before your joining date/],
   punch: [/You are .* m from .*; you must be within/, /away from your approved location/, /cannot mark attendance from the (phone|web)/,
-    /only be marked from the office network/, /Check-in opens at/, /Location is required/],
+    /only be marked from the office network/, /Check-in opens at/, /Location is required/, /already checked (in|out) today/,
+    /already on a break/, /not on a break/],
   expense: [/is limited to Rs/, /needs a receipt/, /is not open to your grade/],
   letter: [/already asked for this letter/],
   training: [/already asked for this course/, /Only \d+ seats are left/, /not open for nominations/, /already started/],
@@ -177,14 +218,19 @@ class Persona {
     return this.me?.employeeId;
   }
 
+  /** Company and simulated day for this persona's events (companies run side by side). */
+  where() {
+    return { company: this.co.name, date: this.co.day ?? ctx.date };
+  }
+
   did(text) {
-    record({ persona: this.label, kind: 'did', text });
+    record({ ...this.where(), persona: this.label, kind: 'did', text });
   }
 
   /** The call worked but what came back is wrong: recorded as a failure (status shows what the server answered). */
   check(intent, ok, method, path, detail) {
     if (ok) return true;
-    record({ persona: this.label, kind: 'failed', intent, method, path, query: '', status: 'wrong data', title: detail, body: detail });
+    record({ ...this.where(), persona: this.label, kind: 'failed', intent, method, path, query: '', status: 'wrong data', title: detail, body: detail });
     return false;
   }
 
@@ -203,7 +249,7 @@ class Persona {
     if (expect404 && r.status === 404) return r;
     const refused = r.status === 400 && !r.validation && refuse.some((x) => x.test(r.title));
     record({
-      persona: this.label, kind: refused ? 'refused' : 'failed', intent, method, path: path.split('?')[0], query: path.includes('?') ? path.slice(path.indexOf('?')) : '',
+      ...this.where(), persona: this.label, kind: refused ? 'refused' : 'failed', intent, method, path: path.split('?')[0], query: path.includes('?') ? path.slice(path.indexOf('?')) : '',
       status: r.status, title: r.title, body: (r.text ?? '').replace(/\s+/g, ' ').slice(0, 400),
       text: refused ? `${intent}: refused (${r.title})` : undefined,
     });
@@ -233,7 +279,7 @@ class Persona {
         continue;
       }
       if (!r.ok) {
-        record({ persona: this.label, kind: 'failed', intent: 'Sign in', method: 'POST', path: '/auth/login', query: '', status: r.status, title: r.title,
+        record({ ...this.where(), persona: this.label, kind: 'failed', intent: 'Sign in', method: 'POST', path: '/auth/login', query: '', status: r.status, title: r.title,
           body: (r.text ?? '').slice(0, 400) });
         return;
       }
@@ -245,7 +291,7 @@ class Persona {
       saveState();
       return;
     }
-    record({ persona: this.label, kind: 'failed', intent: 'Sign in', method: 'POST', path: '/auth/login', query: '', status: 429, title: 'Rate limited after retries', body: '' });
+    record({ ...this.where(), persona: this.label, kind: 'failed', intent: 'Sign in', method: 'POST', path: '/auth/login', query: '', status: 429, title: 'Rate limited after retries', body: '' });
   }
 }
 
@@ -490,54 +536,8 @@ async function growCast(co, r) {
 
 // ---------- Employee behaviour ----------
 
-/** Attendance for one person on one day. Live punches only on the real today. */
-async function attendance(p, co, d, r, { live, workday, weekendWorker }) {
-  if (live) {
-    const today = (await p.get('Open today’s attendance', '/attendance/today')).data;
-    if (!today) return;
-    if (!workday && !weekendWorker) return;
-    const shiftStart = minutesOf(today.shiftStart) ?? 540;
-    const shiftEnd = minutesOf(today.shiftEnd) ?? 1080;
-    const office = co.ref.offices[0];
-    const where = () => {
-      if (!today.locationRequired || !office) return {};
-      // Within ~120 m of the office gate.
-      const j = () => (r.next() - 0.5) * 0.002;
-      return { latitude: +(office.latitude + j()).toFixed(6), longitude: +(office.longitude + j()).toFixed(6) };
-    };
-    const source = r.chance(0.6) ? 'Mobile' : 'Web';
-    let rec = today.record;
-    if (!rec) {
-      if (nowMinutes() < shiftStart - 60 && workday) return; // too early, nobody is in yet
-      // Now and then someone taps check-in from home before leaving.
-      if (today.locationRequired && office && r.chance(0.08)) {
-        const res = await p.post('Check in (still at home)', '/attendance/check-in', { latitude: 31.5204, longitude: 74.3587, source }, { refuse: REFUSALS.punch });
-        if (res.ok) p.did('Checked in from home (the location check let it through)');
-      }
-      const res = await p.post(weekendWorker ? 'Check in for weekend work' : 'Check in', '/attendance/check-in', { ...where(), source }, { refuse: REFUSALS.punch });
-      if (!res.ok) return;
-      rec = res.data;
-      p.check('Check in', rec?.date === today.date && !!rec?.checkIn, 'POST', '/attendance/check-in', `Check-in returned date ${rec?.date} / checkIn ${rec?.checkIn}; today is ${today.date}.`);
-      const after = (await p.get('Open today’s attendance after checking in', '/attendance/today')).data;
-      if (after) p.check('Check in', after.record?.id === rec.id, 'GET', '/attendance/today', `After checking in, today's record is ${after.record?.id ?? 'missing'}, expected ${rec.id}.`);
-      p.did(`${weekendWorker ? 'Came in on a weekend and checked' : 'Checked'} in from the ${source === 'Mobile' ? 'phone' : 'web'} at ${rec.checkIn?.slice(11, 16)}${rec.lateMinutes ? ` (${rec.lateMinutes} min late)` : ''}`);
-    }
-    if (rec.checkOut) return;
-    if (r.chance(0.4)) {
-      const kind = r.pick(['Lunch', 'Prayer', 'Tea']);
-      const s = await p.post(`Start a ${kind.toLowerCase()} break`, '/attendance/break/start', { kind }, { refuse: [/already on a break/] });
-      if (s.ok) {
-        const e = await p.post(`End the ${kind.toLowerCase()} break`, '/attendance/break/end', {});
-        if (e.ok) p.did(`Took a ${kind.toLowerCase()} break`);
-      }
-    }
-    const leaving = nowMinutes() >= shiftEnd - 15 || weekendWorker || r.chance(0.05);
-    if (leaving) {
-      const res = await p.post('Check out', '/attendance/check-out', { ...where(), source }, { refuse: REFUSALS.punch });
-      if (res.ok) p.did(`Checked out at ${res.data.checkOut?.slice(11, 16)} (${Math.round((res.data.workedMinutes ?? 0) / 6) / 10} h)`);
-    } else p.did('Still at work when the run ended (no check-out yet)');
-    return;
-  }
+/** Backfill of a past day: anyone the machine missed asks for it to be fixed. */
+async function attendance(p, co, d, r, { workday }) {
   if (!workday) return;
   // A past day: anyone the machine missed asks for it to be fixed.
   const month = `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
@@ -817,6 +817,24 @@ async function workInbox(p, r, { hr = false } = {}) {
   return done;
 }
 
+/** Nominates one or two of the team for an upcoming training session. */
+async function nominate(m, r) {
+  const sessions = ((await m.get('Open training sessions', '/training/sessions')).data ?? [])
+    .filter((s) => s.status === 'Scheduled' && Date.parse(`${s.startsAtUtc}Z`) > Date.now() && (!s.capacity || s.enrolled < s.capacity));
+  const s = sessions[0];
+  const team = (await m.get('Team list', '/employees?pageSize=200')).data?.items ?? [];
+  if (s && team.length) {
+    const detail = (await m.get('Open a training session', `/training/sessions/${s.id}`)).data;
+    const enrolled = new Set((detail?.enrollments ?? []).map((e) => e.employeeId));
+    const pickIds = r.shuffle(team.filter((e) => !enrolled.has(e.id))).slice(0, r.int(1, 2));
+    if (pickIds.length && detail?.canNominate !== false) {
+      const res = await m.post(`Nominate ${pickIds.map((e) => e.fullName).join(', ')} for ${s.program}`, `/training/sessions/${s.id}/enroll`,
+        { employeeIds: pickIds.map((e) => e.id) }, { refuse: REFUSALS.training });
+      if (res.ok) m.did(`Nominated ${pickIds.map((e) => e.fullName).join(' and ')} for ${s.program}`);
+    }
+  }
+}
+
 async function managerDay(m, co, d, r, opts) {
   if (!m?.token) return;
   await attendance(m, co, d, r, opts);
@@ -824,23 +842,7 @@ async function managerDay(m, co, d, r, opts) {
   await workInbox(m, r);
   await m.get('Look at the team’s attendance', `/attendance/daily?date=${iso(d)}`);
   await social(m, r);
-  // Nominate team members for an upcoming training session.
-  if (r.chance(0.2)) {
-    const sessions = ((await m.get('Open training sessions', '/training/sessions')).data ?? [])
-      .filter((s) => s.status === 'Scheduled' && Date.parse(`${s.startsAtUtc}Z`) > Date.now() && (!s.capacity || s.enrolled < s.capacity));
-    const s = sessions[0];
-    const team = (await m.get('Team list', '/employees?pageSize=200')).data?.items ?? [];
-    if (s && team.length) {
-      const detail = (await m.get('Open a training session', `/training/sessions/${s.id}`)).data;
-      const enrolled = new Set((detail?.enrollments ?? []).map((e) => e.employeeId));
-      const pickIds = r.shuffle(team.filter((e) => !enrolled.has(e.id))).slice(0, r.int(1, 2));
-      if (pickIds.length && detail?.canNominate !== false) {
-        const res = await m.post(`Nominate ${pickIds.map((e) => e.fullName).join(', ')} for ${s.program}`, `/training/sessions/${s.id}/enroll`,
-          { employeeIds: pickIds.map((e) => e.id) }, { refuse: REFUSALS.training });
-        if (res.ok) m.did(`Nominated ${pickIds.map((e) => e.fullName).join(' and ')} for ${s.program}`);
-      }
-    }
-  }
+  if (r.chance(0.2)) await nominate(m, r);
   if (r.chance(0.08)) await applyLeave(m, co, d, r);
   if (r.chance(0.08)) await claimExpense(m, d, r);
 }
@@ -856,7 +858,8 @@ async function addJoiner(hr, co, d, r) {
   const dept = r.pick(co.ref.departments.filter((x) => !/management/i.test(x.name))) ?? co.ref.departments[0];
   const desig = r.pick(co.ref.designations.filter((x) => !/chief|head|manager|lead/i.test(x.title))) ?? co.ref.designations[0];
   const managerId = r.chance(0.6) && co.mgr?.employeeId ? co.mgr.employeeId : dept?.headEmployeeId ?? co.mgr?.employeeId ?? null;
-  const joining = isOff(co, d) ? workdaysFrom(co, d, 1)[0] : d;
+  // Joiners are added ahead of their first day, as HR does once the offer is signed.
+  const joining = workdaysFrom(co, addDays(d, r.int(1, 10)), 1)[0];
   const dob = `${r.int(1994, 2002)}-${pad(r.int(1, 12))}-${pad(r.int(1, 28))}`;
   const emp = await hr.post(`Add new joiner ${first} ${last}`, '/employees', {
     firstName: first, lastName: last, joiningDate: iso(joining), status: 'Probation', email,
@@ -898,7 +901,10 @@ async function addJoiner(hr, co, d, r) {
 async function correctAttendance(hr, co, d, r) {
   const day = previousWorkday(co, d);
   const rows = (await hr.get(`Open daily attendance for ${iso(day)}`, `/attendance/daily?date=${iso(day)}`)).data ?? [];
-  const open = rows.filter((x) => x.record && !x.record.checkOut);
+  // People who already asked for a fix themselves are left to their approver.
+  const asked = new Set(((await hr.get('Open pending attendance requests', '/attendance/requests/approvals?status=Pending')).data ?? [])
+    .filter((x) => x.date === iso(day)).map((x) => x.employeeId));
+  const open = rows.filter((x) => x.record && !x.record.checkOut && !asked.has(x.employeeId));
   for (const row of r.shuffle(open).slice(0, 4)) {
     const inAt = row.record.checkIn.slice(11, 19);
     const out = Math.max(minutesOf(inAt) + 240, r.int(1075, 1110));
@@ -1057,141 +1063,635 @@ async function hrDay(hr, co, d, r, opts) {
   await hr.get('Open the HR dashboard', '/dashboard');
 }
 
-// ---------- A day ----------
+// ---------- Backfill: a whole past day at once ----------
 
 async function simulateDay(co, d) {
   const r = rng(`${co.name}|${iso(d)}|${SEED}`);
-  ctx.date = iso(d);
-  const live = iso(d) === iso(REAL_TODAY);
+  co.day = iso(d);
   const workday = !isOff(co, d);
   const kind = workday ? 'working day' : co.ref.holidays.has(iso(d)) ? 'holiday' : 'weekly off';
-  console.log(`  ${iso(d)} (${WEEKDAYS[d.getUTCDay()]}, ${kind}${live ? ', live' : ''})`);
+  console.log(`  ${co.name}, ${iso(d)} (${WEEKDAYS[d.getUTCDay()]}, ${kind}, backfill)`);
 
-  // Everyone with a login who comes in today; on a day off one or two people still come in for urgent work.
+  // Everyone with a login who came in that day; past days are worked through fix requests, not live punches.
   const staff = co.employees.filter((p) => !p.joinedOn || p.joinedOn <= iso(d));
   const present = workday ? staff.filter(() => r.chance(0.9)) : [];
-  const weekendCrew = !workday && live ? r.shuffle(staff).slice(0, r.int(1, 2)) : [];
-
-  const base = { live, workday, submitDay: workday && (d.getUTCDay() === 5 || isOff(co, addDays(d, 1))) };
-  await hrDay(co.hr, co, d, r, { ...base, weekendWorker: false });
-  for (const p of r.shuffle([...present, ...weekendCrew])) await employeeDay(p, co, d, r, { ...base, weekendWorker: weekendCrew.includes(p) });
+  const base = { live: false, workday, weekendWorker: false, submitDay: workday && (d.getUTCDay() === 5 || isOff(co, addDays(d, 1))) };
+  await hrDay(co.hr, co, d, r, base);
+  for (const p of r.shuffle(present)) await employeeDay(p, co, d, r, base);
   for (const a of co.agents) {
     if (!a.token) await a.signIn();
     if (!a.token || !workday) continue;
-    await attendance(a, co, d, r, { ...base, weekendWorker: false });
+    await attendance(a, co, d, r, base);
     await answerTickets(a, co, r, { onlyCategories: co.ref.helpdesk.filter((c) => c.agentIds?.includes(a.employeeId)).map((c) => c.id) });
     await social(a, r);
   }
-  await managerDay(co.mgr, co, d, r, { ...base, weekendWorker: false });
-  // End of the day: the line manager and HR look at what came in since the morning.
+  await managerDay(co.mgr, co, d, r, base);
   if (workday) {
     if (co.mgr?.token) await workInbox(co.mgr, r);
     await workInbox(co.hr, r, { hr: true });
   }
 }
 
+// ---------- Working hours: everyone's plan for a day ----------
+
+const cast = (co) => [co.hr, co.mgr, ...co.employees, ...co.agents].filter(Boolean);
+const isWorkday = (cell) => !!cell && !cell.isOff && !cell.isHoliday;
+const clampMinute = (m) => Math.max(0, Math.min(1439, Math.round(m)));
+const dayStartMs = (key) => Date.parse(`${key}T00:00:00+05:00`);
+
+/** Each person's shift, off days and holidays per date, read as HR from the roster, as the Roster screen shows them. */
+async function loadCalendar(co, from, to) {
+  co.cal = new Map();
+  co.ref.shiftById = new Map(co.ref.shifts.map((x) => [x.id, x]));
+  for (let f = from; f <= to; f = addDays(f, 42)) {
+    const t = addDays(f, 41) < to ? addDays(f, 41) : to;
+    const roster = (await co.hr.get('Open the roster', `/attendance/roster?from=${iso(f)}&to=${iso(t)}`)).data;
+    for (const row of roster?.rows ?? []) {
+      const days = co.cal.get(row.employeeId) ?? new Map();
+      for (const c of row.days) days.set(c.date, { ...c, defaultShiftId: row.defaultShiftId });
+      co.cal.set(row.employeeId, days);
+    }
+  }
+}
+
+/** On a day off, now and then one or two employees come in for urgent work. */
+function weekendCrew(co, key) {
+  const r = rng(`${co.name}|weekend|${key}|${SEED}`);
+  if (!r.chance(0.45)) return [];
+  const pool = co.employees.filter((p) => p.employeeId && co.cal.get(p.employeeId)?.has(key)).map((p) => p.email).sort();
+  return r.shuffle(pool).slice(0, r.int(1, 2));
+}
+
+/**
+ * One person's day: status, punch times and the work they do, as a list of actions at minutes of the day.
+ * Worked out from the roster and a random stream seeded by company + person + date, so every run gets the same plan.
+ */
+function planDay(co, p, d) {
+  const key = iso(d);
+  p.plans ??= {};
+  if (p.plans[key]) return p.plans[key];
+  const plan = (p.plans[key] = { date: key, status: 'none', actions: [] });
+  const cell = p.employeeId && co.cal.get(p.employeeId)?.get(key);
+  // The roster lists anyone who joins within the range it shows, so days before joining are skipped here.
+  const joined = co.ref.staff.find((e) => e.id === p.employeeId)?.joiningDate ?? p.joinedOn;
+  if (!cell || (joined && key < joined)) return plan;
+  const r = rng(`${co.name}|${p.email}|${key}|${SEED}`);
+  const shift = co.ref.shiftById.get(cell.shiftId) ?? co.ref.shiftById.get(cell.defaultShiftId) ?? co.ref.defaultShift;
+  const start = minutesOf(shift?.startTime) ?? 540;
+  let end = minutesOf(shift?.endTime) ?? 1080;
+  if (end <= start) end = 1435; // a shift past midnight ends at midnight here
+  Object.assign(plan, { shift: shift?.name, start, end });
+  const task = (id, at, label, run) => plan.actions.push({ id, at: clampMinute(at), label, kind: 'task', run });
+  const punch = (id, at, label, extra = {}) => plan.actions.push({ id, at: clampMinute(at), label, kind: 'punch', ...extra });
+
+  if (!isWorkday(cell)) {
+    plan.status = cell.isHoliday ? 'holiday' : 'off';
+    if (p.role !== 'employee' || !weekendCrew(co, key).includes(p.email)) return plan;
+    plan.status = 'weekend work';
+    const arrive = r.int(600, 690);
+    const leave = arrive + r.int(180, 300);
+    Object.assign(plan, { arrive, leave });
+    punch('in', arrive, 'Check in for weekend work');
+    punch('out', leave, 'Check out');
+    task('social', arrive + r.int(5, 30), 'Catch up on announcements and notifications', (p, co, d, r) => social(p, r));
+    if (r.chance(0.3)) task('ticket', arrive + r.int(40, 150), 'Raise a helpdesk ticket', (p, co, d, r) => raiseTicket(p, co, r));
+    return plan;
+  }
+
+  const roll = r.next();
+  if (roll < 0.03) {
+    plan.status = 'sick';
+    task('sick', start - r.int(20, 75), 'Call in sick', (p, co, d, r) => applySickToday(p, co, d, r));
+    return plan;
+  }
+  if (roll < 0.06) {
+    plan.status = 'absent';
+    return plan;
+  }
+  plan.status = 'present';
+  const earliest = shift?.earliestCheckInMinutes != null ? start - shift.earliestCheckInMinutes : 0;
+  const late = r.chance(0.12);
+  const arrive = Math.max(earliest, late ? start + r.int(16, 75) : start + r.int(-25, 12));
+  const o = r.next();
+  let leave = o < 0.15 ? end + r.int(30, 100) : o < 0.2 ? end - r.int(20, 60) : end + r.int(-8, 25);
+  leave = Math.min(Math.max(leave, arrive + 240), 1435);
+  const forgetsCheckOut = r.chance(0.04);
+  Object.assign(plan, { arrive, leave, late, forgetsCheckOut, breaks: [] });
+  punch('in', arrive, 'Check in');
+
+  const wanted = [];
+  if (r.chance(0.7)) {
+    const b = start + Math.floor((end - start) / 2) - 45 + r.int(-20, 20);
+    wanted.push([r.chance(0.5) ? 'Lunch' : 'Prayer', b, b + Math.max(15, (shift?.breakMinutes || 40) + r.int(-10, 15))]);
+  }
+  if (r.chance(0.3)) {
+    const b = end - 110 + r.int(-15, 15);
+    wanted.push(['Prayer', b, b + r.int(10, 20)]);
+  }
+  if (r.chance(0.2)) {
+    const b = arrive + 120 + r.int(0, 40);
+    wanted.push(['Tea', b, b + r.int(10, 20)]);
+  }
+  let free = arrive + 30;
+  for (const [kind, from, to] of wanted.sort((x, y) => x[1] - y[1])) {
+    if (from < free || to > leave - 20) continue;
+    const i = plan.breaks.length;
+    plan.breaks.push({ kind, from, to });
+    punch(`break${i}-start`, from, `Start a ${kind.toLowerCase()} break`, { breakKind: kind, endsAt: to });
+    punch(`break${i}-end`, to, `End the ${kind.toLowerCase()} break`, { breakKind: kind });
+    free = to + 10;
+  }
+  if (!forgetsCheckOut) punch('out', leave, 'Check out');
+
+  const at = (a = 0.05, b = 0.95) => arrive + Math.round((leave - arrive) * (a + r.next() * (b - a)));
+  task('social', arrive + r.int(3, 30), 'Announcements, polls and notifications', (p, co, d, r) => social(p, r));
+  task('fix', arrive + r.int(10, 90), 'Ask to fix earlier days', (p, co, d, r) => fixEarlierDays(p, co, d, r));
+  if (r.chance(0.5)) task('social-2', at(0.5, 0.7), 'Notifications after lunch', (p, co, d, r) => social(p, r));
+
+  if (p.role === 'hr') {
+    task('dashboard', arrive + r.int(5, 20), 'Open the HR dashboard', (p) => p.get('Open the HR dashboard', '/dashboard'));
+    task('inbox-1', arrive + r.int(10, 40), 'Morning approvals', (p, co, d, r) => workInbox(p, r, { hr: true }));
+    task('inbox-2', at(0.4, 0.55), 'Approvals after lunch', (p, co, d, r) => workInbox(p, r, { hr: true }));
+    task('inbox-3', leave - r.int(15, 45), 'Approvals before leaving', (p, co, d, r) => workInbox(p, r, { hr: true }));
+    task('correct', Math.max(arrive + 20, 660 + r.int(-30, 30)), 'Correct missing check-outs', (p, co, d, r) => correctAttendance(p, co, d, r));
+    if (r.chance(0.35)) task('joiner', at(0.1, 0.5), 'Add a new joiner', (p, co, d, r) => addJoiner(p, co, d, r));
+    if (r.chance(0.25)) task('announce', arrive + r.int(20, 90), 'Post an announcement', (p, co, d, r) => announce(p, d, r));
+    if (r.chance(0.6)) task('recruit', at(0.3, 0.8), 'Move candidates along', (p, co, d, r) => recruit(p, co, d, r));
+    task('payroll', Math.min(leave - 30, Math.max(arrive + 30, 900 + r.int(-40, 40))), 'Payroll (month end)', (p, co, d) => payroll(p, d));
+    const hrTickets = (p, co, d, r) => {
+      const hrCats = co.ref.helpdesk.filter((c) => /HR|payroll/i.test(c.name)).map((c) => c.id);
+      return answerTickets(p, co, r, co.agents.length ? { onlyCategories: hrCats } : {});
+    };
+    task('tickets-1', at(0.1, 0.3), 'Answer HR tickets', hrTickets);
+    task('tickets-2', at(0.6, 0.8), 'Answer HR tickets', hrTickets);
+    if (r.chance(0.5)) task('suggestions', at(0.3, 0.9), 'Review suggestions', (p, co, d, r) => reviewSuggestions(p, r));
+  } else if (p.role === 'manager') {
+    task('inbox-1', arrive + r.int(15, 45), 'Morning approvals', (p, co, d, r) => workInbox(p, r));
+    task('team', arrive + r.int(30, 75), 'Look at who is in today', (p, co, d) => p.get('Look at the team’s attendance', `/attendance/daily?date=${iso(d)}`));
+    task('inbox-2', at(0.45, 0.6), 'Approvals after lunch', (p, co, d, r) => workInbox(p, r));
+    task('inbox-3', leave - r.int(20, 50), 'Approvals before leaving', (p, co, d, r) => workInbox(p, r));
+    if (r.chance(0.2)) task('nominate', at(), 'Nominate the team for training', (p, co, d, r) => nominate(p, r));
+    if (r.chance(0.08)) task('leave', at(), 'Apply for leave', (p, co, d, r) => applyLeave(p, co, d, r));
+    if (r.chance(0.08)) task('expense', at(), 'Claim expenses', (p, co, d, r) => claimExpense(p, d, r));
+  } else if (p.role === 'agent') {
+    const queue = (p, co, d, r) => answerTickets(p, co, r, { onlyCategories: co.ref.helpdesk.filter((c) => c.agentIds?.includes(p.employeeId)).map((c) => c.id) });
+    task('tickets-1', at(0.03, 0.2), 'Work the helpdesk queue', queue);
+    task('tickets-2', at(0.4, 0.6), 'Work the helpdesk queue', queue);
+    task('tickets-3', at(0.75, 0.95), 'Work the helpdesk queue', queue);
+  } else {
+    const next = co.cal.get(p.employeeId)?.get(iso(addDays(d, 1)));
+    const submitDay = d.getUTCDay() === 5 || (next ? !isWorkday(next) : isOff(co, addDays(d, 1)));
+    if (r.chance(0.14)) task('leave', at(), 'Apply for leave', (p, co, d, r) => applyLeave(p, co, d, r));
+    if (r.chance(0.04)) task('cancel-leave', at(), 'Cancel a pending leave', (p, co, d) => cancelLeave(p, d));
+    if (r.chance(0.12)) task('expense', at(), 'Claim expenses', (p, co, d, r) => claimExpense(p, d, r));
+    if (r.chance(0.14)) task('ticket', at(), 'Raise a helpdesk ticket', (p, co, d, r) => raiseTicket(p, co, r));
+    if (r.chance(0.6)) task('follow-tickets', at(0.4, 0.9), 'Follow up on my tickets', (p, co, d, r) => followTickets(p, r));
+    if (r.chance(0.07)) task('letter', at(), 'Ask for a letter', (p, co, d, r) => requestLetter(p, co, r));
+    if (r.chance(0.7)) task('timesheet', leave - r.int(10, 40), 'Fill in the timesheet', (p, co, d, r) => timesheet(p, co, d, r, { submitDay }));
+    if (r.chance(0.05)) task('training', at(), 'Ask for training', (p, co, d, r) => requestTraining(p, co, r));
+    if (r.chance(0.05)) task('suggest', at(), 'Make a suggestion', (p, co, d, r) => suggest(p, co, r));
+  }
+  return plan;
+}
+
+async function applySickToday(p, co, d, r) {
+  const type = leaveType(co, /sick/i);
+  if (!type) return;
+  const extra = {};
+  const reasons = co.ref.leaveReasons.filter((x) => x.leaveTypeId === type.id);
+  if (reasons.length) extra.reasonId = (reasons.find((x) => !x.requiresDocument) ?? reasons[0]).id;
+  const reason = r.pick(LEAVE_REASONS.sick);
+  const res = await p.post(`Apply for ${type.name} for today, ${iso(d)}`, '/leave', { leaveTypeId: type.id, fromDate: iso(d), toDate: iso(d), reason, ...extra },
+    { refuse: REFUSALS.leave });
+  if (res.ok) p.did(`Called in sick and applied for ${type.name} for today: “${reason}”`);
+}
+
+const progressOf = (co, key) => ((co.state.progress ??= {})[key] ??= {});
+const finished = (s) => s === 'done' || s === 'dry';
+
+/**
+ * The next morning a person asks for a fix for any of the last few working days whose punches did not all go in:
+ * a missed check-in or check-out (the run came too late, they forgot) becomes a missed-punch request with the times
+ * of their plan; an unexplained absence sometimes becomes a work-from-home request. Each day is handled once.
+ */
+async function fixEarlierDays(p, co, d, r) {
+  let requests = null;
+  for (let back = 1, seen = 0; back <= 7 && seen < 3; back++) {
+    const d0 = addDays(d, -back);
+    const k0 = iso(d0);
+    if (co.state.firstDay && k0 < co.state.firstDay) break;
+    const cell = co.cal.get(p.employeeId)?.get(k0);
+    if (!cell) break;
+    if (!isWorkday(cell) || k0 >= iso(REAL_TODAY)) continue; // with --now ahead of the server: only days the server has finished
+    seen++;
+    const prog0 = co.state.progress?.[k0];
+    const key = `${p.email}|fixed`;
+    if (prog0?.[key]) continue;
+    const handled = () => {
+      progressOf(co, k0)[key] = { s: 'done' };
+      saveState();
+    };
+    const plan = planDay(co, p, d0);
+    const state = (id) => prog0?.[`${p.email}|${id}`]?.s;
+    let kind, inAt, outAt, reason;
+    if (co.state.days.includes(k0)) {
+      handled(); // a backfilled day: the backfill already asked for its fixes
+      continue;
+    }
+    if (plan.status === 'none' || prog0?.[`${p.email}|day`]?.onLeave || (plan.status !== 'present' && plan.status !== 'absent')) {
+      handled();
+      continue;
+    }
+    if (plan.status === 'absent') {
+      if (!r.chance(0.35)) {
+        handled();
+        continue;
+      }
+      [kind, inAt, outAt] = ['WorkFromHome', plan.start, plan.end];
+      reason = r.pick(['Worked from home, the car was at the mechanic. Was on Teams all day.', 'Worked from home because of the smog; my asthma was bad.',
+        'Waited at home for the internet technician; worked online.']);
+    } else if (state('in')) {
+      if (finished(state('in')) && finished(state('out'))) {
+        handled();
+        continue;
+      }
+      [kind, inAt, outAt] = ['MissedPunch', plan.arrive, plan.leave];
+      if (!finished(state('in')))
+        reason = r.pick(['The attendance app did not open in the morning, so no check-in was recorded.', 'Forgot to check in; was at my desk from the morning.']);
+      else {
+        if (state('in') === 'done') {
+          const rec = await myRecord(p, d0);
+          if (rec?.checkOut) {
+            handled();
+            continue;
+          }
+          if (rec) inAt = minutesOf(rec.checkIn.slice(11, 16));
+        }
+        reason = r.pick(['Forgot to check out, left after the team meeting.', 'Phone battery died before I could check out.', 'Left in a hurry for a family emergency and forgot to check out.']);
+      }
+    } else {
+      // No run reached this person that day (the Mac was off): look at what the app has.
+      const rec = await myRecord(p, d0);
+      if (rec?.checkOut) {
+        handled();
+        continue;
+      }
+      [kind, inAt, outAt] = ['MissedPunch', rec ? minutesOf(rec.checkIn.slice(11, 16)) : plan.arrive, plan.leave];
+      reason = rec ? 'Forgot to check out that day.' : 'The attendance app did not record my punches that day; I was in the office.';
+    }
+    requests ??= (await p.get('Open my attendance requests', '/attendance/requests/my')).data ?? [];
+    if (requests.some((x) => x.date === k0)) {
+      handled();
+      continue;
+    }
+    p.cache ??= {};
+    p.cache.leave ??= (await p.get('Open my leave', '/leave/my')).data ?? [];
+    if (p.cache.leave.some((l) => l.status === 'Approved' && l.fromDate <= k0 && l.toDate >= k0)) {
+      handled();
+      continue;
+    }
+    outAt = Math.max(outAt, inAt + 60);
+    const res = await p.post(`Ask to fix attendance for ${k0} (${kind})`, '/attendance/requests',
+      { date: k0, kind, checkIn: hhmm(inAt), checkOut: hhmm(Math.min(outAt, 1439)), reason }, { refuse: REFUSALS.attendanceRequest });
+    if (res.ok) p.did(`Asked to fix attendance for ${k0} (${kind === 'WorkFromHome' ? 'worked from home' : 'missed punch'}, ${hm(inAt)}–${hm(Math.min(outAt, 1439))}): “${reason}”`);
+    handled();
+  }
+}
+
+async function myRecord(p, d) {
+  const month = `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}`;
+  p.cache ??= {};
+  p.cache[month] ??= (await p.get('Open my attendance', `/attendance/my?year=${d.getUTCFullYear()}&month=${d.getUTCMonth() + 1}`)).data ?? [];
+  return p.cache[month].find((a) => a.date === iso(d));
+}
+
+// ---------- Working hours: a run ----------
+
+/** Whether the person is on approved full-day leave today; read once per day, the first time they act. */
+async function dayStatus(co, p, d, prog) {
+  const k = `${p.email}|day`;
+  if (!prog[k]) {
+    const mine = (await p.get('Open my leave', '/leave/my')).data ?? [];
+    const onLeave = mine.some((l) => l.status === 'Approved' && l.fromDate <= iso(d) && l.toDate >= iso(d) && (l.duration ?? 'FullDay') === 'FullDay');
+    prog[k] = { onLeave };
+    if (onLeave) p.did('On approved leave today, not coming in');
+    saveState();
+  }
+  return prog[k];
+}
+
+async function livePunch(co, p, a) {
+  const today = (await p.get('Open today’s attendance', '/attendance/today')).data;
+  if (!today) return 'failed';
+  if (today.date !== iso(dayOf(clock()))) return 'skipped';
+  const r = rng(`${co.name}|${p.email}|${today.date}|${a.id}|where|${SEED}`);
+  const source = rng(`${co.name}|${p.email}|${today.date}|source|${SEED}`).chance(0.6) ? 'Mobile' : 'Web';
+  const office = co.ref.offices[0];
+  const where = () => {
+    if (!today.locationRequired || !office) return {};
+    const j = () => (r.next() - 0.5) * 0.002; // within ~120 m of the office gate
+    return { latitude: +(office.latitude + j()).toFixed(6), longitude: +(office.longitude + j()).toFixed(6) };
+  };
+  const outcome = (res) => (res.ok ? 'done' : res.status === 400 && !res.validation ? 'refused' : 'failed');
+
+  if (a.id === 'in') {
+    if (today.record) {
+      // Already in (an earlier run, a fix request or HR): never a second check-in.
+      p.did(`Already checked in at ${today.record.checkIn?.slice(11, 16)}; no second check-in`);
+      return 'done';
+    }
+    // Now and then someone taps check-in at home before leaving; the location check should turn it down.
+    if (today.locationRequired && office && r.chance(0.05)) {
+      const res = await p.post('Check in (still at home)', '/attendance/check-in', { latitude: 31.5204, longitude: 74.3587, source }, { refuse: REFUSALS.punch });
+      if (res.ok) {
+        p.did('Checked in from home (the location check let it through)');
+        return 'done';
+      }
+    }
+    const res = await p.post(a.label, '/attendance/check-in', { ...where(), source }, { refuse: REFUSALS.punch });
+    if (!res.ok) return outcome(res);
+    const rec = res.data;
+    p.check(a.label, rec?.date === today.date && !!rec?.checkIn, 'POST', '/attendance/check-in', `Check-in returned date ${rec?.date} / checkIn ${rec?.checkIn}; today is ${today.date}.`);
+    const after = (await p.get('Open today’s attendance after checking in', '/attendance/today')).data;
+    if (after) p.check(a.label, after.record?.id === rec?.id, 'GET', '/attendance/today', `After checking in, today's record is ${after.record?.id ?? 'missing'}, expected ${rec?.id}.`);
+    p.did(`${a.label.replace('Check in', 'Checked in')} from the ${source === 'Mobile' ? 'phone' : 'web'} at ${rec?.checkIn?.slice(11, 16)}${rec?.lateMinutes ? ` (${rec.lateMinutes} min late)` : ''}`);
+    return 'done';
+  }
+  if (!today.record) return 'skipped';
+  if (today.record.checkOut) {
+    if (a.id === 'out') p.did(`Already checked out at ${today.record.checkOut.slice(11, 16)}; no second check-out`);
+    return a.id === 'out' ? 'done' : 'skipped';
+  }
+  const open = (today.breaks ?? []).find((b) => !b.end);
+  if (a.id === 'out') {
+    const res = await p.post('Check out', '/attendance/check-out', { ...where(), source }, { refuse: REFUSALS.punch });
+    if (!res.ok) return outcome(res);
+    p.check('Check out', !!res.data?.checkOut && res.data.checkOut >= res.data.checkIn, 'POST', '/attendance/check-out',
+      `Check-out came back as ${res.data?.checkOut} for a check-in at ${res.data?.checkIn}.`);
+    p.did(`Checked out at ${res.data.checkOut?.slice(11, 16)} (${Math.round((res.data.workedMinutes ?? 0) / 6) / 10} h worked)`);
+    return 'done';
+  }
+  if (a.id.endsWith('-start')) {
+    if (open) return 'done';
+    const res = await p.post(a.label, '/attendance/break/start', { kind: a.breakKind }, { refuse: REFUSALS.punch });
+    if (res.ok) p.did(`Started a ${a.breakKind.toLowerCase()} break at ${res.data?.start?.slice(11, 16)}`);
+    return outcome(res);
+  }
+  if (!open) return 'skipped';
+  const res = await p.post(a.label, '/attendance/break/end', {}, { refuse: REFUSALS.punch });
+  if (res.ok) p.did(`Back from the ${a.breakKind.toLowerCase()} break at ${res.data?.end?.slice(11, 16)} (${res.data?.minutes} min)`);
+  return outcome(res);
+}
+
+/** Does one planned action, returning what became of it (kept in the state file). */
+async function perform(co, p, a, d, prog) {
+  if ((await dayStatus(co, p, d, prog)).onLeave) return 'on leave';
+  const key = iso(d);
+  if (a.kind === 'task') {
+    try {
+      await a.run(p, co, d, rng(`${co.name}|${p.email}|${key}|${a.id}|${SEED}`));
+      return 'done';
+    } catch (e) {
+      record({ ...p.where(), persona: p.label, kind: 'failed', intent: a.label, method: '-', path: '-', query: '', status: 'script error', title: e.message, body: String(e.stack).slice(0, 400) });
+      return 'failed';
+    }
+  }
+  // Punches go in order: breaks and check-out need the check-in, a break end needs its start.
+  const before = a.id === 'in' ? null : a.id.endsWith('-end') ? a.id.replace(/-end$/, '-start') : 'in';
+  const prior = before && prog[`${p.email}|${before}`]?.s;
+  if (before && !finished(prior)) return 'skipped';
+  if (a.id !== 'out' && a.id !== 'in' && prog[`${p.email}|out`]) return 'skipped';
+  if (DRY_PUNCHES || prior === 'dry') {
+    p.did(`${a.label} at ${hm(a.at)} (dry: --now is not the server's clock, so the punch was not sent)`);
+    return 'dry';
+  }
+  const late = minuteOf(clock()) - a.at;
+  if (a.endsAt != null && minuteOf(clock()) >= a.endsAt) {
+    p.did(`Did not log the ${a.breakKind.toLowerCase()} break of ${hm(a.at)}–${hm(a.endsAt)} (the run came after it ended)`);
+    return 'missed';
+  }
+  if (late > LATE_OK) {
+    const big = a.id === 'in' || a.id === 'out';
+    p.did(`Did not ${a.label.toLowerCase()} (due at ${hm(a.at)}, the run came ${late} min later)${big ? '; asks for a missed-punch fix on the next working day' : ''}`);
+    return 'missed';
+  }
+  return livePunch(co, p, a);
+}
+
+/** Everything due for this company now: overdue actions at once, then the next --lookahead minutes on their minute. */
+async function runToday(co, d) {
+  const key = iso(d);
+  co.day = key;
+  const prog = progressOf(co, key);
+  co.state.firstDay ??= [...co.state.days, key].sort()[0];
+  const all = [];
+  for (const p of cast(co).filter((x) => x.token && x.employeeId)) for (const a of planDay(co, p, d).actions) all.push({ p, a });
+  const rank = (a) => (a.id === 'in' ? 0 : a.kind === 'punch' && a.id !== 'out' ? 1 : a.kind === 'task' ? 2 : 3);
+  all.sort((x, y) => x.a.at - y.a.at || rank(x.a) - rank(y.a));
+  const nowMinute = () => (iso(dayOf(clock())) === key ? minuteOf(clock()) : 1440);
+  const horizon = Math.min(1439, Math.max(nowMinute(), iso(dayOf(START)) === key ? minuteOf(START) + (DRY_PUNCHES ? 0 : LOOKAHEAD) : 0));
+  const stats = { actions: 0, punches: 0, missed: 0 };
+  for (const { p, a } of all) {
+    const k = `${p.email}|${a.id}`;
+    if (prog[k] || a.at > horizon) continue;
+    const wait = dayStartMs(key) + a.at * 60_000 - clock();
+    if (wait > 0) await sleep(wait + Math.floor(Math.random() * 40_000));
+    if (nowMinute() >= 1440) break; // past midnight: tomorrow's runs take over
+    const s = await perform(co, p, a, d, prog);
+    prog[k] = { s, at: hm(Math.min(nowMinute(), 1439)) };
+    saveState();
+    if (s === 'skipped' || s === 'on leave') continue;
+    stats.actions++;
+    if (a.kind === 'punch' && (s === 'done' || s === 'dry')) stats.punches++;
+    if (s === 'missed') stats.missed++;
+  }
+  const blocked = ({ p, a }) => {
+    if (a.kind !== 'punch' || a.id === 'in') return prog[`${p.email}|day`]?.onLeave;
+    const before = a.id.endsWith('-end') ? a.id.replace(/-end$/, '-start') : 'in';
+    const s = prog[`${p.email}|${before}`]?.s;
+    return s && !finished(s);
+  };
+  const next = all.find((x) => !prog[`${x.p.email}|${x.a.id}`] && !blocked(x));
+  return { stats, next: next ? `${hm(next.a.at)} ${next.p.label.replace(/ \(.*\)$/, '')}: ${next.a.label.toLowerCase()}` : 'nothing more today' };
+}
+
+function printPlan(co, d) {
+  const key = iso(d);
+  const prog = co.state.progress?.[key] ?? {};
+  console.log(`${co.name}, ${key} (${WEEKDAYS[d.getUTCDay()]})`);
+  for (const p of cast(co).filter((x) => x.token && x.employeeId)) {
+    const plan = planDay(co, p, d);
+    const times = plan.status === 'present' || plan.status === 'weekend work'
+      ? ` ${hm(plan.arrive)}–${plan.forgetsCheckOut ? `(forgets to check out, leaves ${hm(plan.leave)})` : hm(plan.leave)}${plan.late ? ' late' : ''}`
+      + (plan.breaks?.length ? `, breaks ${plan.breaks.map((b) => `${b.kind} ${hm(b.from)}–${hm(b.to)}`).join(', ')}` : '')
+      : '';
+    console.log(`  ${p.label} [${p.role}${plan.shift ? `, ${plan.shift}` : ''}]: ${plan.status}${times}`);
+    for (const a of [...plan.actions].sort((x, y) => x.at - y.at)) {
+      const s = prog[`${p.email}|${a.id}`];
+      console.log(`      ${hm(a.at)} ${a.label}${s ? `  [${s.s} at ${s.at}]` : ''}`);
+    }
+  }
+}
+
 // ---------- Report ----------
 
-function writeReport() {
+const callKey = (f) => `${f.method} ${f.path.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, '{id}')} → ${f.status}`;
+
+/** Adds this run's section to the day's report (one file per day, kept across runs). */
+function appendReport(day, title) {
   const failed = events.filter((e) => e.kind === 'failed');
   const refused = events.filter((e) => e.kind === 'refused');
   const did = events.filter((e) => e.kind === 'did');
+  mkdirSync(SECRETS, { recursive: true });
+  const file = join(SECRETS, `virtual-clients-report-${day}.md`);
   const out = [];
-  out.push(`# Virtual clients report, ${iso(REAL_TODAY)}`, '');
-  out.push(`Server: ${BASE}  `, `Days: ${DAYS} ending ${iso(LAST_DAY)}  `, `Run at: ${new Date().toISOString()}  `,
-    `Actions done: ${did.length} · refused (business rules): ${refused.length} · **failures: ${failed.length}**`, '');
-
-  out.push('## Failures', '');
-  if (!failed.length) out.push('None.', '');
-  else {
+  if (!existsSync(file))
+    out.push(`# Virtual clients, ${day}`, '', `Server: ${BASE}. Each run adds a section. Failures are app bugs (or script mistakes); refusals are business rules a real user meets.`, '');
+  out.push(`## ${title}`, '', `Actions: ${did.length} · refused: ${refused.length} · **failures: ${failed.length}**`, '');
+  if (failed.length) {
     const groups = new Map();
-    for (const f of failed) {
-      const key = `${f.method} ${f.path.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, '{id}')} → ${f.status}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(f);
-    }
-    out.push('| # | Call | Times | First seen trying to |', '|---|---|---|---|');
-    [...groups.entries()].forEach(([k, list], i) => out.push(`| ${i + 1} | \`${k}\` | ${list.length} | ${list[0].intent} (${list[0].persona}) |`));
-    out.push('');
-    [...groups.entries()].forEach(([k, list], i) => {
-      out.push(`### ${i + 1}. \`${k}\``, '');
+    for (const f of failed) groups.set(callKey(f), [...(groups.get(callKey(f)) ?? []), f]);
+    out.push('### Failures', '');
+    for (const [k, list] of groups) {
+      out.push(`#### \`${k}\` (${list.length}×)`, '');
       for (const f of list.slice(0, 6))
-        out.push(`- ${f.company}, ${f.date}, **${f.persona}** trying to *${f.intent}*: \`${f.method} ${f.path}${f.query ?? ''}\` → ${f.status}`, `  \`\`\`\n  ${f.body || '(empty body)'}\n  \`\`\``);
+        out.push(`- ${f.company}, ${f.date} ${f.at}, **${f.persona}** trying to *${f.intent}*: \`${f.method} ${f.path}${f.query ?? ''}\` → ${f.status}`, `  \`\`\`\n  ${f.body || '(empty body)'}\n  \`\`\``);
       if (list.length > 6) out.push(`- … and ${list.length - 6} more like this`);
       out.push('');
-    });
-  }
-
-  out.push('## Refused by business rules (expected)', '');
-  if (!refused.length) out.push('None.', '');
-  for (const e of refused) out.push(`- ${e.company}, ${e.date}, ${e.persona}: ${e.intent} → “${e.title}”`);
-  out.push('');
-
-  out.push('## What each persona did', '');
-  const companies = [...new Set(events.map((e) => e.company))];
-  for (const c of companies) {
-    out.push(`### ${c}`, '');
-    const dates = [...new Set(events.filter((e) => e.company === c).map((e) => e.date))].filter(Boolean).sort();
-    for (const date of dates) {
-      out.push(`#### ${date}`, '');
-      const evs = events.filter((e) => e.company === c && e.date === date);
-      for (const persona of [...new Set(evs.map((e) => e.persona))]) {
-        out.push(`**${persona}**`, '');
-        for (const e of evs.filter((x) => x.persona === persona)) {
-          if (e.kind === 'did') out.push(`- ${e.text}`);
-          else if (e.kind === 'refused') out.push(`- REFUSED: ${e.intent} (“${e.title}”)`);
-          else out.push(`- FAILED: ${e.intent} (\`${e.method} ${e.path}\` → ${e.status})`);
-        }
-        out.push('');
-      }
     }
   }
-  mkdirSync(SECRETS, { recursive: true });
-  const file = join(SECRETS, `virtual-clients-report-${iso(REAL_TODAY)}.md`);
-  writeFileSync(file, out.join('\n'));
+  if (refused.length) {
+    out.push('### Refused by business rules', '');
+    for (const e of refused) out.push(`- ${e.company}, ${e.date} ${e.at}, ${e.persona}: ${e.intent} → “${e.title}”`);
+    out.push('');
+  }
+  for (const c of [...new Set(events.map((e) => e.company))]) {
+    for (const date of [...new Set(events.filter((e) => e.company === c).map((e) => e.date))].sort()) {
+      const evs = events.filter((e) => e.company === c && e.date === date);
+      out.push(`### ${c}${date === day ? '' : `, ${date}`}`, '');
+      for (const e of evs) {
+        const text = e.kind === 'did' ? e.text : e.kind === 'refused' ? `REFUSED: ${e.intent} (“${e.title}”)` : `FAILED: ${e.intent} (\`${e.method} ${e.path}\` → ${e.status})`;
+        out.push(`- ${e.at} **${e.persona}**: ${text}`);
+      }
+      out.push('');
+    }
+  }
+  if (!events.length) out.push('Nothing was due.', '');
+  appendFileSync(file, out.join('\n') + '\n');
   return { file, failed, refused, did };
 }
 
 // ---------- Run ----------
 
-async function main() {
-  console.log(`Virtual clients on ${BASE}: ${DAYS} day(s) ending ${iso(LAST_DAY)}\n`);
-  for (const file of LOGIN_FILES) {
-    let co;
+const LOCK = join(SECRETS, 'virtual-clients.lock');
+function takeLock() {
+  mkdirSync(SECRETS, { recursive: true });
+  if (existsSync(LOCK)) {
+    const pid = Number(readFileSync(LOCK, 'utf8'));
     try {
-      co = await setupCompany(file);
+      process.kill(pid, 0);
+      console.log(`${iso(TODAY)} ${hm(minuteOf(START))} an earlier run (pid ${pid}) is still going; nothing to do.`);
+      process.exit(0);
+    } catch {
+      // stale lock from a run that died
+    }
+  }
+  writeFileSync(LOCK, String(process.pid));
+  process.on('exit', () => {
+    try {
+      unlinkSync(LOCK);
+    } catch {
+      // already gone
+    }
+  });
+  for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => process.exit(130));
+}
+
+async function main() {
+  if (!PLAN_ONLY) takeLock();
+  const stamp = `${iso(TODAY)} ${hm(minuteOf(START))}`;
+  if (DRY_PUNCHES) console.log(`(--now ${NOW_ARG} is not the real time: punches are logged, not sent)`);
+  if (BACKFILL) console.log(`Virtual clients on ${BASE}: backfill of ${DAYS} day(s) ending ${iso(LAST_DAY)}`);
+  const lines = [];
+  // Set up one company at a time (sign-in is rate limited) ...
+  const companies = [];
+  for (const file of LOGIN_FILES) {
+    ctx.company = file;
+    ctx.date = iso(TODAY);
+    try {
+      const co = await setupCompany(file);
+      ctx.company = co.name;
+      co.day = iso(TODAY);
+      await loadReference(co);
+      await growCast(co, rng(`${co.name}|cast|${SEED}`));
+      for (const p of cast(co)) if (!p.token) await p.signIn();
+      await loadCalendar(co, addDays(BACKFILL ? addDays(LAST_DAY, -(DAYS - 1)) : TODAY, -10), addDays(TODAY, 1));
+      companies.push(co);
     } catch (e) {
-      console.log(`  ${file}: ${e.message}`);
+      lines.push(`${stamp} ${file}: ${e.message}`);
       record({ persona: 'setup', kind: 'failed', intent: `Start ${file}`, method: '-', path: '-', query: '', status: 0, title: e.message, body: e.message });
-      continue;
     }
-    ctx.company = co.name;
-    ctx.date = '';
-    console.log(`${co.name}`);
-    await loadReference(co);
-    await growCast(co, rng(`${co.name}|cast|${SEED}`));
-    for (let i = DAYS - 1; i >= 0; i--) {
-      const d = addDays(LAST_DAY, -i);
-      if (co.state.days.includes(iso(d)) && !FORCE) {
-        console.log(`  ${iso(d)} already simulated (use --force to run it again)`);
-        continue;
+  }
+  if (PLAN_ONLY) {
+    for (const co of companies) printPlan(co, TODAY);
+    return;
+  }
+  // ... then let them all work at the same time, so every company's punches land on their minute.
+  const title = BACKFILL ? `Backfill run at ${stamp.slice(11)}: ${DAYS} day(s) ending ${iso(LAST_DAY)}` : `Run at ${stamp.slice(11)}${DRY_PUNCHES ? ' (--now, dry punches)' : ''}`;
+  let reported = false;
+  const finish = (note = '') => {
+    if (reported) return [];
+    reported = true;
+    const { file, failed } = appendReport(iso(TODAY), title + note);
+    for (const l of lines) console.log(l);
+    const seen = new Set();
+    for (const f of failed) {
+      if (seen.has(callKey(f))) continue;
+      seen.add(callKey(f));
+      console.log(`  FAILED ${callKey(f)}: ${f.intent} — ${(f.title || f.body).slice(0, 140)}`);
+    }
+    console.log(`  report: ${file}`);
+    return failed;
+  };
+  // Stopped half way (launchd, Ctrl-C): what was done is in the state file; put it in the report too.
+  for (const sig of ['SIGINT', 'SIGTERM']) {
+    process.removeAllListeners(sig);
+    process.on(sig, () => {
+      finish(' (stopped before the end)');
+      process.exit(130);
+    });
+  }
+  await Promise.all(companies.map(async (co) => {
+    let result = null;
+    if (BACKFILL) {
+      for (let i = DAYS - 1; i >= 0; i--) {
+        const d = addDays(LAST_DAY, -i);
+        if (iso(d) === iso(TODAY)) {
+          result = await runToday(co, d);
+          continue;
+        }
+        if (co.state.days.includes(iso(d)) && !FORCE) {
+          console.log(`  ${co.name}, ${iso(d)}: already played (use --force to play it again)`);
+          continue;
+        }
+        if (co.state.progress?.[iso(d)] && !FORCE) {
+          console.log(`  ${co.name}, ${iso(d)}: was played hour by hour; not backfilling it`);
+          continue;
+        }
+        await simulateDay(co, d);
+        if (!co.state.days.includes(iso(d))) co.state.days.push(iso(d));
+        saveState();
       }
-      await simulateDay(co, d);
-      if (!co.state.days.includes(iso(d))) co.state.days.push(iso(d));
-      saveState();
-    }
-    console.log('');
-  }
-  const { file, failed, refused, did } = writeReport();
-  console.log(`Done: ${did.length} actions, ${refused.length} refused by business rules, ${failed.length} failures.`);
-  const seen = new Set();
-  for (const f of failed) {
-    const k = `${f.method} ${f.path.replace(/[0-9a-f]{8}-[0-9a-f-]{27}/gi, '{id}')} → ${f.status}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    console.log(`  FAILED ${k}: ${f.intent} — ${(f.title || f.body).slice(0, 140)}`);
-  }
-  console.log(`Report: ${file}`);
+    } else result = await runToday(co, TODAY);
+    // Forget hour-by-hour progress after three weeks.
+    for (const k of Object.keys(co.state.progress ?? {})) if (k < iso(addDays(TODAY, -21))) delete co.state.progress[k];
+    saveState();
+    const mine = events.filter((e) => e.company === co.name);
+    const n = (kind) => mine.filter((e) => e.kind === kind).length;
+    lines.push(`${stamp} ${co.name}: ${result ? `${result.stats.actions} due action(s), ${result.stats.punches} punch(es)${result.stats.missed ? `, ${result.stats.missed} missed` : ''}, ` : ''}`
+      + `${n('did')} done, ${n('refused')} refused, ${n('failed')} failed${result ? `; next ${result.next}` : ''}`);
+  }));
+  const failed = finish();
   process.exit(failed.length ? 2 : 0);
 }
 

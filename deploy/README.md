@@ -61,11 +61,38 @@ Then deploy again. Use a mailbox only for Qaventra: every unread email in it is 
 ## Virtual clients
 
 `seed-demo.mjs` creates a client company; copy the `demo-logins.txt` it writes to `secrets/logins-<name>.txt`.
-`run-virtual-clients.sh` then runs `virtual-clients.mjs` for every `secrets/logins-*.txt`: one simulated working day of
-employees, managers and HR, with a report of anything that failed in `secrets/virtual-clients-report-<date>.md`. On this
-Mac a launchd job (`~/Library/LaunchAgents/com.qaventra.virtual-clients.plist`) runs it Monday to Saturday at 10:30
-and logs to `secrets/virtual-clients-daily.log`; if the Mac is asleep it runs on wake. Stop it with
-`launchctl bootout gui/$(id -u)/com.qaventra.virtual-clients`.
+`run-virtual-clients.sh` then runs `virtual-clients.mjs` for every `secrets/logins-*.txt`. The company's HR manager, line
+manager, employees and a helpdesk agent use the product through the API during their working hours, as a real company
+would:
+
+- Each person gets a plan for the day from their shift on the roster (off days and holidays included): arrival around
+  shift start (some late), lunch/prayer/tea breaks, departure around shift end (some overtime, a few forget to check out),
+  a few absences and sick days, and daytime work spread over the hours (leave, expenses, helpdesk, letters, timesheets,
+  training, suggestions, manager approvals, HR work such as joiners, attendance fixes, announcements, recruitment and
+  payroll near the month end). On a day off one or two people may come in. The plan is seeded by company, person and
+  date, so every run of the day agrees on it.
+- Each run does what has fallen due and is not done yet, then waits for what falls due in the next 25 minutes, so
+  punches land on their planned minute. Progress is kept per day in `secrets/virtual-clients-state.json`, so nothing is
+  done twice; a run that finds another still going exits.
+- Punches are stamped by the server's clock, so they are only made on time (up to 40 minutes late). If the Mac slept
+  through a check-in or check-out, it is not made late: the person asks for a missed-punch fix on their next working
+  day. Other overdue work is done when the Mac wakes.
+- Every run appends a section to that day's report, `secrets/virtual-clients-report-<date>.md` (failures first; each is
+  an app bug or a script mistake), and prints one line per company to the log.
+
+The launchd job (`~/Library/LaunchAgents/com.qaventra.virtual-clients.plist`) starts it every 30 minutes Monday to
+Saturday from 08:00 to 23:30 (a `StartCalendarInterval` entry per weekday for minutes 0 and 30 of hours 8–23), so the
+14:00–23:00 evening shift checks out on time too; it logs to `secrets/virtual-clients-daily.log`, and a run missed
+while the Mac slept runs on wake. Stop it with `launchctl bootout gui/$(id -u)/com.qaventra.virtual-clients`.
+
+Useful by hand:
+
+- `node deploy/virtual-clients.mjs --base http://localhost:5080 --logins a.txt --plan` prints today's plan for everyone.
+- `--now 2026-11-03T09:30` pretends it is that time (Pakistan time unless a zone is given). The server stamps punches
+  with its own clock, so with a `--now` that is not the real time punches are only logged ("dry"); everything else is
+  sent. Use `--state-dir <dir>` to keep such tests out of `secrets/`.
+- `--days 5` (or `--date 2026-10-30`) backfills whole past days the old way, through missed-punch and work-from-home
+  requests; today, if in the range, is played as a normal run.
 
 ## Notes
 
