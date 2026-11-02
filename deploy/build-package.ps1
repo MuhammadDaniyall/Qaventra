@@ -44,8 +44,8 @@ $settings = [ordered]@{
     SuperAdmin = @{ Email = $secrets.OwnerEmail; Password = $secrets.OwnerPassword }
     Logging = @{ LogLevel = @{ Default = 'Warning'; 'Microsoft.Hosting.Lifetime' = 'Information' } }
 }
-# Optional: outgoing email and the helpdesk reply inbox, copied as written in production.json.
-foreach ($section in 'Smtp', 'HelpdeskInbox') {
+# Optional: outgoing email, the helpdesk reply inbox and the AI assistant ({ "ApiKey": ... }), copied as written in production.json.
+foreach ($section in 'Smtp', 'HelpdeskInbox', 'Ai') {
     if ($secrets.PSObject.Properties[$section]) { $settings[$section] = $secrets.$section }
 }
 $settings | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $site 'appsettings.Production.json') -Encoding utf8

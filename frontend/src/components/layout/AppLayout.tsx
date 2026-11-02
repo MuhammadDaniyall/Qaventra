@@ -14,6 +14,7 @@ import { Sidebar } from './Sidebar';
 import { NotificationBell } from './NotificationBell';
 import { UserMenu } from './UserMenu';
 import { QuickSearch } from './QuickSearch';
+import { AskAi } from './AskAi';
 import { MobileTabBar } from './MobileTabBar';
 
 const COLLAPSE_KEY = 'hrms.sidebar.collapsed';
@@ -97,6 +98,7 @@ export function AppLayout() {
           </div>
           <div className="ms-auto flex items-center gap-1.5">
             {!isPlatformOwner(user) && <QuickSearch />}
+            {!isPlatformOwner(user) && <AskAi />}
             <IconButton label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>
               {theme === 'dark' ? <Sun className="size-[18px]" /> : <Moon className="size-[18px]" />}
             </IconButton>

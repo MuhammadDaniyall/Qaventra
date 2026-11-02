@@ -94,7 +94,7 @@ cfg = {
     'Logging': {'LogLevel': {'Default': 'Warning', 'Microsoft.Hosting.Lifetime': 'Information'}},
 }
 # Optional: outgoing email and the helpdesk reply inbox, copied as written in production.json.
-for section in ('Smtp', 'HelpdeskInbox'):
+for section in ('Smtp', 'HelpdeskInbox', 'Ai'):
     if s.get(section):
         cfg[section] = s[section]
 with open(sys.argv[2], 'w', encoding='utf-8') as f:

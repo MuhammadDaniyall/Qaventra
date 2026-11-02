@@ -17,6 +17,8 @@ public class Tenant : BaseEntity
     public int? MaxEmployees { get; set; }
     /// <summary>Emails the company may send a month (notifications, payslips, letters). Null = unlimited.</summary>
     public int? EmailQuotaPerMonth { get; set; }
+    /// <summary>Questions the company's people may ask the AI assistant a month. Null = the platform default.</summary>
+    public int? AiMessagesPerMonth { get; set; }
     /// <summary>Comma-separated email domains people may sign in with (company admins always can). Null = any.</summary>
     public string? AllowedEmailDomains { get; set; }
 

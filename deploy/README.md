@@ -58,6 +58,18 @@ A free Gmail account works for both. Turn on 2-step verification, create an app 
 
 Then deploy again. Use a mailbox only for Qaventra: every unread email in it is read.
 
+## AI assistant (optional)
+
+The "Ask AI" assistant stays hidden until `deploy/secrets/production.json` has an `Ai` section with an Anthropic API key
+(console.anthropic.com → API keys). `Model` and `MessagesPerMonth` (questions per company a month) are optional:
+
+```json
+"Ai": { "ApiKey": "<anthropic api key>", "Model": "claude-opus-5-5", "MessagesPerMonth": 1000 }
+```
+
+Then deploy again. For local runs, put the same section in `backend/src/HRMS.Api/appsettings.Development.json` or set
+`Ai__ApiKey` in the environment.
+
 ## Virtual clients
 
 `seed-demo.mjs` creates a client company; copy the `demo-logins.txt` it writes to `secrets/logins-<name>.txt`.

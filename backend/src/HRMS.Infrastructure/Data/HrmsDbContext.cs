@@ -54,6 +54,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ReviewCheckIn> ReviewCheckIns => Set<ReviewCheckIn>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<AiMessageLog> AiMessageLogs => Set<AiMessageLog>();
     public DbSet<PayrollGlMapping> PayrollGlMappings => Set<PayrollGlMapping>();
     public DbSet<PushKeys> PushKeys => Set<PushKeys>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
@@ -716,6 +717,11 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Intro).HasMaxLength(2000);
         });
 
+        b.Entity<AiMessageLog>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.CreatedAtUtc });
+            e.Property(x => x.Error).HasMaxLength(500);
+        });
         b.Entity<EmailLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.CreatedAtUtc });
