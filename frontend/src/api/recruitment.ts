@@ -483,6 +483,8 @@ export const recruitmentApi = {
 
   myInterviews: () => http.get<MyInterview[]>('/recruitment/interviews/mine'),
   setInterviewStatus: (id: string, status: InterviewStatus) => http.post(`/recruitment/interviews/${id}/status`, { status }),
+  rescheduleInterview: (id: string, b: { startsAtUtc: string; where: string | null; reason: string; emailCandidate: boolean }) =>
+    http.post(`/recruitment/interviews/${id}/reschedule`, b),
   feedback: (
     id: string,
     b: {
@@ -537,9 +539,7 @@ export const interviewTemplatesApi = {
   add: (b: { name: string; questions: InterviewQuestion[] }) => http.post('/recruitment-extras/interview-templates', b),
   update: (id: string, b: { name: string; questions: InterviewQuestion[] }) => http.put(`/recruitment-extras/interview-templates/${id}`, b),
   remove: (id: string) => http.del(`/recruitment-extras/interview-templates/${id}`),
-  setForInterview: (interviewId: string, templateId: string | null) =>
-    http.put(`/recruitment-extras/interviews/${interviewId}/template`, { templateId }),
+  setForInterview: (interviewId: string, templateId: string | null) => http.put(`/recruitment-extras/interviews/${interviewId}/template`, { templateId }),
   scorecard: (interviewId: string) => http.get<Scorecard>(`/recruitment-extras/interviews/${interviewId}/scorecard`),
   saveMarks: (interviewId: string, marks: QuestionMark[]) => http.put(`/recruitment-extras/interviews/${interviewId}/marks`, { marks }),
 };
-

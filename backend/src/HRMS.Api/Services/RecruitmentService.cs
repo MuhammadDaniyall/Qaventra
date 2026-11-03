@@ -581,6 +581,34 @@ public class RecruitmentService(HrmsDbContext db, ICurrentUser me, TenantClock c
         return interview;
     }
 
+    /// <summary>Moves a scheduled interview to a new time (and place); interviewers are told, and the candidate if asked.</summary>
+    public async Task RescheduleAsync(Guid interviewId, DateTime startsAtUtc, string? where, string reason, bool emailCandidate)
+    {
+        var interview = await db.Interviews.FirstOrDefaultAsync(i => i.Id == interviewId) ?? throw new NotFoundException("Interview");
+        var app = await RunAsync(interview.ApplicationId);
+        if (interview.Status != InterviewStatus.Scheduled)
+            throw new DomainException("Only a scheduled interview can be moved.");
+        if (startsAtUtc < clock.UtcNow)
+            throw new DomainException("Choose a time in the future.");
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new DomainException("Say why the interview is moving.");
+        var before = await LocalTextAsync(interview.StartsAtUtc);
+        interview.StartsAtUtc = DateTime.SpecifyKind(startsAtUtc, DateTimeKind.Utc);
+        if (!string.IsNullOrWhiteSpace(where))
+            interview.Where = Clean(where, 500);
+        var when = await LocalTextAsync(interview.StartsAtUtc);
+        Log(app.Id, $"Interview moved: {interview.Title}, {before} → {when}. {reason.Trim()}", await MyNameAsync());
+        await notify.ToEmployeesAsync(HelpdeskService.Ids(interview.InterviewerIds), NotificationKind.Recruitment,
+            $"Interview moved: {app.Candidate!.FullName}", $"{interview.Title} · now {when}" + (interview.Where is null ? "" : $" · {interview.Where}"),
+            $"/recruitment/applications/{app.Id}", includeMe: true);
+        if (emailCandidate)
+            notify.EmailOnly(app.Candidate.Email, $"New time for your interview for {app.JobPost!.Title}",
+                $"Dear {app.Candidate.FirstName},\n\nYour interview ({interview.Title}) has moved.\nNew time: {when} ({interview.DurationMinutes} minutes)"
+                + (interview.Where is null ? "" : $"\nWhere: {interview.Where}") + "\n\nPlease reply to confirm.",
+                null, CandidateFooter);
+        await db.SaveChangesAsync();
+    }
+
     public async Task SetInterviewStatusAsync(Guid interviewId, InterviewStatus status)
     {
         var interview = await db.Interviews.FirstOrDefaultAsync(i => i.Id == interviewId) ?? throw new NotFoundException("Interview");

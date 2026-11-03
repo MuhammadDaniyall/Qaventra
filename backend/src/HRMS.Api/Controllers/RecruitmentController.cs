@@ -132,6 +132,8 @@ public record ScheduleInterviewRequest(
     [Required, StringLength(150)] string Title, DateTime StartsAtUtc, int DurationMinutes, InterviewMode Mode, [StringLength(500)] string? Where,
     [Required] List<Guid> InterviewerIds, [StringLength(2000)] string? Notes, bool EmailCandidate);
 
+public record RescheduleInterviewRequest(DateTime StartsAtUtc, [StringLength(500)] string? Where, [Required, StringLength(500)] string Reason, bool EmailCandidate);
+
 public record InterviewStatusRequest(InterviewStatus Status);
 
 public record FeedbackRequest(int Rating, HireRecommendation Recommendation, [StringLength(2000)] string? Strengths, [StringLength(2000)] string? Concerns);
@@ -474,6 +476,13 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
     public async Task<IActionResult> SetInterviewStatus(Guid id, InterviewStatusRequest req)
     {
         await hiring.SetInterviewStatusAsync(id, req.Status);
+        return NoContent();
+    }
+
+    [HttpPost("interviews/{id:guid}/reschedule")]
+    public async Task<IActionResult> Reschedule(Guid id, RescheduleInterviewRequest req)
+    {
+        await hiring.RescheduleAsync(id, req.StartsAtUtc, req.Where, req.Reason, req.EmailCandidate);
         return NoContent();
     }
 

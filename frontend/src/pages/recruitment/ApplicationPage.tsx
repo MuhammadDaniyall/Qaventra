@@ -320,6 +320,7 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
   const qc = useQueryClient();
   const [giving, setGiving] = useState(false);
   const [scoring, setScoring] = useState(false);
+  const [moving, setMoving] = useState(false);
   const started = new Date(/[zZ]$/.test(i.startsAtUtc) ? i.startsAtUtc : `${i.startsAtUtc}Z`).getTime() <= Date.now();
   const status = useMutation({
     mutationFn: (s: Interview['status']) => recruitmentApi.setInterviewStatus(i.id, s),
@@ -366,6 +367,11 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
             </Button>
           )}
           {canRun && i.status === 'Scheduled' && (
+            <Button size="sm" variant="secondary" icon={<CalendarPlus className="size-3.5" />} onClick={() => setMoving(true)}>
+              Move
+            </Button>
+          )}
+          {canRun && i.status === 'Scheduled' && (
             <Select className="h-8 w-36 text-xs" value="" onChange={(e) => e.target.value && status.mutate(e.target.value as Interview['status'])}>
               <option value="">Mark as…</option>
               <option value="Completed">Completed</option>
@@ -406,6 +412,7 @@ function InterviewItem({ i, canRun }: { i: Interview; canRun: boolean }) {
       )}
       {giving && <FeedbackModal i={i} onClose={() => setGiving(false)} />}
       {scoring && <ScorecardModal interviewId={i.id} canRun={canRun} iAmInterviewer={i.iAmInterviewer && started} onClose={() => setScoring(false)} />}
+      {moving && <MoveInterviewModal i={i} onClose={() => setMoving(false)} />}
     </li>
   );
 }
@@ -741,5 +748,60 @@ function Notes({ a }: { a: Application }) {
         {!a.events.length && <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing yet.</p>}
       </ol>
     </Card>
+  );
+}
+
+function MoveInterviewModal({ i, onClose }: { i: Interview; onClose: () => void }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [when, setWhen] = useState('');
+  const [where, setWhere] = useState(i.where ?? '');
+  const [reason, setReason] = useState('');
+  const [email, setEmail] = useState(true);
+  const save = useMutation({
+    mutationFn: () =>
+      recruitmentApi.rescheduleInterview(i.id, {
+        startsAtUtc: new Date(when).toISOString(),
+        where: where.trim() || null,
+        reason: reason.trim(),
+        emailCandidate: email,
+      }),
+    onSuccess: () => {
+      toast.success('Interview moved');
+      qc.invalidateQueries({ queryKey: qk.recruitment });
+      onClose();
+    },
+    onError: (e) => toast.error(e),
+  });
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Move ${i.title}`}
+      description={`Now ${formatDateTimeUtc(i.startsAtUtc)}. Interviewers are told about the new time.`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button loading={save.isPending} disabled={!when || !reason.trim()} onClick={() => save.mutate()}>
+            Move interview
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <Field label="New time" required>
+          <Input type="datetime-local" value={when} min={`${todayIso()}T00:00`} onChange={(e) => setWhen(e.target.value)} />
+        </Field>
+        <Field label="Where or link">
+          <Input value={where} maxLength={500} onChange={(e) => setWhere(e.target.value)} />
+        </Field>
+        <Field label="Why it is moving" required>
+          <Input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder="Interviewer is travelling" />
+        </Field>
+        <Checkbox label="Email the candidate the new time" checked={email} onChange={(e) => setEmail(e.target.checked)} />
+      </div>
+    </Modal>
   );
 }
