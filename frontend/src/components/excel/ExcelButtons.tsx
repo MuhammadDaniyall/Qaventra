@@ -116,6 +116,7 @@ export function ExportRangeButton({ path, name, label = 'Export' }: { path: stri
 const TITLES: Record<ImportKind, { title: string; what: string }> = {
   employees: { title: 'Import employees', what: 'employees' },
   attendance: { title: 'Import attendance', what: 'attendance rows' },
+  assets: { title: 'Import assets', what: 'assets' },
 };
 
 /** Template → upload → row-by-row check → import (all or nothing). */

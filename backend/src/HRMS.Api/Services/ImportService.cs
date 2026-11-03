@@ -390,6 +390,88 @@ public partial class ImportService(HrmsDbContext db, EmployeeService employees, 
         return new ImportResult(true, parsed.Count, valid, parsed.Count - updates, updates, results);
     }
 
+    private static readonly string[] AssetHeaders = ["Type*", "Name*", "Tag", "Serial number", "Purchased on", "Cost", "Warranty until", "Condition"];
+
+    public async Task<byte[]> AssetTemplateAsync()
+    {
+        var types = await db.AssetTypes.OrderBy(t => t.Name).Select(t => t.Name).ToListAsync();
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Assets");
+        for (var i = 0; i < AssetHeaders.Length; i++)
+            ws.Cell(1, i + 1).Value = AssetHeaders[i];
+        Excel.StyleTable(ws, AssetHeaders.Length, 1);
+        var help = wb.Worksheets.Add("How to fill");
+        help.Cell(1, 1).Value = "One row per asset. Type must match an asset type already set up: " + (types.Count > 0 ? string.Join(", ", types) : "add types first") + ".";
+        help.Cell(2, 1).Value = "Leave Tag empty to number assets automatically (AST-0001…). Condition: New, Good, Fair or Damaged (empty = New).";
+        help.Cell(4, 1).Value = $"Example:  {types.FirstOrDefault() ?? "Laptop"}  |  Dell Latitude 5440  |    |  DL5440-1001  |  01-Jul-2026  |  250000  |  30-Jun-2029  |  New";
+        help.Column(1).Width = 120;
+        return Excel.Save(wb);
+    }
+
+    public async Task<ImportResult> ImportAssetsAsync(Stream file, bool commit)
+    {
+        var rows = Read(file, ["Type", "Name"]);
+        var types = (await db.AssetTypes.Select(t => new { t.Id, t.Name }).ToListAsync()).ToDictionary(t => t.Name, t => t.Id, StringComparer.OrdinalIgnoreCase);
+        var tags = (await db.Assets.Select(a => a.Tag).ToListAsync()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var serials = (await db.Assets.Where(a => a.SerialNumber != null).Select(a => new { a.TypeId, a.SerialNumber }).ToListAsync())
+            .Select(a => (a.TypeId, a.SerialNumber!.ToUpperInvariant())).ToHashSet();
+        var next = tags.Where(t => t.StartsWith("AST-")).Select(t => int.TryParse(t[4..], out var n) ? n : 0).DefaultIfEmpty(0).Max();
+        var parsed = new List<(ExcelRow Row, Asset Asset, List<string> Errors)>();
+
+        foreach (var row in rows)
+        {
+            var errors = new List<string>();
+            var a = new Asset { Name = row.Get("Name") ?? "", Status = AssetStatus.Available };
+            if (row.Get("Type") is not { } typeName) errors.Add("Type is required.");
+            else if (!types.TryGetValue(typeName, out var typeId)) errors.Add($"No asset type '{typeName}'.");
+            else a.TypeId = typeId;
+            if (string.IsNullOrWhiteSpace(a.Name)) errors.Add("Name is required.");
+            else if (a.Name.Length > 150) errors.Add("Name is longer than 150 characters.");
+
+            var tag = row.Get("Tag")?.Trim().ToUpperInvariant();
+            if (tag is null) tag = $"AST-{++next:D4}";
+            else if (tags.Contains(tag)) errors.Add($"Tag {tag} is already used.");
+            a.Tag = tag;
+            tags.Add(tag);
+
+            if (row.Get("Serial number") is { } serial)
+            {
+                a.SerialNumber = serial.Trim();
+                if (a.TypeId != Guid.Empty && !serials.Add((a.TypeId, a.SerialNumber.ToUpperInvariant()))) errors.Add($"Serial number {a.SerialNumber} is already used.");
+            }
+            if (row.Get("Purchased on") is { } p)
+            {
+                if (Excel.TryDate(p, out var d)) a.PurchasedOn = d;
+                else errors.Add($"Purchased on '{p}' is not a date.");
+            }
+            if (row.Get("Warranty until") is { } w)
+            {
+                if (Excel.TryDate(w, out var d)) a.WarrantyUntil = d;
+                else errors.Add($"Warranty until '{w}' is not a date.");
+            }
+            if (row.Get("Cost") is { } c)
+            {
+                if (decimal.TryParse(c.Replace(",", ""), out var cost) && cost >= 0) a.Cost = cost;
+                else errors.Add($"Cost '{c}' is not an amount.");
+            }
+            a.Condition = AssetCondition.New;
+            if (row.Get("Condition") is { } cond)
+            {
+                if (Enum.TryParse<AssetCondition>(cond.Trim(), true, out var cd) && Enum.IsDefined(cd)) a.Condition = cd;
+                else errors.Add($"Condition '{cond}' is not New, Good, Fair or Damaged.");
+            }
+            parsed.Add((row, a, errors));
+        }
+
+        var results = parsed.Select(p => new ImportRowResult(p.Row.Number, $"{p.Asset.Tag} · {p.Asset.Name}", p.Errors, [])).ToList();
+        var valid = parsed.Count(p => p.Errors.Count == 0);
+        if (!commit || valid != parsed.Count || parsed.Count == 0)
+            return new ImportResult(false, parsed.Count, valid, 0, 0, results);
+        db.Assets.AddRange(parsed.Select(p => p.Asset));
+        await db.SaveChangesAsync();
+        return new ImportResult(true, parsed.Count, valid, parsed.Count, 0, results);
+    }
+
     private static List<ExcelRow> Read(Stream file, string[] required)
     {
         var rows = Excel.Read(file, out var headers);

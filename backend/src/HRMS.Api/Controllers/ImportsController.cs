@@ -27,6 +27,7 @@ public class ImportsController(ImportService imports) : ControllerBase
         {
             "employees" => await imports.EmployeeTemplateAsync(),
             "attendance" => await imports.AttendanceTemplateAsync(),
+            "assets" => await imports.AssetTemplateAsync(),
             _ => null,
         };
         return bytes is null ? NotFound() : File(bytes, Excel.ContentType, $"{kind}-import-template.xlsx");
@@ -47,6 +48,7 @@ public class ImportsController(ImportService imports) : ControllerBase
         {
             "employees" => await imports.ImportEmployeesAsync(buffer, commit, form.CreateMissing),
             "attendance" => await imports.ImportAttendanceAsync(buffer, commit),
+            "assets" => await imports.ImportAssetsAsync(buffer, commit),
             _ => null,
         };
         if (result is null)

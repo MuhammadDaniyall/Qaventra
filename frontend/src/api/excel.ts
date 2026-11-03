@@ -1,6 +1,6 @@
 import { fetchBlob, http } from './client';
 
-export type ImportKind = 'employees' | 'attendance';
+export type ImportKind = 'employees' | 'attendance' | 'assets';
 
 export interface ImportRowResult {
   row: number;

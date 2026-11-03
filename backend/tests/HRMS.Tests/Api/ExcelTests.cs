@@ -138,4 +138,28 @@ public class ExcelTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.NotEqual(Guid.Empty, worker);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync($"/api/exports/attendance?from={to}&to={from}")).StatusCode);
     }
+
+    [Fact]
+    public async Task Assets_import_checks_types_and_numbers_tags()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("AssetImport");
+        await Ok(await admin.PostAsJsonAsync("/api/assets/types", new { name = "Laptop", allowMultiple = false, returnOnExit = true, handlerIds = Array.Empty<Guid>() }));
+        Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync("/api/imports/assets/template")).StatusCode);
+        string[] headers = ["Type*", "Name*", "Tag", "Serial number", "Purchased on", "Cost", "Warranty until", "Condition"];
+
+        var bad = await Upload(admin, "assets", Sheet(headers, ["Phone", "Galaxy", "", "", "", "", "", ""], ["Laptop", "Dell", "", "S1", "", "abc", "", "Shiny"]), commit: true);
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Contains("No asset type 'Phone'", await bad.Content.ReadAsStringAsync());
+
+        var good = await Ok(await Upload(admin, "assets", Sheet(headers,
+            ["Laptop", "Dell Latitude", "", "DL-1", "01-Jul-2026", "250000", "", "New"],
+            ["laptop", "HP EliteBook", "IT-77", "HP-1", "", "", "", "Good"]), commit: true));
+        Assert.True(good.GetProperty("committed").GetBoolean());
+        var list = await Ok(await admin.GetAsync("/api/assets"));
+        var tags = list.EnumerateArray().Select(a => a.GetProperty("tag").GetString()).ToList();
+        Assert.Contains("AST-0001", tags);
+        Assert.Contains("IT-77", tags);
+        var again = await Upload(admin, "assets", Sheet(headers, ["Laptop", "Dell 2", "", "DL-1", "", "", "", ""]), commit: false);
+        Assert.Contains("already used", await again.Content.ReadAsStringAsync());
+    }
 }

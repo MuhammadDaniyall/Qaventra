@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ImportButton } from '../../components/excel/ExcelButtons';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Boxes, ClipboardList, Download, Layers, Package, PackageCheck, Plus, Search, Tags, Undo2, Wrench } from 'lucide-react';
@@ -87,6 +88,7 @@ export function AssetsPage() {
         description="Company property: what you have, who has it, and what needs handing over."
         actions={
           <>
+            <ImportButton kind="assets" invalidate={[qk.assets, qk.assetsSummary]} />
             <Button
               variant="secondary"
               icon={<Download className="size-4" />}
