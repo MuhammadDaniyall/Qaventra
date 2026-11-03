@@ -75,8 +75,9 @@ public class TrainingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<HRMS.Infrastructure.Data.HrmsDbContext>();
             var s = await db.TrainingSessions.IgnoreQueryFilters().FirstAsync(x => x.Id == sid);
-            s.StartsAtUtc = DateTime.UtcNow.AddHours(-4);
-            s.EndsAtUtc = DateTime.UtcNow.AddHours(-1);
+            // Just finished, so it ended today in Pakistan even shortly after midnight.
+            s.StartsAtUtc = DateTime.UtcNow.AddMinutes(-2);
+            s.EndsAtUtc = DateTime.UtcNow.AddMinutes(-1);
             await db.SaveChangesAsync();
         }
         var detail = await Ok(await trainerClient.GetAsync($"/api/training/sessions/{sid}"));
