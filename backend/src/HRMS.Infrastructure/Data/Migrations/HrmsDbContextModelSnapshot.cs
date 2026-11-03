@@ -939,6 +939,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<bool>("AllowMultiple")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Category")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 

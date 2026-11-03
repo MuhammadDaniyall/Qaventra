@@ -7,6 +7,8 @@ public class AssetType : TenantEntity
 {
     public string Name { get; set; } = "";
     /// <summary>One person may hold more than one at a time (e.g. SIMs); otherwise one each.</summary>
+    /// <summary>Group shown on lists and reports, e.g. IT equipment, Furniture, Vehicles.</summary>
+    public string? Category { get; set; }
     public bool AllowMultiple { get; set; }
     /// <summary>Must come back before someone leaves (shows on their separation).</summary>
     public bool ReturnOnExit { get; set; } = true;

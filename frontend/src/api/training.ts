@@ -189,6 +189,7 @@ export const trainingApi = {
   updateCategory: (id: string, name: string) => http.put(`/training/categories/${id}`, { name }),
   deleteCategory: (id: string) => http.del(`/training/categories/${id}`),
   programs: () => http.get<TrainingProgram[]>('/training/programs'),
+  trainers: () => http.get<string[]>('/training/trainers'),
   addProgram: (b: SaveProgram) => http.post('/training/programs', b),
   updateProgram: (id: string, b: SaveProgram) => http.put(`/training/programs/${id}`, b),
   deleteProgram: (id: string) => http.del(`/training/programs/${id}`),

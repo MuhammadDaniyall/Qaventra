@@ -13,9 +13,10 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record AssetTypeDto(Guid Id, string Name, bool AllowMultiple, bool ReturnOnExit, List<Guid> HandlerIds, List<string> Handlers, bool IsActive,
-    int Total, int Available, int Assigned, RecordStampsDto Stamps);
+    int Total, int Available, int Assigned, RecordStampsDto Stamps, string? Category = null);
 
-public record SaveAssetTypeRequest([Required, StringLength(100)] string Name, bool AllowMultiple, bool ReturnOnExit, List<Guid>? HandlerIds, bool IsActive = true);
+public record SaveAssetTypeRequest([Required, StringLength(100)] string Name, bool AllowMultiple, bool ReturnOnExit, List<Guid>? HandlerIds, bool IsActive = true,
+    [StringLength(100)] string? Category = null);
 
 public record AssetKitDto(Guid Id, string Name, List<Guid> TypeIds, List<string> Types, RecordStampsDto Stamps);
 
@@ -82,7 +83,8 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
             var ids = HelpdeskService.Ids(t.HandlerIds);
             var c = counts.Where(x => x.TypeId == t.Id).ToList();
             return new AssetTypeDto(t.Id, t.Name, t.AllowMultiple, t.ReturnOnExit, ids, ids.Select(i => names.GetValueOrDefault(i) ?? "").ToList(), t.IsActive,
-                c.Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Available).Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Assigned).Sum(x => x.Count), RecordStampsDto.Of(t));
+                c.Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Available).Sum(x => x.Count), c.Where(x => x.Status == AssetStatus.Assigned).Sum(x => x.Count), RecordStampsDto.Of(t),
+                t.Category);
         }).ToList();
     }
 
@@ -424,6 +426,7 @@ public class AssetsController(HrmsDbContext db, AssetService assets, TenantClock
             throw new DomainException("Choose up to 30 handlers who work here.");
         t.Name = name;
         t.AllowMultiple = req.AllowMultiple;
+        t.Category = string.IsNullOrWhiteSpace(req.Category) ? null : req.Category.Trim();
         t.ReturnOnExit = req.ReturnOnExit;
         t.HandlerIds = string.Join(',', handlers);
         t.IsActive = req.IsActive;

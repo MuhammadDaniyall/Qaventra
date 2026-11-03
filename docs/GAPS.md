@@ -99,3 +99,8 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Helpdesk ticket types: default agent and always-involved people.
 - Recruitment: upload many CVs at once (email, phone, experience read from PDF/Word).
 
+- Desks: book a range of weekdays.
+- Announcements: audience by designation.
+- Assets: type categories.
+- Training: list of outside trainers used before.
+

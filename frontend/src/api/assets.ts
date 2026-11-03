@@ -19,6 +19,8 @@ export const ASSET_STATUS_LABELS: Record<AssetStatus, string> = {
 export interface AssetType {
   id: string;
   name: string;
+  /** Group such as IT equipment or Furniture. */
+  category?: string | null;
   allowMultiple: boolean;
   returnOnExit: boolean;
   handlerIds: string[];
@@ -32,6 +34,7 @@ export interface AssetType {
 
 export interface SaveAssetType {
   name: string;
+  category?: string | null;
   allowMultiple: boolean;
   returnOnExit: boolean;
   handlerIds: string[];

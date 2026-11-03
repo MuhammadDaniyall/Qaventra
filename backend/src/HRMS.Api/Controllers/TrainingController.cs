@@ -124,6 +124,12 @@ public class TrainingController(HrmsDbContext db, TrainingService training, Tena
         return NoContent();
     }
 
+    /// <summary>Outside trainers used before, most used first, so the session form can offer them.</summary>
+    [HttpGet("trainers"), Authorize(Policy = Policies.Hr)]
+    public async Task<List<string>> Trainers() =>
+        (await db.TrainingSessions.Where(s => s.ExternalTrainer != null && s.ExternalTrainer != "").Select(s => s.ExternalTrainer!).ToListAsync())
+            .GroupBy(n => n.Trim(), StringComparer.OrdinalIgnoreCase).OrderByDescending(g => g.Count()).Select(g => g.Key).Take(100).ToList();
+
     [HttpGet("programs")]
     public async Task<List<TrainingProgramDto>> Programs()
     {

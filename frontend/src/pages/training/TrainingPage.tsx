@@ -376,6 +376,7 @@ export function SessionModal({ session, onClose }: { session?: import('../../api
     const p = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   };
+  const trainers = useQuery({ queryKey: ['training', 'trainers'], queryFn: trainingApi.trainers, staleTime: 5 * 60_000 });
   const [f, setF] = useState({
     programId: session?.programId ?? '',
     start: local(session?.startsAtUtc),
@@ -472,9 +473,20 @@ export function SessionModal({ session, onClose }: { session?: import('../../api
               ))}
             </Select>
           ) : (
-            <Input value={f.external} maxLength={200} onChange={(e) => set('external', e.target.value)} placeholder="e.g. Rescue 1122 trainers" />
+            <Input
+              value={f.external}
+              maxLength={200}
+              list="past-trainers"
+              onChange={(e) => set('external', e.target.value)}
+              placeholder="e.g. Rescue 1122 trainers"
+            />
           )}
         </Field>
+        <datalist id="past-trainers">
+          {trainers.data?.map((n) => (
+            <option key={n} value={n} />
+          ))}
+        </datalist>
         <Field label="Seats" hint="Leave empty for no limit">
           <Input type="number" min={1} value={f.capacity} onChange={(e) => set('capacity', e.target.value)} />
         </Field>

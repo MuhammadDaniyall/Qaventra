@@ -592,6 +592,7 @@ function Types() {
                 <Td className="text-sm">{t.handlers.length ? t.handlers.join(', ') : <span className="text-zinc-500 dark:text-zinc-400">HR</span>}</Td>
                 <Td>
                   <div className="flex flex-wrap gap-1">
+                    {t.category && <Badge tone="gray">{t.category}</Badge>}
                     {t.allowMultiple && <Badge tone="blue">More than one each</Badge>}
                     {t.returnOnExit && <Badge tone="amber">Return on exit</Badge>}
                   </div>
@@ -621,6 +622,7 @@ function TypeModal({ item, onClose }: { item: AssetType | null; onClose: () => v
   const qc = useQueryClient();
   const people = useEmployeeLookup();
   const [name, setName] = useState(item?.name ?? '');
+  const [category, setCategory] = useState(item?.category ?? '');
   const [multiple, setMultiple] = useState(item?.allowMultiple ?? false);
   const [onExit, setOnExit] = useState(item?.returnOnExit ?? true);
   const [handlers, setHandlers] = useState<string[]>(item?.handlerIds ?? []);
@@ -628,7 +630,7 @@ function TypeModal({ item, onClose }: { item: AssetType | null; onClose: () => v
   const [error, setError] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: () => {
-      const b = { name: name.trim(), allowMultiple: multiple, returnOnExit: onExit, handlerIds: handlers, isActive: active };
+      const b = { name: name.trim(), category: category.trim() || null, allowMultiple: multiple, returnOnExit: onExit, handlerIds: handlers, isActive: active };
       return item ? assetsApi.updateType(item.id, b) : assetsApi.createType(b);
     },
     onSuccess: () => {
@@ -661,6 +663,9 @@ function TypeModal({ item, onClose }: { item: AssetType | null; onClose: () => v
           <FormError message={error} />
           <Field label="Name" required>
             <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="Laptop" />
+          </Field>
+          <Field label="Category" hint="Groups types, e.g. IT equipment, Furniture, Vehicles">
+            <Input value={category} maxLength={100} onChange={(e) => setCategory(e.target.value)} placeholder="IT equipment" />
           </Field>
           <Checkbox label="More than one per person" description="E.g. SIMs or monitors." checked={multiple} onChange={(e) => setMultiple(e.target.checked)} />
           <Checkbox label="Must be returned on exit" description="Listed on the person's separation." checked={onExit} onChange={(e) => setOnExit(e.target.checked)} />
