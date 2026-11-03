@@ -56,6 +56,9 @@ try {
     }
     if ($failed.Count) {
         Write-Host "Second pass for $($failed.Count) locked file(s) in 60 seconds..."
+        # A worker that ignored app_offline keeps the DLLs open (FTP 550); re-sending web.config recycles it.
+        $webConfig = $files | Where-Object { $_.Name -eq 'web.config' } | Select-Object -First 1
+        if ($webConfig) { Send $webConfig 3 | Out-Null }
         Start-Sleep -Seconds 60
         foreach ($f in $failed) {
             if (-not (Send $f 6)) { throw "Upload failed for $($f.Name). The site still shows the 'updating' page; run this script again." }
