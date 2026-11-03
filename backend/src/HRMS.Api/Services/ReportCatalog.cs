@@ -58,6 +58,8 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("approvals.pending", "Approvals", "Pending approvals", "Everything waiting, who it waits for and how long", ["department"], false),
         new("training.hours", "Training", "Training by person", "Sessions attended, hours and scores in a period", ["period", "department", "employee"], false),
         new("travel.trips", "Travel", "Trips", "Business trips in a period with cost and settlement", ["period", "department", "employee"], true),
+        new("payroll.overtime", "Payroll", "Overtime", "Overtime claimed in a period: date, hours, amount and status", ["period", "department", "employee"], true),
+        new("attendance.summary", "Attendance", "Attendance summary", "Per person in a period: days worked, late, short and half days, minutes late and hours worked", ["period", "department", "employee"], false),
         new("payroll.loans", "Payroll", "Loan balances", "Approved loans with installments paid, amount recovered and balance left", ["department", "employee", "includeLeft"], true),
         new("payroll.increments", "Payroll", "Salary revisions", "Increments and other salary changes in a period, old and new pay", ["period", "department", "employee"], true),
         new("employees.separations", "Employees", "Separations", "Resignations and terminations in a period with last day, status and exit reason", ["period", "department"], true),
@@ -545,6 +547,35 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     trips.Select(t => L(t.Employee!.FullName, TravelService.Route(t), D(t.DepartOn), D(t.ReturnOn),
                         t.Settlement == SettlementStatus.None ? t.Status.ToString() : ScheduledService.Humanize(t.Settlement.ToString()),
                         M(TravelService.BookedCost(t)), M(TravelService.Claimed(t)), M(t.AdvancePaid ?? 0))), totals: true);
+            }
+            case "payroll.overtime":
+            {
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var rows = await db.PayRequests.Include(r => r.Employee)
+                    .Where(r => r.Kind == PayRequestKind.Overtime && r.WorkDate >= from && r.WorkDate <= to && ids.Contains(r.EmployeeId)
+                        && r.Status != RequestStatus.Cancelled && r.Status != RequestStatus.Rejected)
+                    .OrderBy(r => r.WorkDate).ToListAsync();
+                return T(def, range, ["Code", "Name", "Date", "Hours", "Amount", "Status", "Reason"], [3, 4],
+                    rows.Select(r => L(r.Employee!.EmployeeCode, r.Employee.FullName, r.WorkDate is { } d ? D(d) : "", r.Hours?.ToString("0.#"), M(r.Amount),
+                        r.Status.ToString(), r.Reason)), totals: true);
+            }
+            case "attendance.summary":
+            {
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var rows = await db.AttendanceRecords.Where(a => a.Date >= from && a.Date <= to && ids.Contains(a.EmployeeId))
+                    .GroupBy(a => new { a.EmployeeId, a.Employee!.EmployeeCode, Name = a.Employee.FirstName + " " + a.Employee.LastName })
+                    .Select(g => new
+                    {
+                        g.Key.EmployeeCode, g.Key.Name,
+                        Days = g.Count(a => a.Status != AttendanceStatus.Absent && a.Status != AttendanceStatus.OnLeave),
+                        Late = g.Count(a => a.LateMinutes > 0),
+                        Short = g.Count(a => a.Status == AttendanceStatus.ShortDay),
+                        Half = g.Count(a => a.Status == AttendanceStatus.HalfDay),
+                        LateMinutes = g.Sum(a => a.LateMinutes),
+                        Worked = g.Sum(a => a.WorkedMinutes),
+                    }).OrderBy(r => r.Name).ToListAsync();
+                return T(def, range, ["Code", "Name", "Days worked", "Late days", "Short days", "Half days", "Minutes late", "Hours worked"], [2, 3, 4, 5, 6, 7],
+                    rows.Select(r => L(r.EmployeeCode, r.Name, N(r.Days), N(r.Late), N(r.Short), N(r.Half), N(r.LateMinutes), (r.Worked / 60m).ToString("0.#"))), totals: true);
             }
             case "payroll.loans":
             {

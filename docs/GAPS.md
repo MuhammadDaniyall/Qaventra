@@ -104,3 +104,8 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Assets: type categories.
 - Training: list of outside trainers used before.
 
+- Settings where 0 is a real choice now save 0 (desk day start, exemptions, notice, send hour).
+- AI CV check falls back to OpenRouter.
+- Loan types: limits, markup, processing fee, service period.
+- Reports: overtime, attendance summary.
+

@@ -21,7 +21,7 @@ public class ReportsExtraTests(ApiFactory factory) : IClassFixture<ApiFactory>
             lines = new[] { new { employeeId = id, percent = 10m } },
         }, ApiFactory.Json)).EnsureSuccessStatusCode();
 
-        foreach (var key in new[] { "payroll.loans", "payroll.increments", "employees.separations", "recruitment.pipeline", "helpdesk.tickets" })
+        foreach (var key in new[] { "payroll.loans", "payroll.increments", "employees.separations", "recruitment.pipeline", "helpdesk.tickets", "payroll.overtime", "attendance.summary" })
         {
             var body = key == "payroll.increments" ? (object)new { from = next.ToString("yyyy-MM-dd"), to = next.AddDays(5).ToString("yyyy-MM-dd") } : new { };
             var res = await admin.PostAsJsonAsync($"/api/reports/{key}", body, ApiFactory.Json);
