@@ -60,7 +60,7 @@ public partial class AiAssistantService
     async Task<JsonObject> OpenRouterCallAsync(JsonObject body, AiMessageLog entry)
     {
         var client = http.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(60);
+        client.Timeout = TimeSpan.FromSeconds(30);
         var models = options.OpenRouterModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         if (openRouterModel is not null) models.Insert(0, openRouterModel);
         HttpResponseMessage res = null!;
@@ -69,7 +69,7 @@ public partial class AiAssistantService
         JsonObject? message = null;
         // Free models come and go and are often busy: try each in turn until one answers. A spent daily allowance (429
         // "free-models-per-day") or a bad key stops the loop, since every other model would refuse too.
-        foreach (var model in models.Distinct())
+        foreach (var model in models.Distinct().Where(m => m == openRouterModel || !Resting(m)))
         {
             body["model"] = model;
             using var req = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions") { Content = JsonContent.Create(body) };
@@ -82,6 +82,7 @@ public partial class AiAssistantService
             }
             catch (TaskCanceledException)
             {
+                Rest(model, 503);
                 continue;
             }
             json = res.IsSuccessStatusCode ? JsonNode.Parse(text) as JsonObject : null;
@@ -93,6 +94,7 @@ public partial class AiAssistantService
             }
             if ((int)res.StatusCode is 401 or 403 || text.Contains("per-day", StringComparison.OrdinalIgnoreCase))
                 break;
+            Rest(model, (int)res.StatusCode);
         }
         if (message is null)
         {

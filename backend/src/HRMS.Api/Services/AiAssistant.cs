@@ -20,9 +20,9 @@ public class AiOptions
     public string? GeminiApiKey { get; set; }
     /// <summary>
     /// Gemini models tried in order, comma-separated: the next one is used when one is busy, failing or out of its free
-    /// allowance. Gemma has the largest free allowance; Flash-Lite and Flash follow.
+    /// allowance. Flash-Lite answers fastest; Gemma and Flash follow.
     /// </summary>
-    public string GeminiModels { get; set; } = "gemma-4-31b-it,gemini-flash-lite-latest,gemini-flash-latest";
+    public string GeminiModels { get; set; } = "gemini-flash-lite-latest,gemma-4-31b-it,gemini-flash-latest";
     /// <summary>OpenRouter key: the backup when Gemini is busy or used up, or the only model when there is no other key.</summary>
     public string? OpenRouterApiKey { get; set; }
     /// <summary>OpenRouter models tried one after another, comma-separated: every free model that can use tools, biggest first.</summary>
@@ -81,6 +81,21 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
     };
 
     static readonly string[] ActionKinds = ["apply_leave", "attendance_request", "helpdesk_ticket", "decide_approval"];
+
+    /// <summary>The person's everyday data, loaded before the first model call so most questions need no lookup round.</summary>
+    string preloaded = "";
+
+    static readonly string[] Preload = ["my_profile", "my_leave_balances", "leave_types", "leave_reasons", "holidays", "today"];
+
+    async Task PreloadAsync(HttpClient api)
+    {
+        var parts = await Task.WhenAll(Preload.Select(async key =>
+        {
+            var (content, isError) = await RunToolAsync(api, "lookup", new Dictionary<string, JsonElement> { ["source"] = JsonSerializer.SerializeToElement(key) }, []);
+            return isError ? "" : $"{key}: {(content.Length > 4000 ? content[..4000] : content)}";
+        }));
+        preloaded = string.Join("\n", parts.Where(p => p.Length > 0));
+    }
 
     public bool Enabled => !string.IsNullOrWhiteSpace(options.ApiKey) || !string.IsNullOrWhiteSpace(options.GeminiApiKey) || HasOpenRouter;
 
@@ -332,6 +347,7 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         api.BaseAddress = new Uri(baseUrl);
         api.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         api.Timeout = TimeSpan.FromSeconds(30);
+        await PreloadAsync(api);
         if (UseGemini)
             try { return await GeminiAskAsync(turns, voice, api, limit, used); }
             catch (AiUnavailableException) when (HasOpenRouter) { }
@@ -441,7 +457,12 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
             approve/reject a request, look up whatever ids you need, then call propose_action with the exact details. The page shows it with
             a Confirm button; say briefly what you prepared and ask them to confirm. Never claim a request was submitted. If a required detail
             (dates, leave type, reason) is missing, ask for it first. Work out relative dates ("kal", "tomorrow", "next Monday") from today's date.
-            """;
+            """ + (preloaded.Length == 0 ? "" : $"""
+
+
+            Already loaded for this person (use it directly; call lookup only for anything else):
+            {preloaded}
+            """);
     }
 
     static List<ToolUnion> Tools()

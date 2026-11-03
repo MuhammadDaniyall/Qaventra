@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Mic, MicOff, Send, Sparkles, Volume2, VolumeX, X } from 'lucide-react';
 import { aiApi, type AiAction, type AiTurn } from '../../api/ai';
+import { qk } from '../../api/keys';
+import { leaveRulesApi } from '../../api/leaveRules';
+import { setupApi } from '../../api/organization';
 import { errorMessage } from '../../api/client';
 import { cn } from '../../lib/cn';
 import { useT } from '../../lib/i18n';
-import { Button, Drawer, IconButton, useToast } from '../ui';
+import { Button, Drawer, IconButton, Select, useToast } from '../ui';
 
 // The browser's speech recognition (Chrome, Edge, Safari). Not in TypeScript's DOM types yet.
 interface SpeechResult {
@@ -150,6 +153,8 @@ function AiPanel({ onClose, defaultVoiceLang }: { onClose: () => void; defaultVo
     },
     onError: (err) => toast.error(err),
   });
+  const edit = (entry: number, index: number, payload: Record<string, unknown>) =>
+    setEntries((list) => list.map((e, i) => (i === entry ? { ...e, actions: e.actions?.map((a, j) => (j === index ? { ...a, payload } : a)) } : e)));
   const dismiss = (entry: number, index: number) =>
     setEntries((list) =>
       list.map((e, i) => (i === entry ? { ...e, actions: e.actions?.map((a, j) => (j === index ? { ...a, state: 'dismissed' as const } : a)) } : e)),
@@ -256,19 +261,22 @@ function AiPanel({ onClose, defaultVoiceLang }: { onClose: () => void; defaultVo
                   ) : a.state === 'dismissed' ? (
                     <p className="mt-2 text-sm text-zinc-500">{t('Cancelled')}</p>
                   ) : (
-                    <div className="mt-2 flex gap-2">
-                      <Button
-                        size="sm"
-                        icon={<Check className="size-4" />}
-                        loading={confirm.isPending}
-                        onClick={() => confirm.mutate({ entry: i, index: j, action: a })}
-                      >
-                        {t('Confirm')}
-                      </Button>
-                      <Button size="sm" variant="ghost" icon={<X className="size-4" />} onClick={() => dismiss(i, j)}>
-                        {t('Cancel')}
-                      </Button>
-                    </div>
+                    <>
+                      {a.kind === 'apply_leave' && <LeaveChoice payload={a.payload} onChange={(p) => edit(i, j, p)} />}
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          size="sm"
+                          icon={<Check className="size-4" />}
+                          loading={confirm.isPending}
+                          onClick={() => confirm.mutate({ entry: i, index: j, action: a })}
+                        >
+                          {t('Confirm')}
+                        </Button>
+                        <Button size="sm" variant="ghost" icon={<X className="size-4" />} onClick={() => dismiss(i, j)}>
+                          {t('Cancel')}
+                        </Button>
+                      </div>
+                    </>
                   )}
                 </div>
               ))}
@@ -283,5 +291,37 @@ function AiPanel({ onClose, defaultVoiceLang }: { onClose: () => void; defaultVo
         <div ref={bottom} />
       </div>
     </Drawer>
+  );
+}
+
+/** Lets the person pick the leave type and, where the company asks for one, the reason before confirming. */
+function LeaveChoice({ payload, onChange }: { payload: Record<string, unknown>; onChange: (p: Record<string, unknown>) => void }) {
+  const { t } = useT();
+  const types = useQuery({ queryKey: qk.leaveTypes, queryFn: setupApi.leaveTypes });
+  const reasons = useQuery({ queryKey: qk.leaveReasons, queryFn: leaveRulesApi.reasons });
+  const typeId = String(payload.leaveTypeId ?? '');
+  const forType = (reasons.data ?? []).filter((r) => r.leaveTypeId === typeId && r.isActive);
+  return (
+    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+      <Select aria-label={t('Leave type')} value={typeId} onChange={(e) => onChange({ ...payload, leaveTypeId: e.target.value, reasonId: null })}>
+        {(types.data ?? [])
+          .filter((x) => x.isActive)
+          .map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+      </Select>
+      {forType.length > 0 && (
+        <Select aria-label={t('Reason')} value={String(payload.reasonId ?? '')} onChange={(e) => onChange({ ...payload, reasonId: e.target.value || null })}>
+          <option value="">{t('Choose a reason')}</option>
+          {forType.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </Select>
+      )}
+    </div>
   );
 }

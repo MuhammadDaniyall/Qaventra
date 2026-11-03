@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HRMS.Api.Services;
 
@@ -18,6 +19,10 @@ public partial class AiAssistantService
 
     /// <summary>The model that answered the last call; later rounds of the same question stay on it.</summary>
     string? geminiModel;
+
+    /// <summary>A model that was busy, failing or out of allowance is left alone for a while instead of being asked again on every question.</summary>
+    bool Resting(string model) => cache.TryGetValue($"ai-rest:{model}", out _);
+    void Rest(string model, int status) => cache.Set($"ai-rest:{model}", true, TimeSpan.FromMinutes(status == 429 ? 30 : 10));
 
     /// <summary>Thought signatures only work with the model that wrote them; drop them before another model sees the history.</summary>
     static void StripThoughts(JsonObject body)
@@ -37,13 +42,13 @@ public partial class AiAssistantService
     async Task<JsonObject> GeminiCallAsync(JsonObject body, AiMessageLog entry)
     {
         var client = http.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(90);
-        HttpResponseMessage res = null!;
+        client.Timeout = TimeSpan.FromSeconds(30);
+        HttpResponseMessage? res = null;
         var text = "";
         // A busy, failing, retired or used-up model (503, 500, 404, 429) hands over to the next one in the list.
         var models = options.GeminiModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
         if (geminiModel is not null) models.Insert(0, geminiModel);
-        foreach (var model in models.Distinct())
+        foreach (var model in models.Distinct().Where(m => m == geminiModel || !Resting(m)))
         {
             if (geminiModel is not null && model != geminiModel)
                 StripThoughts(body);
@@ -53,13 +58,39 @@ public partial class AiAssistantService
                 Content = JsonContent.Create(body),
             };
             req.Headers.Add("x-goog-api-key", options.GeminiApiKey);
-            res = await client.SendAsync(req);
-            text = await res.Content.ReadAsStringAsync();
+            // Gemini 3 Flash models answer faster with minimal thinking; Gemma does not take the setting.
+            if (model.Contains("flash", StringComparison.OrdinalIgnoreCase))
+            {
+                var withThinking = body.DeepClone().AsObject();
+                var config = withThinking["generationConfig"] as JsonObject ?? new JsonObject();
+                config["thinkingConfig"] = new JsonObject { ["thinkingLevel"] = "minimal" };
+                withThinking["generationConfig"] = config.DeepClone();
+                req.Content = JsonContent.Create(withThinking);
+            }
+            try
+            {
+                res = await client.SendAsync(req);
+                text = await res.Content.ReadAsStringAsync();
+            }
+            catch (TaskCanceledException)
+            {
+                Rest(model, 503);
+                res = null;
+                continue;
+            }
             if ((int)res.StatusCode is not (503 or 500 or 404 or 429))
             {
                 geminiModel = model;
                 break;
             }
+            Rest(model, (int)res.StatusCode);
+        }
+        if (res is null)
+        {
+            entry.Error = "Every Gemini model is busy or resting.";
+            db.AiMessageLogs.Add(entry);
+            await db.SaveChangesAsync();
+            throw new AiUnavailableException("The AI assistant is busy right now. Please try again in a minute.");
         }
         if (!res.IsSuccessStatusCode)
         {
