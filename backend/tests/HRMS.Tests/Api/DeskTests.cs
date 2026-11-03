@@ -123,4 +123,18 @@ public class DeskTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Ok(await sanaClient.PostAsync($"/api/desks/bookings/{booking.GetProperty("id").GetGuid()}/check-in", null));
         Assert.Equal("CheckedIn", (await Ok(await sanaClient.GetAsync("/api/desks/bookings/my")))[0].GetProperty("status").GetString());
     }
+
+    [Fact]
+    public async Task A_desk_is_booked_for_a_range_of_weekdays()
+    {
+        var (admin, floor, person) = await OfficeAsync("Range Desk Co");
+        var (_, sanaClient) = await person("Sana");
+        await Ok(await admin.PostAsJsonAsync("/api/desks/spaces/bulk", new { floorId = floor, prefix = "R", from = 1, to = 1 }, ApiFactory.Json));
+        var desk = (await Ok(await admin.GetAsync($"/api/desks/floors/{floor}/spaces")))[0].GetProperty("id").GetGuid();
+        var monday = Today.AddDays(7 - ((int)Today.DayOfWeek + 6) % 7);
+        var res = await Ok(await sanaClient.PostAsJsonAsync("/api/desks/bookings",
+            new { spaceId = desk, date = Iso(monday), toDate = Iso(monday.AddDays(6)) }, ApiFactory.Json));
+        Assert.Equal(5, res.GetProperty("booked").GetInt32());
+        Assert.Equal(5, (await Ok(await sanaClient.GetAsync("/api/desks/bookings/my"))).GetArrayLength());
+    }
 }

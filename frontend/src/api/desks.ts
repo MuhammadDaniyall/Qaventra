@@ -119,8 +119,8 @@ export const desksApi = {
     http.post<{ added: number; skipped: number }>('/desks/spaces/bulk', b),
 
   day: (floorId: string, date: string) => http.get<FloorDay>(`/desks/floors/${floorId}/day`, { date }),
-  book: (b: { spaceId: string; date: string; from: string | null; to: string | null; title: string | null; attendees: number }) =>
-    http.post('/desks/bookings', b),
+  book: (b: { spaceId: string; date: string; toDate?: string | null; from: string | null; to: string | null; title: string | null; attendees: number }) =>
+    http.post<{ booked: number; skipped: string[] } | undefined>('/desks/bookings', b),
   cancel: (id: string) => http.post(`/desks/bookings/${id}/cancel`),
   checkIn: (id: string) => http.post(`/desks/bookings/${id}/check-in`),
   my: () => http.get<MyBooking[]>('/desks/bookings/my'),

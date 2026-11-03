@@ -32,7 +32,9 @@ public record SpaceDayDto(Guid Id, string Name, SpaceKind Kind, int Seats, strin
 
 public record FloorDayDto(DateOnly Date, Guid FloorId, string Floor, string Office, List<SpaceDayDto> Spaces, int DesksFree, int DesksTotal);
 
-public record BookRequest(Guid SpaceId, DateOnly Date, TimeOnly? From, TimeOnly? To, [StringLength(200)] string? Title, int Attendees = 1, Guid? ForEmployeeId = null);
+/// <summary>ToDate books every weekday from Date to ToDate (up to two weeks); days that cannot be booked are reported, not fatal.</summary>
+public record BookRequest(Guid SpaceId, DateOnly Date, TimeOnly? From, TimeOnly? To, [StringLength(200)] string? Title, int Attendees = 1, Guid? ForEmployeeId = null,
+    DateOnly? ToDate = null);
 
 public record MyBookingDto(Guid Id, Guid SpaceId, string Space, SpaceKind Kind, string Floor, string Office, DateOnly Date, TimeOnly? From, TimeOnly? To, string? Title,
     int Attendees, BookingStatus Status, bool CanCheckIn, RecordStampsDto Stamps);
@@ -215,8 +217,30 @@ public class DesksController(HrmsDbContext db, DeskService desks, TenantClock cl
     [HttpPost("bookings")]
     public async Task<IActionResult> Book(BookRequest req)
     {
-        await desks.BookAsync(new DeskBookingInput(req.SpaceId, req.Date, req.From, req.To, req.Title, req.Attendees, req.ForEmployeeId));
-        return NoContent();
+        if (req.ToDate is not { } last || last == req.Date)
+        {
+            await desks.BookAsync(new DeskBookingInput(req.SpaceId, req.Date, req.From, req.To, req.Title, req.Attendees, req.ForEmployeeId));
+            return NoContent();
+        }
+        if (last < req.Date || last.DayNumber - req.Date.DayNumber > 13)
+            throw new DomainException("Book a range of at most two weeks.");
+        var booked = 0;
+        var skipped = new List<string>();
+        for (var d = req.Date; d <= last; d = d.AddDays(1))
+        {
+            if (d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
+            try
+            {
+                await desks.BookAsync(new DeskBookingInput(req.SpaceId, d, req.From, req.To, req.Title, req.Attendees, req.ForEmployeeId));
+                booked++;
+            }
+            catch (DomainException ex)
+            {
+                skipped.Add($"{d:ddd d MMM}: {ex.Message}");
+            }
+        }
+        if (booked == 0) throw new DomainException(skipped.FirstOrDefault() ?? "Nothing could be booked.");
+        return Ok(new { booked, skipped });
     }
 
     [HttpPost("bookings/{id:guid}/cancel")]

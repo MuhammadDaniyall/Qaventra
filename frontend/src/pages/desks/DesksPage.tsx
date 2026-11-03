@@ -225,18 +225,21 @@ function BookModal({ space, date, onClose }: { space: SpaceDay; date: string; on
   const [to, setTo] = useState('11:00');
   const [title, setTitle] = useState('');
   const [attendees, setAttendees] = useState('2');
+  const [until, setUntil] = useState(date);
   const book = useMutation({
     mutationFn: () =>
       desksApi.book({
         spaceId: space.id,
         date,
+        toDate: until > date ? until : null,
         from: desk ? null : from,
         to: desk ? null : to,
         title: desk ? null : title.trim() || null,
         attendees: desk ? 1 : Number(attendees) || 1,
       }),
-    onSuccess: () => {
-      toast.success(`${space.name} booked`, formatDate(date));
+    onSuccess: (r) => {
+      const many = r ?? null;
+      toast.success(`${space.name} booked`, many ? `${many.booked} days${many.skipped.length ? `; not booked: ${many.skipped.join(', ')}` : ''}` : formatDate(date));
       qc.invalidateQueries({ queryKey: qk.desks });
       onClose();
     },
@@ -260,7 +263,12 @@ function BookModal({ space, date, onClose }: { space: SpaceDay; date: string; on
       }
     >
       {desk ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">The desk is yours for the whole day.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300">The desk is yours for the whole day.</p>
+          <Field label="Until" hint="Book the same desk every weekday up to this date (two weeks at most)">
+            <Input type="date" value={until} min={date} onChange={(e) => setUntil(e.target.value || date)} />
+          </Field>
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <Field label="From">
