@@ -50,6 +50,15 @@ public record IssueLetterRequest(
     bool ShareWithEmployee = true,
     Guid? TemplateId = null);
 
+public record IssueManyLettersRequest(
+    [Required, MinLength(1), MaxLength(500)] List<Guid> EmployeeIds,
+    LetterCategory Category,
+    [Required, StringLength(300)] string Subject,
+    [Required, StringLength(20000)] string Body,
+    DateOnly? IssuedOn,
+    bool ShareWithEmployee = true,
+    Guid? TemplateId = null);
+
 public record IssuedLetterDto(
     Guid Id, string ReferenceNo, LetterCategory Category, string Subject, DateOnly IssuedOn,
     Guid EmployeeId, string EmployeeName, string EmployeeCode, string? IssuedByName, bool SharedWithEmployee,
@@ -150,6 +159,15 @@ public class LettersController(HrmsDbContext db, LetterService letters, ICurrent
     {
         var letter = await letters.IssueAsync(req.EmployeeId, req.Category, req.Subject, req.Body, req.IssuedOn, req.ShareWithEmployee, req.TemplateId);
         return await Project(db.IssuedLetters.Where(l => l.Id == letter.Id)).FirstAsync();
+    }
+
+    /// <summary>The same letter to many people at once; placeholders are filled for each person.</summary>
+    [HttpPost("bulk"), Authorize(Policy = Policies.Hr)]
+    public async Task<object> IssueMany(IssueManyLettersRequest req)
+    {
+        foreach (var id in req.EmployeeIds.Distinct())
+            await letters.IssueAsync(id, req.Category, req.Subject, req.Body, req.IssuedOn, req.ShareWithEmployee, req.TemplateId);
+        return new { issued = req.EmployeeIds.Distinct().Count() };
     }
 
     [HttpGet("{id:guid}")]

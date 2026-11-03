@@ -10,6 +10,7 @@ import {
   Badge,
   Button,
   Card,
+  Checkbox,
   ConfirmDialog,
   Drawer,
   EmptyState,
@@ -383,6 +384,9 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
   const [issuedOn, setIssuedOn] = useState(todayIso());
   const [share, setShare] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [many, setMany] = useState(false);
+  const [others, setOthers] = useState<string[]>([]);
+  const [find, setFind] = useState('');
 
   const applyTemplate = (id: string) => {
     setTemplateId(id);
@@ -418,13 +422,34 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
     onError: (err) => setError(errorMessage(err)),
   });
 
+  const issueMany = useMutation({
+    mutationFn: () =>
+      lettersApi.issueMany({
+        employeeIds: [employeeId, ...others.filter((x) => x !== employeeId)],
+        category,
+        subject,
+        body,
+        issuedOn,
+        shareWithEmployee: share,
+        templateId: templateId || null,
+      }),
+    onSuccess: (r) => {
+      toast.success(`${r.issued} letters issued`);
+      qc.invalidateQueries({ queryKey: qk.letters });
+      onClose();
+    },
+    onError: (err) => setError(errorMessage(err)),
+  });
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!employeeId) return setError('Choose the employee.');
     if (!subject.trim() || !body.trim()) return setError('The letter needs a subject and a body.');
-    issue.mutate();
+    if (many && others.some((x) => x !== employeeId)) issueMany.mutate();
+    else issue.mutate();
   };
+  const shown = (employees.data ?? []).filter((e) => e.id !== employeeId && e.name.toLowerCase().includes(find.trim().toLowerCase()));
 
   const unknown = preview.data?.unknownPlaceholders ?? [];
 
@@ -440,8 +465,8 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" form="issue-letter-form" loading={issue.isPending} disabled={unknown.length > 0}>
-            Issue letter
+          <Button type="submit" form="issue-letter-form" loading={issue.isPending || issueMany.isPending} disabled={unknown.length > 0}>
+            {many && others.length > 0 ? `Issue ${others.filter((x) => x !== employeeId).length + 1} letters` : 'Issue letter'}
           </Button>
         </>
       }
@@ -449,15 +474,18 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
       <form id="issue-letter-form" onSubmit={submit} className="space-y-4">
         <FormError message={error} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Employee" required>
-            <Select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={employees.isLoading}>
-              {employees.data?.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <div className="space-y-2">
+            <Field label="Employee" required>
+              <Select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} disabled={employees.isLoading}>
+                {employees.data?.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Checkbox label="Also issue to other employees" checked={many} onChange={(e) => setMany(e.target.checked)} />
+          </div>
           <Field label="Start from template">
             <Select value={templateId} onChange={(e) => applyTemplate(e.target.value)}>
               <option value="">Blank letter</option>
@@ -483,6 +511,35 @@ function IssueLetterDrawer({ initial, onClose }: { initial: LetterTemplate | nul
             <Input type="date" value={issuedOn} onChange={(e) => setIssuedOn(e.target.value)} />
           </Field>
         </div>
+        {many && (
+          <div>
+            <p className="mb-1.5 text-sm font-medium">{`Other employees (${others.length} chosen)`}</p>
+            <p className="mb-2 text-xs text-zinc-500">Placeholders such as {'{{EmployeeName}}'} are filled for each person.</p>
+            <Input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Search by name" />
+            <div className="mt-2 flex gap-3 text-sm">
+              <button
+                type="button"
+                className="text-accent-600 hover:underline"
+                onClick={() => setOthers((o) => [...new Set([...o, ...shown.map((e) => e.id)])])}
+              >
+                Select all shown
+              </button>
+              <button type="button" className="text-zinc-500 hover:underline" onClick={() => setOthers([])}>
+                Clear
+              </button>
+            </div>
+            <div className="mt-2 max-h-52 space-y-1 overflow-y-auto rounded-lg border border-zinc-200 p-2 dark:border-zinc-700">
+              {shown.map((e) => (
+                <Checkbox
+                  key={e.id}
+                  label={e.name}
+                  checked={others.includes(e.id)}
+                  onChange={(ev) => setOthers((o) => (ev.target.checked ? [...o, e.id] : o.filter((x) => x !== e.id)))}
+                />
+              ))}
+            </div>
+          </div>
+        )}
         <Field label="Subject" required>
           <Input value={subject} maxLength={300} onChange={(e) => setSubject(e.target.value)} />
         </Field>

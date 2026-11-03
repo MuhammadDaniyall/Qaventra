@@ -27,6 +27,7 @@ export const lettersApi = {
   reject: (id: string, note: string | null) => http.post(`/letters/${id}/reject`, { note }),
   candidate: async (applicationId: string) => (await http.get<CandidateLetter | undefined>(`/letters/candidate/${applicationId}`)) ?? null,
   issue: (b: IssueLetterRequest) => http.post<IssuedLetter>('/letters', b),
+  issueMany: (b: Omit<IssueLetterRequest, 'employeeId'> & { employeeIds: string[] }) => http.post<{ issued: number }>('/letters/bulk', b),
   get: (id: string) => http.get<LetterDocument>(`/letters/${id}`),
   setSharing: (id: string, shared: boolean) => http.put(`/letters/${id}/sharing?shared=${shared}`),
   remove: (id: string) => http.del(`/letters/${id}`),
