@@ -89,3 +89,8 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Final settlement paid through the leaving month's payroll.
 - AI: HR assistant with voice, AI summary on insights, AI CV check.
 
+- Leave types: max days ahead, max days back, monthly limit.
+- Assets: Excel import.
+- Roster: copy a week forward.
+- Payslip password: not needed (payslips are only shown after sign-in, never emailed as PDF).
+
