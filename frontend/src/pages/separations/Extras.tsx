@@ -272,7 +272,7 @@ export function SettlementApprovalCard({ separationId, completed }: { separation
   const refresh = () => qc.invalidateQueries({ queryKey: KEY });
   const submit = useMutation({ mutationFn: () => separationSetupApi.submitSettlement(separationId), onSuccess: refresh, onError: (e) => toast.error(e) });
   const paid = useMutation({
-    mutationFn: (via: string) => separationSetupApi.settlementPaid(separationId, via),
+    mutationFn: (via: string) => separationSetupApi.settlementPaid(separationId, via === 'Payroll' ? null : via, via === 'Payroll'),
     onSuccess: refresh,
     onError: (e) => toast.error(e),
   });
@@ -309,6 +309,9 @@ export function SettlementApprovalCard({ separationId, completed }: { separation
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
+              <Button size="sm" loading={paid.isPending && paid.variables === 'Payroll'} onClick={() => paid.mutate('Payroll')}>
+                Pay with the leaving month's payroll
+              </Button>
               {['Bank transfer', 'Cheque', 'Cash'].map((via) => (
                 <Button key={via} size="sm" variant="secondary" loading={paid.isPending && paid.variables === via} onClick={() => paid.mutate(via)}>
                   Paid by {via.toLowerCase()}

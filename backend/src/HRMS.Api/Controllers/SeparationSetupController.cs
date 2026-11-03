@@ -40,7 +40,8 @@ public record SetClearanceOwnerRequest([Range(1, 10)] int Level, Guid? Responsib
 public record ExitPanelRequest(Guid? TemplateId, List<Guid>? InterviewerIds, DateTime? ScheduledUtc, [StringLength(4000)] string? Notes);
 public record ExitAnswersRequest(List<ExitAnswerInput> Answers);
 public record ExitAnswerInput(Guid QuestionId, [StringLength(2000)] string? Answer);
-public record SettlementPaidRequest([StringLength(100)] string? Via);
+/// <summary>WithPayroll adds the settlement to the leaving month's payroll instead of recording a separate payment.</summary>
+public record SettlementPaidRequest([StringLength(100)] string? Via, bool WithPayroll = false);
 
 /// <summary>Final settlement approval (through the FinalSettlement approval chain); also used by the approvals inbox.</summary>
 public class SettlementApprovalService(HrmsDbContext db, TenantClock clock, ApprovalEngine approvals, SeparationService separations)
@@ -353,8 +354,25 @@ public class SeparationSetupController(HrmsDbContext db, SeparationService separ
     {
         var s = await separations.LoadAsync(id);
         if (s.Status != SeparationStatus.Completed) throw new DomainException("Complete the separation first.");
+        if (s.SettlementPaidAtUtc is not null) throw new DomainException("The settlement is already paid.");
+        if (req.WithPayroll)
+        {
+            var lastDay = s.LastWorkingDay ?? s.ProposedLastDay;
+            if (await db.PayrollRuns.AnyAsync(r => r.Year == lastDay.Year && r.Month == lastDay.Month && r.Status == PayrollRunStatus.Finalized))
+                throw new DomainException($"Payroll for {lastDay:MMMM yyyy} is already finalized. Pay the settlement by bank or cheque.");
+            var net = s.NetSettlement;
+            if (net != 0)
+                db.PayRequests.Add(new PayRequest
+                {
+                    EmployeeId = s.EmployeeId, Kind = net > 0 ? PayRequestKind.Allowance : PayRequestKind.Deduction, Title = "Final settlement", Amount = Math.Abs(net),
+                    IsTaxable = net > 0, Year = lastDay.Year, Month = lastDay.Month, Reason = "Final settlement on leaving", Status = RequestStatus.Approved,
+                    DecidedAtUtc = clock.UtcNow,
+                });
+            s.SettlementPaidVia = $"Payroll {lastDay:MMMM yyyy}";
+        }
+        else
+            s.SettlementPaidVia = string.IsNullOrWhiteSpace(req.Via) ? "Bank transfer" : req.Via.Trim();
         s.SettlementPaidAtUtc = clock.UtcNow;
-        s.SettlementPaidVia = string.IsNullOrWhiteSpace(req.Via) ? "Bank transfer" : req.Via.Trim();
         await db.SaveChangesAsync();
         return NoContent();
     }

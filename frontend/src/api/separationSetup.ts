@@ -97,5 +97,5 @@ export const separationSetupApi = {
   clearMine: (id: string, itemId: string, isCleared: boolean, note: string | null) =>
     http.put(`${base}/separations/${id}/clearance/${itemId}/mine`, { isCleared, note }),
   submitSettlement: (id: string) => http.post(`${base}/separations/${id}/settlement/submit`),
-  settlementPaid: (id: string, via: string | null) => http.post(`${base}/separations/${id}/settlement/paid`, { via }),
+  settlementPaid: (id: string, via: string | null, withPayroll = false) => http.post(`${base}/separations/${id}/settlement/paid`, { via, withPayroll }),
 };

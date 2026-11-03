@@ -85,8 +85,12 @@ public class SeparationDepthTests(ApiFactory factory) : IClassFixture<ApiFactory
         Assert.Equal(HttpStatusCode.BadRequest, completing.StatusCode);
         await Ok(await admin.PostAsJsonAsync($"/api/approvals/FinalSettlement/{id}/decide", new { approve = true, force = true, note = "OK" }, ApiFactory.Json));
         await Ok(await admin.PostAsync($"/api/separations/{id}/complete", null));
-        await Ok(await admin.PostAsJsonAsync($"/api/separation-setup/separations/{id}/settlement/paid", new { via = "Cheque" }, ApiFactory.Json));
-        Assert.Equal("Cheque", (await Ok(await admin.GetAsync($"/api/separation-setup/separations/{id}"))).GetProperty("settlementPaidVia").GetString());
+        // Paid with the leaving month's payroll: the net settlement becomes an approved pay item for that month.
+        await Ok(await admin.PostAsJsonAsync($"/api/separation-setup/separations/{id}/settlement/paid", new { withPayroll = true }, ApiFactory.Json));
+        Assert.StartsWith("Payroll ", (await Ok(await admin.GetAsync($"/api/separation-setup/separations/{id}"))).GetProperty("settlementPaidVia").GetString());
+        var pay = await Ok(await admin.GetAsync($"/api/pay/requests?employeeId={leaver}"));
+        Assert.Contains(pay.EnumerateArray(), r => r.GetProperty("title").GetString() == "Final settlement" && r.GetProperty("status").GetString() == "Approved");
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/api/separation-setup/separations/{id}/settlement/paid", new { via = "Cheque" }, ApiFactory.Json)).StatusCode);
     }
 
     [Fact]
