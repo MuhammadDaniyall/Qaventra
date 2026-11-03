@@ -18,6 +18,7 @@ export function LeaveDetailDrawer({ request, onClose }: { request: LeaveRequest 
         ['Days', formatNumber(r.days)],
         ['Status', <StatusBadge key="s" status={r.status} />],
         ['Reason', r.reason],
+        ['Station leave', r.isStationLeave ? [r.stationAddress, r.stationPhone].filter(Boolean).join(' · ') : null],
         ['Decided', r.decidedAtUtc ? formatDateTimeUtc(r.decidedAtUtc) : null],
         ['Decision note', r.decisionNote],
       ]

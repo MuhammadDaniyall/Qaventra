@@ -13,7 +13,7 @@ namespace HRMS.Api.Controllers;
 public record ApplyLeaveRequest(
     Guid LeaveTypeId, DateOnly FromDate, DateOnly ToDate, [StringLength(1000)] string? Reason,
     LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null, Guid? ReasonId = null,
-    Guid? EmployeeId = null);
+    Guid? EmployeeId = null, bool IsStationLeave = false, [StringLength(500)] string? StationAddress = null, [StringLength(30)] string? StationPhone = null);
 
 public record DecideLeaveRequest([StringLength(1000)] string? Note);
 
@@ -21,7 +21,8 @@ public record LeaveRequestDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, Guid LeaveTypeId, string LeaveType,
     DateOnly FromDate, DateOnly ToDate, decimal Days, string? Reason, LeaveStatus Status,
     DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, int AttachmentCount,
-    LeaveDuration Duration, HalfDayPart? HalfDayPart, TimeOnly? StartTime, TimeOnly? EndTime, RecordStampsDto Stamps);
+    LeaveDuration Duration, HalfDayPart? HalfDayPart, TimeOnly? StartTime, TimeOnly? EndTime, RecordStampsDto Stamps,
+    bool IsStationLeave = false, string? StationAddress = null, string? StationPhone = null);
 
 /// <summary>
 /// Entitled = the year's quota; Earned = how much of it is available so far (monthly accrual);
@@ -92,7 +93,8 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
     public async Task<LeaveRequestDto> Apply(ApplyLeaveRequest req)
     {
         var request = await leave.ApplyAsync(await onBehalf.ResolveAsync(req.EmployeeId), new LeaveService.LeaveApplication(
-            req.LeaveTypeId, req.FromDate, req.ToDate, req.Reason, req.Duration, req.HalfDayPart, req.StartTime, req.EndTime, req.ReasonId));
+            req.LeaveTypeId, req.FromDate, req.ToDate, req.Reason, req.Duration, req.HalfDayPart, req.StartTime, req.EndTime, req.ReasonId,
+            req.IsStationLeave, req.StationAddress, req.StationPhone));
         return await Project(db.LeaveRequests.Where(r => r.Id == request.Id)).FirstAsync();
     }
 
@@ -146,5 +148,5 @@ public class LeaveController(HrmsDbContext db, LeaveService leave, ApprovalEngin
             r.CreatedAtUtc, r.DecidedAtUtc, r.DecisionNote,
             db.Attachments.Count(a => a.OwnerType == AttachmentOwner.Leave && a.OwnerId == r.Id),
             r.Duration, r.HalfDayPart, r.StartTime, r.EndTime,
-            new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)));
+            new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy), r.IsStationLeave, r.StationAddress, r.StationPhone));
 }

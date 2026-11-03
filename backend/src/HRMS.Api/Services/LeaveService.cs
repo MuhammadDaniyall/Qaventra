@@ -116,7 +116,8 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
 
     public record LeaveApplication(
         Guid LeaveTypeId, DateOnly FromDate, DateOnly ToDate, string? Reason,
-        LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null, Guid? ReasonId = null);
+        LeaveDuration Duration = LeaveDuration.FullDay, HalfDayPart? HalfDayPart = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null, Guid? ReasonId = null,
+        bool IsStationLeave = false, string? StationAddress = null, string? StationPhone = null);
 
     public async Task<LeaveRequest> ApplyAsync(Guid employeeId, LeaveApplication a)
     {
@@ -214,7 +215,12 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
             EndTime = a.Duration == LeaveDuration.ShortLeave ? a.EndTime : null,
             Reason = a.Reason,
             ReasonId = reason?.Id,
+            IsStationLeave = a.IsStationLeave,
+            StationAddress = a.IsStationLeave ? a.StationAddress?.Trim() : null,
+            StationPhone = a.IsStationLeave ? a.StationPhone?.Trim() : null,
         };
+        if (a.IsStationLeave && string.IsNullOrWhiteSpace(a.StationAddress))
+            throw new DomainException("Give the address where you will be during station leave.");
         db.LeaveRequests.Add(request);
 
         var length = a.Duration switch

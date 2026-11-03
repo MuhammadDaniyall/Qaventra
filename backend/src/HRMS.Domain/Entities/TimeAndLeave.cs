@@ -197,6 +197,10 @@ public class LeaveRequest : TenantEntity
     public TimeOnly? EndTime { get; set; }
     public string? Reason { get; set; }
     public Guid? ReasonId { get; set; }
+    /// <summary>Leaving the city during the leave; the address and phone where they can be reached.</summary>
+    public bool IsStationLeave { get; set; }
+    public string? StationAddress { get; set; }
+    public string? StationPhone { get; set; }
     public LeaveStatus Status { get; set; } = LeaveStatus.Pending;
     public Guid? DecidedByUserId { get; set; }
     public DateTime? DecidedAtUtc { get; set; }

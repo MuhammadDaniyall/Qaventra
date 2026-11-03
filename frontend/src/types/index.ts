@@ -612,6 +612,9 @@ export interface LeaveRequest {
   /** Short leave only, "HH:mm:ss". */
   startTime: string | null;
   endTime: string | null;
+  isStationLeave?: boolean;
+  stationAddress?: string | null;
+  stationPhone?: string | null;
   stamps: RecordStamps;
 }
 
@@ -647,6 +650,9 @@ export interface ApplyLeaveRequest {
   reasonId?: string | null;
   /** Filing for someone else (HR, or a manager for their team). */
   employeeId?: string | null;
+  isStationLeave?: boolean;
+  stationAddress?: string | null;
+  stationPhone?: string | null;
 }
 
 // ---- Payroll ----

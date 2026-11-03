@@ -15,6 +15,7 @@ import { leaveRulesApi } from '../../api/leaveRules';
 import {
   Button,
   Card,
+  Checkbox,
   CardHeader,
   ConfirmDialog,
   EmptyState,
@@ -152,8 +153,12 @@ export function MyLeavePage() {
                   <Td>
                     <StatusBadge status={r.status} />
                   </Td>
-                  <Td className="max-w-xs truncate" title={r.reason ?? undefined}>{r.reason ?? '—'}</Td>
-                  <Td className="max-w-xs truncate" title={r.decisionNote ?? undefined}>{r.decisionNote ?? '—'}</Td>
+                  <Td className="max-w-xs truncate" title={r.reason ?? undefined}>
+                    {r.reason ?? '—'}
+                  </Td>
+                  <Td className="max-w-xs truncate" title={r.decisionNote ?? undefined}>
+                    {r.decisionNote ?? '—'}
+                  </Td>
                   <Td onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     {(r.attachmentCount > 0 || r.status === 'Pending') && (
                       <Button variant="ghost" size="sm" icon={<Paperclip className="size-3.5" />} onClick={() => setFilesFor(r)}>
@@ -236,7 +241,11 @@ function BalanceCard({ b }: { b: LeaveBalance }) {
       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
         {formatNumber(b.used)} used · {formatNumber(b.pending)} pending
       </p>
-      {extras.length > 0 && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400" title={b.adjustmentNote ?? undefined}>{extras.join(' · ')}</p>}
+      {extras.length > 0 && (
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400" title={b.adjustmentNote ?? undefined}>
+          {extras.join(' · ')}
+        </p>
+      )}
     </Card>
   );
 }
@@ -265,6 +274,9 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('12:00');
   const [forWhom, setForWhom] = useState('');
+  const [station, setStation] = useState(false);
+  const [stationAddress, setStationAddress] = useState('');
+  const [stationPhone, setStationPhone] = useState('');
 
   const typeId = leaveTypeId || active[0]?.id || '';
   const type = active.find((t) => t.id === typeId);
@@ -302,6 +314,9 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         startTime: mode === 'ShortLeave' ? `${startTime}:00` : null,
         endTime: mode === 'ShortLeave' ? `${endTime}:00` : null,
         employeeId: forWhom || null,
+        isStationLeave: station,
+        stationAddress: station ? stationAddress.trim() : null,
+        stationPhone: station ? stationPhone.trim() || null : null,
       });
       // The request exists now; a failed upload must not hide that, so it is reported separately.
       const failed: string[] = [];
@@ -309,7 +324,10 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
       return { r, failed };
     },
     onSuccess: ({ r, failed }) => {
-      toast.success('Leave requested', `${r.duration === 'FullDay' ? `${formatNumber(r.days)} day(s)` : durationLabel(r)} of ${r.leaveType} sent for approval.`);
+      toast.success(
+        'Leave requested',
+        `${r.duration === 'FullDay' ? `${formatNumber(r.days)} day(s)` : durationLabel(r)} of ${r.leaveType} sent for approval.`,
+      );
       if (failed.length) toast.error('Some files did not upload', `${failed.join(', ')}. Add them from the Files button.`);
       qc.invalidateQueries({ queryKey: qk.leave });
       qc.invalidateQueries({ queryKey: qk.approvals });
@@ -382,7 +400,14 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         {single ? (
           <div className="grid grid-cols-2 gap-3">
             <Field label="Date" required>
-              <Input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setTo(e.target.value); }} />
+              <Input
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  setTo(e.target.value);
+                }}
+              />
             </Field>
             {mode === 'HalfDay' ? (
               <Field label="Which half">
@@ -419,10 +444,7 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
                 <Input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
               </Field>
             </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm dark:bg-zinc-800/50"
-              aria-live="polite"
-            >
+            <div className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm dark:bg-zinc-800/50" aria-live="polite">
               <span className="text-zinc-600 dark:text-zinc-300">{type?.sandwich ? 'Days charged' : 'Working days'}</span>
               <span className="font-semibold text-zinc-900 tabular-nums dark:text-white">
                 {!validRange ? '—' : days.isFetching ? <Spinner className="size-4" /> : days.isError ? '—' : formatNumber(days.data?.days)}
@@ -432,16 +454,17 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
         )}
         {type && (type.minNoticeDays > 0 || type.maxConsecutiveDays) && (
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            {[type.minNoticeDays > 0 ? `Apply at least ${type.minNoticeDays} day(s) ahead` : null, type.maxConsecutiveDays ? `at most ${type.maxConsecutiveDays} day(s) at a time` : null]
+            {[
+              type.minNoticeDays > 0 ? `Apply at least ${type.minNoticeDays} day(s) ahead` : null,
+              type.maxConsecutiveDays ? `at most ${type.maxConsecutiveDays} day(s) at a time` : null,
+            ]
               .filter(Boolean)
               .join(' · ')}
             .
           </p>
         )}
         {days.isError && <p className="text-xs text-red-600 dark:text-red-400">{errorMessage(days.error)}</p>}
-        {over && !single && (
-          <p className="text-xs text-amber-700 dark:text-amber-300">This is more than your available balance.</p>
-        )}
+        {over && !single && <p className="text-xs text-amber-700 dark:text-amber-300">This is more than your available balance.</p>}
         {reasons.length > 0 && (
           <Field label="Reason type" required hint={chosenReason?.maxDays ? `Up to ${chosenReason.maxDays} days` : undefined}>
             <Select value={reasonId} onChange={(e) => setReasonId(e.target.value)}>
@@ -454,10 +477,23 @@ function ApplyLeaveModal({ balances, onClose }: { balances: LeaveBalance[]; onCl
             </Select>
           </Field>
         )}
-        {type?.sandwich && !single && <p className="text-xs text-zinc-500 dark:text-zinc-400">Weekends and holidays between your leave days also count as leave.</p>}
+        {type?.sandwich && !single && (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Weekends and holidays between your leave days also count as leave.</p>
+        )}
         <Field label="Reason">
           <Textarea value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} placeholder="Optional" />
         </Field>
+        <Checkbox label="Station leave (I will be out of the city)" checked={station} onChange={(e) => setStation(e.target.checked)} />
+        {station && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Address during leave" required>
+              <Input value={stationAddress} maxLength={500} onChange={(e) => setStationAddress(e.target.value)} />
+            </Field>
+            <Field label="Phone during leave">
+              <Input value={stationPhone} maxLength={30} onChange={(e) => setStationPhone(e.target.value)} />
+            </Field>
+          </div>
+        )}
         {needsDocument && (
           <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
             Attach a supporting document; your manager cannot approve this leave without it.

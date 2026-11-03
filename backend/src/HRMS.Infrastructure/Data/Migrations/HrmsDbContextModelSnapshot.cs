@@ -4933,6 +4933,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int?>("HalfDayPart")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsStationLeave")
+                        .HasColumnType("bit");
+
                     b.Property<Guid>("LeaveTypeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -4955,6 +4958,12 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<TimeOnly?>("StartTime")
                         .HasColumnType("time");
+
+                    b.Property<string>("StationAddress")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StationPhone")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
