@@ -15,6 +15,10 @@ public record AiAskRequest([Required, MinLength(1), MaxLength(40)] List<AiTurnRe
 [Authorize(Policy = Policies.CompanyUser)]
 public class AiController(AiAssistantService ai, IWebHostEnvironment env) : ControllerBase
 {
+    /// <summary>Whether this server can reach the AI providers and its own API; yes/no and timings only, no secrets.</summary>
+    [HttpGet("health"), AllowAnonymous]
+    public Task<object> Health() => ai.HealthAsync(BaseUrl());
+
     [HttpGet("status")]
     public Task<AiStatus> Status() => ai.StatusAsync();
 

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HRMS.Api.Services;
 
@@ -17,6 +18,41 @@ public class AiUnavailableException(string message) : DomainException(message);
 public partial class AiAssistantService
 {
     bool HasOpenRouter => !string.IsNullOrWhiteSpace(options.OpenRouterApiKey);
+
+    public async Task<object> HealthAsync(string baseUrl)
+    {
+        if (cache.TryGetValue("ai-health", out object? cached) && cached is not null) return cached;
+        async Task<string> Probe(string url, Action<HttpRequestMessage>? auth = null)
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                var client = http.CreateClient();
+                client.Timeout = TimeSpan.FromSeconds(15);
+                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                auth?.Invoke(req);
+                using var res = await client.SendAsync(req);
+                return $"{(int)res.StatusCode} in {watch.ElapsedMilliseconds} ms";
+            }
+            catch (Exception ex)
+            {
+                return $"failed after {watch.ElapsedMilliseconds} ms: {ex.GetType().Name} {ex.Message}";
+            }
+        }
+        var result = new
+        {
+            gemini = !string.IsNullOrWhiteSpace(options.GeminiApiKey)
+                ? await Probe("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1", r => r.Headers.Add("x-goog-api-key", options.GeminiApiKey))
+                : "no key",
+            openRouter = HasOpenRouter
+                ? await Probe("https://openrouter.ai/api/v1/key", r => r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.OpenRouterApiKey))
+                : "no key",
+            selfCall = await Probe($"{baseUrl}/api/ai/status"),
+            baseUrl,
+        };
+        cache.Set("ai-health", (object)result, TimeSpan.FromMinutes(1));
+        return result;
+    }
 
     /// <summary>The model that answered last; later rounds of the same question start with it.</summary>
     string? openRouterModel;
