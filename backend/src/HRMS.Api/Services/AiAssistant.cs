@@ -18,7 +18,10 @@ public class AiOptions
     public string? ApiKey { get; set; }
     /// <summary>Google Gemini key (free tier available); used when there is no Anthropic key.</summary>
     public string? GeminiApiKey { get; set; }
-    public string GeminiModel { get; set; } = "gemini-2.5-flash";
+    /// <summary>Always Google's newest Flash model (free tier).</summary>
+    public string GeminiModel { get; set; } = "gemini-flash-latest";
+    /// <summary>Tried when the main model is overloaded or not available.</summary>
+    public string GeminiFallbackModel { get; set; } = "gemini-3-flash-preview";
     public string Model { get; set; } = "claude-haiku-5-5";
     /// <summary>Questions a company may ask a month unless the platform owner sets its own number.</summary>
     public int MessagesPerMonth { get; set; } = 1000;
@@ -409,7 +412,7 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
             You are the HR assistant inside Qaventra, the HR system of {company}. You are talking to {who?.FullName ?? "a user"}, whose role is {role}.
             Today is {today:dddd, d MMMM yyyy}.
 
-            Reply in the language and script the person writes in: Urdu script, Roman Urdu or English.
+            Reply in the language and script the person writes in: Urdu script for Urdu script, Roman Urdu (Urdu in English letters) for Roman Urdu, English for English.
             {style}
 
             Answer from the person's real data. Use the lookup tool for anything about their leave, attendance, pay, loans, funds, assets,

@@ -70,7 +70,7 @@ The "Ask AI" assistant stays hidden until `deploy/secrets/production.json` has a
 Free option: Google Gemini. Create a key at aistudio.google.com (API keys; no card needed) and use it instead:
 
 ```json
-"Ai": { "GeminiApiKey": "<gemini api key>", "GeminiModel": "gemini-2.5-flash", "MessagesPerMonth": 1000 }
+"Ai": { "GeminiApiKey": "<gemini api key>", "MessagesPerMonth": 1000 }
 ```
 
 Gemini is used only when there is no Anthropic `ApiKey`. On Gemini's free tier Google may use what is sent to improve its

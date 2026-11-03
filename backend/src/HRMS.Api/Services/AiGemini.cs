@@ -21,14 +21,21 @@ public partial class AiAssistantService
     {
         var client = http.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(90);
-        using var req = new HttpRequestMessage(HttpMethod.Post,
-            $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(options.GeminiModel)}:generateContent")
+        HttpResponseMessage res = null!;
+        var text = "";
+        // An overloaded or retired model (503, 404, 500) is retried once on the fallback model.
+        foreach (var model in new[] { options.GeminiModel, options.GeminiFallbackModel }.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct())
         {
-            Content = JsonContent.Create(body),
-        };
-        req.Headers.Add("x-goog-api-key", options.GeminiApiKey);
-        var res = await client.SendAsync(req);
-        var text = await res.Content.ReadAsStringAsync();
+            using var req = new HttpRequestMessage(HttpMethod.Post,
+                $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent")
+            {
+                Content = JsonContent.Create(body),
+            };
+            req.Headers.Add("x-goog-api-key", options.GeminiApiKey);
+            res = await client.SendAsync(req);
+            text = await res.Content.ReadAsStringAsync();
+            if ((int)res.StatusCode is not (503 or 404 or 500)) break;
+        }
         if (!res.IsSuccessStatusCode)
         {
             log.LogWarning("Gemini call failed: {Status} {Body}", (int)res.StatusCode, text.Length > 500 ? text[..500] : text);
