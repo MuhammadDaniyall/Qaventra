@@ -90,7 +90,13 @@ public class HelpdeskService(HrmsDbContext db, ICurrentUser me, TenantClock cloc
 
         var link = $"/helpdesk/{ticket.Id}";
         var what = type is null ? category.Name : $"{category.Name} · {type.Name}";
-        var assignee = await AutoAssigneeAsync(category, type);
+        var assignee = type?.LeadEmployeeId ?? await AutoAssigneeAsync(category, type);
+        var involve = type is null ? [] : Ids(type.InvolveIds).Where(x => x != forId).ToList();
+        if (involve.Count > 0)
+        {
+            ticket.InvolvedIds = string.Join(',', involve);
+            await notify.ToEmployeesAsync(involve, NotificationKind.Ticket, $"You are on {what} ticket {Code(ticket.Number)}", ticket.Subject, link);
+        }
         if (assignee is { } a)
         {
             ticket.AssigneeEmployeeId = a;

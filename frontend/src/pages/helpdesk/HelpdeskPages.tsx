@@ -477,11 +477,13 @@ function TypeModal({ categoryId, item, onClose }: { categoryId: string; item: Ti
   const [name, setName] = useState(item?.name ?? '');
   const [hours, setHours] = useState(item?.targetHours ? String(item.targetHours) : '');
   const [agents, setAgents] = useState<string[]>(item?.agentIds ?? []);
+  const [lead, setLead] = useState(item?.leadEmployeeId ?? '');
+  const [involve, setInvolve] = useState<string[]>(item?.involveIds ?? []);
   const [active, setActive] = useState(item?.isActive ?? true);
   const [error, setError] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: () => {
-      const b = { name: name.trim(), targetHours: hours ? Number(hours) : null, agentIds: agents, isActive: active };
+      const b = { name: name.trim(), targetHours: hours ? Number(hours) : null, agentIds: agents, isActive: active, leadEmployeeId: lead || null, involveIds: involve };
       return item ? helpdeskApi.updateType(item.id, b) : helpdeskApi.createType(categoryId, b);
     },
     onSuccess: () => {
@@ -523,6 +525,29 @@ function TypeModal({ categoryId, item, onClose }: { categoryId: string; item: Ti
             {people.data?.map((p) => (
               <li key={p.id} className="px-3 py-1.5">
                 <Checkbox label={p.name} checked={agents.includes(p.id)} onChange={(e) => setAgents((a) => (e.target.checked ? [...a, p.id] : a.filter((x) => x !== p.id)))} />
+              </li>
+            ))}
+          </ul>
+        </Field>
+        <Field label="Assign every ticket to" hint="Empty uses the category's rule">
+          <Select value={lead} onChange={(e) => setLead(e.target.value)}>
+            <option value="">Category's rule</option>
+            {people.data?.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Always involve" hint={involve.length ? `${involve.length} chosen: they follow and can reply on every ticket of this type` : 'Nobody'}>
+          <ul className="max-h-40 divide-y divide-zinc-100 overflow-y-auto rounded-lg border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+            {people.data?.map((p) => (
+              <li key={p.id} className="px-3 py-1.5">
+                <Checkbox
+                  label={p.name}
+                  checked={involve.includes(p.id)}
+                  onChange={(e) => setInvolve((a) => (e.target.checked ? [...a, p.id] : a.filter((x) => x !== p.id)))}
+                />
               </li>
             ))}
           </ul>

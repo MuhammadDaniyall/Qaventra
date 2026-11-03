@@ -32,6 +32,10 @@ public class TicketType : TenantEntity
     public int? TargetHours { get; set; }
     /// <summary>Overrides the category's agents when not empty (comma-separated ids).</summary>
     public string AgentIds { get; set; } = "";
+    /// <summary>Agent every ticket of this type goes to; null = the category's own rule.</summary>
+    public Guid? LeadEmployeeId { get; set; }
+    /// <summary>Comma-separated employee ids added to every ticket of this type (e.g. a manager who wants to follow them).</summary>
+    public string InvolveIds { get; set; } = "";
     public bool IsActive { get; set; } = true;
 }
 

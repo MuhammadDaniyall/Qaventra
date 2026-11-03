@@ -13,7 +13,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Controllers;
 
-public record TicketTypeDto(Guid Id, string Name, int? TargetHours, List<Guid> AgentIds, List<string> Agents, bool IsActive, RecordStampsDto Stamps);
+public record TicketTypeDto(Guid Id, string Name, int? TargetHours, List<Guid> AgentIds, List<string> Agents, bool IsActive, RecordStampsDto Stamps,
+    Guid? LeadEmployeeId = null, List<Guid>? InvolveIds = null);
 
 public record TicketCategoryDto(
     Guid Id, string Name, string? Description, int TargetHours, List<Guid> AgentIds, List<string> Agents, bool IsActive, int OpenTickets,
@@ -25,7 +26,8 @@ public record SaveTicketCategoryRequest(
     List<Guid>? AgentIds, bool IsActive = true, Guid? LeadEmployeeId = null, TicketAssignment AssignmentMode = TicketAssignment.Manual,
     bool AgentCanClose = false, [Range(0, 90)] int AutoCloseDays = 3, [Range(0, 365)] int ReopenDays = 7);
 
-public record SaveTicketTypeRequest([Required, StringLength(100)] string Name, [Range(1, 2000)] int? TargetHours, List<Guid>? AgentIds, bool IsActive = true);
+public record SaveTicketTypeRequest([Required, StringLength(100)] string Name, [Range(1, 2000)] int? TargetHours, List<Guid>? AgentIds, bool IsActive = true,
+    Guid? LeadEmployeeId = null, [MaxLength(20)] List<Guid>? InvolveIds = null);
 
 public record CreateTicketRequest(
     Guid? ForEmployeeId, Guid CategoryId, [Required, StringLength(200)] string Subject, [Required, StringLength(8000)] string Description,
@@ -99,7 +101,8 @@ public class HelpdeskController(HrmsDbContext db, HelpdeskService helpdesk, Tena
             var typeDtos = types[c.Id].Select(t =>
             {
                 var tIds = HelpdeskService.Ids(t.AgentIds);
-                return new TicketTypeDto(t.Id, t.Name, t.TargetHours, tIds, Names(tIds), t.IsActive, RecordStampsDto.Of(t));
+                return new TicketTypeDto(t.Id, t.Name, t.TargetHours, tIds, Names(tIds), t.IsActive, RecordStampsDto.Of(t), t.LeadEmployeeId,
+                HelpdeskService.Ids(t.InvolveIds));
             }).ToList();
             return new TicketCategoryDto(c.Id, c.Name, c.Description, c.TargetHours, ids, Names(ids), c.IsActive, open.GetValueOrDefault(c.Id),
                 c.LeadEmployeeId, c.LeadEmployeeId is { } lead ? names.GetValueOrDefault(lead) : null, c.AssignmentMode, c.AgentCanClose,
@@ -521,5 +524,9 @@ public class HelpdeskController(HrmsDbContext db, HelpdeskService helpdesk, Tena
         t.TargetHours = req.TargetHours;
         t.AgentIds = string.Join(',', await ValidAgentsAsync(req.AgentIds));
         t.IsActive = req.IsActive;
+        if (req.LeadEmployeeId is { } lead && !await db.Employees.AnyAsync(e => e.Id == lead))
+            throw new NotFoundException("Employee");
+        t.LeadEmployeeId = req.LeadEmployeeId;
+        t.InvolveIds = string.Join(',', await ValidAgentsAsync(req.InvolveIds));
     }
 }

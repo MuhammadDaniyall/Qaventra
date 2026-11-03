@@ -28,6 +28,10 @@ export interface TicketType {
   agents: string[];
   isActive: boolean;
   stamps: RecordStamps;
+  /** Every ticket of this type goes to this agent. */
+  leadEmployeeId?: string | null;
+  /** Added to every ticket of this type. */
+  involveIds?: string[];
 }
 
 export interface SaveTicketType {
@@ -35,6 +39,8 @@ export interface SaveTicketType {
   targetHours: number | null;
   agentIds: string[];
   isActive: boolean;
+  leadEmployeeId?: string | null;
+  involveIds?: string[];
 }
 
 export interface HelpdeskLabels {
