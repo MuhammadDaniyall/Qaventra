@@ -58,6 +58,11 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("approvals.pending", "Approvals", "Pending approvals", "Everything waiting, who it waits for and how long", ["department"], false),
         new("training.hours", "Training", "Training by person", "Sessions attended, hours and scores in a period", ["period", "department", "employee"], false),
         new("travel.trips", "Travel", "Trips", "Business trips in a period with cost and settlement", ["period", "department", "employee"], true),
+        new("payroll.loans", "Payroll", "Loan balances", "Approved loans with installments paid, amount recovered and balance left", ["department", "employee", "includeLeft"], true),
+        new("payroll.increments", "Payroll", "Salary revisions", "Increments and other salary changes in a period, old and new pay", ["period", "department", "employee"], true),
+        new("employees.separations", "Employees", "Separations", "Resignations and terminations in a period with last day, status and exit reason", ["period", "department"], true),
+        new("recruitment.pipeline", "Recruitment", "Hiring pipeline", "Applications received in a period by job and stage, with offers and hires", ["period"], true),
+        new("helpdesk.tickets", "Helpdesk", "Helpdesk tickets", "Tickets raised in a period with category, priority, status and time to resolve", ["period", "department"], true),
     ];
 
     public async Task<IEnumerable<ReportDefinition>> AvailableAsync()
@@ -71,6 +76,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
     {
         ["Employees"] = "employees", ["Attendance"] = "attendance", ["Projects"] = "projects", ["Leave"] = "leave", ["Payroll"] = "payroll",
         ["Expenses"] = "expenses", ["Approvals"] = "approvals", ["Training"] = "training", ["Travel"] = "travel",
+        ["Recruitment"] = "recruitment", ["Helpdesk"] = "helpdesk",
     };
 
     /// <summary>An HR manager with an access template sees only the reports of the template's modules.</summary>
@@ -539,6 +545,61 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     trips.Select(t => L(t.Employee!.FullName, TravelService.Route(t), D(t.DepartOn), D(t.ReturnOn),
                         t.Settlement == SettlementStatus.None ? t.Status.ToString() : ScheduledService.Humanize(t.Settlement.ToString()),
                         M(TravelService.BookedCost(t)), M(TravelService.Claimed(t)), M(t.AdvancePaid ?? 0))), totals: true);
+            }
+            case "payroll.loans":
+            {
+                var ids = People(f).Select(e => e.Id);
+                var loans = await db.Loans.Include(l => l.Employee).Include(l => l.Repayments)
+                    .Where(l => l.Status == RequestStatus.Approved && ids.Contains(l.EmployeeId)).OrderBy(l => l.StartYear).ThenBy(l => l.StartMonth).ToListAsync();
+                return T(def, $"{loans.Count} loans", ["Code", "Name", "Loan", "Starts", "Amount", "Installment", "Paid", "Recovered", "Balance"], [4, 5, 7, 8],
+                    loans.Select(l =>
+                    {
+                        var paid = l.Repayments.Sum(r => r.Amount);
+                        return L(l.Employee!.EmployeeCode, l.Employee.FullName, l.Title, $"{l.StartMonth:00}/{l.StartYear}", M(l.Amount), M(l.InstallmentAmount),
+                            $"{l.Repayments.Count} of {l.Installments}", M(paid), M(l.Amount - paid));
+                    }), totals: true);
+            }
+            case "payroll.increments":
+            {
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var rows = await db.SalaryRevisions.Include(r => r.Employee).Where(r => r.EffectiveFrom >= from && r.EffectiveFrom <= to && ids.Contains(r.EmployeeId))
+                    .OrderBy(r => r.EffectiveFrom).ToListAsync();
+                return T(def, range, ["Code", "Name", "From", "Kind", "Old gross", "New gross", "Change", "Change %", "Reason"], [4, 5, 6],
+                    rows.Select(r => L(r.Employee!.EmployeeCode, r.Employee.FullName, D(r.EffectiveFrom), ScheduledService.Humanize(r.Kind.ToString()), M(r.OldGross), M(r.NewGross),
+                        M(r.NewGross - r.OldGross), r.OldGross == 0 ? "" : $"{(r.NewGross - r.OldGross) * 100 / r.OldGross:0.0}%", r.Reason)), totals: true);
+            }
+            case "employees.separations":
+            {
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var rows = await db.Separations.Include(s => s.Employee).ThenInclude(e => e!.Department)
+                    .Where(s => s.NoticeDate <= to && (s.LastWorkingDay ?? s.ProposedLastDay) >= from && ids.Contains(s.EmployeeId))
+                    .OrderBy(s => s.LastWorkingDay ?? s.ProposedLastDay).ToListAsync();
+                return T(def, range, ["Code", "Name", "Department", "Type", "Notice", "Last day", "Status", "Exit reason"], [],
+                    rows.Select(s => L(s.Employee!.EmployeeCode, s.Employee.FullName, s.Employee.Department?.Name, ScheduledService.Humanize(s.Type.ToString()), D(s.NoticeDate),
+                        D(s.LastWorkingDay ?? s.ProposedLastDay), ScheduledService.Humanize(s.Status.ToString()), s.ExitReason ?? s.Reason)));
+            }
+            case "recruitment.pipeline":
+            {
+                var start = from.ToDateTime(TimeOnly.MinValue);
+                var end = to.AddDays(1).ToDateTime(TimeOnly.MinValue);
+                var apps = await db.JobApplications.Include(a => a.JobPost).Where(a => a.CreatedAtUtc >= start && a.CreatedAtUtc < end)
+                    .Select(a => new { Job = a.JobPost!.Title, a.Stage, Offered = a.OfferStatus != null }).ToListAsync();
+                ApplicationStage[] stages = [ApplicationStage.Applied, ApplicationStage.Shortlisted, ApplicationStage.Interview, ApplicationStage.Offer, ApplicationStage.Hired, ApplicationStage.Rejected];
+                return T(def, range, ["Job", "Applications", "Applied", "Shortlisted", "Interview", "Offer", "Hired", "Rejected", "Offers made"], [1, 2, 3, 4, 5, 6, 7, 8],
+                    apps.GroupBy(a => a.Job).OrderBy(g => g.Key).Select(g =>
+                        L([g.Key, N(g.Count()), .. stages.Select(st => N(g.Count(a => a.Stage == st))), N(g.Count(a => a.Offered))])), totals: true);
+            }
+            case "helpdesk.tickets":
+            {
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var start = from.ToDateTime(TimeOnly.MinValue);
+                var end = to.AddDays(1).ToDateTime(TimeOnly.MinValue);
+                var rows = await db.Tickets.Include(t => t.Employee).Include(t => t.Category)
+                    .Where(t => t.CreatedAtUtc >= start && t.CreatedAtUtc < end && ids.Contains(t.EmployeeId)).OrderBy(t => t.Number).ToListAsync();
+                return T(def, range, ["Ticket", "Raised by", "Category", "Subject", "Priority", "Status", "Hours to resolve", "Overdue"], [6],
+                    rows.Select(t => L($"HD-{t.Number:0000}", t.Employee!.FullName, t.Category?.Name, t.Subject, t.Priority.ToString(), ScheduledService.Humanize(t.Status.ToString()),
+                        t.ResolvedAtUtc is { } r ? ((int)(r - t.CreatedAtUtc).TotalHours).ToString() : "",
+                        (t.ResolvedAtUtc ?? DateTime.UtcNow) > t.DueAtUtc ? "Yes" : "")));
             }
             default:
                 throw new NotFoundException("Report");
