@@ -109,7 +109,8 @@ export function ExitQuestionsCard({ separationId, canAnswer }: { separationId: s
   const v = draft ?? Object.fromEntries(answers.map((a) => [a.questionId, a.answer ?? '']));
   const field = (a: ExitAnswer) => {
     const set = (x: string) => setDraft({ ...v, [a.questionId]: x });
-    if (!draft) return <p className="text-sm text-zinc-600 dark:text-zinc-300">{a.answer || <span className="text-zinc-500 dark:text-zinc-400">Not answered</span>}</p>;
+    if (!draft)
+      return <p className="text-sm text-zinc-600 dark:text-zinc-300">{a.answer || <span className="text-zinc-500 dark:text-zinc-400">Not answered</span>}</p>;
     if (a.kind === 'Rating')
       return (
         <div className="flex gap-1">
@@ -250,7 +251,8 @@ export function ExitPanelCard({ separationId }: { separationId: string }) {
         ) : (
           <div className="space-y-1 text-sm">
             <p>
-              <span className="text-zinc-500 dark:text-zinc-400">When:</span> {e.interviewScheduledUtc ? formatDateTimeUtc(e.interviewScheduledUtc) : 'Not scheduled'}
+              <span className="text-zinc-500 dark:text-zinc-400">When:</span>{' '}
+              {e.interviewScheduledUtc ? formatDateTimeUtc(e.interviewScheduledUtc) : 'Not scheduled'}
             </p>
             <p>
               <span className="text-zinc-500 dark:text-zinc-400">Panel:</span>{' '}
@@ -431,7 +433,12 @@ function PanelNotesCard({ separationId }: { separationId: string }) {
       <CardHeader
         title="Panel notes"
         actions={
-          <Button size="sm" variant={notes !== null ? 'primary' : 'secondary'} loading={save.isPending} onClick={() => (notes !== null ? save.mutate() : setNotes(e.interviewNotes ?? ''))}>
+          <Button
+            size="sm"
+            variant={notes !== null ? 'primary' : 'secondary'}
+            loading={save.isPending}
+            onClick={() => (notes !== null ? save.mutate() : setNotes(e.interviewNotes ?? ''))}
+          >
             {notes !== null ? 'Save' : 'Edit'}
           </Button>
         }
