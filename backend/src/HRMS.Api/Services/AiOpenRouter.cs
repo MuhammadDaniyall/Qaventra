@@ -18,26 +18,53 @@ public partial class AiAssistantService
 {
     bool HasOpenRouter => !string.IsNullOrWhiteSpace(options.OpenRouterApiKey);
 
+    /// <summary>The model that answered last; later rounds of the same question start with it.</summary>
+    string? openRouterModel;
+
     async Task<JsonObject> OpenRouterCallAsync(JsonObject body, AiMessageLog entry)
     {
-        body["models"] = new JsonArray(options.OpenRouterModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(m => (JsonNode)m!).ToArray());
         var client = http.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(120);
-        using var req = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions") { Content = JsonContent.Create(body) };
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.OpenRouterApiKey);
-        req.Headers.Add("X-Title", "Qaventra HRMS");
-        var res = await client.SendAsync(req);
-        var text = await res.Content.ReadAsStringAsync();
-        var json = res.IsSuccessStatusCode ? JsonNode.Parse(text) as JsonObject : null;
-        var message = json?["choices"]?[0]?["message"] as JsonObject;
+        client.Timeout = TimeSpan.FromSeconds(60);
+        var models = options.OpenRouterModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        if (openRouterModel is not null) models.Insert(0, openRouterModel);
+        HttpResponseMessage res = null!;
+        var text = "";
+        JsonObject? json = null;
+        JsonObject? message = null;
+        // Free models come and go and are often busy: try each in turn until one answers. A spent daily allowance (429
+        // "free-models-per-day") or a bad key stops the loop, since every other model would refuse too.
+        foreach (var model in models.Distinct())
+        {
+            body["model"] = model;
+            using var req = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions") { Content = JsonContent.Create(body) };
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.OpenRouterApiKey);
+            req.Headers.Add("X-Title", "Qaventra HRMS");
+            try
+            {
+                res = await client.SendAsync(req);
+                text = await res.Content.ReadAsStringAsync();
+            }
+            catch (TaskCanceledException)
+            {
+                continue;
+            }
+            json = res.IsSuccessStatusCode ? JsonNode.Parse(text) as JsonObject : null;
+            message = json?["choices"]?[0]?["message"] as JsonObject;
+            if (message is not null)
+            {
+                openRouterModel = model;
+                break;
+            }
+            if ((int)res.StatusCode is 401 or 403 || text.Contains("per-day", StringComparison.OrdinalIgnoreCase))
+                break;
+        }
         if (message is null)
         {
             log.LogWarning("OpenRouter call failed: {Status} {Body}", (int)res.StatusCode, text.Length > 500 ? text[..500] : text);
             entry.Error = $"OpenRouter {(int)res.StatusCode} {(text.Length > 460 ? text[..460] : text)}";
             db.AiMessageLogs.Add(entry);
             await db.SaveChangesAsync();
-            throw (int)res.StatusCode is 401 or 403
+            throw res is not null && (int)res.StatusCode is 401 or 403
                 ? new DomainException("The AI assistant's key on this site is not valid. Please tell the platform administrator.")
                 : new AiUnavailableException("The free AI allowance is used up for now. Please try again later.");
         }

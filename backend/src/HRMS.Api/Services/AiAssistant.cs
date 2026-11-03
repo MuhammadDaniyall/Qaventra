@@ -25,8 +25,11 @@ public class AiOptions
     public string GeminiModels { get; set; } = "gemma-4-31b-it,gemini-flash-lite-latest,gemini-flash-latest";
     /// <summary>OpenRouter key: the backup when Gemini is busy or used up, or the only model when there is no other key.</summary>
     public string? OpenRouterApiKey { get; set; }
-    /// <summary>OpenRouter models tried in order (up to three), comma-separated.</summary>
-    public string OpenRouterModels { get; set; } = "google/gemma-4-31b-it:free,nvidia/nemotron-3-ultra-550b-a55b:free,thinkingmachines/inkling:free";
+    /// <summary>OpenRouter models tried one after another, comma-separated: every free model that can use tools, biggest first.</summary>
+    public string OpenRouterModels { get; set; } = "nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-31b-it:free,thinkingmachines/inkling:free,"
+        + "nvidia/nemotron-3.5-super-vl:free,google/gemma-4-26b-a4b-it:free,dots-studio/dots-3-note-preview:free,xingchen-agi/xing4.0-29b-a4b:free,"
+        + "thinkingmachines/inkling-small:free,nvidia/nemotron-3.5-lightning:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,"
+        + "recursive/flint-v1.0:free,cohere/north-mini-code:free,liquid/lfm-2.5-2.6b:free,openrouter/free";
     public string Model { get; set; } = "claude-haiku-5-5";
     /// <summary>Questions a company may ask a month unless the platform owner sets its own number.</summary>
     public int MessagesPerMonth { get; set; } = 1000;
