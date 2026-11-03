@@ -1186,9 +1186,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         b.Entity<DeskSettings>(e =>
         {
             e.HasIndex(x => x.TenantId).IsUnique();
-            e.Property(x => x.MaxDaysAhead).HasDefaultValue(14);
-            e.Property(x => x.ReleaseAfterMinutes).HasDefaultValue(60);
-            e.Property(x => x.DayStartsAt).HasDefaultValue(9);
+            // 0 is a real choice for these settings (midnight, none, same day); without a sentinel EF would send nothing for 0 and the column default would win.
+            e.Property(x => x.MaxDaysAhead).HasDefaultValue(14).HasSentinel(-1);
+            e.Property(x => x.ReleaseAfterMinutes).HasDefaultValue(60).HasSentinel(-1);
+            e.Property(x => x.DayStartsAt).HasDefaultValue(9).HasSentinel(-1);
         });
 
         b.Entity<Floor>(e =>
@@ -1223,8 +1224,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.DepartmentIds).HasMaxLength(2000);
             e.Property(x => x.TitleTemplate).HasMaxLength(200);
             e.Property(x => x.BodyTemplate).HasMaxLength(2000);
-            e.Property(x => x.SendHour).HasDefaultValue(9);
-            e.Property(x => x.ProbationMonths).HasDefaultValue(3);
+            e.Property(x => x.SendHour).HasDefaultValue(9).HasSentinel(-1);
+            e.Property(x => x.ProbationMonths).HasDefaultValue(3).HasSentinel(-1);
         });
 
         b.Entity<ScheduledReport>(e =>
@@ -1234,7 +1235,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.RecipientIds).HasMaxLength(2000);
             e.Property(x => x.ExtraEmails).HasMaxLength(2000);
             e.Property(x => x.DepartmentIds).HasMaxLength(2000);
-            e.Property(x => x.SendHour).HasDefaultValue(9);
+            e.Property(x => x.SendHour).HasDefaultValue(9).HasSentinel(-1);
         });
 
         b.Entity<LeaveReason>(e =>
@@ -1257,8 +1258,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         b.Entity<AttendanceSettings>(e =>
         {
             e.HasIndex(x => x.TenantId).IsUnique();
-            e.Property(x => x.ExemptionsPerMonth).HasDefaultValue(2);
-            e.Property(x => x.ExemptionWithinDays).HasDefaultValue(7);
+            e.Property(x => x.ExemptionsPerMonth).HasDefaultValue(2).HasSentinel(-1);
+            e.Property(x => x.ExemptionWithinDays).HasDefaultValue(7).HasSentinel(-1);
         });
 
         b.Entity<SalaryRevision>(e =>
@@ -1351,8 +1352,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             e.HasIndex(x => x.TenantId).IsUnique();
             e.Property(x => x.DeskIds).HasMaxLength(2000);
-            e.Property(x => x.MinNoticeDays).HasDefaultValue(3);
-            e.Property(x => x.SettleWithinDays).HasDefaultValue(15);
+            e.Property(x => x.MinNoticeDays).HasDefaultValue(3).HasSentinel(-1);
+            e.Property(x => x.SettleWithinDays).HasDefaultValue(15).HasSentinel(-1);
         });
 
         b.Entity<TravelReason>(e =>
