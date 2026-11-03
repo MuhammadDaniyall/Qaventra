@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { OfferLetterButton } from './OfferLetter';
+import { AiCvCard } from './AiCvCard';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Ban, CalendarPlus, Check, Handshake, Lock, MessageSquare, UserCheck, X, ClipboardList } from 'lucide-react';
@@ -302,6 +303,7 @@ function ApplicationView({ a }: { a: Application }) {
               <AttachmentList owner="Candidate" ownerId={c.id} emptyText="No CV." />
             </div>
           </Card>
+          <AiCvCard applicationId={a.id} />
         </div>
       </div>
 

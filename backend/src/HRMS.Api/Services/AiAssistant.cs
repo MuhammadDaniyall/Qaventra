@@ -26,6 +26,7 @@ public record AiAction(string Kind, string Summary, JsonElement Payload);
 public record AiReply(string Reply, List<AiAction> Actions, int Remaining);
 public record AiStatus(bool Enabled, int Limit, int Used);
 public record AiFinding(string Title, string Detail, string Level, string Action);
+public record AiCvScreen(int Score, string Summary, List<string> Strengths, List<string> Gaps, List<string> Questions, bool FromCv);
 public record AiInsights(string Headline, List<AiFinding> Findings, DateTime MadeAtUtc);
 
 /// <summary>
@@ -188,6 +189,92 @@ public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUse
         var result = JsonSerializer.Deserialize<AiInsights>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web))
             ?? throw new DomainException("The AI summary could not be read. Please try again.");
         result = result with { MadeAtUtc = DateTime.UtcNow };
+        cache.Set(key, result, TimeSpan.FromHours(24));
+        return result;
+    }
+
+    /// <summary>Reads a candidate's CV against the job and scores the fit. One AI call; cached for a day per application.</summary>
+    public async Task<AiCvScreen> ScreenCvAsync(Guid applicationId, AttachmentService files, bool refresh)
+    {
+        if (!Enabled) throw new DomainException("The AI assistant is not switched on for this site yet.");
+        var key = $"ai-cv:{applicationId}";
+        if (!refresh && cache.TryGetValue(key, out AiCvScreen? cached) && cached is not null) return cached;
+        var app = await db.JobApplications.Include(a => a.JobPost).Include(a => a.Candidate).FirstOrDefaultAsync(a => a.Id == applicationId)
+            ?? throw new HRMS.Api.Infrastructure.NotFoundException("Application");
+        var (limit, used) = await AllowanceAsync();
+        if (used >= limit) throw new DomainException("Your company has used this month's AI questions. Ask your administrator to raise the limit.");
+
+        var c = app.Candidate!;
+        var cvId = await db.Attachments.Where(x => x.OwnerType == AttachmentOwner.Candidate && x.OwnerId == c.Id && x.ContentType == "application/pdf")
+            .OrderByDescending(x => x.CreatedAtUtc).Select(x => (Guid?)x.Id).FirstOrDefaultAsync();
+        var content = new List<ContentBlockParam>();
+        if (cvId is { } id)
+        {
+            var (_, data) = await files.ReadAsync(id);
+            content.Add(new DocumentBlockParam { Source = new Base64PdfSource { Data = Convert.ToBase64String(data) } });
+        }
+        content.Add(new TextBlockParam
+        {
+            Text = $"""
+                Job: {app.JobPost!.Title}
+                Description: {app.JobPost.Description}
+                Requirements: {app.JobPost.Requirements}
+
+                Candidate form: {c.FirstName} {c.LastName}; current title {c.CurrentTitle}; {c.ExperienceYears} years' experience; skills: {c.Skills}.
+                {(cvId is null ? "No PDF CV was uploaded; judge from the form only and say so in the summary." : "The CV is attached.")}
+                """,
+        });
+
+        var entry = new AiMessageLog { UserId = me.UserId ?? Guid.Empty };
+        string text;
+        try
+        {
+            static JsonElement J(object o) => JsonSerializer.SerializeToElement(o);
+            var list = new { type = "array", items = new { type = "string" } };
+            var response = await new AnthropicClient { ApiKey = options.ApiKey }.Messages.Create(new MessageCreateParams
+            {
+                Model = options.Model,
+                MaxTokens = 3000,
+                OutputConfig = new OutputConfig
+                {
+                    Effort = Effort.Low,
+                    Format = new JsonOutputFormat
+                    {
+                        Schema = new Dictionary<string, JsonElement>
+                        {
+                            ["type"] = J("object"),
+                            ["properties"] = J(new { score = new { type = "integer" }, summary = new { type = "string" }, strengths = list, gaps = list, questions = list }),
+                            ["required"] = J(new[] { "score", "summary", "strengths", "gaps", "questions" }),
+                            ["additionalProperties"] = J(false),
+                        },
+                    },
+                },
+                System = """
+                    You screen job applicants for a recruiter. Compare the candidate with the job and give: score 0-100 for fit,
+                    a two-sentence summary, up to 4 strengths and up to 4 gaps (each one short line, with evidence from the CV),
+                    and 3 to 5 interview questions that probe the gaps. Judge only skills, experience and qualifications;
+                    ignore age, gender, religion, marital status, photos and anything else unrelated to the work.
+                    """,
+                Messages = [new UserMessageParam { Content = content }],
+            });
+            entry.InputTokens = (int)response.Usage.InputTokens;
+            entry.OutputTokens = (int)response.Usage.OutputTokens;
+            text = string.Concat(response.Content.Select(b => b.Value).OfType<TextBlock>().Select(b => b.Text));
+        }
+        catch (AnthropicApiException ex)
+        {
+            log.LogWarning(ex, "AI CV screening failed");
+            entry.Error = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+            db.AiMessageLogs.Add(entry);
+            await db.SaveChangesAsync();
+            throw new DomainException("The CV could not be read by the AI right now. Please try again later.");
+        }
+        db.AiMessageLogs.Add(entry);
+        await db.SaveChangesAsync();
+
+        var result = JsonSerializer.Deserialize<AiCvScreen>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            ?? throw new DomainException("The AI's answer could not be read. Please try again.");
+        result = result with { Score = Math.Clamp(result.Score, 0, 100), FromCv = cvId is not null };
         cache.Set(key, result, TimeSpan.FromHours(24));
         return result;
     }

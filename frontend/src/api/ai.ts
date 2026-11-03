@@ -25,6 +25,15 @@ export interface AiStatus {
   used: number;
 }
 
+export interface AiCvScreen {
+  score: number;
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  questions: string[];
+  fromCv: boolean;
+}
+
 export interface AiInsights {
   headline: string;
   findings: { title: string; detail: string; level: 'good' | 'watch' | 'act'; action: string }[];
@@ -33,6 +42,7 @@ export interface AiInsights {
 
 export const aiApi = {
   status: () => http.get<AiStatus>('/ai/status'),
+  screenCv: (applicationId: string, refresh = false) => http.post<AiCvScreen>(`/ai/cv/${applicationId}?refresh=${refresh}`),
   insights: (refresh = false) => http.get<AiInsights>('/ai/insights', { refresh }),
   ask: (messages: AiTurn[], voice: boolean) => http.post<AiReply>('/ai/ask', { messages, voice }),
   /** Sends a prepared action through the normal endpoint, as if the person had filled the form themselves. */

@@ -25,6 +25,10 @@ public class AiController(AiAssistantService ai, IWebHostEnvironment env) : Cont
     [HttpGet("insights"), Authorize(Policy = Policies.Hr)]
     public Task<AiInsights> Insights([FromQuery] bool refresh = false) => ai.InsightsAsync(BaseUrl(), Bearer(), refresh);
 
+    [HttpPost("cv/{applicationId:guid}"), Authorize(Policy = Policies.Hr)]
+    public Task<AiCvScreen> ScreenCv(Guid applicationId, [FromServices] AttachmentService files, [FromQuery] bool refresh = false) =>
+        ai.ScreenCvAsync(applicationId, files, refresh);
+
     // The site redirects http to https, and a redirect would drop the sign-in header on the assistant's lookups.
     string BaseUrl() => $"{(env.IsDevelopment() ? Request.Scheme : "https")}://{Request.Host}";
 
