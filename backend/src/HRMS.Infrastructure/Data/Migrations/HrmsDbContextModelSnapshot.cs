@@ -5042,7 +5042,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<bool>("IsPaid")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("MaxBackdatedDays")
+                        .HasColumnType("int");
+
                     b.Property<int?>("MaxConsecutiveDays")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxDaysInAdvance")
                         .HasColumnType("int");
 
                     b.Property<int>("MinNoticeDays")
@@ -5057,6 +5063,10 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("MonthlyLimit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Name")
                         .IsRequired()

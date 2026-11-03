@@ -5,7 +5,26 @@ import { setupApi } from '../../api/organization';
 import { useLeaveTypes } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
-import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, ErrorState, Field, Input, Select, SkeletonRows, StatusBadge, Table, TBody, Td, Th, THead, Tr } from '../../components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  Checkbox,
+  EmptyState,
+  ErrorState,
+  Field,
+  Input,
+  Select,
+  SkeletonRows,
+  StatusBadge,
+  Table,
+  TBody,
+  Td,
+  Th,
+  THead,
+  Tr,
+} from '../../components/ui';
 import { formatNumber } from '../../lib/format';
 import type { Gender, LeaveAccrual, LeaveType, SaveLeaveTypeRequest } from '../../types';
 import { DeleteConfirm, EditModal, RowActions, useSaveMutation } from './shared';
@@ -32,7 +51,15 @@ export function LeaveTypesTab() {
       ) : list.isError ? (
         <ErrorState error={list.error} onRetry={() => list.refetch()} />
       ) : !list.data?.length ? (
-        <EmptyState icon={Palmtree} title="No leave types" action={<Button variant="secondary" onClick={() => setEditing('new')}>Add leave type</Button>} />
+        <EmptyState
+          icon={Palmtree}
+          title="No leave types"
+          action={
+            <Button variant="secondary" onClick={() => setEditing('new')}>
+              Add leave type
+            </Button>
+          }
+        />
       ) : (
         <Table>
           <THead>
@@ -103,6 +130,9 @@ function policySummary(t: LeaveType): string {
   if (t.allowShortLeave) parts.push('Short leave');
   if (t.sandwich) parts.push('Sandwich');
   if (t.documentAfterDays) parts.push(`Document after ${t.documentAfterDays} days`);
+  if (t.maxDaysInAdvance != null) parts.push(`Up to ${t.maxDaysInAdvance} days ahead`);
+  if (t.maxBackdatedDays != null) parts.push(`Up to ${t.maxBackdatedDays} days back`);
+  if (t.monthlyLimit != null) parts.push(`Max ${t.monthlyLimit} a month`);
   return parts.join(' · ');
 }
 
@@ -123,6 +153,9 @@ type Form = {
   isCompensatory: boolean;
   sandwich: boolean;
   documentAfterDays: string;
+  maxDaysInAdvance: string;
+  maxBackdatedDays: string;
+  monthlyLimit: string;
 };
 
 function toForm(t: LeaveType | null): Form {
@@ -144,10 +177,30 @@ function toForm(t: LeaveType | null): Form {
         isCompensatory: t.isCompensatory,
         sandwich: t.sandwich,
         documentAfterDays: t.documentAfterDays != null ? String(t.documentAfterDays) : '',
+        maxDaysInAdvance: t.maxDaysInAdvance != null ? String(t.maxDaysInAdvance) : '',
+        maxBackdatedDays: t.maxBackdatedDays != null ? String(t.maxBackdatedDays) : '',
+        monthlyLimit: t.monthlyLimit != null ? String(t.monthlyLimit) : '',
       }
     : {
-        name: '', code: '', annualQuota: '10', isPaid: true, isActive: true, accrual: 'Upfront', carryForwardMax: '0', maxConsecutiveDays: '',
-        minNoticeDays: '0', applicableGender: '', allowedOnProbation: true, allowHalfDay: true, allowShortLeave: false, isCompensatory: false, sandwich: false, documentAfterDays: '',
+        name: '',
+        code: '',
+        annualQuota: '10',
+        isPaid: true,
+        isActive: true,
+        accrual: 'Upfront',
+        carryForwardMax: '0',
+        maxConsecutiveDays: '',
+        minNoticeDays: '0',
+        applicableGender: '',
+        allowedOnProbation: true,
+        allowHalfDay: true,
+        allowShortLeave: false,
+        isCompensatory: false,
+        sandwich: false,
+        documentAfterDays: '',
+        maxDaysInAdvance: '',
+        maxBackdatedDays: '',
+        monthlyLimit: '',
       };
 }
 
@@ -200,6 +253,9 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
           isCompensatory: v.isCompensatory,
           sandwich: v.sandwich,
           documentAfterDays: v.documentAfterDays ? Number(v.documentAfterDays) : null,
+          maxDaysInAdvance: v.maxDaysInAdvance ? Number(v.maxDaysInAdvance) : null,
+          maxBackdatedDays: v.maxBackdatedDays ? Number(v.maxBackdatedDays) : null,
+          monthlyLimit: v.monthlyLimit ? Number(v.monthlyLimit) : null,
         });
       }}
     >
@@ -224,7 +280,12 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
           </Field>
         </div>
       )}
-      <Checkbox label="Paid leave" description="Unpaid leave days are deducted in payroll." checked={v.isPaid} onChange={(e) => set({ isPaid: e.target.checked })} />
+      <Checkbox
+        label="Paid leave"
+        description="Unpaid leave days are deducted in payroll."
+        checked={v.isPaid}
+        onChange={(e) => set({ isPaid: e.target.checked })}
+      />
       <Checkbox
         label="Compensatory leave (comp-off)"
         description={fieldErrors.isCompensatory ?? 'No yearly quota; days come from approved comp-off claims for weekend or holiday work.'}
@@ -248,6 +309,17 @@ function LeaveTypeModal({ item, onClose }: { item: LeaveType | null; onClose: ()
         <Field label="Document needed for more than (days)" hint="Empty = never; the approver cannot approve until it is attached">
           <Input type="number" min={0.5} max={365} step="0.5" value={v.documentAfterDays} onChange={(e) => set({ documentAfterDays: e.target.value })} />
         </Field>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Request at most (days ahead)" hint="Empty = no limit">
+            <Input type="number" min={0} max={365} value={v.maxDaysInAdvance} onChange={(e) => set({ maxDaysInAdvance: e.target.value })} />
+          </Field>
+          <Field label="Past days allowed (days back)" hint="Empty = no limit">
+            <Input type="number" min={0} max={365} value={v.maxBackdatedDays} onChange={(e) => set({ maxBackdatedDays: e.target.value })} />
+          </Field>
+          <Field label="Most days in a month" hint="Empty = no limit">
+            <Input type="number" min={0.5} max={31} step="0.5" value={v.monthlyLimit} onChange={(e) => set({ monthlyLimit: e.target.value })} />
+          </Field>
+        </div>
         <Field label="Who can take it">
           <Select value={v.applicableGender} onChange={(e) => set({ applicableGender: e.target.value as Gender | '' })}>
             <option value="">Everyone</option>

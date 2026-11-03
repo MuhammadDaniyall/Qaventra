@@ -334,6 +334,9 @@ export interface LeaveType {
   sandwich: boolean;
   /** Longer requests need a supporting document before approval. */
   documentAfterDays: number | null;
+  maxDaysInAdvance?: number | null;
+  maxBackdatedDays?: number | null;
+  monthlyLimit?: number | null;
   stamps: RecordStamps;
 }
 export type SaveLeaveTypeRequest = Omit<LeaveType, 'id' | 'stamps'>;

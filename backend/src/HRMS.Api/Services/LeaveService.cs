@@ -140,6 +140,10 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
         var today = await clock.TodayAsync();
         if (type.MinNoticeDays > 0 && from < today.AddDays(type.MinNoticeDays) && !me.IsHr())
             throw new DomainException($"{type.Name} must be requested at least {type.MinNoticeDays} day(s) in advance.");
+        if (type.MaxDaysInAdvance is { } ahead && from > today.AddDays(ahead) && !me.IsHr())
+            throw new DomainException($"{type.Name} can be requested at most {ahead} day(s) ahead.");
+        if (type.MaxBackdatedDays is { } back && from < today.AddDays(-back) && !me.IsHr())
+            throw new DomainException($"{type.Name} can be requested for past days only up to {back} day(s) back.");
 
         LeaveReason? reason = null;
         if (a.ReasonId is { } rid)
@@ -200,6 +204,16 @@ public class LeaveService(HrmsDbContext db, ICurrentUser me, TenantClock clock, 
                 throw new DomainException(type.Accrual == LeaveAccrual.Monthly && balance is not null && balance.Earned < balance.Balance.Entitled
                     ? $"Not enough {type.Name} earned yet: {available:0.##} day(s) available now ({type.Name} is earned monthly), {days:0.##} requested."
                     : $"Not enough {type.Name} balance: {available:0.##} day(s) available, {days:0.##} requested.");
+        }
+
+        if (type.MonthlyLimit is { } perMonth && !me.IsHr())
+        {
+            var monthStart = new DateOnly(from.Year, from.Month, 1);
+            var monthEnd = monthStart.AddMonths(1).AddDays(-1);
+            var taken = await db.LeaveRequests.Where(r => r.EmployeeId == employeeId && r.LeaveTypeId == type.Id && r.FromDate <= monthEnd && r.ToDate >= monthStart
+                && (r.Status == LeaveStatus.Pending || r.Status == LeaveStatus.Approved)).SumAsync(r => r.Days);
+            if (taken + days > perMonth)
+                throw new DomainException($"{type.Name} is limited to {perMonth:0.##} day(s) a month; {taken:0.##} already taken or requested in {from:MMMM}.");
         }
 
         var request = new LeaveRequest

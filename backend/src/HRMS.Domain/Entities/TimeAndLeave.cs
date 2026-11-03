@@ -112,6 +112,12 @@ public class LeaveType : TenantEntity
     public int? MaxConsecutiveDays { get; set; }
     /// <summary>Days of notice needed before the leave starts; 0 allows same-day requests (e.g. sick leave).</summary>
     public int MinNoticeDays { get; set; }
+    /// <summary>How far ahead it may be requested; null = no limit.</summary>
+    public int? MaxDaysInAdvance { get; set; }
+    /// <summary>How many days back a past day may still be requested; null = no limit.</summary>
+    public int? MaxBackdatedDays { get; set; }
+    /// <summary>Most days that may be taken in one calendar month; null = no limit.</summary>
+    public decimal? MonthlyLimit { get; set; }
     /// <summary>Only this gender may apply (maternity, paternity); null means everyone.</summary>
     public Gender? ApplicableGender { get; set; }
     public bool AllowedOnProbation { get; set; } = true;
