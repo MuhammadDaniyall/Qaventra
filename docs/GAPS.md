@@ -79,3 +79,13 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Email: one global SMTP, no per-company SMTP or test send; no header/footer; no per-form or per-stage templates.
 - Integrations: JV is generic CSV (no Oracle/SAP format); GL mapping is 9 fixed lines; no field mapping, compliance APIs, Muqeem, Abhi.
 - Desks: a booking covers one day, not a range.
+
+## Done since the audit
+- Reports: loan balances, salary revisions, separations, hiring pipeline, helpdesk tickets.
+- Letters issued to many employees at once.
+- Expense: approved amount per line.
+- Interview rescheduling.
+- Station leave with address and phone.
+- Final settlement paid through the leaving month's payroll.
+- AI: HR assistant with voice, AI summary on insights, AI CV check.
+
