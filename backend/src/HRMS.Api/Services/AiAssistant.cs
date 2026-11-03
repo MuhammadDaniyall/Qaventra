@@ -25,6 +25,8 @@ public class AiOptions
     public string GeminiModels { get; set; } = "gemini-flash-lite-latest,gemma-4-31b-it,gemini-flash-latest";
     /// <summary>OpenRouter key: the backup when Gemini is busy or used up, or the only model when there is no other key.</summary>
     public string? OpenRouterApiKey { get; set; }
+    /// <summary>Ask OpenRouter before Gemini (faster while its small daily allowance lasts).</summary>
+    public bool OpenRouterFirst { get; set; } = true;
     /// <summary>OpenRouter models tried one after another, comma-separated: every free model that can use tools, biggest first.</summary>
     public string OpenRouterModels { get; set; } = "nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-31b-it:free,thinkingmachines/inkling:free,"
         + "nvidia/nemotron-3.5-super-vl:free,google/gemma-4-26b-a4b-it:free,dots-studio/dots-3-note-preview:free,xingchen-agi/xing4.0-29b-a4b:free,"
@@ -351,11 +353,19 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         api.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         api.Timeout = TimeSpan.FromSeconds(30);
         await PreloadAsync(api);
-        if (UseGemini)
+        if (string.IsNullOrWhiteSpace(options.ApiKey) && (UseGemini || HasOpenRouter))
+        {
+            // Free providers: OpenRouter first while its daily allowance lasts (it answers in seconds), then Gemini.
+            if (HasOpenRouter && (options.OpenRouterFirst || !UseGemini))
+            {
+                try { return await OpenRouterAskAsync(turns, voice, api, limit, used); }
+                catch (AiUnavailableException) when (UseGemini) { }
+                return await GeminiAskAsync(turns, voice, api, limit, used);
+            }
             try { return await GeminiAskAsync(turns, voice, api, limit, used); }
             catch (AiUnavailableException) when (HasOpenRouter) { }
-        if (string.IsNullOrWhiteSpace(options.ApiKey) && HasOpenRouter)
             return await OpenRouterAskAsync(turns, voice, api, limit, used);
+        }
 
         var messages = turns.TakeLast(20)
             .Select(t => t.Role == "user" ? (MessageParam)new UserMessageParam { Content = t.Text } : new AssistantMessageParam { Content = t.Text })
