@@ -21,6 +21,7 @@ public record RosterRowDto(Guid EmployeeId, string EmployeeCode, string Name, st
 
 public record RosterDto(DateOnly From, DateOnly To, List<RosterShiftDto> Shifts, List<RosterRowDto> Rows, List<string> ClosedMonths);
 
+public record CopyRosterRequest(List<Guid>? EmployeeIds, DateOnly SourceFrom, DateOnly SourceTo, DateOnly TargetFrom, int Times = 1);
 public record AssignRosterRequest(
     [Required, MaxLength(500)] List<Guid> EmployeeIds, DateOnly From, DateOnly To, List<DayOfWeek>? Weekdays, Guid? ShiftId, bool Off, bool Clear);
 
@@ -91,6 +92,11 @@ public class SchedulingController(
         var count = await schedule.AssignAsync(req.EmployeeIds ?? [], req.From, req.To, req.Weekdays, req.ShiftId, req.Off, req.Clear);
         return new { days = count };
     }
+
+    /// <summary>Repeats the planned days of a week or month (shifts and days off) over the following periods.</summary>
+    [HttpPost("roster/copy"), Authorize(Policy = Policies.Hr)]
+    public async Task<object> CopyRoster(CopyRosterRequest req) =>
+        new { days = await schedule.CopyAsync(req.EmployeeIds, req.SourceFrom, req.SourceTo, req.TargetFrom, req.Times) };
 
     // ---------- Shift requests ----------
 

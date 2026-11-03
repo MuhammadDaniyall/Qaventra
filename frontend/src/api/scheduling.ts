@@ -100,6 +100,8 @@ export interface MonthlyAttendance {
 export const schedulingApi = {
   roster: (from: string, to: string, departmentId?: string) => http.get<Roster>('/attendance/roster', { from, to, departmentId }),
   assign: (b: AssignRoster) => http.put<{ days: number }>('/attendance/roster', b),
+  copy: (b: { employeeIds: string[] | null; sourceFrom: string; sourceTo: string; targetFrom: string; times: number }) =>
+    http.post<{ days: number }>('/attendance/roster/copy', b),
   colleagues: () => http.get<{ id: string; name: string }[]>('/attendance/colleagues'),
   myShiftRequests: () => http.get<ShiftRequest[]>('/attendance/shift-requests/my'),
   shiftRequests: (status = 'Pending') => http.get<ShiftRequest[]>('/attendance/shift-requests', { status }),

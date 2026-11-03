@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarRange, ChevronLeft, ChevronRight, Lock, Search, Users } from 'lucide-react';
+import { CalendarRange, ChevronLeft, Copy, ChevronRight, Lock, Search, Users } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -72,6 +72,7 @@ export function RosterPage() {
   const [departmentId, setDepartmentId] = useState('');
   const [editing, setEditing] = useState<{ row: RosterRow; cell: RosterCell } | null>(null);
   const [assigning, setAssigning] = useState(false);
+  const [copying, setCopying] = useState(false);
   const from = toIsoDate(start);
   const to = toIsoDate(addDays(start, Number(span) - 1));
   const roster = useQuery({
@@ -90,12 +91,26 @@ export function RosterPage() {
         description={hr ? 'Who works which shift each day. Click a day to change it, or plan many people at once.' : 'Who in your team works which shift each day.'}
         actions={
           hr && (
-            <Button icon={<CalendarRange className="size-4" />} onClick={() => setAssigning(true)}>
-              Assign shifts
-            </Button>
+            <>
+              <Button variant="secondary" icon={<Copy className="size-4" />} onClick={() => setCopying(true)}>
+                Copy forward
+              </Button>
+              <Button icon={<CalendarRange className="size-4" />} onClick={() => setAssigning(true)}>
+                Assign shifts
+              </Button>
+            </>
           )
         }
       />
+      {copying && (
+        <CopyRosterModal
+          from={from}
+          to={to}
+          days={Number(span)}
+          employeeIds={departmentId ? (roster.data?.rows ?? []).map((r) => r.employeeId) : null}
+          onClose={() => setCopying(false)}
+        />
+      )}
       <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-zinc-100 p-4 dark:border-zinc-800">
           <div className="flex items-center gap-1">
@@ -443,6 +458,50 @@ function AssignModal({ shifts, defaultFrom, defaultTo, onClose }: { shifts: Rost
           <ChoicePicker shifts={shifts} value={choice} onChange={setChoice} showReset />
         </div>
       </div>
+    </Modal>
+  );
+}
+
+function CopyRosterModal({ from, to, days, employeeIds, onClose }: { from: string; to: string; days: number; employeeIds: string[] | null; onClose: () => void }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [times, setTimes] = useState('3');
+  const target = toIsoDate(addDays(new Date(`${from}T00:00:00`), days));
+  const copy = useMutation({
+    mutationFn: () => schedulingApi.copy({ employeeIds, sourceFrom: from, sourceTo: to, targetFrom: target, times: Number(times) }),
+    onSuccess: (r) => {
+      toast.success(`${r.days} days planned`);
+      qc.invalidateQueries({ queryKey: qk.attendance });
+      onClose();
+    },
+    onError: (e) => toast.error(e),
+  });
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Copy these days forward"
+      description={`Repeats the shifts and days off planned for ${formatDate(from)} – ${formatDate(to)}${employeeIds ? ' for this department' : ''}. Days already planned there are replaced.`}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button loading={copy.isPending} onClick={() => copy.mutate()}>
+            Copy
+          </Button>
+        </>
+      }
+    >
+      <Field label={`Repeat over the next (starting ${formatDate(target)})`}>
+        <Select value={times} onChange={(e) => setTimes(e.target.value)}>
+          {[1, 2, 3, 4, 6, 8, 12].map((n) => (
+            <option key={n} value={n}>
+              {n} × {days === 7 ? 'week' : `${days} days`}
+            </option>
+          ))}
+        </Select>
+      </Field>
     </Modal>
   );
 }

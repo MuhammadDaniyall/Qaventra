@@ -106,6 +106,51 @@ public class ScheduleService(HrmsDbContext db)
     /// Sets each employee's shift (or a day off) on every day of the range that matches the weekdays, or clears those
     /// days back to their own shift. Returns how many days were written.
     /// </summary>
+    public async Task<int> CopyAsync(IReadOnlyCollection<Guid>? employeeIds, DateOnly sourceFrom, DateOnly sourceTo, DateOnly targetFrom, int times)
+    {
+        if (sourceTo < sourceFrom)
+            throw new DomainException("The end date is before the start date.");
+        var length = sourceTo.DayNumber - sourceFrom.DayNumber + 1;
+        if (length > 31)
+            throw new DomainException("Copy at most a month at a time.");
+        if (times is < 1 or > 12)
+            throw new DomainException("Repeat it 1 to 12 times.");
+        if (targetFrom <= sourceTo && targetFrom.AddDays(length * times - 1) >= sourceFrom)
+            throw new DomainException("The copy would overlap the days it copies from.");
+        var targetTo = targetFrom.AddDays(length * times - 1);
+        if (targetTo.DayNumber - targetFrom.DayNumber > 370)
+            throw new DomainException("Plan at most a year ahead.");
+        await EnsureOpenAsync(targetFrom, targetTo);
+
+        var q = db.ShiftAssignments.Where(a => a.Date >= sourceFrom && a.Date <= sourceTo && a.Source == ShiftAssignmentSource.Roster);
+        if (employeeIds is { Count: > 0 })
+            q = q.Where(a => employeeIds.Contains(a.EmployeeId));
+        var source = await q.ToListAsync();
+        if (source.Count == 0)
+            throw new DomainException("There is nothing planned in those days to copy.");
+        var ids = source.Select(a => a.EmployeeId).Distinct().ToList();
+        var existing = (await db.ShiftAssignments.Where(a => ids.Contains(a.EmployeeId) && a.Date >= targetFrom && a.Date <= targetTo).ToListAsync())
+            .ToDictionary(a => (a.EmployeeId, a.Date));
+        var count = 0;
+        for (var n = 0; n < times; n++)
+            foreach (var s in source)
+            {
+                var day = targetFrom.AddDays(n * length + (s.Date.DayNumber - sourceFrom.DayNumber));
+                if (!existing.TryGetValue((s.EmployeeId, day), out var a))
+                {
+                    a = new ShiftAssignment { EmployeeId = s.EmployeeId, Date = day };
+                    db.ShiftAssignments.Add(a);
+                    existing[(s.EmployeeId, day)] = a;
+                }
+                a.ShiftId = s.ShiftId;
+                a.IsOff = s.IsOff;
+                a.Source = ShiftAssignmentSource.Roster;
+                count++;
+            }
+        await db.SaveChangesAsync();
+        return count;
+    }
+
     public async Task<int> AssignAsync(IReadOnlyCollection<Guid> employeeIds, DateOnly from, DateOnly to, IReadOnlyCollection<DayOfWeek>? weekdays,
         Guid? shiftId, bool off, bool clear, ShiftAssignmentSource source = ShiftAssignmentSource.Roster)
     {

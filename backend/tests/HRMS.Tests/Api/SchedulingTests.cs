@@ -50,6 +50,25 @@ public class SchedulingTests(ApiFactory factory) : IClassFixture<ApiFactory>
             .GetProperty("days").EnumerateArray().First(c => c.GetProperty("date").GetString() == Iso(day));
 
     [Fact]
+    public async Task Roster_week_is_copied_forward()
+    {
+        var (admin, _, _, person) = await CompanyAsync("RosterCopy");
+        var (worker, _) = await person("Wajid");
+        var evening = await ShiftAsync(admin, "Evening", "14:00:00", "22:00:00", "Sunday");
+        var mon = NextMonday();
+        await Ok(await admin.PutAsJsonAsync("/api/attendance/roster", new { employeeIds = new[] { worker }, from = Iso(mon), to = Iso(mon), shiftId = evening }, ApiFactory.Json));
+        await Ok(await admin.PutAsJsonAsync("/api/attendance/roster", new { employeeIds = new[] { worker }, from = Iso(mon.AddDays(4)), to = Iso(mon.AddDays(4)), off = true }, ApiFactory.Json));
+
+        var copied = await Ok(await admin.PostAsJsonAsync("/api/attendance/roster/copy", new { sourceFrom = Iso(mon), sourceTo = Iso(mon.AddDays(6)), targetFrom = Iso(mon.AddDays(7)), times = 2 }, ApiFactory.Json));
+        Assert.Equal(4, copied.GetProperty("days").GetInt32());
+        var roster = await Ok(await admin.GetAsync($"/api/attendance/roster?from={Iso(mon.AddDays(14))}&to={Iso(mon.AddDays(20))}"));
+        Assert.Equal(evening, Cell(roster, worker, mon.AddDays(14)).GetProperty("shiftId").GetGuid());
+        Assert.True(Cell(roster, worker, mon.AddDays(18)).GetProperty("isOff").GetBoolean());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/attendance/roster/copy",
+            new { sourceFrom = Iso(mon), sourceTo = Iso(mon.AddDays(6)), targetFrom = Iso(mon.AddDays(3)), times = 1 }, ApiFactory.Json)).StatusCode);
+    }
+
+    [Fact]
     public async Task Roster_overrides_the_usual_shift_and_off_days()
     {
         var (admin, _, _, person) = await CompanyAsync("Roster");
