@@ -64,7 +64,7 @@ The "Ask AI" assistant stays hidden until `deploy/secrets/production.json` has a
 (console.anthropic.com → API keys). `Model` and `MessagesPerMonth` (questions per company a month) are optional:
 
 ```json
-"Ai": { "ApiKey": "<anthropic api key>", "Model": "claude-opus-5-5", "MessagesPerMonth": 1000 }
+"Ai": { "ApiKey": "<anthropic api key>", "Model": "claude-haiku-5-5", "MessagesPerMonth": 1000 }
 ```
 
 Then deploy again. For local runs, put the same section in `backend/src/HRMS.Api/appsettings.Development.json` or set

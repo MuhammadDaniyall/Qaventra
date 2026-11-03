@@ -15,7 +15,7 @@ public class AiOptions
 {
     /// <summary>Anthropic API key; the assistant is off when empty.</summary>
     public string? ApiKey { get; set; }
-    public string Model { get; set; } = "claude-opus-5-5";
+    public string Model { get; set; } = "claude-haiku-5-5";
     /// <summary>Questions a company may ask a month unless the platform owner sets its own number.</summary>
     public int MessagesPerMonth { get; set; } = 1000;
 }
