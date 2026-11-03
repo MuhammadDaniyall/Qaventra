@@ -16,6 +16,23 @@ public partial class AiAssistantService
 
     static readonly JsonSerializerOptions GeminiJson = new(JsonSerializerDefaults.Web);
 
+    /// <summary>The model that answered the last call; later rounds of the same question stay on it.</summary>
+    string? geminiModel;
+
+    /// <summary>Thought signatures only work with the model that wrote them; drop them before another model sees the history.</summary>
+    static void StripThoughts(JsonObject body)
+    {
+        if (body["contents"] is not JsonArray contents) return;
+        foreach (var c in contents.OfType<JsonObject>())
+            if (c["parts"] is JsonArray parts)
+            {
+                foreach (var thought in parts.OfType<JsonObject>().Where(x => x["thought"]?.GetValue<bool>() == true).ToList())
+                    parts.Remove(thought);
+                foreach (var part in parts.OfType<JsonObject>())
+                    part.Remove("thoughtSignature");
+            }
+    }
+
     /// <summary>One generateContent call. Returns the model's content (to echo back as-is) and logs the tokens.</summary>
     async Task<JsonObject> GeminiCallAsync(JsonObject body, AiMessageLog entry)
     {
@@ -23,9 +40,13 @@ public partial class AiAssistantService
         client.Timeout = TimeSpan.FromSeconds(90);
         HttpResponseMessage res = null!;
         var text = "";
-        // An overloaded or retired model (503, 404, 500) is retried once on the fallback model.
-        foreach (var model in new[] { options.GeminiModel, options.GeminiFallbackModel }.Where(m => !string.IsNullOrWhiteSpace(m)).Distinct())
+        // A busy, failing, retired or used-up model (503, 500, 404, 429) hands over to the next one in the list.
+        var models = options.GeminiModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        if (geminiModel is not null) models.Insert(0, geminiModel);
+        foreach (var model in models.Distinct())
         {
+            if (geminiModel is not null && model != geminiModel)
+                StripThoughts(body);
             using var req = new HttpRequestMessage(HttpMethod.Post,
                 $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent")
             {
@@ -34,7 +55,11 @@ public partial class AiAssistantService
             req.Headers.Add("x-goog-api-key", options.GeminiApiKey);
             res = await client.SendAsync(req);
             text = await res.Content.ReadAsStringAsync();
-            if ((int)res.StatusCode is not (503 or 404 or 500)) break;
+            if ((int)res.StatusCode is not (503 or 500 or 404 or 429))
+            {
+                geminiModel = model;
+                break;
+            }
         }
         if (!res.IsSuccessStatusCode)
         {
@@ -44,7 +69,8 @@ public partial class AiAssistantService
             await db.SaveChangesAsync();
             throw new DomainException((int)res.StatusCode switch
             {
-                400 or 401 or 403 => "The AI assistant's key on this site is not valid. Please tell the platform administrator.",
+                401 or 403 => "The AI assistant's key on this site is not valid. Please tell the platform administrator.",
+                400 when text.Contains("API key", StringComparison.OrdinalIgnoreCase) => "The AI assistant's key on this site is not valid. Please tell the platform administrator.",
                 429 => "The free AI allowance is used up for now. Please try again in a minute.",
                 _ => "The AI assistant is busy right now. Please try again in a minute.",
             });

@@ -18,10 +18,11 @@ public class AiOptions
     public string? ApiKey { get; set; }
     /// <summary>Google Gemini key (free tier available); used when there is no Anthropic key.</summary>
     public string? GeminiApiKey { get; set; }
-    /// <summary>Always Google's newest Flash model (free tier).</summary>
-    public string GeminiModel { get; set; } = "gemini-flash-latest";
-    /// <summary>Tried when the main model is overloaded or not available.</summary>
-    public string GeminiFallbackModel { get; set; } = "gemini-3-flash-preview";
+    /// <summary>
+    /// Gemini models tried in order, comma-separated: the next one is used when one is busy, failing or out of its free
+    /// allowance. Gemma has the largest free allowance; Flash-Lite and Flash follow.
+    /// </summary>
+    public string GeminiModels { get; set; } = "gemma-4-31b-it,gemini-flash-lite-latest,gemini-flash-latest";
     public string Model { get; set; } = "claude-haiku-5-5";
     /// <summary>Questions a company may ask a month unless the platform owner sets its own number.</summary>
     public int MessagesPerMonth { get; set; } = 1000;

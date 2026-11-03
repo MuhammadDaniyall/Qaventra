@@ -73,6 +73,12 @@ Free option: Google Gemini. Create a key at aistudio.google.com (API keys; no ca
 "Ai": { "GeminiApiKey": "<gemini api key>", "MessagesPerMonth": 1000 }
 ```
 
+Models are tried in order (default `gemma-4-31b-it,gemini-flash-lite-latest,gemini-flash-latest`); set `"GeminiModels"` to change them.
+
+```json
+"Ai": { "GeminiApiKey": "<gemini api key>", "GeminiModels": "gemma-4-31b-it,gemini-flash-lite-latest,gemini-flash-latest" }
+```
+
 Gemini is used only when there is no Anthropic `ApiKey`. On Gemini's free tier Google may use what is sent to improve its
 products, and the free allowance is limited per minute and per day; a paid Gemini or Anthropic key avoids both.
 
