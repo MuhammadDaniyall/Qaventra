@@ -27,9 +27,13 @@ public class CompOffService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             throw new DomainException("Claim a half day (0.5) or a full day (1).");
         if (string.IsNullOrWhiteSpace(reason))
             throw new DomainException("Say what you worked on.");
-        var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == workedOn)
-            ?? throw new DomainException("There is no attendance for that day. Check in when you work, or send an attendance request first.");
-        if (await leave.CountDaysAsync(employeeId, workedOn, workedOn) > 0)
+        var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == workedOn);
+        var workingDay = await leave.CountDaysAsync(employeeId, workedOn, workedOn) > 0;
+        if (record is null)
+            throw new DomainException(workingDay
+                ? "That is a normal working day. Comp-off is for work on an off day or a holiday, or for at least 4 hours beyond the shift."
+                : "There is no attendance for that day. Check in when you work, or send an attendance request first.");
+        if (workingDay)
         {
             var shift = (await schedule.ForEmployeeAsync(employeeId, workedOn, workedOn)).ShiftOn(workedOn);
             var extra = record.WorkedMinutes - (shift?.ExpectedMinutes ?? 480);
