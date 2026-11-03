@@ -380,7 +380,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
     [HttpPost("{id:guid}/job-changes"), Authorize(Policy = Policies.Hr)]
     public async Task<EmployeeDto> RecordJobChange(Guid id, RecordJobChangeRequest req)
     {
-        await employees.RecordJobChangeAsync(id, new JobChangeInput(req.Kind, req.EffectiveDate, req.DepartmentId, req.DesignationId, req.ManagerId, req.Note));
+        await employees.RecordJobChangeAsync(id, new JobChangeInput(req.Kind, req.EffectiveDate, req.DepartmentId, req.DesignationId, req.ManagerId, req.Note,
+            req.GradeId, req.DivisionId, req.CostCenterId));
         return await Load(id);
     }
 
@@ -396,7 +397,8 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
             .Select(c => new JobChangeDto(c.Id, c.Kind, c.EffectiveDate, c.FromDepartment, c.ToDepartment, c.FromDesignation, c.ToDesignation,
                 c.FromManager, c.ToManager, c.Note, includeRecorder ? c.RecordedByName : null, c.CreatedAtUtc,
                 // The employee's own view hides who recorded the change, so it gets no stamps either.
-                includeRecorder ? new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy) : null))
+                includeRecorder ? new RecordStampsDto(c.CreatedAtUtc, c.CreatedBy, c.ModifiedAtUtc, c.ModifiedBy) : null,
+                c.FromGrade, c.ToGrade, c.FromDivision, c.ToDivision, c.FromCostCenter, c.ToCostCenter))
             .ToListAsync();
 
     private Guid MyId() => me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
@@ -464,10 +466,12 @@ public record SaveEmergencyContactsRequest(List<EmergencyContactDto> Contacts);
 public record JobChangeDto(
     Guid Id, JobChangeKind Kind, DateOnly EffectiveDate, string? FromDepartment, string? ToDepartment, string? FromDesignation,
     string? ToDesignation, string? FromManager, string? ToManager, string? Note, string? RecordedByName, DateTime CreatedAtUtc,
-    RecordStampsDto? Stamps);
+    RecordStampsDto? Stamps, string? FromGrade = null, string? ToGrade = null, string? FromDivision = null, string? ToDivision = null,
+    string? FromCostCenter = null, string? ToCostCenter = null);
 
 public record RecordJobChangeRequest(
-    JobChangeKind Kind, DateOnly EffectiveDate, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, [StringLength(1000)] string? Note);
+    JobChangeKind Kind, DateOnly EffectiveDate, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, [StringLength(1000)] string? Note,
+    Guid? GradeId = null, Guid? DivisionId = null, Guid? CostCenterId = null);
 
 public record RehireRequest(
     DateOnly JoiningDate, EmploymentStatus Status, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, Guid? ShiftId,

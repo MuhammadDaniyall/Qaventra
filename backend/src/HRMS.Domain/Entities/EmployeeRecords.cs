@@ -43,6 +43,12 @@ public class JobChange : TenantEntity
     public string? ToDesignation { get; set; }
     public string? FromManager { get; set; }
     public string? ToManager { get; set; }
+    public string? FromGrade { get; set; }
+    public string? ToGrade { get; set; }
+    public string? FromDivision { get; set; }
+    public string? ToDivision { get; set; }
+    public string? FromCostCenter { get; set; }
+    public string? ToCostCenter { get; set; }
     public string? Note { get; set; }
     public string? RecordedByName { get; set; }
     /// <summary>On a re-hire: the earlier employment period, so Insights can still count it after the employee's dates are overwritten.</summary>

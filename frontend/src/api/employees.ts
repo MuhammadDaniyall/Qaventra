@@ -43,7 +43,18 @@ export const employeesApi = {
   myJobHistory: () => http.get<JobChange[]>('/employees/me/job-history'),
   recordJobChange: (
     id: string,
-    b: { kind: JobChangeKind; effectiveDate: string; departmentId: string | null; designationId: string | null; managerId: string | null; note: string | null },
+    b: {
+      kind: JobChangeKind;
+      effectiveDate: string;
+      departmentId: string | null;
+      designationId: string | null;
+      managerId: string | null;
+      note: string | null;
+      /** Null keeps the current one. */
+      gradeId?: string | null;
+      divisionId?: string | null;
+      costCenterId?: string | null;
+    },
   ) => http.post<Employee>(`/employees/${id}/job-changes`, b),
   rehire: (
     id: string,

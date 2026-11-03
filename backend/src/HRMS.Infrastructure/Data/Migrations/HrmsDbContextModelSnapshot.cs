@@ -4405,6 +4405,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid>("EmployeeId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("FromCostCenter")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("FromDepartment")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -4412,6 +4415,12 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("FromDesignation")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("FromDivision")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FromGrade")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("FromManager")
                         .HasMaxLength(200)
@@ -4447,6 +4456,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ToCostCenter")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ToDepartment")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -4454,6 +4466,12 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("ToDesignation")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("ToDivision")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ToGrade")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ToManager")
                         .HasMaxLength(200)

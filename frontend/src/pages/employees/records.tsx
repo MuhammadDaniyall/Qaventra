@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLookups } from '../../api/employeeFile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Copy, Download, Phone, Plus, Trash2, UserRoundCheck, UsersRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -216,6 +217,9 @@ export function JobHistory({ employeeId, joiningDate, actions }: { employeeId?: 
                 <Move label="Designation" from={h.fromDesignation} to={h.toDesignation} />
                 <Move label="Department" from={h.fromDepartment} to={h.toDepartment} />
                 <Move label="Manager" from={h.fromManager} to={h.toManager} />
+                <Move label="Grade" from={h.fromGrade ?? null} to={h.toGrade ?? null} />
+                <Move label="Division" from={h.fromDivision ?? null} to={h.toDivision ?? null} />
+                <Move label="Cost center" from={h.fromCostCenter ?? null} to={h.toCostCenter ?? null} />
               </div>
               {h.note && <p className="mt-1.5 text-sm text-zinc-600 dark:text-zinc-400">{h.note}</p>}
               {h.stamps && <RecordStamp stamps={h.stamps} className="mt-1.5" />}
@@ -294,9 +298,20 @@ export function JobChangeModal({ employee, onClose }: { employee: Employee; onCl
   const [date, setDate] = useState(todayIso());
   const [job, setJob] = useState({ departmentId: employee.departmentId, designationId: employee.designationId, managerId: employee.managerId });
   const [note, setNote] = useState('');
+  const [org, setOrg] = useState({ gradeId: '', divisionId: '', costCenterId: '' });
+  const lookups = useLookups();
   const [error, setError] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: () => employeesApi.recordJobChange(employee.id, { kind, effectiveDate: date, ...job, note: note.trim() || null }),
+    mutationFn: () =>
+      employeesApi.recordJobChange(employee.id, {
+        kind,
+        effectiveDate: date,
+        ...job,
+        note: note.trim() || null,
+        gradeId: org.gradeId || null,
+        divisionId: org.divisionId || null,
+        costCenterId: org.costCenterId || null,
+      }),
     onSuccess: (updated) => {
       toast.success(`${JOB_CHANGE_LABELS[kind]} recorded`, `${updated.firstName}'s profile and history are updated.`);
       qc.setQueryData(qk.employee(employee.id), updated);
@@ -339,6 +354,23 @@ export function JobChangeModal({ employee, onClose }: { employee: Employee; onCl
           <Input type="date" value={date} max={todayIso()} min={employee.joiningDate} onChange={(e) => setDate(e.target.value)} />
         </Field>
         <JobFields value={job} selfId={employee.id} onChange={(p) => setJob((j) => ({ ...j, ...p }))} />
+        {(['Grade', 'Division', 'CostCenter'] as const).map((k) => {
+          const key = k === 'Grade' ? 'gradeId' : k === 'Division' ? 'divisionId' : 'costCenterId';
+          const options = (lookups.data ?? []).filter((l) => l.kind === k);
+          if (!options.length) return null;
+          return (
+            <Field key={k} label={`New ${k === 'CostCenter' ? 'cost center' : k.toLowerCase()}`} hint="Empty = no change">
+              <Select value={org[key]} onChange={(e) => setOrg((o) => ({ ...o, [key]: e.target.value }))}>
+                <option value="">No change</option>
+                {options.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          );
+        })}
         <Field label="Note" className="sm:col-span-2">
           <Textarea rows={2} maxLength={1000} value={note} placeholder="e.g. Annual review 2026" onChange={(e) => setNote(e.target.value)} />
         </Field>

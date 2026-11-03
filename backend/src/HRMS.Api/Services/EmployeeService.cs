@@ -33,7 +33,9 @@ public record NewEmployee(
     string? BloodGroup = null);
 
 /// <summary>A transfer, promotion or other job change. Department, designation and manager are the new values.</summary>
-public record JobChangeInput(JobChangeKind Kind, DateOnly EffectiveDate, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, string? Note);
+/// <summary>Grade, division and cost center: null keeps the current one.</summary>
+public record JobChangeInput(JobChangeKind Kind, DateOnly EffectiveDate, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, string? Note,
+    Guid? GradeId = null, Guid? DivisionId = null, Guid? CostCenterId = null);
 
 public record RehireInput(
     DateOnly JoiningDate, EmploymentStatus Status, Guid? DepartmentId, Guid? DesignationId, Guid? ManagerId, Guid? ShiftId, string? Note);
@@ -128,13 +130,31 @@ public class EmployeeService(
         if (input.EffectiveDate < employee.JoiningDate)
             throw new DomainException("The change cannot be before the joining date.");
         await ValidateJobAsync(employeeId, input.DepartmentId, input.DesignationId, input.ManagerId);
-        if (input.DepartmentId == employee.DepartmentId && input.DesignationId == employee.DesignationId && input.ManagerId == employee.ManagerId)
-            throw new DomainException("Nothing changes. Pick the new department, designation or manager.");
+        async Task CheckLookup(Guid? id, LookupKind kind)
+        {
+            if (id is { } l && !await db.OrgLookups.AnyAsync(x => x.Id == l && x.Kind == kind)) throw new NotFoundException(kind.ToString());
+        }
+        await CheckLookup(input.GradeId, LookupKind.Grade);
+        await CheckLookup(input.DivisionId, LookupKind.Division);
+        await CheckLookup(input.CostCenterId, LookupKind.CostCenter);
+        var grade = input.GradeId ?? employee.GradeId;
+        var division = input.DivisionId ?? employee.DivisionId;
+        var costCenter = input.CostCenterId ?? employee.CostCenterId;
+        if (input.DepartmentId == employee.DepartmentId && input.DesignationId == employee.DesignationId && input.ManagerId == employee.ManagerId
+            && grade == employee.GradeId && division == employee.DivisionId && costCenter == employee.CostCenterId)
+            throw new DomainException("Nothing changes. Pick the new department, designation, manager, grade, division or cost center.");
 
         var change = await StartChangeAsync(employee, input.Kind, input.EffectiveDate, input.Note);
+        async Task<string?> Name(Guid? id) => id is { } l ? await db.OrgLookups.Where(x => x.Id == l).Select(x => x.Name).FirstOrDefaultAsync() : null;
+        if (grade != employee.GradeId) (change.FromGrade, change.ToGrade) = (await Name(employee.GradeId), await Name(grade));
+        if (division != employee.DivisionId) (change.FromDivision, change.ToDivision) = (await Name(employee.DivisionId), await Name(division));
+        if (costCenter != employee.CostCenterId) (change.FromCostCenter, change.ToCostCenter) = (await Name(employee.CostCenterId), await Name(costCenter));
         employee.DepartmentId = input.DepartmentId;
         employee.DesignationId = input.DesignationId;
         employee.ManagerId = input.ManagerId;
+        employee.GradeId = grade;
+        employee.DivisionId = division;
+        employee.CostCenterId = costCenter;
         await ClearStaleSubDepartmentAsync(employee);
         await FinishChangeAsync(change, employee);
         await db.SaveChangesAsync();

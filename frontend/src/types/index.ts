@@ -445,6 +445,12 @@ export interface JobChange {
   toDesignation: string | null;
   fromManager: string | null;
   toManager: string | null;
+  fromGrade?: string | null;
+  toGrade?: string | null;
+  fromDivision?: string | null;
+  toDivision?: string | null;
+  fromCostCenter?: string | null;
+  toCostCenter?: string | null;
   note: string | null;
   recordedByName: string | null;
   createdAtUtc: string;
