@@ -8,6 +8,7 @@ using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
 using HRMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace HRMS.Api.Services;
 
@@ -24,13 +25,16 @@ public record AiChatTurn(string Role, string Text);
 public record AiAction(string Kind, string Summary, JsonElement Payload);
 public record AiReply(string Reply, List<AiAction> Actions, int Remaining);
 public record AiStatus(bool Enabled, int Limit, int Used);
+public record AiFinding(string Title, string Detail, string Level, string Action);
+public record AiInsights(string Headline, List<AiFinding> Findings, DateTime MadeAtUtc);
 
 /// <summary>
 /// The in-app HR assistant. Claude answers from the person's own data by calling this API's read endpoints with the
 /// person's own sign-in, so it can never see more than they can. Changes are only proposed: the page shows each one
 /// with a Confirm button and the person's click sends the normal request.
 /// </summary>
-public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUser me, TenantClock clock, IHttpClientFactory http, ILogger<AiAssistantService> log)
+public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUser me, TenantClock clock, IHttpClientFactory http, IMemoryCache cache,
+    ILogger<AiAssistantService> log)
 {
     const int MaxRounds = 6;
     const int MaxResultChars = 12_000;
@@ -77,6 +81,115 @@ public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUse
         var monthStart = new DateTime(today.Year, today.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddHours(-14);
         var used = await db.AiMessageLogs.CountAsync(x => x.CreatedAtUtc >= monthStart && x.Error == null);
         return (own ?? options.MessagesPerMonth, used);
+    }
+
+    /// <summary>
+    /// A short written read of the company's numbers for HR: what changed, what to watch, what to do. Built from the
+    /// same dashboard and trend data HR already sees; one AI call a day per company, cached.
+    /// </summary>
+    public async Task<AiInsights> InsightsAsync(string baseUrl, string bearer, bool refresh)
+    {
+        if (!Enabled) throw new DomainException("The AI assistant is not switched on for this site yet.");
+        var today = await clock.TodayAsync();
+        var key = $"ai-insights:{db.CurrentTenantId}:{today:yyyyMMdd}";
+        if (!refresh && cache.TryGetValue(key, out AiInsights? cached) && cached is not null) return cached;
+        var (limit, used) = await AllowanceAsync();
+        if (used >= limit) throw new DomainException("Your company has used this month's AI questions. Ask your administrator to raise the limit.");
+
+        var api = http.CreateClient();
+        api.BaseAddress = new Uri(baseUrl);
+        api.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        api.Timeout = TimeSpan.FromSeconds(30);
+        var last = today.AddMonths(-1);
+        var data = new Dictionary<string, string>();
+        foreach (var (name, path) in new[]
+        {
+            ("dashboard", "/api/dashboard"),
+            ("monthly_trends", "/api/dashboard/trends"),
+            ("attendance_penalties_last_month", $"/api/attendance-rules/penalties/preview?year={last.Year}&month={last.Month}"),
+            ("waiting_approvals", "/api/approvals/inbox"),
+        })
+        {
+            var res = await api.GetAsync(path);
+            if (!res.IsSuccessStatusCode) continue;
+            var body = await res.Content.ReadAsStringAsync();
+            data[name] = body.Length > MaxResultChars ? body[..MaxResultChars] : body;
+        }
+
+        var company = await db.Tenants.Where(t => t.Id == db.CurrentTenantId).Select(t => t.Name).FirstOrDefaultAsync();
+        var entry = new AiMessageLog { UserId = me.UserId ?? Guid.Empty };
+        string text;
+        try
+        {
+            var client = new AnthropicClient { ApiKey = options.ApiKey };
+            static JsonElement J(object o) => JsonSerializer.SerializeToElement(o);
+            var response = await client.Messages.Create(new MessageCreateParams
+            {
+                Model = options.Model,
+                MaxTokens = 3000,
+                OutputConfig = new OutputConfig
+                {
+                    Effort = Effort.Low,
+                    Format = new JsonOutputFormat
+                    {
+                        Schema = new Dictionary<string, JsonElement>
+                        {
+                            ["type"] = J("object"),
+                            ["properties"] = J(new
+                            {
+                                headline = new { type = "string" },
+                                findings = new
+                                {
+                                    type = "array",
+                                    items = new
+                                    {
+                                        type = "object",
+                                        properties = new
+                                        {
+                                            title = new { type = "string" },
+                                            detail = new { type = "string" },
+                                            level = new { type = "string", @enum = new[] { "good", "watch", "act" } },
+                                            action = new { type = "string" },
+                                        },
+                                        required = new[] { "title", "detail", "level", "action" },
+                                        additionalProperties = false,
+                                    },
+                                },
+                            }),
+                            ["required"] = J(new[] { "headline", "findings" }),
+                            ["additionalProperties"] = J(false),
+                        },
+                    },
+                },
+                System = $"""
+                    You write a short weekly read of {company}'s HR numbers for its HR team and CEO. Today is {today:d MMMM yyyy}.
+                    Use only the JSON data given. Give a one-sentence headline and 3 to 6 findings: changes in headcount,
+                    joiners and leavers, absence, lateness, leave, penalties, pending approvals or payroll cost that matter.
+                    Each finding: a short title, one or two sentences of detail with the actual numbers, a level (good, watch
+                    or act) and one concrete next step. Plain English, no jargon. Do not invent numbers; skip what the data lacks.
+                    """,
+                Messages = [new UserMessageParam { Content = JsonSerializer.Serialize(data) }],
+            });
+            entry.InputTokens = (int)response.Usage.InputTokens;
+            entry.OutputTokens = (int)response.Usage.OutputTokens;
+            text = string.Concat(response.Content.Select(b => b.Value).OfType<TextBlock>().Select(b => b.Text));
+        }
+        catch (AnthropicApiException ex)
+        {
+            log.LogWarning(ex, "AI insights call failed");
+            entry.Error = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+            db.AiMessageLogs.Add(entry);
+            await db.SaveChangesAsync();
+            throw new DomainException("The AI summary could not be made right now. Please try again later.");
+        }
+        db.AiMessageLogs.Add(entry);
+        await db.SaveChangesAsync();
+
+        var result = JsonSerializer.Deserialize<AiInsights>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web))
+            ?? throw new DomainException("The AI summary could not be read. Please try again.");
+        result = result with { MadeAtUtc = DateTime.UtcNow };
+        cache.Set(key, result, TimeSpan.FromHours(24));
+        return result;
     }
 
     public async Task<AiReply> AskAsync(List<AiChatTurn> turns, bool voice, string baseUrl, string bearer)

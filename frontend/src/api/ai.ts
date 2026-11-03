@@ -25,8 +25,15 @@ export interface AiStatus {
   used: number;
 }
 
+export interface AiInsights {
+  headline: string;
+  findings: { title: string; detail: string; level: 'good' | 'watch' | 'act'; action: string }[];
+  madeAtUtc: string;
+}
+
 export const aiApi = {
   status: () => http.get<AiStatus>('/ai/status'),
+  insights: (refresh = false) => http.get<AiInsights>('/ai/insights', { refresh }),
   ask: (messages: AiTurn[], voice: boolean) => http.post<AiReply>('/ai/ask', { messages, voice }),
   /** Sends a prepared action through the normal endpoint, as if the person had filled the form themselves. */
   confirm: (a: AiAction) => {

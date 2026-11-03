@@ -8,6 +8,7 @@ import { useChartColors } from '../../lib/chartColors';
 import { formatNumber, monthLabel, monthName } from '../../lib/format';
 import { ChartTooltip } from '../dashboard/Charts';
 import { tx, txf } from '../../lib/i18n';
+import { AiInsightsCard } from './AiInsightsCard';
 
 type Row = MonthTrend & { label: string };
 
@@ -53,6 +54,7 @@ export function InsightsPage() {
   return (
     <>
       <PageHeader title="Workforce insights" description="The last 12 months: headcount, joiners and leavers, leave and punctuality." />
+      <AiInsightsCard />
       {trends.isError ? (
         <Card>
           <ErrorState error={trends.error} onRetry={() => trends.refetch()} />
@@ -61,9 +63,30 @@ export function InsightsPage() {
         <>
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="Headcount now" value={last?.headcount} icon={Users} loading={trends.isLoading} />
-            <StatCard label="Turnover, 12 months" value={trends.isLoading ? undefined : `${formatNumber(turnover)}%`} icon={TrendingDown} tone="red" loading={trends.isLoading} hint={txf('{count} left', { count: leavers })} />
-            <StatCard label="Leave days a month" value={trends.isLoading ? undefined : formatNumber(Math.round(leavePerMonth * 10) / 10)} icon={Palmtree} tone="blue" loading={trends.isLoading} hint="Average" />
-            <StatCard label="Hours a day" value={last ? formatNumber(last.averageWorkedHours) : undefined} icon={Clock} tone="green" loading={trends.isLoading} hint="This month, average" />
+            <StatCard
+              label="Turnover, 12 months"
+              value={trends.isLoading ? undefined : `${formatNumber(turnover)}%`}
+              icon={TrendingDown}
+              tone="red"
+              loading={trends.isLoading}
+              hint={txf('{count} left', { count: leavers })}
+            />
+            <StatCard
+              label="Leave days a month"
+              value={trends.isLoading ? undefined : formatNumber(Math.round(leavePerMonth * 10) / 10)}
+              icon={Palmtree}
+              tone="blue"
+              loading={trends.isLoading}
+              hint="Average"
+            />
+            <StatCard
+              label="Hours a day"
+              value={last ? formatNumber(last.averageWorkedHours) : undefined}
+              icon={Clock}
+              tone="green"
+              loading={trends.isLoading}
+              hint="This month, average"
+            />
           </div>
 
           {trends.isLoading ? (
