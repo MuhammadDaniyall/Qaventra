@@ -61,6 +61,7 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         ["my_leave_balances"] = ("/api/leave/balances", "Leave balances per leave type for a year (pass year)."),
         ["my_leave_requests"] = ("/api/leave/my", "The person's leave requests and their status."),
         ["leave_types"] = ("/api/setup/leave-types", "Company leave types with ids and codes. Needed before proposing a leave request."),
+        ["leave_reasons"] = ("/api/leave-rules/reasons", "Reasons per leave type (leaveTypeId, id, name). When a leave type has active reasons, a leave request must carry one as reasonId: pick the closest to what the person said, or ask."),
         ["holidays"] = ("/api/setup/holidays", "Public and company holidays for a year (pass year)."),
         ["my_attendance_month"] = ("/api/attendance/my", "Day-by-day attendance for a month: check-in/out, late minutes, status (pass year and month)."),
         ["today"] = ("/api/attendance/today", "Today's check-in/out, shift and whether checking in is allowed."),
@@ -469,7 +470,7 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
                 Name = "propose_action",
                 Description = """
                     Prepare a change for the person to confirm; nothing is saved until they press Confirm. kind and payload:
-                    apply_leave: {"leaveTypeId": id from leave_types, "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason": text}.
+                    apply_leave: {"leaveTypeId": id from leave_types, "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason": text, "reasonId": id from leave_reasons when that type has reasons}.
                     attendance_request: {"date": "yyyy-MM-dd", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason": text} (past or today only).
                     helpdesk_ticket: {"categoryId": id from helpdesk_categories, "subject": text, "description": text, "priority": "Low" | "Medium" | "High" | "Urgent"}.
                     decide_approval: {"requestType": type from approvals_inbox, "subjectId": id from approvals_inbox, "approve": true | false, "note": text or null}.

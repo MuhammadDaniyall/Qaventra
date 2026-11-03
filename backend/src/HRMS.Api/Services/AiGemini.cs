@@ -119,7 +119,7 @@ public partial class AiAssistantService
                     ["name"] = "propose_action",
                     ["description"] = """
                         Prepare a change for the person to confirm; nothing is saved until they press Confirm. payload is a JSON object written as a string:
-                        apply_leave: {"leaveTypeId": id from leave_types, "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason": text}.
+                        apply_leave: {"leaveTypeId": id from leave_types, "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason": text, "reasonId": id from leave_reasons when that type has reasons}.
                         attendance_request: {"date": "yyyy-MM-dd", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason": text}.
                         helpdesk_ticket: {"categoryId": id from helpdesk_categories, "subject": text, "description": text, "priority": "Low" | "Medium" | "High" | "Urgent"}.
                         decide_approval: {"requestType": type from approvals_inbox, "subjectId": id from approvals_inbox, "approve": true | false, "note": text or null}.

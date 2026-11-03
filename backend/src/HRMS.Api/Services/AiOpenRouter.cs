@@ -134,7 +134,7 @@ public partial class AiAssistantService
             }),
             Fn("propose_action", """
                 Prepare a change for the person to confirm; nothing is saved until they press Confirm. payload is a JSON object:
-                apply_leave: {"leaveTypeId", "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason"}; attendance_request: {"date", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason"};
+                apply_leave: {"leaveTypeId", "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason", "reasonId" (from leave_reasons when the type has reasons)}; attendance_request: {"date", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason"};
                 helpdesk_ticket: {"categoryId", "subject", "description", "priority": "Low" | "Medium" | "High" | "Urgent"}; decide_approval: {"requestType", "subjectId", "approve", "note"}.
                 summary is one line in the person's language describing what will be submitted.
                 """, new JsonObject
