@@ -193,6 +193,40 @@ public partial class AiAssistantService
         return new AiReply(reply, actions, Math.Max(0, limit - used - 1));
     }
 
+    async Task<AiCvScreen> OpenRouterCvAsync(string jobAndCandidate)
+    {
+        var entry = new AiMessageLog { UserId = me.UserId ?? Guid.Empty };
+        var message = await OpenRouterCallAsync(new JsonObject
+        {
+            ["response_format"] = new JsonObject { ["type"] = "json_object" },
+            ["messages"] = new JsonArray(
+                new JsonObject
+                {
+                    ["role"] = "system",
+                    ["content"] = """
+                        You screen job applicants for a recruiter. Compare the candidate with the job and answer with JSON only:
+                        {"score": 0-100 fit, "summary": two sentences, "strengths": up to 4 short lines with evidence, "gaps": up to 4 short lines,
+                        "questions": 3 to 5 interview questions that probe the gaps}. Judge only skills, experience and qualifications; ignore age,
+                        gender, religion, marital status and anything else unrelated to the work.
+                        """,
+                },
+                new JsonObject { ["role"] = "user", ["content"] = jobAndCandidate }),
+        }, entry);
+        db.AiMessageLogs.Add(entry);
+        await db.SaveChangesAsync();
+        var text = message["content"]?.GetValue<string>() ?? "";
+        var start = text.IndexOf('{');
+        var end = text.LastIndexOf('}');
+        try
+        {
+            return JsonSerializer.Deserialize<AiCvScreen>(start >= 0 && end > start ? text[start..(end + 1)] : text, GeminiJson) ?? throw new JsonException();
+        }
+        catch (JsonException)
+        {
+            throw new DomainException("The AI's answer could not be read. Please try again.");
+        }
+    }
+
     async Task<AiInsights> OpenRouterInsightsAsync(string? company, DateOnly today, Dictionary<string, string> data)
     {
         var entry = new AiMessageLog { UserId = me.UserId ?? Guid.Empty };

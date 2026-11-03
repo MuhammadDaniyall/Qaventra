@@ -253,17 +253,26 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         var c = app.Candidate!;
         var cvId = await db.Attachments.Where(x => x.OwnerType == AttachmentOwner.Candidate && x.OwnerId == c.Id && x.ContentType == "application/pdf")
             .OrderByDescending(x => x.CreatedAtUtc).Select(x => (Guid?)x.Id).FirstOrDefaultAsync();
-        if (UseGemini)
+        if (string.IsNullOrWhiteSpace(options.ApiKey) && (UseGemini || HasOpenRouter))
         {
             var pdf = cvId is { } gid ? (await files.ReadAsync(gid)).Data : null;
-            var g = await GeminiCvAsync($"""
+            var brief = $"""
                 Job: {app.JobPost!.Title}
                 Description: {app.JobPost.Description}
                 Requirements: {app.JobPost.Requirements}
 
                 Candidate form: {c.FirstName} {c.LastName}; current title {c.CurrentTitle}; {c.ExperienceYears} years' experience; skills: {c.Skills}.
-                {(pdf is null ? "No PDF CV was uploaded; judge from the form only and say so in the summary." : "The CV is attached.")}
-                """, pdf);
+                """;
+            AiCvScreen? g = null;
+            if (UseGemini)
+                try { g = await GeminiCvAsync(brief + (pdf is null ? "No PDF CV was uploaded; judge from the form only and say so in the summary." : "The CV is attached."), pdf); }
+                catch (AiUnavailableException) when (HasOpenRouter) { }
+            // OpenRouter's free models take text only: send the words read from the PDF instead of the file.
+            var cvText = pdf is null ? "" : CvReader.Text("cv.pdf", pdf);
+            if (cvText.Length > 20000) cvText = cvText[..20000];
+            g ??= await OpenRouterCvAsync(brief + (cvText.Length == 0
+                ? "No readable PDF CV; judge from the form only and say so in the summary."
+                : "CV text:\n" + cvText));
             g = g with { Score = Math.Clamp(g.Score, 0, 100), FromCv = pdf is not null };
             cache.Set(key, g, TimeSpan.FromHours(24));
             return g;
