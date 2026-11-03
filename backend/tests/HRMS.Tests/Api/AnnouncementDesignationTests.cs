@@ -36,5 +36,8 @@ public class AnnouncementDesignationTests(ApiFactory factory) : IClassFixture<Ap
             (await (await c.GetAsync("/api/announcements")).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json)).EnumerateArray().Select(a => a.GetProperty("title").GetString()).ToList();
         Assert.Contains("Vehicle checks", await Titles(dan));
         Assert.DoesNotContain("Vehicle checks", await Titles(cal));
+        var manage = (await (await admin.GetAsync("/api/announcements/manage")).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json))
+            .EnumerateArray().Single(x => x.GetProperty("title").GetString() == "Vehicle checks");
+        Assert.Equal(1, manage.GetProperty("audienceCount").GetInt32());
     }
 }

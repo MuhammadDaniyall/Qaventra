@@ -137,6 +137,7 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
         Dictionary<Guid, int> reads = [];
         Dictionary<Guid?, int> perDept = [];
         var everyone = 0;
+        List<(Guid? DepartmentId, Guid? DesignationId)> people = [];
         if (stats)
         {
             var current = db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
@@ -152,11 +153,15 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
             perDept = (await current.GroupBy(e => e.DepartmentId).Select(g => new { g.Key, Count = g.Count() }).ToListAsync())
                 .ToDictionary(x => (Guid?)(x.Key ?? Guid.Empty), x => x.Count);
             everyone = perDept.Values.Sum();
+            if (list.Any(a => !string.IsNullOrEmpty(a.DesignationIds)))
+                people = (await current.Select(e => new { e.DepartmentId, e.DesignationId }).ToListAsync()).Select(e => (e.DepartmentId, e.DesignationId)).ToList();
         }
         return list.Select(a =>
         {
             var depts = AnnouncementService.Departments(a.DepartmentIds).ToList();
-            int? audience = stats ? depts.Count == 0 ? everyone : depts.Sum(d => perDept.GetValueOrDefault(d)) : null;
+            int? audience = !stats ? null
+                : !string.IsNullOrEmpty(a.DesignationIds) ? people.Count(p => AnnouncementService.InAudience(a.DepartmentIds, a.DesignationIds, p.DepartmentId, p.DesignationId))
+                : depts.Count == 0 ? everyone : depts.Sum(d => perDept.GetValueOrDefault(d));
             return new AnnouncementDto(a.Id, a.Title, a.Body, a.Kind, a.PublishFrom, a.PublishTo, depts,
                 depts.Select(d => names.GetValueOrDefault(d) ?? "Removed department").ToList(), a.IsPinned, a.LinkUrl, a.CreatedByName,
                 a.CreatedAtUtc, read.Contains(a.Id), files.GetValueOrDefault(a.Id), stats ? reads.GetValueOrDefault(a.Id) : null, audience,
