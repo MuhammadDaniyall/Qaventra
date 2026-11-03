@@ -1,0 +1,158 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using HRMS.Domain.Common;
+using HRMS.Domain.Entities;
+
+namespace HRMS.Api.Services;
+
+/// <summary>Thrown when every model of a provider is busy or out of its free allowance, so the next provider can try.</summary>
+public class AiUnavailableException(string message) : DomainException(message);
+
+/// <summary>
+/// OpenRouter (OpenAI-style chat API, many models behind one key) as the backup when Gemini is busy or used up for the
+/// day. Its free models are tried in the order given; OpenRouter itself moves on to the next one when one fails.
+/// </summary>
+public partial class AiAssistantService
+{
+    bool HasOpenRouter => !string.IsNullOrWhiteSpace(options.OpenRouterApiKey);
+
+    async Task<JsonObject> OpenRouterCallAsync(JsonObject body, AiMessageLog entry)
+    {
+        body["models"] = new JsonArray(options.OpenRouterModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(m => (JsonNode)m!).ToArray());
+        var client = http.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(120);
+        using var req = new HttpRequestMessage(HttpMethod.Post, "https://openrouter.ai/api/v1/chat/completions") { Content = JsonContent.Create(body) };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", options.OpenRouterApiKey);
+        req.Headers.Add("X-Title", "Qaventra HRMS");
+        var res = await client.SendAsync(req);
+        var text = await res.Content.ReadAsStringAsync();
+        var json = res.IsSuccessStatusCode ? JsonNode.Parse(text) as JsonObject : null;
+        var message = json?["choices"]?[0]?["message"] as JsonObject;
+        if (message is null)
+        {
+            log.LogWarning("OpenRouter call failed: {Status} {Body}", (int)res.StatusCode, text.Length > 500 ? text[..500] : text);
+            entry.Error = $"OpenRouter {(int)res.StatusCode} {(text.Length > 460 ? text[..460] : text)}";
+            db.AiMessageLogs.Add(entry);
+            await db.SaveChangesAsync();
+            throw (int)res.StatusCode is 401 or 403
+                ? new DomainException("The AI assistant's key on this site is not valid. Please tell the platform administrator.")
+                : new AiUnavailableException("The free AI allowance is used up for now. Please try again later.");
+        }
+        if (json!["usage"] is JsonObject usage)
+        {
+            entry.InputTokens += usage["prompt_tokens"]?.GetValue<int>() ?? 0;
+            entry.OutputTokens += usage["completion_tokens"]?.GetValue<int>() ?? 0;
+        }
+        return message;
+    }
+
+    static JsonObject Fn(string name, string description, JsonObject parameters) =>
+        new() { ["type"] = "function", ["function"] = new JsonObject { ["name"] = name, ["description"] = description, ["parameters"] = parameters } };
+
+    async Task<AiReply> OpenRouterAskAsync(List<AiChatTurn> turns, bool voice, HttpClient api, int limit, int used)
+    {
+        var messages = new JsonArray(new JsonObject { ["role"] = "system", ["content"] = await SystemPromptAsync(voice) });
+        foreach (var t in turns.TakeLast(20))
+            messages.Add(new JsonObject { ["role"] = t.Role == "user" ? "user" : "assistant", ["content"] = t.Text });
+        var tools = new JsonArray(
+            Fn("lookup", "Read the person's own HR data from the system. Sources: " + string.Join(" ", Sources.Select(s => $"{s.Key}: {s.Value.About}")), new JsonObject
+            {
+                ["type"] = "object",
+                ["properties"] = new JsonObject
+                {
+                    ["source"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(Sources.Keys.Select(k => (JsonNode)k!).ToArray()) },
+                    ["year"] = new JsonObject { ["type"] = "integer" },
+                    ["month"] = new JsonObject { ["type"] = "integer" },
+                },
+                ["required"] = new JsonArray("source"),
+            }),
+            Fn("propose_action", """
+                Prepare a change for the person to confirm; nothing is saved until they press Confirm. payload is a JSON object:
+                apply_leave: {"leaveTypeId", "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason"}; attendance_request: {"date", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason"};
+                helpdesk_ticket: {"categoryId", "subject", "description", "priority": "Low" | "Medium" | "High" | "Urgent"}; decide_approval: {"requestType", "subjectId", "approve", "note"}.
+                summary is one line in the person's language describing what will be submitted.
+                """, new JsonObject
+            {
+                ["type"] = "object",
+                ["properties"] = new JsonObject
+                {
+                    ["kind"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(ActionKinds.Select(k => (JsonNode)k!).ToArray()) },
+                    ["summary"] = new JsonObject { ["type"] = "string" },
+                    ["payload"] = new JsonObject { ["type"] = "object" },
+                },
+                ["required"] = new JsonArray("kind", "summary", "payload"),
+            }));
+        var actions = new List<AiAction>();
+        var entry = new AiMessageLog { UserId = me.UserId ?? Guid.Empty, Voice = voice };
+        var reply = "";
+        for (var round = 0; round < MaxRounds; round++)
+        {
+            var message = await OpenRouterCallAsync(new JsonObject { ["messages"] = messages.DeepClone(), ["tools"] = tools.DeepClone() }, entry);
+            reply = (message["content"]?.GetValueKind() == JsonValueKind.String ? message["content"]!.GetValue<string>() : "").Trim();
+            var calls = (message["tool_calls"] as JsonArray ?? []).OfType<JsonObject>().ToList();
+            if (calls.Count == 0) break;
+            messages.Add(new JsonObject { ["role"] = "assistant", ["content"] = reply, ["tool_calls"] = message["tool_calls"]!.DeepClone() });
+            foreach (var call in calls)
+            {
+                entry.ToolCalls++;
+                var name = call["function"]?["name"]?.GetValue<string>() ?? "";
+                Dictionary<string, JsonElement> args;
+                try
+                {
+                    args = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(call["function"]?["arguments"]?.GetValue<string>() ?? "{}") ?? [];
+                }
+                catch (JsonException)
+                {
+                    args = [];
+                }
+                if (args.TryGetValue("payload", out var p) && p.ValueKind == JsonValueKind.String)
+                {
+                    try { args["payload"] = JsonDocument.Parse(p.GetString()!).RootElement.Clone(); }
+                    catch (JsonException) { /* reported by RunToolAsync */ }
+                }
+                var (result, _) = await RunToolAsync(api, name, args, actions);
+                messages.Add(new JsonObject { ["role"] = "tool", ["tool_call_id"] = call["id"]?.GetValue<string>(), ["content"] = result });
+            }
+        }
+        db.AiMessageLogs.Add(entry);
+        await db.SaveChangesAsync();
+        if (reply.Length == 0) reply = actions.Count > 0 ? "Please check the details below and confirm." : "I couldn't find an answer to that.";
+        return new AiReply(reply, actions, Math.Max(0, limit - used - 1));
+    }
+
+    async Task<AiInsights> OpenRouterInsightsAsync(string? company, DateOnly today, Dictionary<string, string> data)
+    {
+        var entry = new AiMessageLog { UserId = me.UserId ?? Guid.Empty };
+        var message = await OpenRouterCallAsync(new JsonObject
+        {
+            ["response_format"] = new JsonObject { ["type"] = "json_object" },
+            ["messages"] = new JsonArray(
+                new JsonObject
+                {
+                    ["role"] = "system",
+                    ["content"] = $"""
+                        You write a short weekly read of {company}'s HR numbers for its HR team and CEO. Today is {today:d MMMM yyyy}. Use only the JSON data given.
+                        Answer with JSON only: {"{"}"headline": one sentence, "findings": [3 to 6 items of {"{"}"title", "detail", "level": "good" | "watch" | "act", "action"{"}"}]{"}"}.
+                        Details carry the actual numbers; do not invent any.
+                        """,
+                },
+                new JsonObject { ["role"] = "user", ["content"] = JsonSerializer.Serialize(data) }),
+        }, entry);
+        db.AiMessageLogs.Add(entry);
+        await db.SaveChangesAsync();
+        var text = message["content"]?.GetValue<string>() ?? "";
+        var start = text.IndexOf('{');
+        var end = text.LastIndexOf('}');
+        try
+        {
+            return JsonSerializer.Deserialize<AiInsights>(start >= 0 && end > start ? text[start..(end + 1)] : text, GeminiJson) ?? throw new JsonException();
+        }
+        catch (JsonException)
+        {
+            throw new DomainException("The AI summary could not be read. Please try again.");
+        }
+    }
+}

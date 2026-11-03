@@ -23,6 +23,10 @@ public class AiOptions
     /// allowance. Gemma has the largest free allowance; Flash-Lite and Flash follow.
     /// </summary>
     public string GeminiModels { get; set; } = "gemma-4-31b-it,gemini-flash-lite-latest,gemini-flash-latest";
+    /// <summary>OpenRouter key: the backup when Gemini is busy or used up, or the only model when there is no other key.</summary>
+    public string? OpenRouterApiKey { get; set; }
+    /// <summary>OpenRouter models tried in order (up to three), comma-separated.</summary>
+    public string OpenRouterModels { get; set; } = "google/gemma-4-31b-it:free,nvidia/nemotron-3-ultra-550b-a55b:free,thinkingmachines/inkling:free";
     public string Model { get; set; } = "claude-haiku-5-5";
     /// <summary>Questions a company may ask a month unless the platform owner sets its own number.</summary>
     public int MessagesPerMonth { get; set; } = 1000;
@@ -74,7 +78,7 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
 
     static readonly string[] ActionKinds = ["apply_leave", "attendance_request", "helpdesk_ticket", "decide_approval"];
 
-    public bool Enabled => !string.IsNullOrWhiteSpace(options.ApiKey) || !string.IsNullOrWhiteSpace(options.GeminiApiKey);
+    public bool Enabled => !string.IsNullOrWhiteSpace(options.ApiKey) || !string.IsNullOrWhiteSpace(options.GeminiApiKey) || HasOpenRouter;
 
     public async Task<AiStatus> StatusAsync()
     {
@@ -125,9 +129,14 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         }
 
         var company = await db.Tenants.Where(t => t.Id == db.CurrentTenantId).Select(t => t.Name).FirstOrDefaultAsync();
-        if (UseGemini)
+        if (string.IsNullOrWhiteSpace(options.ApiKey))
         {
-            var g = await GeminiInsightsAsync(company, today, data) with { MadeAtUtc = DateTime.UtcNow };
+            AiInsights? g = null;
+            if (UseGemini)
+                try { g = await GeminiInsightsAsync(company, today, data); }
+                catch (AiUnavailableException) when (HasOpenRouter) { }
+            g ??= await OpenRouterInsightsAsync(company, today, data);
+            g = g with { MadeAtUtc = DateTime.UtcNow };
             cache.Set(key, g, TimeSpan.FromHours(24));
             return g;
         }
@@ -319,7 +328,11 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         api.BaseAddress = new Uri(baseUrl);
         api.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         api.Timeout = TimeSpan.FromSeconds(30);
-        if (UseGemini) return await GeminiAskAsync(turns, voice, api, limit, used);
+        if (UseGemini)
+            try { return await GeminiAskAsync(turns, voice, api, limit, used); }
+            catch (AiUnavailableException) when (HasOpenRouter) { }
+        if (string.IsNullOrWhiteSpace(options.ApiKey) && HasOpenRouter)
+            return await OpenRouterAskAsync(turns, voice, api, limit, used);
 
         var messages = turns.TakeLast(20)
             .Select(t => t.Role == "user" ? (MessageParam)new UserMessageParam { Content = t.Text } : new AssistantMessageParam { Content = t.Text })

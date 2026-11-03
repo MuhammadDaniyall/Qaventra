@@ -67,6 +67,10 @@ public partial class AiAssistantService
             entry.Error = $"{(int)res.StatusCode} {(text.Length > 480 ? text[..480] : text)}";
             db.AiMessageLogs.Add(entry);
             await db.SaveChangesAsync();
+            if ((int)res.StatusCode is 429 or 503 or 500 or 404)
+                throw new AiUnavailableException((int)res.StatusCode == 429
+                    ? "The free AI allowance is used up for now. Please try again in a minute."
+                    : "The AI assistant is busy right now. Please try again in a minute.");
             throw new DomainException((int)res.StatusCode switch
             {
                 401 or 403 => "The AI assistant's key on this site is not valid. Please tell the platform administrator.",

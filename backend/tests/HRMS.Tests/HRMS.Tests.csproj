@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -23,6 +23,11 @@
     <ProjectReference Include="..\..\src\HRMS.Domain\HRMS.Domain.csproj" />
     <ProjectReference Include="..\..\src\HRMS.Infrastructure\HRMS.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\HRMS.Api\HRMS.Api.csproj" />
+  </ItemGroup>
+
+  <!-- Fewer test classes at once: each class starts its own API on one LocalDB, and too many together time out. -->
+  <ItemGroup>
+    <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

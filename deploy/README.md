@@ -82,6 +82,9 @@ Models are tried in order (default `gemma-4-31b-it,gemini-flash-lite-latest,gemi
 Gemini is used only when there is no Anthropic `ApiKey`. On Gemini's free tier Google may use what is sent to improve its
 products, and the free allowance is limited per minute and per day; a paid Gemini or Anthropic key avoids both.
 
+Backup: an OpenRouter key (openrouter.ai) is used when Gemini is busy or used up for the day, or alone when there is no other key
+(its free models allow about 50 requests a day): `"OpenRouterApiKey": "<openrouter key>"`, optionally `"OpenRouterModels"`.
+
 Then deploy again. For local runs, put the same section in `backend/src/HRMS.Api/appsettings.Development.json` or set
 `Ai__ApiKey` in the environment.
 
