@@ -74,13 +74,16 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         ["my_assets"] = ("/api/assets/my", "Company assets the person holds and asset requests."),
         ["my_tickets"] = ("/api/helpdesk/tickets/my", "The person's helpdesk tickets."),
         ["helpdesk_categories"] = ("/api/helpdesk/categories", "Helpdesk categories with ids. Needed before proposing a ticket."),
+        ["letter_templates"] = ("/api/letters/self-service", "Letters the person may request (salary certificate, experience letter…) with ids."),
+        ["asset_types"] = ("/api/assets/types", "Kinds of company assets (laptop, SIM…) with ids, for an asset request."),
         ["my_training"] = ("/api/training/my", "Training sessions the person is booked on or completed."),
         ["announcements"] = ("/api/announcements", "Company announcements and news."),
         ["approvals_inbox"] = ("/api/approvals/inbox", "Requests waiting for this person's approval (managers and HR)."),
         ["dashboard"] = ("/api/dashboard", "The person's home dashboard summary; for HR and admins it includes company-wide counts."),
     };
 
-    static readonly string[] ActionKinds = ["apply_leave", "attendance_request", "helpdesk_ticket", "decide_approval"];
+    static readonly string[] ActionKinds = ["apply_leave", "attendance_request", "helpdesk_ticket", "decide_approval", "expense_claim", "loan_request",
+        "letter_request", "asset_request", "training_request"];
 
     /// <summary>The person's everyday data, loaded before the first model call so most questions need no lookup round.</summary>
     string preloaded = "";
@@ -454,7 +457,8 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
             say so and suggest who in HR to ask. Do not discuss other employees' personal data.
 
             You cannot change anything yourself. When the person asks you to apply for leave, correct attendance, raise a helpdesk ticket or
-            approve/reject a request, look up whatever ids you need, then call propose_action with the exact details. The page shows it with
+            approve/reject a request, claim an expense, ask for a loan, a letter, an asset or a training, look up whatever ids you need, then
+            call propose_action with the exact details. The page shows it with
             a Confirm button; say briefly what you prepared and ask them to confirm. Never claim a request was submitted. If a required detail
             (dates, leave type, reason) is missing, ask for it first. Work out relative dates ("kal", "tomorrow", "next Monday") from today's date.
             """ + (preloaded.Length == 0 ? "" : $"""
@@ -495,6 +499,11 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
                     attendance_request: {"date": "yyyy-MM-dd", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason": text} (past or today only).
                     helpdesk_ticket: {"categoryId": id from helpdesk_categories, "subject": text, "description": text, "priority": "Low" | "Medium" | "High" | "Urgent"}.
                     decide_approval: {"requestType": type from approvals_inbox, "subjectId": id from approvals_inbox, "approve": true | false, "note": text or null}.
+                    expense_claim: {"title": text, "items": [{"date": "yyyy-MM-dd", "category": "Travel" | "Fuel" | "Meals" | "Accommodation" | "Medical" | "Mobile" | "OfficeSupplies" | "Training" | "Other", "description": text, "amount": number}]}.
+                    loan_request: {"title": text, "amount": number, "installments": months, "startYear": number, "startMonth": 1-12, "reason": text}.
+                    letter_request: {"templateId": id from letter_templates, "reason": text}.
+                    asset_request: {"typeId": id from asset_types, "reason": text, "neededBy": "yyyy-MM-dd" or null}.
+                    training_request: {"courseName": text, "provider": text, "cost": number or null, "reason": text}.
                     summary is one line in the person's language describing exactly what will be submitted.
                     """,
                 InputSchema = new()

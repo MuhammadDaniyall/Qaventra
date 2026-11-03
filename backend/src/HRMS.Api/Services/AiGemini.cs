@@ -42,7 +42,7 @@ public partial class AiAssistantService
     async Task<JsonObject> GeminiCallAsync(JsonObject body, AiMessageLog entry)
     {
         var client = http.CreateClient();
-        client.Timeout = TimeSpan.FromSeconds(30);
+        client.Timeout = TimeSpan.FromSeconds(25);
         HttpResponseMessage? res = null;
         var text = "";
         // A busy, failing, retired or used-up model (503, 500, 404, 429) hands over to the next one in the list.
@@ -58,12 +58,12 @@ public partial class AiAssistantService
                 Content = JsonContent.Create(body),
             };
             req.Headers.Add("x-goog-api-key", options.GeminiApiKey);
-            // Gemini 3 Flash models answer faster with minimal thinking; Gemma does not take the setting.
+            // Flash-Lite answers faster with minimal thinking (Flash takes "low" at the least); Gemma does not take the setting.
             if (model.Contains("flash", StringComparison.OrdinalIgnoreCase))
             {
                 var withThinking = body.DeepClone().AsObject();
                 var config = withThinking["generationConfig"] as JsonObject ?? new JsonObject();
-                config["thinkingConfig"] = new JsonObject { ["thinkingLevel"] = "minimal" };
+                config["thinkingConfig"] = new JsonObject { ["thinkingLevel"] = model.Contains("lite", StringComparison.OrdinalIgnoreCase) ? "minimal" : "low" };
                 withThinking["generationConfig"] = config.DeepClone();
                 req.Content = JsonContent.Create(withThinking);
             }
@@ -74,11 +74,13 @@ public partial class AiAssistantService
             }
             catch (TaskCanceledException)
             {
+                // A model that does not answer in time means Google's free tier is slow right now: the other Gemini
+                // models usually are too, so hand over to the next provider instead of waiting on each of them.
                 Rest(model, 503);
                 res = null;
-                continue;
+                break;
             }
-            if ((int)res.StatusCode is not (503 or 500 or 404 or 429))
+            if ((int)res.StatusCode is not (503 or 500 or 404 or 429 or 400) || res.StatusCode == System.Net.HttpStatusCode.BadRequest && text.Contains("API key"))
             {
                 geminiModel = model;
                 break;
@@ -98,7 +100,7 @@ public partial class AiAssistantService
             entry.Error = $"{(int)res.StatusCode} {(text.Length > 480 ? text[..480] : text)}";
             db.AiMessageLogs.Add(entry);
             await db.SaveChangesAsync();
-            if ((int)res.StatusCode is 429 or 503 or 500 or 404)
+            if ((int)res.StatusCode is 429 or 503 or 500 or 404 || (int)res.StatusCode == 400 && !text.Contains("API key"))
                 throw new AiUnavailableException((int)res.StatusCode == 429
                     ? "The free AI allowance is used up for now. Please try again in a minute."
                     : "The AI assistant is busy right now. Please try again in a minute.");
@@ -154,6 +156,11 @@ public partial class AiAssistantService
                         attendance_request: {"date": "yyyy-MM-dd", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason": text}.
                         helpdesk_ticket: {"categoryId": id from helpdesk_categories, "subject": text, "description": text, "priority": "Low" | "Medium" | "High" | "Urgent"}.
                         decide_approval: {"requestType": type from approvals_inbox, "subjectId": id from approvals_inbox, "approve": true | false, "note": text or null}.
+                        expense_claim: {"title": text, "items": [{"date": "yyyy-MM-dd", "category": "Travel" | "Fuel" | "Meals" | "Accommodation" | "Medical" | "Mobile" | "OfficeSupplies" | "Training" | "Other", "description": text, "amount": number}]}.
+                        loan_request: {"title": text, "amount": number, "installments": months, "startYear": number, "startMonth": 1-12, "reason": text}.
+                        letter_request: {"templateId": id from letter_templates, "reason": text}.
+                        asset_request: {"typeId": id from asset_types, "reason": text, "neededBy": "yyyy-MM-dd" or null}.
+                        training_request: {"courseName": text, "provider": text, "cost": number or null, "reason": text}.
                         summary is one line in the person's language describing exactly what will be submitted.
                         """,
                     ["parameters"] = new JsonObject

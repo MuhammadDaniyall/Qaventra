@@ -1,6 +1,15 @@
 import { http } from './client';
 
-export type AiActionKind = 'apply_leave' | 'attendance_request' | 'helpdesk_ticket' | 'decide_approval';
+export type AiActionKind =
+  | 'apply_leave'
+  | 'attendance_request'
+  | 'helpdesk_ticket'
+  | 'decide_approval'
+  | 'expense_claim'
+  | 'loan_request'
+  | 'letter_request'
+  | 'asset_request'
+  | 'training_request';
 
 export interface AiAction {
   kind: AiActionKind;
@@ -55,6 +64,16 @@ export const aiApi = {
         return http.post('/attendance/requests', p);
       case 'helpdesk_ticket':
         return http.post('/helpdesk/tickets', p);
+      case 'expense_claim':
+        return http.post('/expenses', p);
+      case 'loan_request':
+        return http.post('/pay/loans', p);
+      case 'letter_request':
+        return http.post('/letters/request', p);
+      case 'asset_request':
+        return http.post('/assets/requests/new', p);
+      case 'training_request':
+        return http.post('/training/requests', p);
       case 'decide_approval':
         return http.post(`/approvals/${String(p.requestType)}/${String(p.subjectId)}/decide`, { approve: p.approve === true, note: p.note ?? null });
     }
