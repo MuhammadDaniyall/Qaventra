@@ -78,6 +78,7 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
         ["helpdesk_categories"] = ("/api/helpdesk/categories", "Helpdesk categories with ids. Needed before proposing a ticket."),
         ["letter_templates"] = ("/api/letters/self-service", "Letters the person may request (salary certificate, experience letter…) with ids."),
         ["asset_types"] = ("/api/assets/types", "Kinds of company assets (laptop, SIM…) with ids, for an asset request."),
+        ["loan_types"] = ("/api/pay/loan-types", "Kinds of loan with limits, markup and fee; a loan request must name one when any exist."),
         ["my_training"] = ("/api/training/my", "Training sessions the person is booked on or completed."),
         ["announcements"] = ("/api/announcements", "Company announcements and news."),
         ["approvals_inbox"] = ("/api/approvals/inbox", "Requests waiting for this person's approval (managers and HR)."),
@@ -519,7 +520,7 @@ public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICu
                     helpdesk_ticket: {"categoryId": id from helpdesk_categories, "subject": text, "description": text, "priority": "Low" | "Medium" | "High" | "Urgent"}.
                     decide_approval: {"requestType": type from approvals_inbox, "subjectId": id from approvals_inbox, "approve": true | false, "note": text or null}.
                     expense_claim: {"title": text, "items": [{"date": "yyyy-MM-dd", "category": "Travel" | "Fuel" | "Meals" | "Accommodation" | "Medical" | "Mobile" | "OfficeSupplies" | "Training" | "Other", "description": text, "amount": number}]}.
-                    loan_request: {"title": text, "amount": number, "installments": months, "startYear": number, "startMonth": 1-12, "reason": text}.
+                    loan_request: {"title": text, "amount": number, "installments": months, "startYear": number, "startMonth": 1-12, "reason": text, "loanTypeId": id from loan_types when the company has types}.
                     letter_request: {"templateId": id from letter_templates, "reason": text}.
                     asset_request: {"typeId": id from asset_types, "reason": text, "neededBy": "yyyy-MM-dd" or null}.
                     training_request: {"courseName": text, "provider": text, "cost": number or null, "reason": text}.

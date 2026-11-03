@@ -61,6 +61,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<CompOffRequest> CompOffRequests => Set<CompOffRequest>();
     public DbSet<PayRequest> PayRequests => Set<PayRequest>();
     public DbSet<Loan> Loans => Set<Loan>();
+    public DbSet<LoanType> LoanTypes => Set<LoanType>();
     public DbSet<LoanRepayment> LoanRepayments => Set<LoanRepayment>();
     public DbSet<EmergencyContact> EmergencyContacts => Set<EmergencyContact>();
     public DbSet<OrgLookup> OrgLookups => Set<OrgLookup>();

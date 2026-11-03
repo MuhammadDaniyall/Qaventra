@@ -21,12 +21,16 @@ public record PayRequestDto(
     DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote, DateTime? PaidAtUtc, bool InDraftPayroll, RecordStampsDto Stamps);
 
 public record RequestLoanRequest(
-    Guid? EmployeeId, [StringLength(150)] string? Title, decimal Amount, int Installments, int StartYear, int StartMonth, [StringLength(1000)] string? Reason);
+    Guid? EmployeeId, [StringLength(150)] string? Title, decimal Amount, int Installments, int StartYear, int StartMonth, [StringLength(1000)] string? Reason, Guid? LoanTypeId = null);
 
 public record LoanDto(
     Guid Id, Guid EmployeeId, string EmployeeName, string EmployeeCode, string Title, decimal Amount, int Installments, decimal InstallmentAmount,
     int StartYear, int StartMonth, string? Reason, RequestStatus Status, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote,
-    decimal Repaid, int InstallmentsTaken, decimal Remaining, RecordStampsDto Stamps);
+    decimal Repaid, int InstallmentsTaken, decimal Remaining, RecordStampsDto Stamps, decimal Markup = 0, decimal ProcessingFee = 0);
+
+public record LoanTypeDto(Guid Id, string Name, decimal? MaxAmount, int? MaxInstallments, decimal MarkupPercent, decimal ProcessingFee, int MinServiceMonths, bool IsActive);
+public record SaveLoanTypeRequest([Required, StringLength(100)] string Name, [Range(1, 50_000_000)] decimal? MaxAmount, [Range(1, 60)] int? MaxInstallments,
+    [Range(0, 100)] decimal MarkupPercent, [Range(0, 1_000_000)] decimal ProcessingFee, [Range(0, 600)] int MinServiceMonths, bool IsActive = true);
 
 public record OvertimeQuoteDto(decimal Amount, decimal Multiplier);
 
@@ -101,7 +105,7 @@ public class PayRequestsController(HrmsDbContext db, PayRequestService pay, ICur
     public async Task<LoanDto> RequestLoan(RequestLoanRequest req)
     {
         var employeeId = req.EmployeeId ?? me.EmployeeId ?? throw new DomainException("Choose the employee.");
-        var loan = await pay.RequestLoanAsync(employeeId, req.Title ?? "", req.Amount, req.Installments, req.StartYear, req.StartMonth, req.Reason);
+        var loan = await pay.RequestLoanAsync(employeeId, req.Title ?? "", req.Amount, req.Installments, req.StartYear, req.StartMonth, req.Reason, req.LoanTypeId);
         return await ProjectLoans(db.Loans.Where(l => l.Id == loan.Id)).FirstAsync();
     }
 
@@ -145,6 +149,40 @@ public class PayRequestsController(HrmsDbContext db, PayRequestService pay, ICur
             Taken = l.Repayments.Count(x => db.PayrollRuns.Any(p => p.Id == x.PayrollRunId && p.Status == PayrollRunStatus.Finalized)),
         }).Select(x => new LoanDto(
             x.l.Id, x.l.EmployeeId, x.Name, x.EmployeeCode, x.l.Title, x.l.Amount, x.l.Installments, x.l.InstallmentAmount, x.l.StartYear,
-            x.l.StartMonth, x.l.Reason, x.l.Status, x.l.CreatedAtUtc, x.l.DecidedAtUtc, x.l.DecisionNote, x.Repaid, x.Taken, x.l.Amount - x.Repaid,
-            new RecordStampsDto(x.l.CreatedAtUtc, x.l.CreatedBy, x.l.ModifiedAtUtc, x.l.ModifiedBy)));
+            x.l.StartMonth, x.l.Reason, x.l.Status, x.l.CreatedAtUtc, x.l.DecidedAtUtc, x.l.DecisionNote, x.Repaid, x.Taken, x.l.Amount + x.l.Markup - x.Repaid,
+            new RecordStampsDto(x.l.CreatedAtUtc, x.l.CreatedBy, x.l.ModifiedAtUtc, x.l.ModifiedBy), x.l.Markup, x.l.ProcessingFee));
+
+    // ---------- Loan types ----------
+
+    [HttpGet("loan-types")]
+    public Task<List<LoanTypeDto>> LoanTypes() => db.LoanTypes.OrderBy(t => t.Name)
+        .Select(t => new LoanTypeDto(t.Id, t.Name, t.MaxAmount, t.MaxInstallments, t.MarkupPercent, t.ProcessingFee, t.MinServiceMonths, t.IsActive)).ToListAsync();
+
+    [HttpPost("loan-types"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> AddLoanType(SaveLoanTypeRequest req)
+    {
+        var t = new LoanType();
+        await ApplyLoanTypeAsync(t, req);
+        db.LoanTypes.Add(t);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    [HttpPut("loan-types/{id:guid}"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> UpdateLoanType(Guid id, SaveLoanTypeRequest req)
+    {
+        var t = await db.LoanTypes.FirstOrDefaultAsync(x => x.Id == id) ?? throw new HRMS.Api.Infrastructure.NotFoundException("Loan type");
+        await ApplyLoanTypeAsync(t, req);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    private async Task ApplyLoanTypeAsync(LoanType t, SaveLoanTypeRequest req)
+    {
+        var name = req.Name.Trim();
+        if (await db.LoanTypes.AnyAsync(x => x.Id != t.Id && x.Name == name))
+            throw new DomainException($"There is already a {name} loan type.");
+        (t.Name, t.MaxAmount, t.MaxInstallments, t.MarkupPercent, t.ProcessingFee, t.MinServiceMonths, t.IsActive) =
+            (name, req.MaxAmount, req.MaxInstallments, req.MarkupPercent, req.ProcessingFee, req.MinServiceMonths, req.IsActive);
+    }
 }

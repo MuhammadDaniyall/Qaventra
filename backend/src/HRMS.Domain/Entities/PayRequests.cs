@@ -40,6 +40,11 @@ public class Loan : TenantEntity
     public string Title { get; set; } = "";
     public decimal Amount { get; set; }
     public int Installments { get; set; }
+    public Guid? LoanTypeId { get; set; }
+    /// <summary>Added to what is repaid (the type's markup on the amount); 0 for interest-free loans.</summary>
+    public decimal Markup { get; set; }
+    /// <summary>Deducted once with the first installment.</summary>
+    public decimal ProcessingFee { get; set; }
     public decimal InstallmentAmount { get; set; }
     /// <summary>First payroll month that deducts an installment.</summary>
     public int StartYear { get; set; }
@@ -57,4 +62,18 @@ public class LoanRepayment : BaseEntity
     public Guid LoanId { get; set; }
     public Guid PayrollRunId { get; set; }
     public decimal Amount { get; set; }
+}
+
+/// <summary>A kind of loan the company offers, with its limits and charges.</summary>
+public class LoanType : TenantEntity
+{
+    public string Name { get; set; } = "";
+    public decimal? MaxAmount { get; set; }
+    public int? MaxInstallments { get; set; }
+    /// <summary>Flat markup on the amount, in percent, added to what is repaid.</summary>
+    public decimal MarkupPercent { get; set; }
+    public decimal ProcessingFee { get; set; }
+    /// <summary>Months of service before someone may apply; 0 = from the start.</summary>
+    public int MinServiceMonths { get; set; }
+    public bool IsActive { get; set; } = true;
 }

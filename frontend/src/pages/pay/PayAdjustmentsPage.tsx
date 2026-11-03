@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LoanTypesCard } from './LoanTypes';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, HandCoins, Plus, Wallet } from 'lucide-react';
 import { qk } from '../../api/keys';
@@ -203,6 +204,8 @@ function MonthItems() {
 function Loans() {
   const loans = useQuery({ queryKey: qk.payLoans, queryFn: payApi.loans });
   return (
+    <>
+    <LoanTypesCard />
     <Card>
       {loans.isLoading ? (
         <SkeletonRows rows={5} cols={6} />
@@ -260,5 +263,6 @@ function Loans() {
         </Table>
       )}
     </Card>
+    </>
   );
 }

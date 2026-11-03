@@ -556,7 +556,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     {
                         var paid = l.Repayments.Sum(r => r.Amount);
                         return L(l.Employee!.EmployeeCode, l.Employee.FullName, l.Title, $"{l.StartMonth:00}/{l.StartYear}", M(l.Amount), M(l.InstallmentAmount),
-                            $"{l.Repayments.Count} of {l.Installments}", M(paid), M(l.Amount - paid));
+                            $"{l.Repayments.Count} of {l.Installments}", M(paid), M(l.Amount + l.Markup - paid));
                     }), totals: true);
             }
             case "payroll.increments":

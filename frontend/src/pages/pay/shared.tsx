@@ -198,6 +198,10 @@ export function LoanModal({ hr = false, onClose }: { hr?: boolean; onClose: () =
   const employees = useEmployeeLookup(hr);
   const months = payrollMonths(6);
   const [employeeId, setEmployeeId] = useState('');
+  const loanTypes = useQuery({ queryKey: [...qk.pay, 'loan-types'], queryFn: payApi.loanTypes });
+  const activeTypes = (loanTypes.data ?? []).filter((t) => t.isActive);
+  const [typeId, setTypeId] = useState('');
+  const type = activeTypes.find((t) => t.id === typeId);
   const [title, setTitle] = useState('Personal loan');
   const [amount, setAmount] = useState('');
   const [installments, setInstallments] = useState('6');
@@ -205,7 +209,8 @@ export function LoanModal({ hr = false, onClose }: { hr?: boolean; onClose: () =
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const n = Number(installments);
-  const per = Number(amount) > 0 && n > 0 ? Math.ceil(Number(amount) / n) : null;
+  const markup = type ? Math.round((Number(amount) * type.markupPercent) / 100) : 0;
+  const per = Number(amount) > 0 && n > 0 ? Math.ceil((Number(amount) + markup) / n) : null;
   const [sy, sm] = start.split('-').map(Number);
 
   const submit = useMutation({
@@ -218,6 +223,7 @@ export function LoanModal({ hr = false, onClose }: { hr?: boolean; onClose: () =
         startYear: sy,
         startMonth: sm,
         reason: reason.trim() || null,
+        loanTypeId: typeId || null,
       }),
     onSuccess: () => {
       toast.success(hr ? 'Loan recorded' : 'Loan request sent', hr ? 'Installments start with the chosen payroll month.' : 'Your approver has been notified.');
@@ -267,6 +273,40 @@ export function LoanModal({ hr = false, onClose }: { hr?: boolean; onClose: () =
               {employees.data?.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+        {activeTypes.length > 0 && (
+          <Field
+            label="Type of loan"
+            required
+            hint={
+              type
+                ? [
+                    type.maxAmount ? `Up to ${formatCurrency(type.maxAmount)}` : null,
+                    type.maxInstallments ? `${type.maxInstallments} installments at most` : null,
+                    type.markupPercent ? `${type.markupPercent}% markup (${formatCurrency(markup)})` : 'No markup',
+                    type.processingFee ? `${formatCurrency(type.processingFee)} fee with the first installment` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : undefined
+            }
+          >
+            <Select
+              value={typeId}
+              onChange={(e) => {
+                setTypeId(e.target.value);
+                const t = activeTypes.find((x) => x.id === e.target.value);
+                if (t) setTitle(t.name);
+              }}
+            >
+              <option value="">Choose…</option>
+              {activeTypes.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
                 </option>
               ))}
             </Select>

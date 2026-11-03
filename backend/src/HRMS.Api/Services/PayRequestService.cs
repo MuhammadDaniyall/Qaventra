@@ -172,7 +172,8 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
 
     // ---------- Loans ----------
 
-    public async Task<Loan> RequestLoanAsync(Guid employeeId, string title, decimal amount, int installments, int startYear, int startMonth, string? reason)
+    public async Task<Loan> RequestLoanAsync(Guid employeeId, string title, decimal amount, int installments, int startYear, int startMonth, string? reason,
+        Guid? loanTypeId = null)
     {
         if (employeeId != me.EmployeeId && !me.IsHr())
             throw new ForbiddenException("You can only apply for a loan for yourself.");
@@ -190,14 +191,31 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
             throw new DomainException("Repayment cannot start in a past month.");
         if (await db.Loans.AnyAsync(l => l.EmployeeId == employeeId && l.Status == RequestStatus.Pending))
             throw new DomainException("There is already a loan request waiting for approval.");
+        LoanType? type = null;
+        if (loanTypeId is { } tid)
+        {
+            type = await db.LoanTypes.FirstOrDefaultAsync(t => t.Id == tid && t.IsActive) ?? throw new NotFoundException("Loan type");
+            if (type.MaxAmount is { } max && amount > max)
+                throw new DomainException($"{type.Name} is up to {LetterService.Money(max)}.");
+            if (type.MaxInstallments is { } most && installments > most)
+                throw new DomainException($"{type.Name} is repaid in at most {most} installments.");
+            if (type.MinServiceMonths > 0 && employee.JoiningDate.AddMonths(type.MinServiceMonths) > today)
+                throw new DomainException($"{type.Name} is available after {type.MinServiceMonths} months of service.");
+        }
+        else if (await db.LoanTypes.AnyAsync(t => t.IsActive))
+            throw new DomainException("Choose the type of loan.");
+        var markup = type is null ? 0 : Math.Round(Math.Round(amount, 0) * type.MarkupPercent / 100m, 0);
 
         var loan = new Loan
         {
             EmployeeId = employeeId,
-            Title = string.IsNullOrWhiteSpace(title) ? "Loan" : title.Trim(),
+            Title = string.IsNullOrWhiteSpace(title) ? type?.Name ?? "Loan" : title.Trim(),
             Amount = Math.Round(amount, 0),
+            LoanTypeId = type?.Id,
+            Markup = markup,
+            ProcessingFee = type?.ProcessingFee ?? 0,
             Installments = installments,
-            InstallmentAmount = Math.Ceiling(Math.Round(amount, 0) / installments),
+            InstallmentAmount = Math.Ceiling((Math.Round(amount, 0) + markup) / installments),
             StartYear = startYear,
             StartMonth = startMonth,
             Reason = reason?.Trim(),

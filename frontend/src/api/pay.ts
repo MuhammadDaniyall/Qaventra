@@ -29,6 +29,17 @@ export interface PayRequest {
   stamps: RecordStamps;
 }
 
+export interface LoanType {
+  id: string;
+  name: string;
+  maxAmount: number | null;
+  maxInstallments: number | null;
+  markupPercent: number;
+  processingFee: number;
+  minServiceMonths: number;
+  isActive: boolean;
+}
+
 export interface Loan {
   id: string;
   employeeId: string;
@@ -85,7 +96,18 @@ export const payApi = {
   cancel: (id: string) => http.post(`/pay/requests/${id}/cancel`),
   myLoans: () => http.get<Loan[]>('/pay/loans/my'),
   loans: () => http.get<Loan[]>('/pay/loans'),
-  requestLoan: (b: { employeeId?: string | null; title: string; amount: number; installments: number; startYear: number; startMonth: number; reason: string | null }) =>
+  loanTypes: () => http.get<LoanType[]>('/pay/loan-types'),
+  saveLoanType: (id: string | null, b: Omit<LoanType, 'id'>) => (id ? http.put(`/pay/loan-types/${id}`, b) : http.post('/pay/loan-types', b)),
+  requestLoan: (b: {
+    employeeId?: string | null;
+    title: string;
+    amount: number;
+    installments: number;
+    startYear: number;
+    startMonth: number;
+    reason: string | null;
+    loanTypeId?: string | null;
+  }) =>
     http.post<Loan>('/pay/loans', b),
   approveLoan: (id: string, note: string | null) => http.post(`/pay/loans/${id}/approve`, { note }),
   rejectLoan: (id: string, note: string | null) => http.post(`/pay/loans/${id}/reject`, { note }),

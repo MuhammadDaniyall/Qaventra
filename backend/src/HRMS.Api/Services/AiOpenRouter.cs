@@ -139,7 +139,7 @@ public partial class AiAssistantService
                 apply_leave: {"leaveTypeId", "fromDate": "yyyy-MM-dd", "toDate": "yyyy-MM-dd", "reason", "reasonId" (from leave_reasons when the type has reasons)}; attendance_request: {"date", "kind": "MissedPunch" | "TimeCorrection" | "WorkFromHome", "checkIn": "HH:mm:ss", "checkOut": "HH:mm:ss", "reason"};
                 helpdesk_ticket: {"categoryId", "subject", "description", "priority": "Low" | "Medium" | "High" | "Urgent"}; decide_approval: {"requestType", "subjectId", "approve", "note"}.
                 expense_claim: {"title": text, "items": [{"date": "yyyy-MM-dd", "category": "Travel" | "Fuel" | "Meals" | "Accommodation" | "Medical" | "Mobile" | "OfficeSupplies" | "Training" | "Other", "description": text, "amount": number}]}.
-                loan_request: {"title": text, "amount": number, "installments": months, "startYear": number, "startMonth": 1-12, "reason": text}.
+                loan_request: {"title": text, "amount": number, "installments": months, "startYear": number, "startMonth": 1-12, "reason": text, "loanTypeId": id from loan_types when the company has types}.
                 letter_request: {"templateId": id from letter_templates, "reason": text}.
                 asset_request: {"typeId": id from asset_types, "reason": text, "neededBy": "yyyy-MM-dd" or null}.
                 training_request: {"courseName": text, "provider": text, "cost": number or null, "reason": text}.

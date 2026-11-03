@@ -254,13 +254,15 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             foreach (var loan in loans.Where(l => l.EmployeeId == employee.Id))
             {
                 var repaid = loan.Repayments.Where(x => x.PayrollRunId != run.Id).Sum(x => x.Amount);
-                var remaining = loan.Amount - repaid;
+                var remaining = loan.Amount + loan.Markup - repaid;
                 if (remaining <= 0)
                     continue;
                 var installment = Math.Min(loan.InstallmentAmount, remaining);
                 var number = loan.Repayments.Count(x => x.PayrollRunId != run.Id) + 1;
                 db.LoanRepayments.Add(new LoanRepayment { LoanId = loan.Id, PayrollRunId = run.Id, Amount = installment });
                 extras.Add(new PayItem($"{loan.Title} installment ({number}/{loan.Installments})", SalaryComponentKind.Deduction, installment, false));
+                if (number == 1 && loan.ProcessingFee > 0)
+                    extras.Add(new PayItem($"{loan.Title} processing fee", SalaryComponentKind.Deduction, loan.ProcessingFee, false));
             }
 
             // Provident fund: the member's share is deducted; the company's share is recorded on the payslip.
