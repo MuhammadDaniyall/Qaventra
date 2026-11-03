@@ -14,6 +14,8 @@ public class Announcement : TenantEntity
     public DateOnly PublishFrom { get; set; }
     public DateOnly? PublishTo { get; set; }
     public string DepartmentIds { get; set; } = "";
+    /// <summary>Comma-separated designation ids; empty = every designation. Combined with the departments.</summary>
+    public string DesignationIds { get; set; } = "";
     public bool IsPinned { get; set; }
     public string? LinkUrl { get; set; }
     public string? CreatedByName { get; set; }

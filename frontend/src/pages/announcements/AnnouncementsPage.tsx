@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { BarChart3, Check, ExternalLink, Megaphone, Pencil, Pin, Plus, Trash2, Users, Vote, X } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { announcementsApi, type Announcement, type AnnouncementKind, type Poll, type PollResultsVisibility } from '../../api/engagement';
-import { useDepartments } from '../../api/hooks';
+import { useDepartments, useDesignations } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
@@ -235,13 +235,14 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
   const [from, setFrom] = useState(item?.publishFrom ?? todayIso());
   const [to, setTo] = useState(item?.publishTo ?? '');
   const [departments, setDepartments] = useState<string[]>(item?.departmentIds ?? []);
+  const [designations, setDesignations] = useState<string[]>(item?.designationIds ?? []);
   const [pinned, setPinned] = useState(item?.isPinned ?? false);
   const [link, setLink] = useState(item?.linkUrl ?? '');
   const [notify, setNotify] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: () => {
-      const b = { title: title.trim(), body: body.trim(), kind, publishFrom: from, publishTo: to || null, departmentIds: departments, isPinned: pinned, linkUrl: link.trim() || null, notify };
+      const b = { title: title.trim(), body: body.trim(), kind, publishFrom: from, publishTo: to || null, departmentIds: departments, isPinned: pinned, linkUrl: link.trim() || null, notify, designationIds: designations };
       return item ? announcementsApi.update(item.id, b) : announcementsApi.create(b);
     },
     onSuccess: () => {
@@ -304,6 +305,9 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
         </Field>
         <div className="sm:col-span-2">
           <DepartmentPicker value={departments} onChange={setDepartments} />
+        </div>
+        <div className="sm:col-span-2">
+          <DesignationPicker value={designations} onChange={setDesignations} />
         </div>
         <Checkbox label="Pin to the top" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />
         {!item && <Checkbox label="Notify people" description="In the app, and by email for those who have it on." checked={notify} onChange={(e) => setNotify(e.target.checked)} />}
@@ -558,5 +562,32 @@ function PollModal({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </Modal>
+  );
+}
+
+function DesignationPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const designations = useDesignations();
+  if (!designations.data?.length) return null;
+  const chip = (on: boolean) =>
+    cn(
+      'rounded-md border px-2.5 py-1 text-xs font-medium',
+      on ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300' : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-300',
+    );
+  return (
+    <Field label="Only these designations" hint={value.length ? `${value.length} designation${value.length === 1 ? '' : 's'}` : 'Any designation'}>
+      <div className="flex flex-wrap gap-1.5">
+        <button type="button" onClick={() => onChange([])} className={chip(!value.length)}>
+          Any
+        </button>
+        {designations.data.map((d) => {
+          const on = value.includes(d.id);
+          return (
+            <button key={d.id} type="button" aria-pressed={on} onClick={() => onChange(on ? value.filter((x) => x !== d.id) : [...value, d.id])} className={chip(on)}>
+              {d.title}
+            </button>
+          );
+        })}
+      </div>
+    </Field>
   );
 }

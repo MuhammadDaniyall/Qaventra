@@ -6,6 +6,7 @@ export type PollResultsVisibility = 'AfterVoting' | 'AfterClose' | 'HrOnly';
 export type CustomFieldType = 'Text' | 'Number' | 'Date' | 'Dropdown' | 'YesNo';
 
 export interface Announcement {
+  designationIds?: string[] | null;
   id: string;
   title: string;
   body: string;
@@ -36,6 +37,8 @@ export interface SaveAnnouncement {
   isPinned: boolean;
   linkUrl: string | null;
   notify: boolean;
+  /** Empty = every designation. */
+  designationIds?: string[];
 }
 
 export interface PollOption {

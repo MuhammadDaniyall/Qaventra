@@ -14,13 +14,14 @@ namespace HRMS.Api.Controllers;
 
 public record SaveAnnouncementRequest(
     [Required, StringLength(200)] string Title, [Required, StringLength(8000)] string Body, AnnouncementKind Kind, DateOnly PublishFrom,
-    DateOnly? PublishTo, List<Guid>? DepartmentIds, bool IsPinned, [StringLength(500)] string? LinkUrl, bool Notify = true);
+    DateOnly? PublishTo, List<Guid>? DepartmentIds, bool IsPinned, [StringLength(500)] string? LinkUrl, bool Notify = true,
+    [MaxLength(100)] List<Guid>? DesignationIds = null);
 
 /// <summary>ReadCount and AudienceCount are filled for HR only.</summary>
 public record AnnouncementDto(
     Guid Id, string Title, string Body, AnnouncementKind Kind, DateOnly PublishFrom, DateOnly? PublishTo, List<Guid> DepartmentIds,
     List<string> Departments, bool IsPinned, string? LinkUrl, string? CreatedByName, DateTime CreatedAtUtc, bool IsRead, int Attachments,
-    int? ReadCount, int? AudienceCount, RecordStampsDto Stamps);
+    int? ReadCount, int? AudienceCount, RecordStampsDto Stamps, List<Guid>? DesignationIds = null);
 
 public record CreatePollRequest(
     [Required, StringLength(300)] string Question, [StringLength(2000)] string? Description, DateOnly OpensOn, DateOnly ClosesOn,
@@ -121,7 +122,7 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
     }
 
     private static AnnouncementInput Input(SaveAnnouncementRequest r) =>
-        new(r.Title, r.Body, r.Kind, r.PublishFrom, r.PublishTo, r.DepartmentIds, r.IsPinned, r.LinkUrl, r.Notify);
+        new(r.Title, r.Body, r.Kind, r.PublishFrom, r.PublishTo, r.DepartmentIds, r.IsPinned, r.LinkUrl, r.Notify, r.DesignationIds);
 
     private async Task<Dictionary<Guid, string>> DepartmentNamesAsync() => await db.Departments.ToDictionaryAsync(d => d.Id, d => d.Name);
 
@@ -159,7 +160,7 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
             return new AnnouncementDto(a.Id, a.Title, a.Body, a.Kind, a.PublishFrom, a.PublishTo, depts,
                 depts.Select(d => names.GetValueOrDefault(d) ?? "Removed department").ToList(), a.IsPinned, a.LinkUrl, a.CreatedByName,
                 a.CreatedAtUtc, read.Contains(a.Id), files.GetValueOrDefault(a.Id), stats ? reads.GetValueOrDefault(a.Id) : null, audience,
-                RecordStampsDto.Of(a));
+                RecordStampsDto.Of(a), AnnouncementService.Departments(a.DesignationIds).ToList());
         }).ToList();
     }
 

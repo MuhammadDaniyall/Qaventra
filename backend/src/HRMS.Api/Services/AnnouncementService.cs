@@ -10,7 +10,7 @@ namespace HRMS.Api.Services;
 
 public record AnnouncementInput(
     string Title, string Body, AnnouncementKind Kind, DateOnly PublishFrom, DateOnly? PublishTo, IReadOnlyCollection<Guid>? DepartmentIds,
-    bool IsPinned, string? LinkUrl, bool Notify);
+    bool IsPinned, string? LinkUrl, bool Notify, IReadOnlyCollection<Guid>? DesignationIds = null);
 
 public record PollInput(
     string Question, string? Description, DateOnly OpensOn, DateOnly ClosesOn, IReadOnlyCollection<Guid>? DepartmentIds, bool IsAnonymous,
@@ -26,13 +26,26 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
     public static IReadOnlyList<Guid> Departments(string departmentIds) =>
         departmentIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(Guid.Parse).ToList();
 
+    /// <summary>Department audience plus, for announcements, an optional designation filter (empty = any designation).</summary>
+    public static bool InAudience(string departmentIds, string designationIds, Guid? departmentId, Guid? designationId) =>
+        InAudience(departmentIds, departmentId)
+        && (string.IsNullOrEmpty(designationIds) || (designationId is { } g && designationIds.Contains(g.ToString(), StringComparison.OrdinalIgnoreCase)));
+
+    public async Task<Guid?> MyDesignationAsync() =>
+        me.EmployeeId is { } mine ? await db.Employees.Where(e => e.Id == mine).Select(e => e.DesignationId).FirstOrDefaultAsync() : null;
+
     public async Task<Guid?> MyDepartmentAsync() =>
         me.EmployeeId is { } mine ? await db.Employees.Where(e => e.Id == mine).Select(e => e.DepartmentId).FirstOrDefaultAsync() : null;
 
     /// <summary>Current employees the audience reaches.</summary>
-    public async Task<List<Guid>> AudienceAsync(string departmentIds)
+    public async Task<List<Guid>> AudienceAsync(string departmentIds, string designationIds = "")
     {
         var q = db.Employees.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
+        if (!string.IsNullOrEmpty(designationIds))
+        {
+            var titles = Departments(designationIds);
+            q = q.Where(e => e.DesignationId != null && titles.Contains(e.DesignationId.Value));
+        }
         if (!string.IsNullOrEmpty(departmentIds))
         {
             var depts = Departments(departmentIds);
@@ -67,6 +80,10 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
         a.PublishFrom = input.PublishFrom;
         a.PublishTo = input.PublishTo;
         a.DepartmentIds = audience;
+        var titleIds = (input.DesignationIds ?? []).Distinct().ToList();
+        if (titleIds.Count > 0 && await db.Designations.CountAsync(d => titleIds.Contains(d.Id)) != titleIds.Count)
+            throw new NotFoundException("Designation");
+        a.DesignationIds = string.Join(',', titleIds);
         a.IsPinned = input.IsPinned;
         a.LinkUrl = string.IsNullOrWhiteSpace(input.LinkUrl) ? null : input.LinkUrl.Trim();
         if (!input.Notify)
@@ -87,7 +104,7 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
         a.NotifiedAtUtc = clock.UtcNow;
         var label = a.Kind switch { AnnouncementKind.Policy => "New policy", AnnouncementKind.Event => "Event", _ => "Announcement" };
         var body = a.Body.Length > 200 ? a.Body[..200] + "…" : a.Body;
-        await notify.ToEmployeesAsync(await AudienceAsync(a.DepartmentIds), NotificationKind.Announcement, $"{label}: {a.Title}", body, "/announcements");
+        await notify.ToEmployeesAsync(await AudienceAsync(a.DepartmentIds, a.DesignationIds), NotificationKind.Announcement, $"{label}: {a.Title}", body, "/announcements");
     }
 
     /// <summary>Live announcements for the signed-in user, pinned first. Also sends any due notifications.</summary>
@@ -111,16 +128,17 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
         if (me.IsHr())
             return live;
         var dept = await MyDepartmentAsync();
-        return live.Where(a => InAudience(a.DepartmentIds, dept)).ToList();
+        var title = await MyDesignationAsync();
+        return live.Where(a => InAudience(a.DepartmentIds, a.DesignationIds, dept, title)).ToList();
     }
 
     public async Task MarkReadAsync(Guid id)
     {
         var employeeId = me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
-        var departmentIds = await db.Announcements.Where(a => a.Id == id).Select(a => a.DepartmentIds).FirstOrDefaultAsync()
+        var audience = await db.Announcements.Where(a => a.Id == id).Select(a => new { a.DepartmentIds, a.DesignationIds }).FirstOrDefaultAsync()
             ?? throw new NotFoundException("Announcement");
         // Only the audience counts as readers; HR opening another department's item doesn't.
-        if (!InAudience(departmentIds, await MyDepartmentAsync()))
+        if (!InAudience(audience.DepartmentIds, audience.DesignationIds, await MyDepartmentAsync(), await MyDesignationAsync()))
             return;
         if (await db.AnnouncementReads.AnyAsync(r => r.AnnouncementId == id && r.EmployeeId == employeeId))
             return;
