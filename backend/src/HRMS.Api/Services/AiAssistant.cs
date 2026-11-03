@@ -16,6 +16,9 @@ public class AiOptions
 {
     /// <summary>Anthropic API key; the assistant is off when empty.</summary>
     public string? ApiKey { get; set; }
+    /// <summary>Google Gemini key (free tier available); used when there is no Anthropic key.</summary>
+    public string? GeminiApiKey { get; set; }
+    public string GeminiModel { get; set; } = "gemini-2.5-flash";
     public string Model { get; set; } = "claude-haiku-5-5";
     /// <summary>Questions a company may ask a month unless the platform owner sets its own number.</summary>
     public int MessagesPerMonth { get; set; } = 1000;
@@ -34,7 +37,7 @@ public record AiInsights(string Headline, List<AiFinding> Findings, DateTime Mad
 /// person's own sign-in, so it can never see more than they can. Changes are only proposed: the page shows each one
 /// with a Confirm button and the person's click sends the normal request.
 /// </summary>
-public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUser me, TenantClock clock, IHttpClientFactory http, IMemoryCache cache,
+public partial class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUser me, TenantClock clock, IHttpClientFactory http, IMemoryCache cache,
     ILogger<AiAssistantService> log)
 {
     const int MaxRounds = 6;
@@ -67,7 +70,7 @@ public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUse
 
     static readonly string[] ActionKinds = ["apply_leave", "attendance_request", "helpdesk_ticket", "decide_approval"];
 
-    public bool Enabled => !string.IsNullOrWhiteSpace(options.ApiKey);
+    public bool Enabled => !string.IsNullOrWhiteSpace(options.ApiKey) || !string.IsNullOrWhiteSpace(options.GeminiApiKey);
 
     public async Task<AiStatus> StatusAsync()
     {
@@ -118,6 +121,12 @@ public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUse
         }
 
         var company = await db.Tenants.Where(t => t.Id == db.CurrentTenantId).Select(t => t.Name).FirstOrDefaultAsync();
+        if (UseGemini)
+        {
+            var g = await GeminiInsightsAsync(company, today, data) with { MadeAtUtc = DateTime.UtcNow };
+            cache.Set(key, g, TimeSpan.FromHours(24));
+            return g;
+        }
         var entry = new AiMessageLog { UserId = me.UserId ?? Guid.Empty };
         string text;
         try
@@ -207,6 +216,21 @@ public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUse
         var c = app.Candidate!;
         var cvId = await db.Attachments.Where(x => x.OwnerType == AttachmentOwner.Candidate && x.OwnerId == c.Id && x.ContentType == "application/pdf")
             .OrderByDescending(x => x.CreatedAtUtc).Select(x => (Guid?)x.Id).FirstOrDefaultAsync();
+        if (UseGemini)
+        {
+            var pdf = cvId is { } gid ? (await files.ReadAsync(gid)).Data : null;
+            var g = await GeminiCvAsync($"""
+                Job: {app.JobPost!.Title}
+                Description: {app.JobPost.Description}
+                Requirements: {app.JobPost.Requirements}
+
+                Candidate form: {c.FirstName} {c.LastName}; current title {c.CurrentTitle}; {c.ExperienceYears} years' experience; skills: {c.Skills}.
+                {(pdf is null ? "No PDF CV was uploaded; judge from the form only and say so in the summary." : "The CV is attached.")}
+                """, pdf);
+            g = g with { Score = Math.Clamp(g.Score, 0, 100), FromCv = pdf is not null };
+            cache.Set(key, g, TimeSpan.FromHours(24));
+            return g;
+        }
         var content = new List<ContentBlockParam>();
         if (cvId is { } id)
         {
@@ -291,6 +315,7 @@ public class AiAssistantService(AiOptions options, HrmsDbContext db, ICurrentUse
         api.BaseAddress = new Uri(baseUrl);
         api.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         api.Timeout = TimeSpan.FromSeconds(30);
+        if (UseGemini) return await GeminiAskAsync(turns, voice, api, limit, used);
 
         var messages = turns.TakeLast(20)
             .Select(t => t.Role == "user" ? (MessageParam)new UserMessageParam { Content = t.Text } : new AssistantMessageParam { Content = t.Text })

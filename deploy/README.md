@@ -67,6 +67,15 @@ The "Ask AI" assistant stays hidden until `deploy/secrets/production.json` has a
 "Ai": { "ApiKey": "<anthropic api key>", "Model": "claude-haiku-5-5", "MessagesPerMonth": 1000 }
 ```
 
+Free option: Google Gemini. Create a key at aistudio.google.com (API keys; no card needed) and use it instead:
+
+```json
+"Ai": { "GeminiApiKey": "<gemini api key>", "GeminiModel": "gemini-2.5-flash", "MessagesPerMonth": 1000 }
+```
+
+Gemini is used only when there is no Anthropic `ApiKey`. On Gemini's free tier Google may use what is sent to improve its
+products, and the free allowance is limited per minute and per day; a paid Gemini or Anthropic key avoids both.
+
 Then deploy again. For local runs, put the same section in `backend/src/HRMS.Api/appsettings.Development.json` or set
 `Ai__ApiKey` in the environment.
 
