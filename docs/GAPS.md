@@ -94,3 +94,8 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Roster: copy a week forward.
 - Payslip password: not needed (payslips are only shown after sign-in, never emailed as PDF).
 
+- Job changes move grade, division and cost center.
+- Comp-off from overtime on a working day; a day is paid or taken off, not both.
+- Helpdesk ticket types: default agent and always-involved people.
+- Recruitment: upload many CVs at once (email, phone, experience read from PDF/Word).
+

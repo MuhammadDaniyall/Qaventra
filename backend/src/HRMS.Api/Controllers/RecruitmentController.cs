@@ -134,6 +134,8 @@ public record ScheduleInterviewRequest(
 
 public record RescheduleInterviewRequest(DateTime StartsAtUtc, [StringLength(500)] string? Where, [Required, StringLength(500)] string Reason, bool EmailCandidate);
 
+public record BulkCvRow(string File, bool Added, string? Problem, string? Name, string? Email);
+
 public record InterviewStatusRequest(InterviewStatus Status);
 
 public record FeedbackRequest(int Rating, HireRecommendation Recommendation, [StringLength(2000)] string? Strengths, [StringLength(2000)] string? Concerns);
@@ -293,6 +295,49 @@ public class RecruitmentController(HrmsDbContext db, RecruitmentService hiring, 
         var source = form.Source is { } s && Enum.IsDefined(s) && s != CandidateSource.CareersPage ? s : CandidateSource.Manual;
         var app = await hiring.ApplyAsync(post, form.ToInput(), source, form.CoverLetter, await form.ReadCvAsync());
         return await ProjectCards(db.JobApplications.Where(a => a.Id == app.Id)).FirstAsync();
+    }
+
+    /// <summary>
+    /// Many CVs at once: each file becomes a candidate on this job, with the email, phone and experience read from the CV
+    /// and the name from the file name. Files without an email, or already on this job, are skipped and reported.
+    /// </summary>
+    [HttpPost("jobs/{id:guid}/candidates/bulk")]
+    [RequestSizeLimit(30 * AttachmentService.MaxBytes)]
+    public async Task<List<BulkCvRow>> AddMany(Guid id, [FromForm] List<IFormFile> files)
+    {
+        var post = await hiring.MyPosts().FirstOrDefaultAsync(p => p.Id == id) ?? throw new NotFoundException("Job post");
+        if (files.Count is 0 or > 30) throw new DomainException("Upload 1 to 30 CVs at a time.");
+        var rows = new List<BulkCvRow>();
+        foreach (var file in files)
+        {
+            using var buffer = new MemoryStream();
+            await file.CopyToAsync(buffer);
+            var cv = new CvFile(file.FileName, buffer.ToArray());
+            try
+            {
+                RecruitmentService.CheckCv(cv);
+                var facts = CvReader.Read(file.FileName, cv.Data);
+                if (facts.Email is null)
+                {
+                    rows.Add(new BulkCvRow(file.FileName, false, "No email address found in the CV.", null, null));
+                    continue;
+                }
+                if (await db.JobApplications.AnyAsync(a => a.JobPostId == post.Id && a.Candidate!.Email == facts.Email))
+                {
+                    rows.Add(new BulkCvRow(file.FileName, false, "Already on this job.", null, facts.Email));
+                    continue;
+                }
+                var input = new CandidateInput(facts.FirstName ?? facts.Email.Split('@')[0], facts.LastName ?? "", facts.Email, facts.Phone, null, null, null, null,
+                    facts.ExperienceYears, null, null, null, null, null);
+                await hiring.ApplyAsync(post, input, CandidateSource.Manual, null, cv);
+                rows.Add(new BulkCvRow(file.FileName, true, null, $"{input.FirstName} {input.LastName}".Trim(), facts.Email));
+            }
+            catch (DomainException ex)
+            {
+                rows.Add(new BulkCvRow(file.FileName, false, ex.Message, null, null));
+            }
+        }
+        return rows;
     }
 
     [HttpPost("jobs/{id:guid}/candidates/{candidateId:guid}")]

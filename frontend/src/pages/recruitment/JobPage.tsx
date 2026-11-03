@@ -2,7 +2,7 @@ import { useState, type DragEvent } from 'react';
 import { ScreeningCard } from './Screening';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Ban, CalendarClock, Copy, MapPin, Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
+import { Ban, CalendarClock, Copy, MapPin, Pencil, Plus, Trash2, Upload, UserPlus } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import {
@@ -28,6 +28,7 @@ import {
   ErrorState,
   Field,
   FormError,
+  Input,
   Modal,
   PageHeader,
   SkeletonRows,
@@ -64,6 +65,7 @@ export function JobPage() {
   });
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [bulk, setBulk] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [rejecting, setRejecting] = useState<PipelineCard | null>(null);
   const [dragOver, setDragOver] = useState<Column | null>(null);
@@ -163,9 +165,14 @@ export function JobPage() {
               </Button>
             )}
             {j.status !== 'Filled' && (
-              <Button variant="secondary" size="sm" icon={<UserPlus className="size-3.5" />} onClick={() => setAdding(true)}>
-                Add candidate
-              </Button>
+              <>
+                <Button variant="secondary" size="sm" icon={<UserPlus className="size-3.5" />} onClick={() => setAdding(true)}>
+                  Add candidate
+                </Button>
+                <Button variant="secondary" size="sm" icon={<Upload className="size-3.5" />} onClick={() => setBulk(true)}>
+                  Upload CVs
+                </Button>
+              </>
             )}
             {hr && (
               <>
@@ -265,6 +272,7 @@ export function JobPage() {
 
       {editing && <JobPostModal post={j} onClose={() => setEditing(false)} />}
       {adding && <AddCandidateModal jobId={id} onClose={() => setAdding(false)} />}
+      {bulk && <BulkCvModal jobId={id} onClose={() => setBulk(false)} />}
       {rejecting && <RejectModal card={rejecting} onClose={() => setRejecting(null)} />}
       <ConfirmDialog
         open={deleting}
@@ -417,6 +425,56 @@ export function RejectModal({ card, onClose }: { card: { id: string; name: strin
         {stage === 'Rejected' && <Checkbox label="Email the candidate a polite regret" checked={email} onChange={(e) => setEmail(e.target.checked)} />}
       </div>
       <FormError message={save.isError ? errorMessage(save.error) : null} />
+    </Modal>
+  );
+}
+
+/** Many CVs at once: each becomes a candidate, with email, phone and experience read from the file. */
+function BulkCvModal({ jobId, onClose }: { jobId: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [files, setFiles] = useState<File[]>([]);
+  const upload = useMutation({
+    mutationFn: () => recruitmentApi.addMany(jobId, files),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.recruitment }),
+  });
+  const rows = upload.data;
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Upload CVs"
+      description="PDF or Word files, up to 30 at a time. Each becomes a candidate on this job; the email and phone are read from the CV and the name from the file name (e.g. Ali_Raza_CV.pdf)."
+      footer={
+        rows ? (
+          <Button onClick={onClose}>Done</Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button loading={upload.isPending} disabled={!files.length} onClick={() => upload.mutate()}>
+              Add {files.length || ''} candidates
+            </Button>
+          </>
+        )
+      }
+    >
+      {upload.isError && <FormError message={errorMessage(upload.error)} />}
+      {!rows ? (
+        <Input type="file" multiple accept=".pdf,.doc,.docx" onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 30))} />
+      ) : (
+        <ul className="max-h-80 space-y-1 overflow-y-auto text-sm">
+          <li className="font-medium">
+            {rows.filter((r) => r.added).length} added, {rows.filter((r) => !r.added).length} skipped
+          </li>
+          {rows.map((r) => (
+            <li key={r.file} className={r.added ? 'text-zinc-700 dark:text-zinc-300' : 'text-amber-700'}>
+              {r.added ? '✓' : '•'} {r.file}
+              {r.added ? ` → ${r.name} (${r.email})` : `: ${r.problem}`}
+            </li>
+          ))}
+        </ul>
+      )}
     </Modal>
   );
 }

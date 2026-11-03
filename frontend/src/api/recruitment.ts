@@ -439,6 +439,14 @@ export const recruitmentApi = {
   deleteJob: (id: string) => http.del(`/recruitment/jobs/${id}`),
   pipeline: (id: string) => http.get<PipelineCard[]>(`/recruitment/jobs/${id}/pipeline`),
   addCandidate: (jobId: string, v: CandidateFormValues) => http.upload<PipelineCard>(`/recruitment/jobs/${jobId}/candidates`, candidateForm(v)),
+  addMany: (jobId: string, files: File[]) => {
+    const form = new FormData();
+    files.forEach((f) => form.append('files', f));
+    return http.upload<{ file: string; added: boolean; problem: string | null; name: string | null; email: string | null }[]>(
+      `/recruitment/jobs/${jobId}/candidates/bulk`,
+      form,
+    );
+  },
   addExisting: (jobId: string, candidateId: string) => http.post<PipelineCard>(`/recruitment/jobs/${jobId}/candidates/${candidateId}`),
 
   openings: () => http.get<Opening[]>('/recruitment/openings'),
