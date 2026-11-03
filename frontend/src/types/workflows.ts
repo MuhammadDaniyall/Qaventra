@@ -126,6 +126,8 @@ export interface ExpenseItem {
   amount: number;
   receiptId: string | null;
   receiptFileName: string | null;
+  /** What the approver allowed when it differs from the amount claimed. */
+  approvedAmount: number | null;
 }
 
 export interface ExpenseClaimDetail {

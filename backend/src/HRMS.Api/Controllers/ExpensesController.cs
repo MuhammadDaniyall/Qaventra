@@ -35,7 +35,10 @@ public record ExpenseClaimDto(
     decimal Total, int ItemCount, int ReceiptCount, DateTime CreatedAtUtc, DateTime? DecidedAtUtc, string? DecisionNote,
     DateTime? PaidAtUtc, string? PaidVia, decimal AdvanceAdjusted, RecordStampsDto Stamps);
 
-public record ExpenseItemDto(Guid Id, DateOnly Date, ExpenseCategory Category, string Description, decimal Amount, Guid? ReceiptId, string? ReceiptFileName);
+public record ExpenseItemDto(Guid Id, DateOnly Date, ExpenseCategory Category, string Description, decimal Amount, Guid? ReceiptId, string? ReceiptFileName,
+    decimal? ApprovedAmount);
+public record ApprovedAmountLine(Guid ItemId, [Range(0, 10_000_000)] decimal? ApprovedAmount);
+public record SetApprovedAmountsRequest([Required] List<ApprovedAmountLine> Lines);
 
 public record ExpenseClaimDetailDto(ExpenseClaimDto Claim, List<ExpenseItemDto> Items, bool CanDecide);
 
@@ -85,7 +88,7 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
 
         var dto = await Project(db.ExpenseClaims.Where(c => c.Id == id)).FirstAsync();
         var items = claim.Items.OrderBy(i => i.Date)
-            .Select(i => new ExpenseItemDto(i.Id, i.Date, i.Category, i.Description, i.Amount, i.ReceiptId, i.ReceiptFileName)).ToList();
+            .Select(i => new ExpenseItemDto(i.Id, i.Date, i.Category, i.Description, i.Amount, i.ReceiptId, i.ReceiptFileName, i.ApprovedAmount)).ToList();
         var canDecide = claim.Status == ExpenseStatus.Pending && await expenses.CanDecideAsync(claim);
         return new ExpenseClaimDetailDto(dto, items, canDecide);
     }
@@ -99,6 +102,25 @@ public class ExpensesController(HrmsDbContext db, ExpenseService expenses, Appro
         var receipt = await db.ExpenseReceipts.FirstOrDefaultAsync(r => r.Id == receiptId && r.ExpenseClaimId == id)
             ?? throw new NotFoundException("Receipt");
         return File(receipt.Data, receipt.ContentType, receipt.FileName);
+    }
+
+    /// <summary>The approver allows less (or more) than claimed on some lines before deciding; the claim total follows.</summary>
+    [HttpPut("{id:guid}/approved-amounts"), Authorize(Policy = Policies.Approver)]
+    public async Task<IActionResult> SetApprovedAmounts(Guid id, SetApprovedAmountsRequest req)
+    {
+        var claim = await db.ExpenseClaims.Include(c => c.Items).FirstOrDefaultAsync(c => c.Id == id) ?? throw new NotFoundException("Expense claim");
+        if (claim.Status != ExpenseStatus.Pending)
+            throw new DomainException("Only a claim waiting for approval can be changed.");
+        if (claim.EmployeeId == me.EmployeeId || !(me.IsHr() || me.EmployeeId is { } eid && await approvals.CanDecideAsync(ApprovalRequestType.Expense, id, eid)))
+            throw new ForbiddenException("Only the person deciding this claim can change its amounts.");
+        foreach (var line in req.Lines)
+        {
+            var item = claim.Items.FirstOrDefault(i => i.Id == line.ItemId) ?? throw new NotFoundException("Expense line");
+            item.ApprovedAmount = line.ApprovedAmount == item.Amount ? null : line.ApprovedAmount;
+        }
+        claim.Total = claim.Items.Sum(i => i.ApprovedAmount ?? i.Amount);
+        await db.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpPost("{id:guid}/approve"), Authorize(Policy = Policies.Approver)]

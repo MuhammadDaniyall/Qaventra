@@ -36,6 +36,8 @@ public class ExpenseItem : BaseEntity
     public ExpenseCategory Category { get; set; }
     public string Description { get; set; } = "";
     public decimal Amount { get; set; }
+    /// <summary>What the approver allowed for this line when it differs from the amount claimed; null = as claimed.</summary>
+    public decimal? ApprovedAmount { get; set; }
     public Guid? ExpenseTypeId { get; set; }
     /// <summary>Units for rate-based types (km, nights…).</summary>
     public decimal? Quantity { get; set; }

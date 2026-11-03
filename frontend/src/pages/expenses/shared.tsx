@@ -6,7 +6,7 @@ import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
 import { ApprovalTimeline } from '../../components/approvals/ApprovalTimeline';
 import { RecordStamp } from '../../components/RecordStamp';
-import { Avatar, Button, Drawer, ErrorState, Field, SkeletonRows, StatusBadge, Textarea, useToast } from '../../components/ui';
+import { Avatar, Button, Drawer, ErrorState, Field, Input, SkeletonRows, StatusBadge, Textarea, useToast } from '../../components/ui';
 import { formatCurrency, formatDate, formatDateTimeUtc, humanize } from '../../lib/format';
 import type { ExpenseCategory, ExpenseItem } from '../../types/workflows';
 
@@ -83,6 +83,7 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
   const toast = useToast();
   const qc = useQueryClient();
   const [note, setNote] = useState('');
+  const [allowed, setAllowed] = useState<Record<string, string>>({});
   const detail = useQuery({ queryKey: qk.expense(claimId), queryFn: () => expensesApi.get(claimId) });
   const { open, opening } = useOpenReceipt(claimId);
 
@@ -94,7 +95,11 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
     onClose();
   };
   const decide = useMutation({
-    mutationFn: (approve: boolean) => (approve ? expensesApi.approve : expensesApi.reject)(claimId, note.trim() || null),
+    mutationFn: async (approve: boolean) => {
+      const lines = Object.entries(allowed).map(([itemId, v]) => ({ itemId, approvedAmount: v === '' ? null : Number(v) }));
+      if (approve && lines.length) await expensesApi.setApprovedAmounts(claimId, lines);
+      return (approve ? expensesApi.approve : expensesApi.reject)(claimId, note.trim() || null);
+    },
     onSuccess: (_, approve) => done(approve ? 'Claim approved' : 'Claim rejected'),
     onError: (err) => toast.error(err),
   });
@@ -106,6 +111,9 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
 
   const d = detail.data;
   const mine = d?.claim.employeeId === user.employeeId;
+  const lineAmount = (i: { id: string; amount: number; approvedAmount: number | null }) =>
+    allowed[i.id] !== undefined && allowed[i.id] !== '' ? Number(allowed[i.id]) : (i.approvedAmount ?? i.amount);
+  const approvedTotal = d ? d.items.reduce((sum, i) => sum + lineAmount(i), 0) : 0;
 
   return (
     <Drawer
@@ -131,7 +139,7 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
               loading={decide.isPending && decide.variables === true}
               onClick={() => decide.mutate(true)}
             >
-              Approve {formatCurrency(d.claim.total)}
+              Approve {formatCurrency(approvedTotal)}
             </Button>
           </>
         ) : mine && d?.claim.status === 'Pending' ? (
@@ -189,7 +197,24 @@ export function ClaimDrawer({ claimId, onClose }: { claimId: string; onClose: ()
                     {!item.receiptId && ' · no receipt'}
                   </p>
                 </div>
-                <p className="text-sm font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(item.amount)}</p>
+                {d.canDecide ? (
+                  <div className="w-28 text-end">
+                    <Input
+                      type="number"
+                      min={0}
+                      aria-label={`Amount allowed for ${item.description}`}
+                      value={allowed[item.id] ?? String(item.approvedAmount ?? item.amount)}
+                      onChange={(e) => setAllowed((a) => ({ ...a, [item.id]: e.target.value }))}
+                      className="text-end"
+                    />
+                    {lineAmount(item) !== item.amount && <p className="mt-0.5 text-xs text-zinc-500 line-through">{formatCurrency(item.amount)}</p>}
+                  </div>
+                ) : (
+                  <div className="text-end">
+                    <p className="text-sm font-semibold text-zinc-900 tabular-nums dark:text-white">{formatCurrency(item.approvedAmount ?? item.amount)}</p>
+                    {item.approvedAmount != null && <p className="text-xs text-zinc-500 line-through">{formatCurrency(item.amount)}</p>}
+                  </div>
+                )}
               </li>
             ))}
           </ul>

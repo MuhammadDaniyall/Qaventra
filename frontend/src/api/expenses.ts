@@ -7,6 +7,7 @@ export const expensesApi = {
   approvals: (status: ExpenseStatus) => http.get<ExpenseClaim[]>('/expenses/approvals', { status }),
   get: (id: string) => http.get<ExpenseClaimDetail>(`/expenses/${id}`),
   approve: (id: string, note: string | null) => http.post(`/expenses/${id}/approve`, { note }),
+  setApprovedAmounts: (id: string, lines: { itemId: string; approvedAmount: number | null }[]) => http.put(`/expenses/${id}/approved-amounts`, { lines }),
   reject: (id: string, note: string | null) => http.post(`/expenses/${id}/reject`, { note }),
   cancel: (id: string) => http.post(`/expenses/${id}/cancel`),
   /** Receipts need the bearer token, so they are fetched as blobs and shown through object URLs. */
