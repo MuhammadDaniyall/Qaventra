@@ -65,6 +65,8 @@ public class PayRequestService(HrmsDbContext db, ICurrentUser me, TenantClock cl
                 .SumAsync(x => x.Hours) ?? 0;
             if (claimed + h > 16)
                 throw new DomainException($"Overtime for {d:d MMM} is already claimed ({claimed:0.#} h).");
+            if (await db.CompOffRequests.AnyAsync(c => c.EmployeeId == r.EmployeeId && c.WorkedOn == d && (c.Status == RequestStatus.Pending || c.Status == RequestStatus.Approved)))
+                throw new DomainException($"{d:d MMM} is already claimed as comp-off. A day is paid or taken as comp-off, not both.");
             amount = await OvertimeAmountAsync(r.EmployeeId, d, h);
         }
         else

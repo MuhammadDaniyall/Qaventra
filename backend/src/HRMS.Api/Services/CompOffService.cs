@@ -8,8 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace HRMS.Api.Services;
 
-/// <summary>Credit compensatory leave for work on a weekly off day or holiday, through the approval chain.</summary>
-public class CompOffService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, LeaveService leave)
+/// <summary>
+/// Credit compensatory leave, through the approval chain, for work on a weekly off day or holiday, or for overtime on a working day:
+/// 4 hours beyond the shift earn half a day, 8 hours a full day. A day's overtime is either paid or taken as comp-off, not both.
+/// </summary>
+public class CompOffService(HrmsDbContext db, ICurrentUser me, TenantClock clock, ApprovalEngine approvals, LeaveService leave, ScheduleService schedule)
 {
     public const int MaxDaysBack = 60;
 
@@ -24,10 +27,21 @@ public class CompOffService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             throw new DomainException("Claim a half day (0.5) or a full day (1).");
         if (string.IsNullOrWhiteSpace(reason))
             throw new DomainException("Say what you worked on.");
+        var record = await db.AttendanceRecords.FirstOrDefaultAsync(a => a.EmployeeId == employeeId && a.Date == workedOn)
+            ?? throw new DomainException("There is no attendance for that day. Check in when you work, or send an attendance request first.");
         if (await leave.CountDaysAsync(employeeId, workedOn, workedOn) > 0)
-            throw new DomainException("That is a normal working day. Comp-off is for work on a weekly off day or a holiday.");
-        if (!await db.AttendanceRecords.AnyAsync(a => a.EmployeeId == employeeId && a.Date == workedOn))
-            throw new DomainException("There is no attendance for that day. Check in when you work, or send an attendance request first.");
+        {
+            var shift = (await schedule.ForEmployeeAsync(employeeId, workedOn, workedOn)).ShiftOn(workedOn);
+            var extra = record.WorkedMinutes - (shift?.ExpectedMinutes ?? 480);
+            var earned = extra >= 480 ? 1m : extra >= 240 ? 0.5m : 0m;
+            if (earned == 0)
+                throw new DomainException("That is a normal working day. Comp-off is for work on an off day or a holiday, or for at least 4 hours beyond the shift (8 for a full day).");
+            if (days > earned)
+                throw new DomainException($"{extra / 60m:0.#} extra hours earn {earned:0.#} day.");
+        }
+        if (await db.PayRequests.AnyAsync(p => p.EmployeeId == employeeId && p.Kind == PayRequestKind.Overtime && p.WorkDate == workedOn
+                && (p.Status == RequestStatus.Pending || p.Status == RequestStatus.Approved)))
+            throw new DomainException("Overtime for that day is already claimed as pay. A day is paid or taken as comp-off, not both.");
         if (await db.CompOffRequests.AnyAsync(c => c.EmployeeId == employeeId && c.WorkedOn == workedOn
                 && (c.Status == RequestStatus.Pending || c.Status == RequestStatus.Approved)))
             throw new DomainException("You have already claimed comp-off for that day.");
