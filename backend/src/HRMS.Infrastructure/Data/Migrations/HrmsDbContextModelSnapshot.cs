@@ -3522,6 +3522,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int>("Calculation")
                         .HasColumnType("int");
 
+                    b.Property<bool>("CarryForward")
+                        .HasColumnType("bit");
+
                     b.Property<int>("Category")
                         .HasColumnType("int");
 
@@ -3534,6 +3537,9 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("ForGender")
+                        .HasColumnType("int");
 
                     b.Property<string>("GradeIds")
                         .HasMaxLength(2000)
@@ -3552,6 +3558,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal?>("MonthlyLimit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -3561,11 +3571,17 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<bool>("ProRata")
+                        .HasColumnType("bit");
+
                     b.Property<decimal?>("Rate")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("ReceiptRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("Taxable")
                         .HasColumnType("bit");
 
                     b.Property<Guid>("TenantId")

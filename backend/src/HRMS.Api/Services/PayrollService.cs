@@ -85,6 +85,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         var claims = await ExpenseService.Payable(db, run.Id).ToListAsync();
         foreach (var c in claims)
             c.PayrollRunId = null;
+        var taxableClaims = await ExpenseService.TaxablePartAsync(db, claims);
 
         // One-off pay items for this month or earlier that no finalized payroll has paid yet; same re-linking as claims.
         var period = year * 12 + month;
@@ -210,6 +211,10 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 c.PayrollRunId = run.Id;
 
             var extras = new List<PayItem>();
+            // Taxable expense types are paid as a taxable one-off earning, not with the tax-free reimbursement.
+            var taxableExpenses = employeeClaims.Sum(c => taxableClaims.GetValueOrDefault(c.Id));
+            if (taxableExpenses > 0)
+                extras.Add(new PayItem("Taxable expenses", SalaryComponentKind.Earning, taxableExpenses, true, OneOff: true));
             if (flagged is not null)
             {
                 // A day's pay is the monthly gross over the days in the month, as unpaid days are.
@@ -337,8 +342,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
 
             var result = PayrollCalculator.Calculate(new PayrollInput(
                 salary, taxYear, daysInMonth, unpaid, monthlyItems ? settings.EobiEmployeeContribution : 0m, monthlyItems ? settings.EobiEmployerContribution : 0m,
-                employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted), extras, taxFor));
-            var wages = result.GrossEarnings - employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted);
+                employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted) - taxableExpenses, extras, taxFor));
+            var wages = result.GrossEarnings - (employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted) - taxableExpenses);
             var socialSecurity = settings.SocialSecurityPercent > 0 && !string.IsNullOrEmpty(employee.SocialSecurityNo)
                 ? Math.Round(Math.Min(wages, settings.SocialSecurityWageCeiling is { } ceiling ? ceiling * share : wages) * settings.SocialSecurityPercent / 100m, 0, MidpointRounding.AwayFromZero)
                 : 0m;

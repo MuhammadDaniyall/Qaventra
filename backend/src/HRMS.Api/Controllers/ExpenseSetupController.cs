@@ -15,15 +15,17 @@ namespace HRMS.Api.Controllers;
 public record ExpenseGradeRateDto(Guid GradeId, [Range(0, 10_000_000)] decimal? Rate, [Range(0, 100_000_000)] decimal? YearlyLimit);
 
 public record ExpenseTypeDto(Guid Id, string Name, ExpenseCategory Category, ExpenseCalculation Calculation, string? Unit, decimal? Rate, decimal? PerClaimLimit,
-    decimal? YearlyLimit, bool ReceiptRequired, List<Guid> GradeIds, bool IsActive, List<ExpenseGradeRateDto> GradeRates, RecordStampsDto Stamps);
+    decimal? YearlyLimit, bool ReceiptRequired, List<Guid> GradeIds, bool IsActive, List<ExpenseGradeRateDto> GradeRates, RecordStampsDto Stamps,
+    decimal? MonthlyLimit, bool ProRata, bool CarryForward, Gender? ForGender, bool Taxable);
 
 public record SaveExpenseTypeRequest([Required, StringLength(150)] string Name, ExpenseCategory Category, ExpenseCalculation Calculation, [StringLength(30)] string? Unit,
     [Range(0, 10_000_000)] decimal? Rate, [Range(0, 100_000_000)] decimal? PerClaimLimit, [Range(0, 100_000_000)] decimal? YearlyLimit, bool ReceiptRequired,
-    List<Guid>? GradeIds, bool IsActive, List<ExpenseGradeRateDto>? GradeRates);
+    List<Guid>? GradeIds, bool IsActive, List<ExpenseGradeRateDto>? GradeRates, [Range(0, 100_000_000)] decimal? MonthlyLimit = null, bool ProRata = false,
+    bool CarryForward = false, Gender? ForGender = null, bool Taxable = false);
 
 /// <summary>What a person may still claim this year for a type, at their rate.</summary>
 public record ExpenseTypeForMeDto(Guid Id, string Name, ExpenseCategory Category, ExpenseCalculation Calculation, string? Unit, decimal? Rate, decimal? PerClaimLimit,
-    decimal? YearlyLimit, decimal UsedThisYear, bool ReceiptRequired);
+    decimal? YearlyLimit, decimal UsedThisYear, bool ReceiptRequired, decimal? MonthlyLimit = null, decimal UsedThisMonth = 0, bool Taxable = false);
 
 public record DistanceRouteDto(Guid Id, string FromCity, string ToCity, decimal Km, RecordStampsDto Stamps);
 public record SaveDistanceRouteRequest([Required, StringLength(100)] string FromCity, [Required, StringLength(100)] string ToCity, [Range(0.1, 10_000)] decimal Km);
@@ -125,27 +127,33 @@ public class ExpenseSetupController(HrmsDbContext db, ExpenseAdvanceService adva
 
     private static ExpenseTypeDto ToDto(ExpenseType t) => new(t.Id, t.Name, t.Category, t.Calculation, t.Unit, t.Rate, t.PerClaimLimit, t.YearlyLimit, t.ReceiptRequired,
         t.GradeIds is { } g ? HelpdeskService.Ids(g) : [], t.IsActive, t.GradeRates.Select(r => new ExpenseGradeRateDto(r.GradeId, r.Rate, r.YearlyLimit)).ToList(),
-        RecordStampsDto.Of(t));
+        RecordStampsDto.Of(t), t.MonthlyLimit, t.ProRata, t.CarryForward, t.ForGender, t.Taxable);
 
     /// <summary>Types the person (or someone they file for) may claim, with their rate and what is left this year.</summary>
     [HttpGet("types/for")]
     public async Task<List<ExpenseTypeForMeDto>> TypesFor([FromQuery] Guid? employeeId)
     {
         var id = await onBehalf.ResolveAsync(employeeId);
-        var grade = await db.Employees.Where(e => e.Id == id).Select(e => e.GradeId).FirstAsync();
-        var year = (await clock.TodayAsync()).Year;
+        var who = await db.Employees.Where(e => e.Id == id).Select(e => new { e.GradeId, e.Gender, e.JoiningDate }).FirstAsync();
+        var grade = who.GradeId;
+        var today = await clock.TodayAsync();
+        var year = today.Year;
         var start = new DateOnly(year, 1, 1);
-        var used = await db.ExpenseClaims.Where(c => c.EmployeeId == id && (c.Status == ExpenseStatus.Pending || c.Status == ExpenseStatus.Approved || c.Status == ExpenseStatus.Paid))
+        var monthStart = new DateOnly(year, today.Month, 1);
+        var items = await db.ExpenseClaims.Where(c => c.EmployeeId == id && (c.Status == ExpenseStatus.Pending || c.Status == ExpenseStatus.Approved || c.Status == ExpenseStatus.Paid))
             .SelectMany(c => c.Items).Where(i => i.ExpenseTypeId != null && i.Date >= start)
-            .GroupBy(i => i.ExpenseTypeId!.Value).Select(g => new { g.Key, Sum = g.Sum(i => i.Amount) }).ToDictionaryAsync(x => x.Key, x => x.Sum);
-        return (await db.ExpenseTypes.Include(t => t.GradeRates).Where(t => t.IsActive).OrderBy(t => t.Name).ToListAsync())
-            .Where(t => t.GradeIds is not { Length: > 0 } g || (grade is { } gr && HelpdeskService.Has(g, gr)))
-            .Select(t =>
-            {
-                var own = t.GradeRates.FirstOrDefault(r => r.GradeId == grade);
-                return new ExpenseTypeForMeDto(t.Id, t.Name, t.Category, t.Calculation, t.Unit, own?.Rate ?? t.Rate, t.PerClaimLimit, own?.YearlyLimit ?? t.YearlyLimit,
-                    used.GetValueOrDefault(t.Id), t.ReceiptRequired);
-            }).ToList();
+            .Select(i => new { TypeId = i.ExpenseTypeId!.Value, i.Date, Amount = i.ApprovedAmount ?? i.Amount }).ToListAsync();
+        var list = new List<ExpenseTypeForMeDto>();
+        foreach (var t in (await db.ExpenseTypes.Include(t => t.GradeRates).Where(t => t.IsActive).OrderBy(t => t.Name).ToListAsync())
+                 .Where(t => t.GradeIds is not { Length: > 0 } g || (grade is { } gr && HelpdeskService.Has(g, gr)))
+                 .Where(t => t.ForGender is null || t.ForGender == who.Gender))
+        {
+            var own = t.GradeRates.FirstOrDefault(r => r.GradeId == grade);
+            list.Add(new ExpenseTypeForMeDto(t.Id, t.Name, t.Category, t.Calculation, t.Unit, own?.Rate ?? t.Rate, t.PerClaimLimit,
+                await ExpenseService.AllowanceAsync(db, t, grade, who.JoiningDate, id, year), items.Where(i => i.TypeId == t.Id).Sum(i => i.Amount), t.ReceiptRequired,
+                t.MonthlyLimit, items.Where(i => i.TypeId == t.Id && i.Date >= monthStart).Sum(i => i.Amount), t.Taxable));
+        }
+        return list;
     }
 
     [HttpPost("types"), Authorize(Policy = Policies.Hr)]
@@ -194,6 +202,12 @@ public class ExpenseSetupController(HrmsDbContext db, ExpenseAdvanceService adva
         t.Rate = req.Calculation == ExpenseCalculation.Amount ? null : req.Rate;
         t.PerClaimLimit = req.PerClaimLimit;
         t.YearlyLimit = req.YearlyLimit;
+        t.MonthlyLimit = req.MonthlyLimit;
+        t.ProRata = req.ProRata;
+        t.CarryForward = req.CarryForward;
+        if (req.ForGender is { } sex && !Enum.IsDefined(sex)) throw new DomainException("Choose men, women or everyone.");
+        t.ForGender = req.ForGender;
+        t.Taxable = req.Taxable;
         t.ReceiptRequired = req.ReceiptRequired;
         t.GradeIds = grades.Count > 0 ? string.Join(',', grades) : null;
         t.IsActive = req.IsActive;

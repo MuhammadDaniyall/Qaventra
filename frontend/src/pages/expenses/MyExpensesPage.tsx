@@ -325,6 +325,7 @@ function NewClaimDrawer({ onClose }: { onClose: () => void }) {
                           {t.name}
                           {t.rate != null ? ` · Rs ${t.rate}/${t.unit ?? 'unit'}` : ''}
                           {t.yearlyLimit != null ? ` · ${Math.max(0, t.yearlyLimit - t.usedThisYear).toLocaleString()} left this year` : ''}
+                          {t.monthlyLimit != null ? ` · ${Math.max(0, t.monthlyLimit - t.usedThisMonth).toLocaleString()} left this month` : ''}
                         </option>
                       ))}
                     </Select>

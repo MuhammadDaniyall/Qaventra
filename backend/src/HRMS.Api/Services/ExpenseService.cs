@@ -35,15 +35,15 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
             throw new DomainException("Choose a category for every item.");
 
         var claim = new ExpenseClaim { EmployeeId = employeeId, Title = title.Trim(), AdvanceId = advanceId };
-        // Typed amounts per type and calendar year: each line counts against its own year's limit.
-        var typed = new Dictionary<(Guid TypeId, int Year), decimal>();
+        // Typed amounts per type and calendar month: each line counts against its own month's and year's limit.
+        var typed = new Dictionary<(Guid TypeId, int Year, int Month), decimal>();
         foreach (var i in items)
         {
             var (category, amount) = (i.Category, i.Amount);
             if (i.ExpenseTypeId is { } typeId)
             {
                 (category, amount) = await TypedAmountAsync(employeeId, typeId, i);
-                typed[(typeId, i.Date.Year)] = typed.GetValueOrDefault((typeId, i.Date.Year)) + amount;
+                typed[(typeId, i.Date.Year, i.Date.Month)] = typed.GetValueOrDefault((typeId, i.Date.Year, i.Date.Month)) + amount;
             }
             if (amount <= 0)
                 throw new DomainException("Every item needs an amount greater than zero.");
@@ -93,9 +93,12 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
     private async Task<(ExpenseCategory, decimal)> TypedAmountAsync(Guid employeeId, Guid typeId, NewExpenseItem i)
     {
         var type = await db.ExpenseTypes.Include(t => t.GradeRates).FirstOrDefaultAsync(t => t.Id == typeId && t.IsActive) ?? throw new NotFoundException("Expense type");
-        var grade = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.GradeId).FirstAsync();
+        var who = await db.Employees.Where(e => e.Id == employeeId).Select(e => new { e.GradeId, e.Gender }).FirstAsync();
+        var grade = who.GradeId;
         if (type.GradeIds is { Length: > 0 } g && (grade is not { } gr || !HelpdeskService.Has(g, gr)))
             throw new DomainException($"{type.Name} is not open to your grade.");
+        if (type.ForGender is { } sex && who.Gender != sex)
+            throw new DomainException($"{type.Name} is only for {(sex == Gender.Female ? "women" : "men")}.");
         var rate = type.GradeRates.FirstOrDefault(r => r.GradeId == grade)?.Rate ?? type.Rate;
         decimal amount;
         switch (type.Calculation)
@@ -129,22 +132,62 @@ public class ExpenseService(HrmsDbContext db, ICurrentUser me, TenantClock clock
         return await db.DistanceRoutes.Where(r => (r.FromCity == a && r.ToCity == b) || (r.FromCity == b && r.ToCity == a)).Select(r => (decimal?)r.Km).FirstOrDefaultAsync();
     }
 
-    private async Task CheckYearlyLimitsAsync(Guid employeeId, Dictionary<(Guid TypeId, int Year), decimal> typed)
+    private async Task CheckYearlyLimitsAsync(Guid employeeId, Dictionary<(Guid TypeId, int Year, int Month), decimal> typed)
     {
         if (typed.Count == 0) return;
-        var grade = await db.Employees.Where(e => e.Id == employeeId).Select(e => e.GradeId).FirstAsync();
-        foreach (var ((typeId, year), amount) in typed)
+        var who = await db.Employees.Where(e => e.Id == employeeId).Select(e => new { e.GradeId, e.JoiningDate }).FirstAsync();
+        foreach (var month in typed)
         {
-            var start = new DateOnly(year, 1, 1);
-            var end = new DateOnly(year, 12, 31);
+            var (typeId, year, m) = month.Key;
             var type = await db.ExpenseTypes.Include(t => t.GradeRates).FirstAsync(t => t.Id == typeId);
-            var limit = type.GradeRates.FirstOrDefault(r => r.GradeId == grade)?.YearlyLimit ?? type.YearlyLimit;
-            if (limit is not { } cap) continue;
-            var used = await db.ExpenseClaims.Where(c => c.EmployeeId == employeeId && (c.Status == ExpenseStatus.Pending || c.Status == ExpenseStatus.Approved || c.Status == ExpenseStatus.Paid))
-                .SelectMany(c => c.Items).Where(i => i.ExpenseTypeId == typeId && i.Date >= start && i.Date <= end).SumAsync(i => (decimal?)i.Amount) ?? 0;
-            if (used + amount > cap)
-                throw new DomainException($"{type.Name} is limited to Rs {cap:N0} a year; Rs {Math.Max(0, cap - used):N0} is left.");
+            if (type.MonthlyLimit is { } monthCap)
+            {
+                var from = new DateOnly(year, m, 1);
+                var usedMonth = await UsedAsync(db, employeeId, typeId, from, from.AddMonths(1).AddDays(-1));
+                if (usedMonth + month.Value > monthCap)
+                    throw new DomainException($"{type.Name} is limited to Rs {monthCap:N0} a month; Rs {Math.Max(0, monthCap - usedMonth):N0} is left for {from:MMMM}.");
+            }
         }
+        foreach (var yearGroup in typed.GroupBy(x => (x.Key.TypeId, x.Key.Year)))
+        {
+            var (typeId, year) = yearGroup.Key;
+            var amount = yearGroup.Sum(x => x.Value);
+            var type = await db.ExpenseTypes.Include(t => t.GradeRates).FirstAsync(t => t.Id == typeId);
+            if (await AllowanceAsync(db, type, who.GradeId, who.JoiningDate, employeeId, year) is not { } cap) continue;
+            var used = await UsedAsync(db, employeeId, typeId, new DateOnly(year, 1, 1), new DateOnly(year, 12, 31));
+            if (used + amount > cap)
+                throw new DomainException($"{type.Name} is limited to Rs {cap:N0} a year ({year}); Rs {Math.Max(0, cap - used):N0} is left.");
+        }
+    }
+
+    /// <summary>What a person has claimed (pending, approved or paid) of a type between two dates.</summary>
+    public static async Task<decimal> UsedAsync(HrmsDbContext db, Guid employeeId, Guid typeId, DateOnly from, DateOnly to) =>
+        await db.ExpenseClaims.Where(c => c.EmployeeId == employeeId && (c.Status == ExpenseStatus.Pending || c.Status == ExpenseStatus.Approved || c.Status == ExpenseStatus.Paid))
+            .SelectMany(c => c.Items).Where(i => i.ExpenseTypeId == typeId && i.Date >= from && i.Date <= to).SumAsync(i => (decimal?)(i.ApprovedAmount ?? i.Amount)) ?? 0;
+
+    /// <summary>
+    /// A person's yearly allowance for a type: the grade's or type's yearly limit, cut to the months left for a joiner (pro-rata),
+    /// plus what was left unclaimed of last year's (carry forward, one year back). Null when the type has no yearly limit.
+    /// </summary>
+    public static async Task<decimal?> AllowanceAsync(HrmsDbContext db, ExpenseType type, Guid? grade, DateOnly joined, Guid employeeId, int year)
+    {
+        if ((type.GradeRates.FirstOrDefault(r => r.GradeId == grade)?.YearlyLimit ?? type.YearlyLimit) is not { } cap) return null;
+        decimal Share(int y) => !type.ProRata || joined.Year < y ? cap : joined.Year > y ? 0 : Math.Round(cap * (13 - joined.Month) / 12m, 0, MidpointRounding.AwayFromZero);
+        var allowance = Share(year);
+        if (type.CarryForward && joined.Year < year)
+            allowance += Math.Max(0, Share(year - 1) - await UsedAsync(db, employeeId, type.Id, new DateOnly(year - 1, 1, 1), new DateOnly(year - 1, 12, 31)));
+        return allowance;
+    }
+
+    /// <summary>The taxable part of each claim: items of taxable types, at most what the claim pays out.</summary>
+    public static async Task<Dictionary<Guid, decimal>> TaxablePartAsync(HrmsDbContext db, List<ExpenseClaim> claims)
+    {
+        var ids = claims.Select(c => c.Id).ToList();
+        if (ids.Count == 0) return [];
+        var taxable = await db.ExpenseClaims.Where(c => ids.Contains(c.Id)).SelectMany(c => c.Items)
+            .Where(i => i.ExpenseTypeId != null && db.ExpenseTypes.Any(t => t.Id == i.ExpenseTypeId && t.Taxable))
+            .GroupBy(i => i.ExpenseClaimId).Select(g => new { g.Key, Sum = g.Sum(i => i.ApprovedAmount ?? i.Amount) }).ToDictionaryAsync(x => x.Key, x => x.Sum);
+        return claims.Where(c => taxable.ContainsKey(c.Id)).ToDictionary(c => c.Id, c => Math.Min(taxable[c.Id], Math.Max(0, c.Total - c.AdvanceAdjusted)));
     }
 
     /// <summary>An approved claim linked to an advance is covered by it first; only the rest is paid.</summary>

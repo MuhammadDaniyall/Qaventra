@@ -19,6 +19,16 @@ public class ExpenseType : TenantEntity
     public decimal? PerClaimLimit { get; set; }
     /// <summary>Most a person may claim in a calendar year (approved and pending).</summary>
     public decimal? YearlyLimit { get; set; }
+    /// <summary>Most a person may claim in a calendar month.</summary>
+    public decimal? MonthlyLimit { get; set; }
+    /// <summary>Joiners get the yearly limit for the months left in their first year.</summary>
+    public bool ProRata { get; set; }
+    /// <summary>What was not claimed of last year's limit is added to this year's.</summary>
+    public bool CarryForward { get; set; }
+    /// <summary>Only for men or only for women; null = everyone.</summary>
+    public Gender? ForGender { get; set; }
+    /// <summary>Paid with salary as a taxable earning instead of a tax-free reimbursement.</summary>
+    public bool Taxable { get; set; }
     public bool ReceiptRequired { get; set; }
     /// <summary>Comma-separated grade ids it is open to; empty = everyone.</summary>
     public string? GradeIds { get; set; }

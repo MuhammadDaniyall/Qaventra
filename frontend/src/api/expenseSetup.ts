@@ -24,6 +24,11 @@ export interface ExpenseType {
   isActive: boolean;
   gradeRates: ExpenseGradeRate[];
   stamps: RecordStamps;
+  monthlyLimit: number | null;
+  proRata: boolean;
+  carryForward: boolean;
+  forGender: 'Male' | 'Female' | null;
+  taxable: boolean;
 }
 export type SaveExpenseType = Omit<ExpenseType, 'id' | 'stamps'>;
 
@@ -38,6 +43,9 @@ export interface ExpenseTypeForMe {
   yearlyLimit: number | null;
   usedThisYear: number;
   receiptRequired: boolean;
+  monthlyLimit: number | null;
+  usedThisMonth: number;
+  taxable: boolean;
 }
 
 export interface DistanceRoute {

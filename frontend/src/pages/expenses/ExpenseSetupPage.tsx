@@ -105,6 +105,8 @@ function Types() {
                   {t.name} <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">{humanize(t.category)}</span>
                   {!t.isActive && <Badge className="ms-2">Off</Badge>}
                   {t.receiptRequired && <Badge className="ms-2">Receipt</Badge>}
+                  {t.taxable && <Badge className="ms-2">Taxable</Badge>}
+                  {t.forGender && <Badge className="ms-2">{t.forGender === 'Female' ? 'Women' : 'Men'}</Badge>}
                 </Td>
                 <Td className="text-sm">
                   {CALC_LABEL[t.calculation]}
@@ -148,6 +150,11 @@ function TypeModal({ item, onClose }: { item: ExpenseType | null; onClose: () =>
           gradeIds: [],
           isActive: true,
           gradeRates: [],
+          monthlyLimit: null,
+          proRata: false,
+          carryForward: false,
+          forGender: null,
+          taxable: false,
         },
   );
   const num = (s: string) => (s === '' ? null : Number(s));
@@ -220,7 +227,24 @@ function TypeModal({ item, onClose }: { item: ExpenseType | null; onClose: () =>
         <Field label="Limit a year (Rs)">
           <Input type="number" min={0} value={v.yearlyLimit ?? ''} onChange={(e) => set({ yearlyLimit: num(e.target.value) })} />
         </Field>
+        <Field label="Limit a month (Rs)">
+          <Input type="number" min={0} value={v.monthlyLimit ?? ''} onChange={(e) => set({ monthlyLimit: num(e.target.value) })} />
+        </Field>
+        <Field label="For">
+          <Select value={v.forGender ?? ''} onChange={(e) => set({ forGender: (e.target.value || null) as SaveExpenseType['forGender'] })}>
+            <option value="">Everyone</option>
+            <option value="Female">Women only</option>
+            <option value="Male">Men only</option>
+          </Select>
+        </Field>
       </div>
+      {v.yearlyLimit != null && (
+        <>
+          <Checkbox label="Pro-rata: joiners get the yearly limit for the months left in their first year" checked={v.proRata} onChange={(e) => set({ proRata: e.target.checked })} />
+          <Checkbox label="Carry forward: what was not claimed last year is added to this year" checked={v.carryForward} onChange={(e) => set({ carryForward: e.target.checked })} />
+        </>
+      )}
+      <Checkbox label="Taxable: paid with salary as a taxable earning" checked={v.taxable} onChange={(e) => set({ taxable: e.target.checked })} />
       <Checkbox label="Receipt required" checked={v.receiptRequired} onChange={(e) => set({ receiptRequired: e.target.checked })} />
       <Checkbox label="In use" checked={v.isActive} onChange={(e) => set({ isActive: e.target.checked })} />
       {grades.length > 0 && (
