@@ -23,6 +23,12 @@ public class Tenant : BaseEntity
     public string? AllowedEmailDomains { get; set; }
     /// <summary>The ID card design (colour, fields, back side, orientation) as JSON, shared by everyone in HR.</summary>
     public string? IdCardTemplateJson { get; set; }
+    /// <summary>Shared progress of the company's scripted users (virtual clients) and the lease that lets one computer run them at a time.</summary>
+    public string? AutomationStateJson { get; set; }
+    public string? AutomationHolder { get; set; }
+    public DateTime? AutomationLeaseUntilUtc { get; set; }
+    public string? AutomationLastHolder { get; set; }
+    public DateTime? AutomationLastRunAtUtc { get; set; }
 
     public BillingCycle? BillingCycle { get; set; }
     /// <summary>Fixed base fee per billing cycle, in PKR (optional).</summary>

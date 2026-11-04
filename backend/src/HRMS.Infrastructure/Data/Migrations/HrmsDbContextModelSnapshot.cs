@@ -9646,6 +9646,21 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<string>("AllowedEmailDomains")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("AutomationHolder")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AutomationLastHolder")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("AutomationLastRunAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("AutomationLeaseUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AutomationStateJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("BillingCycle")
                         .HasColumnType("int");
 

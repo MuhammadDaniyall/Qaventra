@@ -46,6 +46,7 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hostname } from 'node:os';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
@@ -65,6 +66,13 @@ const SEED = arg('seed', '');
 const PLAN_ONLY = flag('plan');
 const SECRETS = resolve(arg('state-dir', join(here, 'secrets')));
 const STATE_FILE = join(SECRETS, 'virtual-clients-state.json');
+// Several computers may run this (a Mac and a Windows PC). Each company's progress is shared on the server, and a lease
+// lets one computer work at a time. --defer-to-others <min> makes this computer stand aside while another one has run
+// within that many minutes (the backup computer uses it, so the main one keeps the work while it is awake).
+const HOLDER = arg('holder', hostname()).slice(0, 100);
+const DEFER = Math.max(0, Number(arg('defer-to-others', '0')) || 0);
+const LEASE_MINUTES = Math.max(10, Number(arg('lease-minutes', '45')) || 45);
+const SHARED = !flag('no-share');
 
 if (!LOGIN_FILES.length) {
   const fallback = join(here, 'secrets', 'demo-logins.txt');
@@ -301,6 +309,72 @@ const state = existsSync(STATE_FILE) ? JSON.parse(readFileSync(STATE_FILE, 'utf8
 function saveState() {
   mkdirSync(SECRETS, { recursive: true });
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+  // Copy the progress to the server soon after it changes, so another computer never repeats it.
+  if (leased.size) {
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => void pushShared(), 15000);
+  }
+}
+
+// ---------- Shared progress and the lease (see HOLDER) ----------
+
+/** Companies whose lease this run holds. */
+const leased = new Set();
+let pushTimer = null;
+/** What is shared between computers: never the sign-in tokens. */
+const shareable = (s) => ({ people: s.people ?? [], days: s.days ?? [], castGrown: !!s.castGrown, progress: s.progress ?? {}, firstDay: s.firstDay ?? null });
+
+/** Adds the server's progress to ours: everything either computer did counts as done. */
+function mergeShared(local, shared) {
+  if (!shared) return;
+  local.castGrown ||= !!shared.castGrown;
+  if (shared.firstDay && (!local.firstDay || shared.firstDay < local.firstDay)) local.firstDay = shared.firstDay;
+  local.days = [...new Set([...(local.days ?? []), ...(shared.days ?? [])])].sort();
+  local.people ??= [];
+  const emails = new Set(local.people.map((p) => p.email));
+  for (const p of shared.people ?? []) if (!emails.has(p.email)) local.people.push(p);
+  local.progress ??= {};
+  for (const [day, items] of Object.entries(shared.progress ?? {})) {
+    const mine = (local.progress[day] ??= {});
+    for (const [k, v] of Object.entries(items ?? {})) if (!(k in mine) || (v?.s === 'done' && mine[k]?.s !== 'done')) mine[k] = v;
+  }
+}
+
+/** Takes the company's lease and merges the shared progress; false when another computer has the turn. */
+async function takeTurn(co) {
+  if (!SHARED) return true;
+  const lease = await http('POST', '/setup/automation/lease', { holder: HOLDER, minutes: LEASE_MINUTES, deferToOthersMinutes: DEFER }, co.hr.token);
+  if (!lease.ok) {
+    // An older server without the lease: carry on alone, as before.
+    if (lease.status === 404) return true;
+    throw new Error(`Could not take the turn (${lease.status} ${lease.title})`);
+  }
+  if (!lease.data.granted) {
+    co.skipReason = lease.data.reason ?? `${lease.data.holder ?? lease.data.lastHolder} has the turn`;
+    return false;
+  }
+  leased.add(co);
+  const shared = await http('GET', '/setup/automation', null, co.hr.token);
+  if (shared.ok && shared.data?.state) {
+    try {
+      mergeShared(co.state, JSON.parse(shared.data.state));
+    } catch {
+      // unreadable shared state: ours stands and replaces it
+    }
+  }
+  return true;
+}
+
+async function pushShared() {
+  clearTimeout(pushTimer);
+  for (const co of leased)
+    await http('PUT', '/setup/automation/state', { holder: HOLDER, state: JSON.stringify(shareable(co.state)) }, co.hr.token);
+}
+
+async function endTurns() {
+  await pushShared();
+  for (const co of leased) await http('POST', '/setup/automation/release', { holder: HOLDER }, co.hr.token);
+  leased.clear();
 }
 
 // ---------- Logins file ----------
@@ -450,6 +524,11 @@ async function setupCompany(file) {
   await co.hr.signIn();
   if (!co.hr.token) throw new Error(`Could not sign in as ${hrLogin.email}.`);
   co.hr.label = `${co.hr.me.fullName} (HR manager)`;
+  if (!PLAN_ONLY && !(await takeTurn(co))) {
+    const e = new Error(`not this computer's turn: ${co.skipReason}`);
+    e.skip = true;
+    throw e;
+  }
   if (mgrLogin) {
     co.mgr = make('Manager', 'manager', mgrLogin.email);
     await co.mgr.signIn();
@@ -1629,12 +1708,18 @@ async function main() {
       companies.push(co);
     } catch (e) {
       lines.push(`${stamp} ${file}: ${e.message}`);
-      record({ persona: 'setup', kind: 'failed', intent: `Start ${file}`, method: '-', path: '-', query: '', status: 0, title: e.message, body: e.message });
+      if (!e.skip)
+        record({ persona: 'setup', kind: 'failed', intent: `Start ${file}`, method: '-', path: '-', query: '', status: 0, title: e.message, body: e.message });
     }
   }
   if (PLAN_ONLY) {
     for (const co of companies) printPlan(co, TODAY);
     return;
+  }
+  if (!companies.length) {
+    // No company's turn here (another computer is working): nothing to report.
+    for (const l of lines) console.log(l);
+    process.exit(0);
   }
   // ... then let them all work at the same time, so every company's punches land on their minute.
   const title = BACKFILL ? `Backfill run at ${stamp.slice(11)}: ${DAYS} day(s) ending ${iso(LAST_DAY)}` : `Run at ${stamp.slice(11)}${DRY_PUNCHES ? ' (--now, dry punches)' : ''}`;
@@ -1658,7 +1743,7 @@ async function main() {
     process.removeAllListeners(sig);
     process.on(sig, () => {
       finish(' (stopped before the end)');
-      process.exit(130);
+      endTurns().finally(() => process.exit(130));
     });
   }
   await Promise.all(companies.map(async (co) => {
@@ -1691,6 +1776,7 @@ async function main() {
     lines.push(`${stamp} ${co.name}: ${result ? `${result.stats.actions} due action(s), ${result.stats.punches} punch(es)${result.stats.missed ? `, ${result.stats.missed} missed` : ''}, ` : ''}`
       + `${n('did')} done, ${n('refused')} refused, ${n('failed')} failed${result ? `; next ${result.next}` : ''}`);
   }));
+  await endTurns();
   const failed = finish();
   process.exit(failed.length ? 2 : 0);
 }

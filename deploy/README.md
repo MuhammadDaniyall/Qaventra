@@ -116,9 +116,13 @@ Saturday from 08:00 to 23:30 (a `StartCalendarInterval` entry per weekday for mi
 while the Mac slept runs on wake. Stop it with `launchctl bootout gui/$(id -u)/com.qaventra.virtual-clients`.
 
 On Windows, `run-virtual-clients.ps1` does the same; the Task Scheduler task "Qaventra virtual clients" starts it every
-30 minutes Monday to Saturday from 08:00 to 23:30 (missed runs start when the computer wakes). Copy the
-`deploy/secrets/logins-*.txt` files from the Mac first. Run it on one computer only: progress is kept per computer,
-so two computers would do each day's work twice. Stop it with `Unregister-ScheduledTask "Qaventra virtual clients"`.
+30 minutes Monday to Saturday at minutes 15 and 45 from 08:15 to 23:45 (missed runs start when the computer wakes).
+Copy the `deploy/secrets/logins-*.txt` files from the Mac first. Stop it with `Unregister-ScheduledTask "Qaventra virtual clients"`.
+
+Both computers can run it: each company's progress is shared on the server (`/api/setup/automation`) and a lease lets
+one computer work at a time, so nothing is done twice. The Mac runs as `--holder mac`; Windows runs as
+`--holder windows --defer-to-others 35`, so it stands aside while the Mac has run in the last 35 minutes and takes over
+only while the Mac is asleep or off. The Mac's script pulls the latest code before each run.
 
 Useful by hand:
 

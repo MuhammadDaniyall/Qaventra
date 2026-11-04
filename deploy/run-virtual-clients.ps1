@@ -17,5 +17,5 @@ Add-Content -Path $log -Value "$stamp starting with $($logins -join ', ')"
 $node = 'C:\Program Files\nodejs\node.exe'
 if (-not (Test-Path $node)) { $node = 'node' }
 # cmd's redirection keeps the log plain UTF-8/ANSI text (PowerShell 5's >> would write UTF-16).
-& cmd.exe /c "`"$node`" deploy/virtual-clients.mjs --logins $($logins -join ',') >> `"$log`" 2>&1"
+& cmd.exe /c "`"$node`" deploy/virtual-clients.mjs --holder windows --defer-to-others 35 --logins $($logins -join ',') >> `"$log`" 2>&1"
 exit $LASTEXITCODE
