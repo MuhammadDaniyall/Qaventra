@@ -25,6 +25,7 @@ import { WelcomeBanner } from '../onboarding/WelcomePage';
 import { AttendanceTrendChart, DepartmentChart } from './Charts';
 import { NewRequestMenu } from '../requests/MyRequestsPage';
 import { SetupGuide } from './SetupGuide';
+import { WhoIsInCard } from './WhoIsInCard';
 import { ActionCenter, CelebrationsCard, HolidaysCard, LeaveBalanceCard, MyRequestsCard } from './HomeCards';
 import { tx } from '../../lib/i18n';
 
@@ -125,6 +126,7 @@ export function DashboardPage() {
             </Card>
             {payroll && <LastPayrollCard d={d} loading={loading} />}
             <HolidaysCard holidays={d?.upcomingHolidays} loading={loading} />
+            <WhoIsInCard d={d} />
           </div>
         </>
       ) : (
