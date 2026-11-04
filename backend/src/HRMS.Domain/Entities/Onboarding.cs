@@ -12,6 +12,8 @@ public class OnboardingTemplate : TenantEntity
     /// <summary>Starter kit queued for hand-over when onboarding starts.</summary>
     public Guid? AssetKitId { get; set; }
     public string? WelcomeMessage { get; set; }
+    /// <summary>When every task is done, the onboarding goes through the Onboarding approval chain before it is complete.</summary>
+    public bool RequiresApproval { get; set; }
     public List<OnboardingTemplateTask> Tasks { get; set; } = [];
 }
 
@@ -46,6 +48,10 @@ public class Onboarding : TenantEntity
     public string? IntroductionJson { get; set; }
     public DateTime? IntroducedAtUtc { get; set; }
     public string? StartedByName { get; set; }
+    /// <summary>Copied from the template: completion needs approval.</summary>
+    public bool RequiresApproval { get; set; }
+    /// <summary>The last approver's note (e.g. why it was sent back).</summary>
+    public string? ApprovalNote { get; set; }
     public List<OnboardingTask> Tasks { get; set; } = [];
 }
 

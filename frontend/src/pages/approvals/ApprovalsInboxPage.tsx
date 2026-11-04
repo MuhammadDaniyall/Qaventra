@@ -93,6 +93,7 @@ const TYPE_ICONS: Record<ApprovalRequestType, LucideIcon> = {
   ExpenseAdvance: HandCoins,
   FinalSettlement: UserMinus,
   Letter: FileSignature,
+  Onboarding: UserPlus,
 };
 
 type Filter = 'all' | ApprovalRequestType;
@@ -122,6 +123,10 @@ const decideApi: Record<
   FinalSettlement: {
     approve: (id, note) => approvalsApi.decide('FinalSettlement', id, { approve: true, note }),
     reject: (id, note) => approvalsApi.decide('FinalSettlement', id, { approve: false, note }),
+  },
+  Onboarding: {
+    approve: (id, note) => approvalsApi.decide('Onboarding', id, { approve: true, note }),
+    reject: (id, note) => approvalsApi.decide('Onboarding', id, { approve: false, note }),
   },
 };
 

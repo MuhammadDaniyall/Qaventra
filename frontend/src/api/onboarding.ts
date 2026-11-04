@@ -3,7 +3,7 @@ import type { RecordStamps } from '../types';
 
 export type OnboardingTaskCategory = 'Paperwork' | 'ItSetup' | 'Workspace' | 'Training' | 'Introduction' | 'Other';
 export type OnboardingAssignee = 'NewJoiner' | 'LineManager' | 'Buddy' | 'Hr' | 'SpecificEmployee';
-export type OnboardingStatus = 'InProgress' | 'Completed' | 'Cancelled';
+export type OnboardingStatus = 'InProgress' | 'Completed' | 'Cancelled' | 'PendingApproval';
 
 export const TASK_CATEGORY_LABELS: Record<OnboardingTaskCategory, string> = {
   Paperwork: 'Paperwork',
@@ -42,6 +42,7 @@ export interface OnboardingTemplate {
   welcomeMessage: string | null;
   tasks: TemplateTask[];
   stamps: RecordStamps;
+  requiresApproval: boolean;
 }
 
 export type SaveOnboardingTemplate = Omit<OnboardingTemplate, 'id' | 'stamps'>;
@@ -94,6 +95,8 @@ export interface OnboardingDetail {
   instructions: string | null;
   startedByName: string | null;
   introduction: Record<string, string | null> | null;
+  requiresApproval: boolean;
+  approvalNote: string | null;
   tasks: OnboardingTask[];
 }
 
@@ -119,6 +122,7 @@ export const onboardingApi = {
   deleteTask: (taskId: string) => http.del(`/onboarding/tasks/${taskId}`),
   setTask: (taskId: string, done: boolean, note?: string | null) => http.post(`/onboarding/tasks/${taskId}`, { done, note: note ?? null }),
   cancel: (id: string) => http.post(`/onboarding/${id}/cancel`),
+  submit: (id: string) => http.post(`/onboarding/${id}/submit`),
   myTasks: (done = false) => http.get<OnboardingTask[]>('/onboarding/my-tasks', { done }),
   welcome: () => http.get<Welcome>('/onboarding/welcome'),
   introduce: (answers: Record<string, string | null>) => http.post('/onboarding/introduce', { answers }),

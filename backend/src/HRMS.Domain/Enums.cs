@@ -299,6 +299,8 @@ public enum OnboardingStatus
     InProgress = 1,
     Completed = 2,
     Cancelled = 3,
+    /// <summary>Every task is done; waiting for the Onboarding approval chain.</summary>
+    PendingApproval = 4,
 }
 
 public enum AssetCondition
@@ -576,6 +578,7 @@ public enum ApprovalRequestType
     ExpenseAdvance = 17,
     FinalSettlement = 18,
     Letter = 19,
+    Onboarding = 20,
 }
 
 public enum PayRequestKind

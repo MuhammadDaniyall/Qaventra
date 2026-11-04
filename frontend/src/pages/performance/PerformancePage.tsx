@@ -90,11 +90,20 @@ export function PerformancePage() {
 function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; queryFn: () => Promise<ReviewListItem[]> }; mine?: boolean }) {
   const navigate = useNavigate();
   const list = useQuery({ queryKey: query.queryKey, queryFn: query.queryFn });
-  if (list.isLoading) return <Card><SkeletonRows rows={3} cols={4} /></Card>;
+  if (list.isLoading)
+    return (
+      <Card>
+        <SkeletonRows rows={3} cols={4} />
+      </Card>
+    );
   if (!list.data?.length)
     return (
       <Card>
-        <EmptyState icon={Target} title={mine ? 'No reviews yet' : 'Nobody to review'} description={mine ? 'When HR starts a review cycle, your review appears here.' : 'Reviews of people who report to you appear here.'} />
+        <EmptyState
+          icon={Target}
+          title={mine ? 'No reviews yet' : 'Nobody to review'}
+          description={mine ? 'When HR starts a review cycle, your review appears here.' : 'Reviews of people who report to you appear here.'}
+        />
       </Card>
     );
   return (
@@ -115,7 +124,9 @@ function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; qu
             <Tr key={r.id} onClick={() => navigate(`/performance/reviews/${r.id}`)}>
               <Td>
                 <p className="font-medium text-zinc-900 dark:text-zinc-100">{mine ? r.cycle : r.employeeName}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{mine ? (r.reviewer ? `Reviewer: ${r.reviewer}` : 'Reviewed by HR') : `${r.cycle}${r.department ? ` · ${r.department}` : ''}`}</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {mine ? (r.reviewer ? `Reviewer: ${r.reviewer}` : 'Reviewed by HR') : `${r.cycle}${r.department ? ` · ${r.department}` : ''}`}
+                </p>
               </Td>
               <Td>
                 <Badge tone={r.stage === 'Done' ? 'green' : r.stage === 'SignOff' ? 'violet' : 'amber'}>{STAGE_LABELS[r.stage]}</Badge>
@@ -251,7 +262,17 @@ function CycleModal({ item, onClose }: { item: ReviewCycle | null; onClose: () =
   const launched = item?.status === 'Active';
   const save = useMutation({
     mutationFn: () => {
-      const b = { name: name.trim(), periodFrom: from, periodTo: to, templateId, departmentIds: depts, goalsDue: goalsDue || null, selfReviewDue: selfDue || null, managerReviewDue: managerDue || null, finalReview };
+      const b = {
+        name: name.trim(),
+        periodFrom: from,
+        periodTo: to,
+        templateId,
+        departmentIds: depts,
+        goalsDue: goalsDue || null,
+        selfReviewDue: selfDue || null,
+        managerReviewDue: managerDue || null,
+        finalReview,
+      };
       return item ? performanceApi.updateCycle(item.id, b) : performanceApi.createCycle(b);
     },
     onSuccess: () => {
@@ -305,7 +326,13 @@ function CycleModal({ item, onClose }: { item: ReviewCycle | null; onClose: () =
         <Field label="Who" hint={depts.length ? `${depts.length} department(s)` : 'Everyone'} className="sm:col-span-2">
           <div className="flex flex-wrap gap-1.5">
             {departments.data?.map((d) => (
-              <Checkbox key={d.id} label={d.name} disabled={launched} checked={depts.includes(d.id)} onChange={(e) => setDepts((x) => (e.target.checked ? [...x, d.id] : x.filter((y) => y !== d.id)))} />
+              <Checkbox
+                key={d.id}
+                label={d.name}
+                disabled={launched}
+                checked={depts.includes(d.id)}
+                onChange={(e) => setDepts((x) => (e.target.checked ? [...x, d.id] : x.filter((y) => y !== d.id)))}
+              />
             ))}
           </div>
         </Field>
@@ -376,7 +403,16 @@ function TemplateModal({ item, onClose }: { item: PerformanceTemplate | null; on
   const [sections, setSections] = useState<ReviewSection[]>(
     item?.sections ?? [
       { name: 'Goals', weight: 60, kind: 'Goals', items: [] },
-      { name: 'Values', weight: 40, kind: 'Competencies', items: [{ title: 'Teamwork', description: null }, { title: 'Ownership', description: null }, { title: 'Communication', description: null }] },
+      {
+        name: 'Values',
+        weight: 40,
+        kind: 'Competencies',
+        items: [
+          { title: 'Teamwork', description: null },
+          { title: 'Ownership', description: null },
+          { title: 'Communication', description: null },
+        ],
+      },
     ],
   );
   const [error, setError] = useState<string | null>(null);
@@ -423,7 +459,12 @@ function TemplateModal({ item, onClose }: { item: PerformanceTemplate | null; on
             <Input value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} />
           </Field>
         </div>
-        <Checkbox label="Self review" description="Employees rate themselves before their manager." checked={selfReview} onChange={(e) => setSelfReview(e.target.checked)} />
+        <Checkbox
+          label="Self review"
+          description="Employees rate themselves before their manager."
+          checked={selfReview}
+          onChange={(e) => setSelfReview(e.target.checked)}
+        />
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Sections</p>
           <Badge tone={total === 100 ? 'green' : 'amber'}>Weights {total} / 100</Badge>
@@ -442,7 +483,9 @@ function TemplateModal({ item, onClose }: { item: PerformanceTemplate | null; on
               </IconButton>
             </div>
             {s.kind === 'Goals' ? (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Each person writes their own goals at the start of the cycle; their manager approves them.</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Each person writes their own goals at the start of the cycle; their manager approves them.
+              </p>
             ) : (
               <Textarea
                 rows={3}
@@ -454,7 +497,12 @@ function TemplateModal({ item, onClose }: { item: PerformanceTemplate | null; on
             )}
           </div>
         ))}
-        <Button variant="ghost" size="sm" icon={<Plus className="size-3.5" />} onClick={() => setSections((x) => [...x, { name: '', weight: 0, kind: 'Competencies', items: [] }])}>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<Plus className="size-3.5" />}
+          onClick={() => setSections((x) => [...x, { name: '', weight: 0, kind: 'Competencies', items: [] }])}
+        >
           Add section
         </Button>
       </div>
@@ -477,20 +525,39 @@ function SettingsTab() {
     },
     onError: (err) => toast.error(err),
   });
-  if (!v) return <Card><SkeletonRows rows={4} cols={3} /></Card>;
+  if (!v)
+    return (
+      <Card>
+        <SkeletonRows rows={4} cols={3} />
+      </Card>
+    );
   const bellTotal = v.bellCurve.reduce((t, x) => t + x, 0);
   return (
     <Card className="max-w-3xl p-5">
       <div className="space-y-6">
         <div>
           <p className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Ratings and the bell curve</p>
-          <p className="mb-3 text-xs text-zinc-500">Name each rating and the share of people you expect at it. Calibration shows how the real spread compares.</p>
+          <p className="mb-3 text-xs text-zinc-500">
+            Name each rating and the share of people you expect at it. Calibration shows how the real spread compares.
+          </p>
           <div className="space-y-2">
             {v.ratingLabels.map((l, i) => (
               <div key={i} className="grid grid-cols-[32px_1fr_100px] items-center gap-2">
                 <span className="text-center font-semibold text-zinc-900 dark:text-zinc-100">{i + 1}</span>
-                <Input value={l} maxLength={40} onChange={(e) => setDraft({ ...v, ratingLabels: v.ratingLabels.map((x, j) => (j === i ? e.target.value : x)) })} aria-label={`Rating ${i + 1} name`} />
-                <Input type="number" min={0} max={100} value={v.bellCurve[i]} onChange={(e) => setDraft({ ...v, bellCurve: v.bellCurve.map((x, j) => (j === i ? Number(e.target.value) : x)) })} aria-label={`Rating ${i + 1} share`} />
+                <Input
+                  value={l}
+                  maxLength={40}
+                  onChange={(e) => setDraft({ ...v, ratingLabels: v.ratingLabels.map((x, j) => (j === i ? e.target.value : x)) })}
+                  aria-label={`Rating ${i + 1} name`}
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={v.bellCurve[i]}
+                  onChange={(e) => setDraft({ ...v, bellCurve: v.bellCurve.map((x, j) => (j === i ? Number(e.target.value) : x)) })}
+                  aria-label={`Rating ${i + 1} share`}
+                />
               </div>
             ))}
             <p className={bellTotal === 100 ? 'text-end text-xs text-zinc-500' : 'text-end text-xs font-medium text-red-600'}>Shares add up to {bellTotal}%</p>
@@ -502,14 +569,34 @@ function SettingsTab() {
           <div className="space-y-2">
             {v.raiseSlabs.map((s, i) => (
               <div key={i} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
-                <Input type="number" min={1} max={5} step="0.1" value={s.minScore} onChange={(e) => setDraft({ ...v, raiseSlabs: v.raiseSlabs.map((x, j) => (j === i ? { ...x, minScore: Number(e.target.value) } : x)) })} aria-label="Rating from" />
-                <Input type="number" min={0} max={100} value={s.raisePercent} onChange={(e) => setDraft({ ...v, raiseSlabs: v.raiseSlabs.map((x, j) => (j === i ? { ...x, raisePercent: Number(e.target.value) } : x)) })} aria-label="Raise %" />
+                <Input
+                  type="number"
+                  min={1}
+                  max={5}
+                  step="0.1"
+                  value={s.minScore}
+                  onChange={(e) => setDraft({ ...v, raiseSlabs: v.raiseSlabs.map((x, j) => (j === i ? { ...x, minScore: Number(e.target.value) } : x)) })}
+                  aria-label="Rating from"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={s.raisePercent}
+                  onChange={(e) => setDraft({ ...v, raiseSlabs: v.raiseSlabs.map((x, j) => (j === i ? { ...x, raisePercent: Number(e.target.value) } : x)) })}
+                  aria-label="Raise %"
+                />
                 <IconButton label="Remove step" onClick={() => setDraft({ ...v, raiseSlabs: v.raiseSlabs.filter((_, j) => j !== i) })}>
                   <Trash2 className="size-4" />
                 </IconButton>
               </div>
             ))}
-            <Button variant="ghost" size="sm" icon={<Plus className="size-3.5" />} onClick={() => setDraft({ ...v, raiseSlabs: [...v.raiseSlabs, { minScore: 3, raisePercent: 5 }] })}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={<Plus className="size-3.5" />}
+              onClick={() => setDraft({ ...v, raiseSlabs: [...v.raiseSlabs, { minScore: 3, raisePercent: 5 }] })}
+            >
               Add step
             </Button>
           </div>

@@ -197,6 +197,7 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             ApprovalRequestType.ExpenseAdvance => services.GetRequiredService<ExpenseAdvanceService>().DecideAsync,
             ApprovalRequestType.FinalSettlement => services.GetRequiredService<SettlementApprovalService>().DecideAsync,
             ApprovalRequestType.Letter => services.GetRequiredService<LetterService>().DecideAsync,
+            ApprovalRequestType.Onboarding => services.GetRequiredService<OnboardingService>().DecideAsync,
             _ => throw new NotFoundException("Request type"),
         };
         await decide(subjectId, req.Approve, req.Note);

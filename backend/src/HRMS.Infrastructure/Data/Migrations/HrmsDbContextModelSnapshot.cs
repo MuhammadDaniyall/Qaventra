@@ -5612,6 +5612,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ApprovalNote")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid?>("BuddyEmployeeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -5661,6 +5664,9 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<TimeOnly?>("ReportingTime")
                         .HasColumnType("time");
+
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("bit");
 
                     b.Property<string>("StartedByName")
                         .HasMaxLength(200)
@@ -5801,6 +5807,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");

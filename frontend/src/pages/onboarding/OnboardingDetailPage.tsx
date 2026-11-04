@@ -16,7 +16,24 @@ import {
 } from '../../api/onboarding';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
-import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, ErrorState, Field, FormError, Input, Modal, PageHeader, PageSpinner, Select, StatusBadge, useToast } from '../../components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  ConfirmDialog,
+  ErrorState,
+  Field,
+  FormError,
+  Input,
+  Modal,
+  PageHeader,
+  PageSpinner,
+  Select,
+  StatusBadge,
+  useToast,
+} from '../../components/ui';
 import { RecordStamp } from '../../components/RecordStamp';
 import { formatDate, formatTime, todayIso } from '../../lib/format';
 import { TaskList } from './shared';
@@ -35,6 +52,14 @@ export function OnboardingDetailPage() {
     onSuccess: () => {
       toast.success('Onboarding cancelled');
       setCancelling(false);
+      qc.invalidateQueries({ queryKey: qk.onboarding });
+    },
+    onError: (err) => toast.error(err),
+  });
+  const submit = useMutation({
+    mutationFn: () => onboardingApi.submit(id),
+    onSuccess: () => {
+      toast.success('Sent for approval');
       qc.invalidateQueries({ queryKey: qk.onboarding });
     },
     onError: (err) => toast.error(err),
@@ -67,7 +92,11 @@ export function OnboardingDetailPage() {
         title={s.employeeName}
         description={
           <span className="flex flex-wrap items-center gap-2">
-            {[s.designation, s.department].filter(Boolean).join(' · ')} · joins {formatDate(s.joiningDate)} <StatusBadge status={s.status === 'InProgress' ? 'Pending' : s.status === 'Completed' ? 'Approved' : 'Cancelled'} label={s.status === 'InProgress' ? 'In progress' : s.status} />
+            {[s.designation, s.department].filter(Boolean).join(' · ')} · joins {formatDate(s.joiningDate)}{' '}
+            <StatusBadge
+              status={s.status === 'InProgress' ? 'Pending' : s.status === 'Completed' ? 'Approved' : s.status === 'PendingApproval' ? 'Pending' : 'Cancelled'}
+              label={s.status === 'InProgress' ? 'In progress' : s.status === 'PendingApproval' ? 'Waiting for approval' : s.status}
+            />
           </span>
         }
         actions={
@@ -85,10 +114,37 @@ export function OnboardingDetailPage() {
         }
       />
       <RecordStamp stamps={s.stamps} className="-mt-2 mb-4" />
+      {d.approvalNote && s.status !== 'Completed' && (
+        <Card className="mb-4 border-amber-200 dark:border-amber-500/30">
+          <CardHeader
+            title="Sent back by the approver"
+            description={d.approvalNote}
+            actions={
+              hr &&
+              active &&
+              s.total > 0 &&
+              s.done === s.total && (
+                <Button size="sm" loading={submit.isPending} onClick={() => submit.mutate()}>
+                  Send for approval again
+                </Button>
+              )
+            }
+          />
+        </Card>
+      )}
+      {s.status === 'PendingApproval' && (
+        <Card className="mb-4">
+          <CardHeader title="Waiting for approval" description="Every task is done. It is complete once the approvers accept it." />
+        </Card>
+      )}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card>
           <CardHeader title="Tasks" description={`${s.done} of ${s.total} done${s.overdue ? ` · ${s.overdue} late` : ''}`} />
-          {d.tasks.length ? <TaskList tasks={d.tasks} onDelete={hr && active ? setDeleting : undefined} /> : <CardBody className="text-sm text-zinc-500 dark:text-zinc-400">No tasks yet.</CardBody>}
+          {d.tasks.length ? (
+            <TaskList tasks={d.tasks} onDelete={hr && active ? setDeleting : undefined} />
+          ) : (
+            <CardBody className="text-sm text-zinc-500 dark:text-zinc-400">No tasks yet.</CardBody>
+          )}
         </Card>
         <div className="space-y-4">
           <FirstDay d={d} />
@@ -164,7 +220,9 @@ export function FirstDay({ d }: { d: OnboardingDetail }) {
               )}
             </>,
           )}
-        {d.instructions && <p className="rounded-lg bg-zinc-50 p-3 text-sm whitespace-pre-line text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300">{d.instructions}</p>}
+        {d.instructions && (
+          <p className="rounded-lg bg-zinc-50 p-3 text-sm whitespace-pre-line text-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300">{d.instructions}</p>
+        )}
         {d.summary.introduced && <Badge tone="green">Introduced to the team</Badge>}
       </CardBody>
     </Card>
@@ -182,7 +240,14 @@ function AddTaskModal({ d, onClose }: { d: OnboardingDetail; onClose: () => void
   const [due, setDue] = useState(d.summary.joiningDate > todayIso() ? d.summary.joiningDate : todayIso());
   const [error, setError] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: () => onboardingApi.addTask(d.summary.id, { title: title.trim(), category, assigneeKind: kind, assigneeEmployeeId: kind === 'SpecificEmployee' ? who || null : null, dueOn: due }),
+    mutationFn: () =>
+      onboardingApi.addTask(d.summary.id, {
+        title: title.trim(),
+        category,
+        assigneeKind: kind,
+        assigneeEmployeeId: kind === 'SpecificEmployee' ? who || null : null,
+        dueOn: due,
+      }),
     onSuccess: () => {
       toast.success('Task added');
       qc.invalidateQueries({ queryKey: qk.onboarding });

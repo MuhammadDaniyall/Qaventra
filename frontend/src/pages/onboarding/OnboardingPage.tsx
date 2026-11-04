@@ -94,8 +94,18 @@ export function OnboardingPage() {
 function List({ status }: { status: 'InProgress' | 'Completed' }) {
   const navigate = useNavigate();
   const list = useQuery({ queryKey: [...qk.onboarding, 'list', status], queryFn: () => onboardingApi.list(status) });
-  if (list.isLoading) return <Card><SkeletonRows rows={4} cols={4} /></Card>;
-  if (list.isError) return <Card><ErrorState error={list.error} onRetry={() => list.refetch()} /></Card>;
+  if (list.isLoading)
+    return (
+      <Card>
+        <SkeletonRows rows={4} cols={4} />
+      </Card>
+    );
+  if (list.isError)
+    return (
+      <Card>
+        <ErrorState error={list.error} onRetry={() => list.refetch()} />
+      </Card>
+    );
   if (!list.data?.length)
     return (
       <Card>
@@ -258,15 +268,23 @@ function StartModal({ onClose }: { onClose: () => void }) {
         <Field label="Buddy" hint="Shows them around; gets the buddy tasks" className="sm:col-span-2">
           <Select value={buddy} onChange={(e) => setBuddy(e.target.value)}>
             <option value="">No buddy (their manager does buddy tasks)</option>
-            {people.data?.filter((p) => p.id !== employeeId).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
+            {people.data
+              ?.filter((p) => p.id !== employeeId)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
           </Select>
         </Field>
         <Field label="First-day instructions" hint="Blank uses the template's welcome message" className="sm:col-span-2">
-          <Textarea rows={3} maxLength={4000} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="Bring your CNIC and two photos. Parking is behind the building." />
+          <Textarea
+            rows={3}
+            maxLength={4000}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+            placeholder="Bring your CNIC and two photos. Parking is behind the building."
+          />
         </Field>
       </div>
     </Modal>
@@ -286,7 +304,11 @@ function Templates() {
         </Button>
       </div>
       {!list.data?.length ? (
-        <EmptyState icon={ClipboardCheck} title="No templates" description="E.g. a standard joiner checklist: offer pack, laptop, accounts, office tour, first-week plan." />
+        <EmptyState
+          icon={ClipboardCheck}
+          title="No templates"
+          description="E.g. a standard joiner checklist: offer pack, laptop, accounts, office tour, first-week plan."
+        />
       ) : (
         <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
           {list.data.map((t) => (
@@ -312,7 +334,15 @@ function Templates() {
   );
 }
 
-const blankTask = (): TemplateTask => ({ id: null, title: '', description: null, category: 'Paperwork', assigneeKind: 'Hr', assigneeEmployeeId: null, dueOffsetDays: 0 });
+const blankTask = (): TemplateTask => ({
+  id: null,
+  title: '',
+  description: null,
+  category: 'Paperwork',
+  assigneeKind: 'Hr',
+  assigneeEmployeeId: null,
+  dueOffsetDays: 0,
+});
 
 function TemplateModal({ item, onClose }: { item: OnboardingTemplate | null; onClose: () => void }) {
   const toast = useToast();
@@ -322,6 +352,7 @@ function TemplateModal({ item, onClose }: { item: OnboardingTemplate | null; onC
   const [name, setName] = useState(item?.name ?? '');
   const [description, setDescription] = useState(item?.description ?? '');
   const [isDefault, setIsDefault] = useState(item?.isDefault ?? false);
+  const [requiresApproval, setRequiresApproval] = useState(item?.requiresApproval ?? false);
   const [kit, setKit] = useState(item?.assetKitId ?? '');
   const [welcome, setWelcome] = useState(item?.welcomeMessage ?? '');
   const [tasks, setTasks] = useState<TemplateTask[]>(item?.tasks.length ? item.tasks : [blankTask()]);
@@ -333,6 +364,7 @@ function TemplateModal({ item, onClose }: { item: OnboardingTemplate | null; onC
         name: name.trim(),
         description: description.trim() || null,
         isDefault,
+        requiresApproval,
         assetKitId: kit || null,
         welcomeMessage: welcome.trim() || null,
         tasks: tasks.filter((t) => t.title.trim()).map((t) => ({ ...t, title: t.title.trim() })),
@@ -386,14 +418,34 @@ function TemplateModal({ item, onClose }: { item: OnboardingTemplate | null; onC
           <Field label="Welcome message" hint="Shown on the new joiner's welcome page" className="sm:col-span-2">
             <Textarea rows={2} maxLength={4000} value={welcome} onChange={(e) => setWelcome(e.target.value)} />
           </Field>
-          <Checkbox className="sm:col-span-2" label="Default" description="Start this automatically for every employee you add." checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />
+          <Checkbox
+            className="sm:col-span-2"
+            label="Default"
+            description="Start this automatically for every employee you add."
+            checked={isDefault}
+            onChange={(e) => setIsDefault(e.target.checked)}
+          />
+          <Checkbox
+            className="sm:col-span-2"
+            label="Needs approval"
+            description="When every task is done, it goes to the Onboarding approval chain before it counts as complete."
+            checked={requiresApproval}
+            onChange={(e) => setRequiresApproval(e.target.checked)}
+          />
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Tasks</p>
           <div className="space-y-2">
             {tasks.map((t, i) => (
               <div key={i} className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-200 p-3 md:grid-cols-[2fr_1fr_1fr_90px_auto] dark:border-zinc-800">
-                <Input className="col-span-2 md:col-span-1" value={t.title} maxLength={200} placeholder="Task" onChange={(e) => set(i, { title: e.target.value })} aria-label="Task" />
+                <Input
+                  className="col-span-2 md:col-span-1"
+                  value={t.title}
+                  maxLength={200}
+                  placeholder="Task"
+                  onChange={(e) => set(i, { title: e.target.value })}
+                  aria-label="Task"
+                />
                 <Select value={t.category} onChange={(e) => set(i, { category: e.target.value as OnboardingTaskCategory })} aria-label="Category">
                   {(Object.keys(TASK_CATEGORY_LABELS) as OnboardingTaskCategory[]).map((c) => (
                     <option key={c} value={c}>
@@ -421,7 +473,12 @@ function TemplateModal({ item, onClose }: { item: OnboardingTemplate | null; onC
                   <Trash2 className="size-4" />
                 </IconButton>
                 {t.assigneeKind === 'SpecificEmployee' && (
-                  <Select className={cn('col-span-2 md:col-span-5')} value={t.assigneeEmployeeId ?? ''} onChange={(e) => set(i, { assigneeEmployeeId: e.target.value || null })} aria-label="Person">
+                  <Select
+                    className={cn('col-span-2 md:col-span-5')}
+                    value={t.assigneeEmployeeId ?? ''}
+                    onChange={(e) => set(i, { assigneeEmployeeId: e.target.value || null })}
+                    aria-label="Person"
+                  >
                     <option value="">Who?</option>
                     {people.data?.map((p) => (
                       <option key={p.id} value={p.id}>

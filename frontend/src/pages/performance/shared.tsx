@@ -21,7 +21,9 @@ export function RatingPicker({ value, onChange, labels }: { value: number | null
           title={names[n - 1]}
           className={cn(
             'flex min-w-12 flex-col items-center rounded-lg border px-2.5 py-1.5 text-xs transition',
-            value === n ? 'border-accent-500 bg-accent-600 text-white' : 'border-zinc-200 text-zinc-700 hover:border-accent-300 dark:border-zinc-700 dark:text-zinc-300',
+            value === n
+              ? 'border-accent-500 bg-accent-600 text-white'
+              : 'border-zinc-200 text-zinc-700 hover:border-accent-300 dark:border-zinc-700 dark:text-zinc-300',
           )}
         >
           <span className="text-sm font-semibold">{n}</span>
@@ -66,7 +68,11 @@ export function StageBar({
             <span
               className={cn(
                 'flex items-center gap-1 rounded-full px-2.5 py-1 font-medium',
-                done ? 'bg-accent-100 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300' : now ? 'bg-accent-600 text-white' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800',
+                done
+                  ? 'bg-accent-100 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300'
+                  : now
+                    ? 'bg-accent-600 text-white'
+                    : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800',
               )}
             >
               {done && <Check className="size-3" />}
@@ -106,7 +112,8 @@ export function NineBox({ reviews, onPick }: { reviews: ReviewListItem[]; onPick
             {[1, 2, 3].map((perf) => {
               const key = `${perf}-${pot}`;
               const people = placed.filter((r) => band(r.finalRating!) === perf && r.potential === pot);
-              const tone = perf + pot >= 5 ? 'bg-emerald-50 dark:bg-emerald-500/10' : perf + pot <= 3 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-zinc-50 dark:bg-zinc-800/60';
+              const tone =
+                perf + pot >= 5 ? 'bg-emerald-50 dark:bg-emerald-500/10' : perf + pot <= 3 ? 'bg-red-50 dark:bg-red-500/10' : 'bg-zinc-50 dark:bg-zinc-800/60';
               return (
                 <div key={key} className={cn('min-h-24 rounded-lg p-2', tone)}>
                   <p className="mb-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
@@ -114,7 +121,12 @@ export function NineBox({ reviews, onPick }: { reviews: ReviewListItem[]; onPick
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {people.map((p) => (
-                      <button key={p.id} type="button" onClick={() => onPick?.(p)} className="rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-800 shadow-xs hover:ring-1 hover:ring-accent-400 dark:bg-zinc-900 dark:text-zinc-200">
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => onPick?.(p)}
+                        className="rounded bg-white px-1.5 py-0.5 text-[11px] text-zinc-800 shadow-xs hover:ring-1 hover:ring-accent-400 dark:bg-zinc-900 dark:text-zinc-200"
+                      >
                         {p.employeeName}
                       </button>
                     ))}

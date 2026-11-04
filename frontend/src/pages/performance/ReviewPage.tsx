@@ -5,7 +5,24 @@ import { Check, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
 import { performanceApi, POTENTIAL_LABELS, STAGE_LABELS, type Review, type ReviewItem } from '../../api/performance';
-import { Badge, Button, Card, CardBody, CardHeader, ConfirmDialog, ErrorState, Field, FormError, IconButton, Input, PageHeader, PageSpinner, Select, Textarea, useToast } from '../../components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  ConfirmDialog,
+  ErrorState,
+  Field,
+  FormError,
+  IconButton,
+  Input,
+  PageHeader,
+  PageSpinner,
+  Select,
+  Textarea,
+  useToast,
+} from '../../components/ui';
 import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatDate } from '../../lib/format';
@@ -119,7 +136,16 @@ function GoalsEditor({ r }: { r: Review }) {
   );
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState('');
-  const payload = () => goals.filter((g) => g.title.trim()).map((g) => ({ sectionIndex: g.sectionIndex, title: g.title.trim(), description: g.description.trim() || null, target: g.target.trim() || null, weight: Number(g.weight) || 0 }));
+  const payload = () =>
+    goals
+      .filter((g) => g.title.trim())
+      .map((g) => ({
+        sectionIndex: g.sectionIndex,
+        title: g.title.trim(),
+        description: g.description.trim() || null,
+        target: g.target.trim() || null,
+        weight: Number(g.weight) || 0,
+      }));
   const run = useMutation({
     mutationFn: async (what: 'save' | 'submit' | 'approve' | 'return') => {
       if (what === 'return') return performanceApi.decideGoals(r.id, false, note.trim() || null);
@@ -138,13 +164,21 @@ function GoalsEditor({ r }: { r: Review }) {
   return (
     <div className="space-y-6">
       <FormError message={error} />
-      {r.isReviewer && r.stage === 'Goals' && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">{r.employeeName} has not sent their goals yet. You can write or edit them yourself and approve.</p>}
+      {r.isReviewer && r.stage === 'Goals' && (
+        <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+          {r.employeeName} has not sent their goals yet. You can write or edit them yourself and approve.
+        </p>
+      )}
       {goalSections.map(({ s, i: si }) => {
         const mine = goals.map((g, i) => ({ g, i })).filter((x) => x.g.sectionIndex === si);
         const total = mine.reduce((t, x) => t + (Number(x.g.weight) || 0), 0);
         return (
           <Card key={si}>
-            <CardHeader title={`${s.name} · ${s.weight}% of the review`} description="Each goal's weight is its share of this section; they add up to 100." actions={<Badge tone={total === 100 ? 'green' : 'amber'}>{total} / 100</Badge>} />
+            <CardHeader
+              title={`${s.name} · ${s.weight}% of the review`}
+              description="Each goal's weight is its share of this section; they add up to 100."
+              actions={<Badge tone={total === 100 ? 'green' : 'amber'}>{total} / 100</Badge>}
+            />
             <CardBody className="space-y-3">
               {mine.map(({ g, i }) => (
                 <div key={i} className="grid gap-2 rounded-lg border border-zinc-200 p-3 sm:grid-cols-[1fr_90px_auto] dark:border-zinc-800">
@@ -153,11 +187,23 @@ function GoalsEditor({ r }: { r: Review }) {
                   <IconButton label="Remove goal" onClick={() => setGoals((list) => list.filter((_, j) => j !== i))}>
                     <Trash2 className="size-4" />
                   </IconButton>
-                  <Input className="sm:col-span-3" value={g.target} maxLength={1000} placeholder="What success looks like (measure, target, date)" onChange={(e) => set(i, { target: e.target.value })} aria-label="Target" />
+                  <Input
+                    className="sm:col-span-3"
+                    value={g.target}
+                    maxLength={1000}
+                    placeholder="What success looks like (measure, target, date)"
+                    onChange={(e) => set(i, { target: e.target.value })}
+                    aria-label="Target"
+                  />
                 </div>
               ))}
               <div className="flex flex-wrap gap-2">
-                <Button variant="ghost" size="sm" icon={<Plus className="size-3.5" />} onClick={() => setGoals((g) => [...g, { sectionIndex: si, title: '', description: '', target: '', weight: '' }])}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Plus className="size-3.5" />}
+                  onClick={() => setGoals((g) => [...g, { sectionIndex: si, title: '', description: '', target: '', weight: '' }])}
+                >
                   Add goal
                 </Button>
                 <KpiPickerButton
@@ -180,12 +226,26 @@ function GoalsEditor({ r }: { r: Review }) {
         );
       })}
       {r.sections.filter((s) => s.kind === 'Competencies').length > 0 && (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Also rated: {r.sections.filter((s) => s.kind === 'Competencies').map((s) => `${s.name} (${s.items.map((i) => i.title).join(', ')})`).join('; ')}.</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Also rated:{' '}
+          {r.sections
+            .filter((s) => s.kind === 'Competencies')
+            .map((s) => `${s.name} (${s.items.map((i) => i.title).join(', ')})`)
+            .join('; ')}
+          .
+        </p>
       )}
       <Card>
         <CardBody className="flex flex-wrap items-center justify-end gap-2">
           {r.isReviewer && (
-            <Input className="min-w-60 flex-1" value={note} maxLength={1000} placeholder="Note to the employee (optional)" onChange={(e) => setNote(e.target.value)} aria-label="Note" />
+            <Input
+              className="min-w-60 flex-1"
+              value={note}
+              maxLength={1000}
+              placeholder="Note to the employee (optional)"
+              onChange={(e) => setNote(e.target.value)}
+              aria-label="Note"
+            />
           )}
           <Button variant="secondary" loading={run.isPending} onClick={() => run.mutate('save')}>
             Save draft
@@ -254,19 +314,27 @@ function ScoreForm({ r, mode }: { r: Review; mode: 'self' | 'manager' }) {
         <Card key={si}>
           <CardHeader title={`${s.name} · ${s.weight}%`} />
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {r.items.filter((i) => i.sectionIndex === si).map((i) => (
-              <li key={i.id} className="space-y-3 px-5 py-4">
-                <ItemHeader i={i} />
-                {!self && i.selfScore && (
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    Self rating: <span className="font-medium text-zinc-700 dark:text-zinc-300">{i.selfScore}</span>
-                    {i.selfComment ? ` · “${i.selfComment}”` : ''}
-                  </p>
-                )}
-                <RatingPicker value={scores[i.id]?.score ?? null} onChange={(v) => setScores((x) => ({ ...x, [i.id]: { ...x[i.id], score: v } }))} />
-                <Input value={scores[i.id]?.comment ?? ''} maxLength={2000} placeholder="Comment (optional)" onChange={(e) => setScores((x) => ({ ...x, [i.id]: { ...x[i.id], comment: e.target.value } }))} aria-label={`Comment on ${i.title}`} />
-              </li>
-            ))}
+            {r.items
+              .filter((i) => i.sectionIndex === si)
+              .map((i) => (
+                <li key={i.id} className="space-y-3 px-5 py-4">
+                  <ItemHeader i={i} />
+                  {!self && i.selfScore && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Self rating: <span className="font-medium text-zinc-700 dark:text-zinc-300">{i.selfScore}</span>
+                      {i.selfComment ? ` · “${i.selfComment}”` : ''}
+                    </p>
+                  )}
+                  <RatingPicker value={scores[i.id]?.score ?? null} onChange={(v) => setScores((x) => ({ ...x, [i.id]: { ...x[i.id], score: v } }))} />
+                  <Input
+                    value={scores[i.id]?.comment ?? ''}
+                    maxLength={2000}
+                    placeholder="Comment (optional)"
+                    onChange={(e) => setScores((x) => ({ ...x, [i.id]: { ...x[i.id], comment: e.target.value } }))}
+                    aria-label={`Comment on ${i.title}`}
+                  />
+                </li>
+              ))}
           </ul>
         </Card>
       ))}
@@ -369,25 +437,27 @@ function ReadOnly({ r }: { r: Review }) {
         <Card key={si}>
           <CardHeader title={`${s.name} · ${s.weight}%`} />
           <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {r.items.filter((i) => i.sectionIndex === si).map((i) => (
-              <li key={i.id} className="space-y-1.5 px-5 py-4">
-                <ItemHeader i={i} />
-                <div className="flex flex-wrap gap-4 text-sm">
-                  {i.selfScore !== null && (
-                    <span className="text-zinc-600 dark:text-zinc-300">
-                      Self <b>{i.selfScore}</b>
-                      {i.selfComment ? ` · ${i.selfComment}` : ''}
-                    </span>
-                  )}
-                  {i.managerScore !== null && (
-                    <span className="text-zinc-600 dark:text-zinc-300">
-                      Manager <b>{i.managerScore}</b>
-                      {i.managerComment ? ` · ${i.managerComment}` : ''}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
+            {r.items
+              .filter((i) => i.sectionIndex === si)
+              .map((i) => (
+                <li key={i.id} className="space-y-1.5 px-5 py-4">
+                  <ItemHeader i={i} />
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    {i.selfScore !== null && (
+                      <span className="text-zinc-600 dark:text-zinc-300">
+                        Self <b>{i.selfScore}</b>
+                        {i.selfComment ? ` · ${i.selfComment}` : ''}
+                      </span>
+                    )}
+                    {i.managerScore !== null && (
+                      <span className="text-zinc-600 dark:text-zinc-300">
+                        Manager <b>{i.managerScore}</b>
+                        {i.managerComment ? ` · ${i.managerComment}` : ''}
+                      </span>
+                    )}
+                  </div>
+                </li>
+              ))}
           </ul>
         </Card>
       ))}
@@ -401,7 +471,12 @@ function ReadOnly({ r }: { r: Review }) {
               ['Areas to develop', r.improvements],
               ['Development plan', r.developmentPlan],
               ['Calibration note (HR only)', r.calibrationNote],
-              ['Sign-off', r.employeeAgrees === null ? null : `${r.employeeAgrees ? 'Agrees' : 'Disagrees'}${r.employeeSignOffComment ? `: ${r.employeeSignOffComment}` : ''}`],
+              [
+                'Sign-off',
+                r.employeeAgrees === null
+                  ? null
+                  : `${r.employeeAgrees ? 'Agrees' : 'Disagrees'}${r.employeeSignOffComment ? `: ${r.employeeSignOffComment}` : ''}`,
+              ],
             ]
               .filter(([, v]) => v)
               .map(([k, v]) => (
@@ -445,7 +520,9 @@ function SignOff({ r }: { r: Review }) {
               onClick={() => setAgree(v)}
               className={cn(
                 'rounded-lg border px-4 py-2 text-sm font-medium',
-                agree === v ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300' : 'border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-300',
+                agree === v
+                  ? 'border-accent-500 bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300'
+                  : 'border-zinc-200 text-zinc-700 dark:border-zinc-700 dark:text-zinc-300',
               )}
             >
               {v ? 'I agree' : 'I disagree'}
@@ -481,10 +558,20 @@ function FinalReviewCard({ r }: { r: Review }) {
   });
   return (
     <Card className="mt-6 border-accent-200 dark:border-accent-500/30">
-      <CardHeader title="Final review" description={`${r.reviewer ?? 'The manager'} scored ${r.managerScore ?? '—'}. Agree to send it to HR, or send it back with what to change.`} />
+      <CardHeader
+        title="Final review"
+        description={`${r.reviewer ?? 'The manager'} scored ${r.managerScore ?? '—'}. Agree to send it to HR, or send it back with what to change.`}
+      />
       <CardBody className="space-y-3">
         <FormError message={error} />
-        <Textarea rows={3} maxLength={4000} value={comment} placeholder="Comment (needed to send back)" onChange={(e) => setComment(e.target.value)} aria-label="Final review comment" />
+        <Textarea
+          rows={3}
+          maxLength={4000}
+          value={comment}
+          placeholder="Comment (needed to send back)"
+          onChange={(e) => setComment(e.target.value)}
+          aria-label="Final review comment"
+        />
         <div className="flex justify-end gap-2">
           <Button variant="secondary" loading={decide.isPending && decide.variables === false} onClick={() => decide.mutate(false)}>
             Send back
@@ -519,10 +606,16 @@ function CalibrateCard({ r }: { r: Review }) {
   });
   return (
     <Card className="mt-6">
-      <CardHeader title="Calibration" description={`Manager score ${r.managerScore ?? '—'}. Adjust the final rating if needed; release it from the cycle page.`} />
+      <CardHeader
+        title="Calibration"
+        description={`Manager score ${r.managerScore ?? '—'}. Adjust the final rating if needed; release it from the cycle page.`}
+      />
       <CardBody className="space-y-3">
         <RatingPicker value={rating} onChange={setRating} labels={settings.data?.ratingLabels} />
-        <Field label="Grace marks" hint={`0 to 1, added to the manager score${r.managerScore != null ? ` (${(r.managerScore + (Number(grace) || 0)).toFixed(2)} with grace)` : ''}`}>
+        <Field
+          label="Grace marks"
+          hint={`0 to 1, added to the manager score${r.managerScore != null ? ` (${(r.managerScore + (Number(grace) || 0)).toFixed(2)} with grace)` : ''}`}
+        >
           <Input type="number" min={0} max={1} step="0.05" value={grace} onChange={(e) => changeGrace(e.target.value)} className="w-32" />
         </Field>
         <Input value={note} maxLength={4000} placeholder="Why it changed (HR only)" onChange={(e) => setNote(e.target.value)} aria-label="Calibration note" />

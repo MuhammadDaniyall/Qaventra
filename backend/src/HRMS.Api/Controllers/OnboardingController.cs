@@ -18,11 +18,12 @@ public record TemplateTaskDto(
     OnboardingAssignee AssigneeKind, Guid? AssigneeEmployeeId, [Range(-60, 365)] int DueOffsetDays);
 
 public record OnboardingTemplateDto(
-    Guid Id, string Name, string? Description, bool IsDefault, Guid? AssetKitId, string? WelcomeMessage, List<TemplateTaskDto> Tasks, RecordStampsDto Stamps);
+    Guid Id, string Name, string? Description, bool IsDefault, Guid? AssetKitId, string? WelcomeMessage, List<TemplateTaskDto> Tasks, RecordStampsDto Stamps,
+    bool RequiresApproval);
 
 public record SaveOnboardingTemplateRequest(
     [Required, StringLength(100)] string Name, [StringLength(500)] string? Description, bool IsDefault, Guid? AssetKitId,
-    [StringLength(4000)] string? WelcomeMessage, [MaxLength(60)] List<TemplateTaskDto> Tasks);
+    [StringLength(4000)] string? WelcomeMessage, [MaxLength(60)] List<TemplateTaskDto> Tasks, bool RequiresApproval = false);
 
 public record StartOnboardingRequest(Guid EmployeeId, Guid? TemplateId, TimeOnly? ReportingTime, [StringLength(300)] string? ReportingPlace,
     Guid? BuddyEmployeeId, [StringLength(4000)] string? Instructions);
@@ -45,7 +46,8 @@ public record OnboardingListItemDto(
 
 public record OnboardingDetailDto(
     OnboardingListItemDto Summary, TimeOnly? ReportingTime, string? ReportingPlace, Guid? BuddyEmployeeId, string? Buddy, string? BuddyPhone,
-    string? Manager, string? Instructions, string? StartedByName, Dictionary<string, string?>? Introduction, List<OnboardingTaskDto> Tasks);
+    string? Manager, string? Instructions, string? StartedByName, Dictionary<string, string?>? Introduction, List<OnboardingTaskDto> Tasks,
+    bool RequiresApproval, string? ApprovalNote);
 
 public record WelcomeDto(OnboardingDetailDto? Onboarding, List<IntroQuestionDto> Questions, bool HasPhoto, bool ProfileComplete, int EmergencyContacts);
 
@@ -96,7 +98,8 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
 
     [HttpGet, Authorize(Policy = Policies.Hr)]
     public async Task<List<OnboardingListItemDto>> List([FromQuery] OnboardingStatus status = OnboardingStatus.InProgress) =>
-        await ProjectAsync(db.Onboardings.Where(o => o.Status == status).OrderBy(o => o.JoiningDate));
+        await ProjectAsync(db.Onboardings.Where(o => o.Status == status || (status == OnboardingStatus.InProgress && o.Status == OnboardingStatus.PendingApproval))
+            .OrderBy(o => o.JoiningDate));
 
     [HttpPost, Authorize(Policy = Policies.Hr)]
     public async Task<OnboardingDetailDto> Start(StartOnboardingRequest req)
@@ -141,6 +144,13 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
     public async Task<IActionResult> SetTask(Guid taskId, SetTaskRequest req)
     {
         await onboarding.SetTaskAsync(taskId, req.Done, req.Note);
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/submit"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> Submit(Guid id)
+    {
+        await onboarding.SubmitAsync(id);
         return NoContent();
     }
 
@@ -190,7 +200,7 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
 
     private static OnboardingTemplateDto ToDto(OnboardingTemplate t) => new(t.Id, t.Name, t.Description, t.IsDefault, t.AssetKitId, t.WelcomeMessage,
         t.Tasks.OrderBy(x => x.Order).Select(x => new TemplateTaskDto(x.Id, x.Title, x.Description, x.Category, x.AssigneeKind, x.AssigneeEmployeeId, x.DueOffsetDays)).ToList(),
-        RecordStampsDto.Of(t));
+        RecordStampsDto.Of(t), t.RequiresApproval);
 
     private async Task ApplyAsync(OnboardingTemplate t, SaveOnboardingTemplateRequest req)
     {
@@ -213,6 +223,7 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
         t.IsDefault = req.IsDefault;
         t.AssetKitId = req.AssetKitId;
         t.WelcomeMessage = string.IsNullOrWhiteSpace(req.WelcomeMessage) ? null : req.WelcomeMessage.Trim();
+        t.RequiresApproval = req.RequiresApproval;
         db.OnboardingTemplateTasks.RemoveRange(t.Tasks);
         t.Tasks.Clear();
         var order = 0;
@@ -263,6 +274,6 @@ public class OnboardingController(HrmsDbContext db, OnboardingService onboarding
         var manager = o.Employee!.ManagerId is { } m ? await db.Employees.Where(e => e.Id == m).Select(e => e.FirstName + " " + e.LastName).FirstOrDefaultAsync() : null;
         var tasks = await ProjectTasksAsync(db.OnboardingTasks.Where(t => t.OnboardingId == id).OrderBy(t => t.DueOn).ThenBy(t => t.Order), withEmployee: false);
         return new OnboardingDetailDto(summary, o.ReportingTime, o.ReportingPlace, o.BuddyEmployeeId, buddy?.Name, buddy?.Phone, manager, o.Instructions, o.StartedByName,
-            o.IntroductionJson is null ? null : JsonSerializer.Deserialize<Dictionary<string, string?>>(o.IntroductionJson, Json), tasks);
+            o.IntroductionJson is null ? null : JsonSerializer.Deserialize<Dictionary<string, string?>>(o.IntroductionJson, Json), tasks, o.RequiresApproval, o.ApprovalNote);
     }
 }

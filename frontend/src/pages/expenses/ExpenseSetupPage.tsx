@@ -240,8 +240,16 @@ function TypeModal({ item, onClose }: { item: ExpenseType | null; onClose: () =>
       </div>
       {v.yearlyLimit != null && (
         <>
-          <Checkbox label="Pro-rata: joiners get the yearly limit for the months left in their first year" checked={v.proRata} onChange={(e) => set({ proRata: e.target.checked })} />
-          <Checkbox label="Carry forward: what was not claimed last year is added to this year" checked={v.carryForward} onChange={(e) => set({ carryForward: e.target.checked })} />
+          <Checkbox
+            label="Pro-rata: joiners get the yearly limit for the months left in their first year"
+            checked={v.proRata}
+            onChange={(e) => set({ proRata: e.target.checked })}
+          />
+          <Checkbox
+            label="Carry forward: what was not claimed last year is added to this year"
+            checked={v.carryForward}
+            onChange={(e) => set({ carryForward: e.target.checked })}
+          />
         </>
       )}
       <Checkbox label="Taxable: paid with salary as a taxable earning" checked={v.taxable} onChange={(e) => set({ taxable: e.target.checked })} />

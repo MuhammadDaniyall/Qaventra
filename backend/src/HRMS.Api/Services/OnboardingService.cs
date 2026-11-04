@@ -16,7 +16,7 @@ public record StartOnboarding(Guid? TemplateId, TimeOnly? ReportingTime, string?
 /// details, and an introduction to the team.
 /// </summary>
 public class OnboardingService(
-    HrmsDbContext db, ICurrentUser me, TenantClock clock, NotificationService notify, AssetService assets, AnnouncementService announcements)
+    HrmsDbContext db, ICurrentUser me, TenantClock clock, NotificationService notify, AssetService assets, AnnouncementService announcements, IServiceProvider services)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -57,6 +57,7 @@ public class OnboardingService(
             BuddyEmployeeId = input.BuddyEmployeeId,
             Instructions = Clean(input.Instructions, 4000) ?? template?.WelcomeMessage,
             StartedByName = await MyNameAsync(),
+            RequiresApproval = template?.RequiresApproval ?? false,
         };
         foreach (var t in template?.Tasks.OrderBy(t => t.Order) ?? Enumerable.Empty<OnboardingTemplateTask>())
             onboarding.Tasks.Add(new OnboardingTask
@@ -163,21 +164,84 @@ public class OnboardingService(
         await db.OnboardingTasks.FirstOrDefaultAsync(t => t.Id == taskId && db.Onboardings.Any(o => o.Id == t.OnboardingId))
         ?? throw new NotFoundException("Task");
 
-    /// <summary>Completes the onboarding when every task is done, and reopens it when one is undone.</summary>
+    private ApprovalEngine Approvals => services.GetRequiredService<ApprovalEngine>();
+
+    /// <summary>
+    /// Completes the onboarding when every task is done (or sends it for approval when the template asks for it),
+    /// and reopens it when one is undone.
+    /// </summary>
     private async Task RefreshStatusAsync(Onboarding onboarding)
     {
         var allDone = onboarding.Tasks.All(t => t.CompletedAtUtc is not null);
         if (allDone && onboarding.Status == OnboardingStatus.InProgress)
+            await FinishAsync(onboarding);
+        else if (!allDone && onboarding.Status is OnboardingStatus.Completed or OnboardingStatus.PendingApproval)
         {
-            onboarding.Status = OnboardingStatus.Completed;
-            onboarding.CompletedAtUtc = clock.UtcNow;
-            await notify.ToHrAsync(NotificationKind.Onboarding, $"{onboarding.Employee!.FullName}'s onboarding is complete", null, $"/onboarding/{onboarding.Id}");
-        }
-        else if (!allDone && onboarding.Status == OnboardingStatus.Completed)
-        {
+            if (onboarding.Status == OnboardingStatus.PendingApproval)
+                await Approvals.CancelAsync(ApprovalRequestType.Onboarding, onboarding.Id);
             onboarding.Status = OnboardingStatus.InProgress;
             onboarding.CompletedAtUtc = null;
         }
+    }
+
+    private async Task FinishAsync(Onboarding onboarding)
+    {
+        if (onboarding.RequiresApproval)
+        {
+            var approval = await Approvals.StartAsync(ApprovalRequestType.Onboarding, onboarding.Id, onboarding.EmployeeId,
+                $"Onboarding of {onboarding.Employee!.FullName} is done ({onboarding.Tasks.Count} tasks)");
+            if (approval.Status != ApprovalStatus.Approved)
+            {
+                onboarding.Status = OnboardingStatus.PendingApproval;
+                return;
+            }
+        }
+        Complete(onboarding);
+        await notify.ToHrAsync(NotificationKind.Onboarding, $"{onboarding.Employee!.FullName}'s onboarding is complete", null, $"/onboarding/{onboarding.Id}");
+    }
+
+    private void Complete(Onboarding onboarding)
+    {
+        onboarding.Status = OnboardingStatus.Completed;
+        onboarding.CompletedAtUtc = clock.UtcNow;
+    }
+
+    /// <summary>HR sends a finished onboarding for approval again after it was sent back.</summary>
+    public async Task SubmitAsync(Guid id)
+    {
+        var o = await db.Onboardings.Include(x => x.Tasks).Include(x => x.Employee).FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Onboarding");
+        if (o.Status != OnboardingStatus.InProgress || !o.RequiresApproval)
+            throw new DomainException("This onboarding is not waiting to be sent for approval.");
+        if (o.Tasks.Any(t => t.CompletedAtUtc is null))
+            throw new DomainException("Finish every task first.");
+        await FinishAsync(o);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>An approver accepts the finished onboarding (complete) or sends it back to HR with a note.</summary>
+    public async Task DecideAsync(Guid id, bool approve, string? note)
+    {
+        var o = await db.Onboardings.Include(x => x.Employee).FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Onboarding");
+        if (o.Status != OnboardingStatus.PendingApproval)
+            throw new DomainException("This onboarding is not waiting for approval.");
+        var outcome = await Approvals.DecideAsync(ApprovalRequestType.Onboarding, o.Id, o.EmployeeId, approve, note);
+        if (outcome == ApprovalStatus.Pending)
+        {
+            await db.SaveChangesAsync();
+            return;
+        }
+        o.ApprovalNote = Clean(note, 1000);
+        if (outcome == ApprovalStatus.Approved)
+        {
+            Complete(o);
+            await notify.ToHrAsync(NotificationKind.Onboarding, $"{o.Employee!.FullName}'s onboarding is approved", null, $"/onboarding/{o.Id}");
+        }
+        else
+        {
+            o.Status = OnboardingStatus.InProgress;
+            await notify.ToHrAsync(NotificationKind.Onboarding, $"{o.Employee!.FullName}'s onboarding was sent back", o.ApprovalNote, $"/onboarding/{o.Id}");
+        }
+        await db.SaveChangesAsync();
     }
 
     public async Task<OnboardingTask> AddTaskAsync(Guid onboardingId, string title, OnboardingTaskCategory category, OnboardingAssignee kind, Guid? employeeId, DateOnly dueOn)
@@ -231,8 +295,10 @@ public class OnboardingService(
     public async Task CancelAsync(Guid id)
     {
         var o = await db.Onboardings.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Onboarding");
-        if (o.Status != OnboardingStatus.InProgress)
+        if (o.Status is not (OnboardingStatus.InProgress or OnboardingStatus.PendingApproval))
             throw new DomainException("This onboarding is not in progress.");
+        if (o.Status == OnboardingStatus.PendingApproval)
+            await Approvals.CancelAsync(ApprovalRequestType.Onboarding, o.Id);
         o.Status = OnboardingStatus.Cancelled;
         await db.SaveChangesAsync();
     }

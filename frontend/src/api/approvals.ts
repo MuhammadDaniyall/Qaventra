@@ -2,7 +2,7 @@ import type { RecordStamps } from '../types';
 import { http } from './client';
 
 export type ApprovalRequestType =
-  'Leave' | 'Expense' | 'Attendance' | 'CompOff' | 'PayRequest' | 'Loan' | 'ProfileChange' | 'ShiftChange' | 'Asset' | 'JobRequest' | 'Travel' | 'Training' | 'Exemption' | 'OffDay' | 'Timesheet' | 'FundWithdrawal' | 'ExpenseAdvance' | 'FinalSettlement' | 'Letter';
+  'Leave' | 'Expense' | 'Attendance' | 'CompOff' | 'PayRequest' | 'Loan' | 'ProfileChange' | 'ShiftChange' | 'Asset' | 'JobRequest' | 'Travel' | 'Training' | 'Exemption' | 'OffDay' | 'Timesheet' | 'FundWithdrawal' | 'ExpenseAdvance' | 'FinalSettlement' | 'Letter' | 'Onboarding';
 export type ApproverKind = 'LineManager' | 'SecondLevelManager' | 'Hr' | 'SpecificEmployee' | 'DepartmentHead';
 export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
 export type ApprovalStepStatus = 'Waiting' | 'Current' | 'Approved' | 'Rejected' | 'Skipped';
@@ -123,4 +123,5 @@ export const REQUEST_LABELS: Record<ApprovalRequestType, string> = {
   ExpenseAdvance: 'Expense advances',
   FinalSettlement: 'Final settlements',
   Letter: 'Letters',
+  Onboarding: 'Onboarding',
 };
