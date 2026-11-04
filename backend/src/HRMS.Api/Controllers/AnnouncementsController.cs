@@ -121,6 +121,14 @@ public class AnnouncementsController(HrmsDbContext db, AnnouncementService servi
         return (await ProjectPollsAsync([poll], manage: false)).Single();
     }
 
+    [HttpDelete("polls/{id:guid}/vote")]
+    public async Task<PollDto> Unvote(Guid id)
+    {
+        await service.UnvoteAsync(id);
+        var poll = await db.Polls.Include(p => p.Options).FirstAsync(p => p.Id == id);
+        return (await ProjectPollsAsync([poll], manage: false)).Single();
+    }
+
     private static AnnouncementInput Input(SaveAnnouncementRequest r) =>
         new(r.Title, r.Body, r.Kind, r.PublishFrom, r.PublishTo, r.DepartmentIds, r.IsPinned, r.LinkUrl, r.Notify, r.DesignationIds);
 

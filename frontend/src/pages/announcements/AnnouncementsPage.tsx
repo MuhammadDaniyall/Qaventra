@@ -353,6 +353,15 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
     },
     onError: (err) => toast.error(err),
   });
+  const unvote = useMutation({
+    mutationFn: () => announcementsApi.unvote(poll.id),
+    onSuccess: () => {
+      toast.success('Vote taken back');
+      qc.invalidateQueries({ queryKey: qk.polls });
+      qc.invalidateQueries({ queryKey: qk.pollsManage });
+    },
+    onError: (err) => toast.error(err),
+  });
   const remove = useMutation({
     mutationFn: () => announcementsApi.removePoll(poll.id),
     onSuccess: () => {
@@ -431,6 +440,11 @@ export function PollCard({ poll, hr }: { poll: Poll; hr: boolean }) {
               : canVote ? 'Pick an answer to vote.' : ''}
           {canVote && poll.myOptionId ? ' You can change your vote until it closes.' : ''}
         </span>
+        {canVote && poll.myOptionId && (
+          <Button variant="ghost" size="sm" loading={unvote.isPending} onClick={() => unvote.mutate()}>
+            Take back my vote
+          </Button>
+        )}
         {hr && !poll.isAnonymous && total > 0 && (
           <Button variant="ghost" size="sm" onClick={() => setShowVoters((s) => !s)}>
             {showVoters ? 'Hide names' : 'Who voted'}

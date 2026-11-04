@@ -124,6 +124,7 @@ export const announcementsApi = {
   createPoll: (b: CreatePoll) => http.post<Poll>('/announcements/polls', b),
   removePoll: (id: string) => http.del(`/announcements/polls/${id}`),
   vote: (id: string, optionId: string) => http.post<Poll>(`/announcements/polls/${id}/vote`, { optionId }),
+  unvote: (id: string) => http.del(`/announcements/polls/${id}/vote`),
 };
 
 export const customFieldsApi = {

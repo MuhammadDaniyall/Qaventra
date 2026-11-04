@@ -100,6 +100,11 @@ public class OrganizationTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var monal = hr.GetProperty("options").EnumerateArray().First(x => x.GetProperty("text").GetString() == "Monal");
         Assert.Equal(2, monal.GetProperty("votes").GetInt32());
         Assert.Equal(2, monal.GetProperty("voters").GetArrayLength());
+        // A vote can be taken back while the poll is open.
+        var undone = await Ok(await dev2.DeleteAsync($"/api/announcements/polls/{id}/vote"));
+        Assert.Equal(JsonValueKind.Null, undone.GetProperty("myOptionId").ValueKind);
+        Assert.Equal(HttpStatusCode.BadRequest, (await dev2.DeleteAsync($"/api/announcements/polls/{id}/vote")).StatusCode);
+        await Ok(await dev2.PostAsJsonAsync($"/api/announcements/polls/{id}/vote", new { optionId = options[1] }));
 
         // Anonymous: HR sees counts but never names.
         var anon = await Ok(await o.Admin.PostAsJsonAsync("/api/announcements/polls", new { question = "Rate your manager", opensOn = Iso(Today), closesOn = Iso(Today), isAnonymous = true, resultsVisibility = "HrOnly", options = new[] { "Good", "Bad" } }, ApiFactory.Json));

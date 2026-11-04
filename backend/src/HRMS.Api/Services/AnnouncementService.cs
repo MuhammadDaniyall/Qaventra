@@ -205,6 +205,18 @@ public class AnnouncementService(HrmsDbContext db, ICurrentUser me, TenantClock 
         await db.SaveChangesAsync();
     }
 
+    /// <summary>Takes back the signed-in person's vote while the poll is open.</summary>
+    public async Task UnvoteAsync(Guid pollId)
+    {
+        var employeeId = me.EmployeeId ?? throw new DomainException("Your login is not linked to an employee record.");
+        var poll = await db.Polls.FirstOrDefaultAsync(p => p.Id == pollId) ?? throw new NotFoundException("Poll");
+        if (await clock.TodayAsync() > poll.ClosesOn)
+            throw new DomainException("This poll has closed.");
+        var vote = await db.PollVotes.FirstOrDefaultAsync(v => v.PollId == pollId && v.EmployeeId == employeeId) ?? throw new DomainException("You have not voted.");
+        db.PollVotes.Remove(vote);
+        await db.SaveChangesAsync();
+    }
+
     private async Task<string> AudienceTextAsync(IReadOnlyCollection<Guid>? departmentIds)
     {
         var ids = (departmentIds ?? []).Distinct().ToList();
