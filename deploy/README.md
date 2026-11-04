@@ -115,6 +115,11 @@ Saturday from 08:00 to 23:30 (a `StartCalendarInterval` entry per weekday for mi
 14:00–23:00 evening shift checks out on time too; it logs to `secrets/virtual-clients-daily.log`, and a run missed
 while the Mac slept runs on wake. Stop it with `launchctl bootout gui/$(id -u)/com.qaventra.virtual-clients`.
 
+On Windows, `run-virtual-clients.ps1` does the same; the Task Scheduler task "Qaventra virtual clients" starts it every
+30 minutes Monday to Saturday from 08:00 to 23:30 (missed runs start when the computer wakes). Copy the
+`deploy/secrets/logins-*.txt` files from the Mac first. Run it on one computer only: progress is kept per computer,
+so two computers would do each day's work twice. Stop it with `Unregister-ScheduledTask "Qaventra virtual clients"`.
+
 Useful by hand:
 
 - `node deploy/virtual-clients.mjs --base http://localhost:5080 --logins a.txt --plan` prints today's plan for everyone.
