@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Receipt, Trash2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useLookups } from '../../api/employeeFile';
+import { LookupList, lookupListId } from '../../components/LookupList';
 import { expenseSetupApi, type ExpenseType, type SaveExpenseType } from '../../api/expenseSetup';
 import {
   Badge,
@@ -308,8 +309,9 @@ function Distances() {
     <Card>
       <CardHeader title="Distances between cities" description="Used by distance-based types; works both ways round." />
       <div className="grid gap-2 border-b border-zinc-100 p-4 sm:grid-cols-[1fr_1fr_8rem_auto] dark:border-zinc-800">
-        <Input placeholder="From city" aria-label="From city" value={f.fromCity} onChange={(e) => setF({ ...f, fromCity: e.target.value })} />
-        <Input placeholder="To city" aria-label="To city" value={f.toCity} onChange={(e) => setF({ ...f, toCity: e.target.value })} />
+        <LookupList kind="City" />
+        <Input placeholder="From city" aria-label="From city" list={lookupListId('City')} value={f.fromCity} onChange={(e) => setF({ ...f, fromCity: e.target.value })} />
+        <Input placeholder="To city" aria-label="To city" list={lookupListId('City')} value={f.toCity} onChange={(e) => setF({ ...f, toCity: e.target.value })} />
         <Input type="number" min={0.1} placeholder="Km" aria-label="Km" value={f.km} onChange={(e) => setF({ ...f, km: e.target.value })} />
         <Button disabled={!f.fromCity.trim() || !f.toCity.trim() || !(Number(f.km) > 0)} loading={add.isPending} onClick={() => add.mutate()}>
           Add

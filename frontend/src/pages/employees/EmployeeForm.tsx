@@ -3,6 +3,7 @@ import { useDepartments, useDesignations, useEmployeeLookup, useShifts } from '.
 import { qk } from '../../api/keys';
 import { orgApi } from '../../api/organization';
 import { QuickCreateSelect } from './QuickCreateSelect';
+import { LookupList, lookupListId } from '../../components/LookupList';
 import { Button, Card, Field, FormError, Input, Select, Textarea } from '../../components/ui';
 import { todayIso } from '../../lib/format';
 import { BLOOD_GROUPS, EMPLOYMENT_STATUSES, MARITAL_STATUSES, type Employee, type EmploymentStatus, type Gender, type MaritalStatus, type SaveEmployeeRequest } from '../../types';
@@ -297,8 +298,9 @@ export function EmployeeForm({
       {(!readOnly || v.bankName || v.bankAccount) && (
         <Section title="Bank" description="Where salary is paid.">
           <Field label="Bank name" error={allErrors.bankName}>
-            <Input placeholder="Meezan Bank" {...text('bankName')} />
+            <Input placeholder="Meezan Bank" list={lookupListId('Bank')} {...text('bankName')} />
           </Field>
+          <LookupList kind="Bank" />
           <Field label="Account number / IBAN" error={allErrors.bankAccount}>
             <Input placeholder="PK36MEZN0000000000000000" {...text('bankAccount')} />
           </Field>

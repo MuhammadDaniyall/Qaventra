@@ -3,7 +3,10 @@ import { http } from './client';
 import { qk } from './keys';
 import type { RecordStamps } from '../types';
 
-export type LookupKind = 'Division' | 'Grade' | 'CostCenter' | 'Region' | 'EmployeeGroup' | 'SubDepartment' | 'ExitType';
+export type LookupKind = 'Division' | 'Grade' | 'CostCenter' | 'Region' | 'EmployeeGroup' | 'SubDepartment' | 'ExitType' | 'Bank' | 'City' | 'Nationality';
+
+/** Lists that only suggest values for text fields; nobody is linked to them, so they are not groupings. */
+export const SUGGESTION_KINDS: LookupKind[] = ['Bank', 'City', 'Nationality'];
 
 export const LOOKUP_KINDS: { kind: LookupKind; label: string; plural: string; hint: string }[] = [
   { kind: 'Division', label: 'Division', plural: 'Divisions', hint: 'Business units above departments, e.g. Retail, Corporate.' },
@@ -13,6 +16,9 @@ export const LOOKUP_KINDS: { kind: LookupKind; label: string; plural: string; hi
   { kind: 'Region', label: 'Region / station', plural: 'Regions and stations', hint: 'Cities, branches or stations people work from.' },
   { kind: 'EmployeeGroup', label: 'Employee group', plural: 'Employee groups', hint: 'Any other grouping, e.g. Staff, Workers, Management.' },
   { kind: 'ExitType', label: 'Exit type', plural: 'Exit types', hint: 'Why people leave: resignation, termination, retirement, contract end.' },
+  { kind: 'Bank', label: 'Bank', plural: 'Banks', hint: 'Banks salaries are paid into; suggested on the employee form.' },
+  { kind: 'City', label: 'City', plural: 'Cities', hint: 'Cities for addresses and travel distances; suggested where a city is typed.' },
+  { kind: 'Nationality', label: 'Nationality', plural: 'Nationalities', hint: 'Suggested on the employee file.' },
 ];
 
 export const lookupLabel = (k: LookupKind) => LOOKUP_KINDS.find((x) => x.kind === k)?.label ?? k;

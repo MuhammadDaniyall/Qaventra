@@ -5,6 +5,7 @@ import { errorMessage } from '../../api/client';
 import {
   employeeFileApi,
   LOOKUP_KINDS,
+  SUGGESTION_KINDS,
   useLookups,
   type Dependant,
   type EmployeeFile,
@@ -33,17 +34,18 @@ import {
 import { formatDate } from '../../lib/format';
 import { cn } from '../../lib/cn';
 import { tx } from '../../lib/i18n';
+import { LookupList, lookupListId } from '../../components/LookupList';
 
 type Key = keyof EmployeeFile;
-type FieldDef = { key: Key; label: string; type?: 'date' | 'text'; max?: number; placeholder?: string };
+type FieldDef = { key: Key; label: string; type?: 'date' | 'text'; max?: number; placeholder?: string; list?: LookupKind };
 
 const SECTIONS: { title: string; fields: FieldDef[] }[] = [
   {
     title: 'Personal',
     fields: [
       { key: 'fatherName', label: 'Father / husband name', max: 100 },
-      { key: 'placeOfBirth', label: 'Place of birth', max: 100 },
-      { key: 'nationality', label: 'Nationality', max: 100, placeholder: 'Pakistani' },
+      { key: 'placeOfBirth', label: 'Place of birth', max: 100, list: 'City' },
+      { key: 'nationality', label: 'Nationality', max: 100, placeholder: 'Pakistani', list: 'Nationality' },
       { key: 'religion', label: 'Religion', max: 100 },
     ],
   },
@@ -127,7 +129,19 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
   const show = (f: FieldDef) => {
     const val = v[f.key] as string | null;
     if (!draft) return <span>{val ? f.type === 'date' ? formatDate(val) : val : <span className="text-zinc-500 dark:text-zinc-400">—</span>}</span>;
-    return <Input type={f.type ?? 'text'} value={val ?? ''} maxLength={f.max} placeholder={f.placeholder} onChange={(e) => set(f.key, e.target.value)} />;
+    return (
+      <>
+        <Input
+          type={f.type ?? 'text'}
+          value={val ?? ''}
+          maxLength={f.max}
+          placeholder={f.placeholder}
+          list={f.list ? lookupListId(f.list) : undefined}
+          onChange={(e) => set(f.key, e.target.value)}
+        />
+        {f.list && <LookupList kind={f.list} />}
+      </>
+    );
   };
 
   return (
@@ -666,7 +680,7 @@ export function EmployeeRecordsCard({ employeeId, editable }: { employeeId?: str
 /** One dropdown over all grouping lists (division, grade, cost center…), for filtering people. Hidden when the company has none. */
 export function GroupFilter({ value, onChange, className }: { value: string; onChange: (id: string) => void; className?: string }) {
   const lookups = useLookups();
-  const used = LOOKUP_KINDS.filter((k) => k.kind !== 'ExitType' && (lookups.data ?? []).some((l) => l.kind === k.kind));
+  const used = LOOKUP_KINDS.filter((k) => k.kind !== 'ExitType' && !SUGGESTION_KINDS.includes(k.kind) && (lookups.data ?? []).some((l) => l.kind === k.kind));
   if (!used.length) return null;
   return (
     <Select aria-label="Filter by group" className={className} value={value} onChange={(e) => onChange(e.target.value)}>

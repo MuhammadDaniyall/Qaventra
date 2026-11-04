@@ -721,6 +721,10 @@ public enum LookupKind
     EmployeeGroup = 5,
     SubDepartment = 6,
     ExitType = 7,
+    /// <summary>Plain lists that suggest values for free-text fields; people are not linked to them.</summary>
+    Bank = 8,
+    City = 9,
+    Nationality = 10,
 }
 
 public enum HolidayKind
