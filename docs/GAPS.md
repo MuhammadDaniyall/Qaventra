@@ -114,3 +114,8 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Expense quotas: monthly limit, pro-rata for joiners, carry forward, women/men-only types, taxable types paid through payroll.
 - Onboarding: a template can need approval before the onboarding is complete.
 - Payroll: daily and hourly pay earned from attendance.
+- Lists for banks, cities and nationalities, suggested on the forms.
+- Daily attendance flags: present on holiday / day off / leave, missing check-out, break not ended.
+- Payroll journal in Oracle GL interface and SAP posting formats.
+- ID cards: design saved per company, upright cards, back side printed with a second line.
+- Polls: take back a vote. Designations have a code.
