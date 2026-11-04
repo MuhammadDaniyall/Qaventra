@@ -256,9 +256,11 @@ export interface Designation {
   title: string;
   employees: number;
   stamps: RecordStamps;
+  code: string | null;
 }
 export interface SaveDesignationRequest {
   title: string;
+  code?: string | null;
 }
 
 // ---- Setup ----

@@ -14,8 +14,8 @@ namespace HRMS.Api.Controllers;
 public record DepartmentDto(Guid Id, string Name, string? Code, int Employees, Guid? HeadEmployeeId = null, string? Head = null, RecordStampsDto? Stamps = null);
 public record SaveDepartmentRequest([Required, StringLength(150)] string Name, [StringLength(30)] string? Code, Guid? HeadEmployeeId = null);
 
-public record DesignationDto(Guid Id, string Title, int Employees, RecordStampsDto Stamps);
-public record SaveDesignationRequest([Required, StringLength(150)] string Title);
+public record DesignationDto(Guid Id, string Title, int Employees, RecordStampsDto Stamps, string? Code = null);
+public record SaveDesignationRequest([Required, StringLength(150)] string Title, [StringLength(30)] string? Code = null);
 
 [ApiController]
 [Route("api")]
@@ -93,16 +93,16 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
     public Task<List<DesignationDto>> Designations() =>
         db.Designations.OrderBy(d => d.Title)
             .Select(d => new DesignationDto(d.Id, d.Title, db.Employees.Count(e => e.DesignationId == d.Id),
-                new RecordStampsDto(d.CreatedAtUtc, d.CreatedBy, d.ModifiedAtUtc, d.ModifiedBy)))
+                new RecordStampsDto(d.CreatedAtUtc, d.CreatedBy, d.ModifiedAtUtc, d.ModifiedBy), d.Code))
             .ToListAsync();
 
     [HttpPost("designations"), Authorize(Policy = Policies.Hr)]
     public async Task<DesignationDto> CreateDesignation(SaveDesignationRequest req)
     {
-        var d = new Designation { Title = req.Title.Trim() };
+        var d = new Designation { Title = req.Title.Trim(), Code = string.IsNullOrWhiteSpace(req.Code) ? null : req.Code.Trim() };
         db.Designations.Add(d);
         await db.SaveChangesAsync();
-        return new DesignationDto(d.Id, d.Title, 0, RecordStampsDto.Of(d));
+        return new DesignationDto(d.Id, d.Title, 0, RecordStampsDto.Of(d), d.Code);
     }
 
     [HttpPut("designations/{id:guid}"), Authorize(Policy = Policies.Hr)]
@@ -110,6 +110,9 @@ public class OrganizationController(HrmsDbContext db) : ControllerBase
     {
         var d = await db.Designations.FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Designation");
         d.Title = req.Title.Trim();
+        // Older clients send only the title; keep the code then.
+        if (req.Code is not null)
+            d.Code = string.IsNullOrWhiteSpace(req.Code) ? null : req.Code.Trim();
         await db.SaveChangesAsync();
         return NoContent();
     }

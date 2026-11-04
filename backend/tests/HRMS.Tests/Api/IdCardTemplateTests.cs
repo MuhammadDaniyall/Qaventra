@@ -22,4 +22,15 @@ public class IdCardTemplateTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var theirs = await (await other.GetAsync("/api/employees/id-card-template")).Content.ReadFromJsonAsync<JsonElement>();
         Assert.False(theirs.TryGetProperty("color", out _));
     }
+
+    [Fact]
+    public async Task Designations_keep_a_code()
+    {
+        var (admin, _, _) = await factory.CreateCompanyAsync("DesigCode");
+        var d = await (await admin.PostAsJsonAsync("/api/designations", new { title = "Software Engineer", code = "SE-2" })).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("SE-2", d.GetProperty("code").GetString());
+        (await admin.PutAsJsonAsync($"/api/designations/{d.GetProperty("id").GetGuid()}", new { title = "Senior Engineer" })).EnsureSuccessStatusCode();
+        var list = await (await admin.GetAsync("/api/designations")).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("SE-2", list[0].GetProperty("code").GetString());
+    }
 }

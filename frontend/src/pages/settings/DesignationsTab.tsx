@@ -39,6 +39,7 @@ export function DesignationsTab() {
           <THead>
             <tr>
               <Th>Title</Th>
+              <Th>Code</Th>
               <Th className="text-end">Employees</Th>
               <Th>Added / modified</Th>
               <Th className="text-end">
@@ -50,6 +51,7 @@ export function DesignationsTab() {
             {list.data.map((d) => (
               <Tr key={d.id}>
                 <Td className="font-medium text-zinc-900 dark:text-zinc-100">{d.title}</Td>
+                <Td className="font-mono text-sm">{d.code ?? '—'}</Td>
                 <Td className="text-end tabular-nums">{d.employees}</Td>
                 <Td>
                   <RecordStampCell stamps={d.stamps} />
@@ -76,8 +78,9 @@ export function DesignationsTab() {
 
 function DesignationModal({ item, onClose }: { item: Designation | null; onClose: () => void }) {
   const [title, setTitle] = useState(item?.title ?? '');
+  const [code, setCode] = useState(item?.code ?? '');
   const { mutation, error, fieldErrors, setFieldErrors } = useSaveMutation({
-    save: (b: { title: string }) => (item ? orgApi.updateDesignation(item.id, b) : orgApi.createDesignation(b)),
+    save: (b: { title: string; code: string }) => (item ? orgApi.updateDesignation(item.id, b) : orgApi.createDesignation(b)),
     invalidate: [qk.designations],
     successMessage: item ? 'Designation updated' : 'Designation added',
     onSuccess: onClose,
@@ -91,11 +94,14 @@ function DesignationModal({ item, onClose }: { item: Designation | null; onClose
       error={error}
       onSubmit={() => {
         if (!title.trim()) return setFieldErrors({ title: 'Title is required.' });
-        mutation.mutate({ title: title.trim() });
+        mutation.mutate({ title: title.trim(), code: code.trim() });
       }}
     >
       <Field label="Title" required error={fieldErrors.title}>
         <Input value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} placeholder="Software Engineer" />
+      </Field>
+      <Field label="Code" hint="Optional, for reports and imports">
+        <Input value={code} maxLength={30} onChange={(e) => setCode(e.target.value)} placeholder="SE-2" />
       </Field>
       {item && <RecordStamp stamps={item.stamps} />}
     </EditModal>

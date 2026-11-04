@@ -96,6 +96,8 @@ public class Department : TenantEntity
 public class Designation : TenantEntity
 {
     public string Title { get; set; } = "";
+    /// <summary>Short code used in reports and imports, e.g. SE-2.</summary>
+    public string? Code { get; set; }
 }
 
 public class Employee : TenantEntity
