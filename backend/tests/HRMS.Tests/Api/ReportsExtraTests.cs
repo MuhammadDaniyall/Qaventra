@@ -21,11 +21,16 @@ public class ReportsExtraTests(ApiFactory factory) : IClassFixture<ApiFactory>
             lines = new[] { new { employeeId = id, percent = 10m } },
         }, ApiFactory.Json)).EnsureSuccessStatusCode();
 
-        foreach (var key in new[] { "payroll.loans", "payroll.increments", "employees.separations", "recruitment.pipeline", "helpdesk.tickets", "payroll.overtime", "attendance.summary" })
+        foreach (var key in new[] { "payroll.loans", "payroll.increments", "employees.separations", "recruitment.pipeline", "helpdesk.tickets", "payroll.overtime", "attendance.summary", "payroll.payslips", "leave.ledger", "performance.reviews", "employees.profile" })
         {
             var body = key == "payroll.increments" ? (object)new { from = next.ToString("yyyy-MM-dd"), to = next.AddDays(5).ToString("yyyy-MM-dd") } : new { };
             var res = await admin.PostAsJsonAsync($"/api/reports/{key}", body, ApiFactory.Json);
             Assert.True(res.IsSuccessStatusCode, $"{key}: {(int)res.StatusCode} {await res.Content.ReadAsStringAsync()}");
+            if (key == "employees.profile")
+            {
+                var profile = await (await admin.PostAsJsonAsync($"/api/reports/{key}", new { employeeId = id }, ApiFactory.Json)).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+                Assert.Contains(profile.GetProperty("rows").EnumerateArray(), r => r[1].GetString() == "Name" && r[2].GetString() == "Rafi R");
+            }
             if (key == "payroll.increments")
             {
                 var row = Assert.Single((await res.Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json)).GetProperty("rows").EnumerateArray());

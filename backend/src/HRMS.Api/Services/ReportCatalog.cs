@@ -65,6 +65,10 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("employees.separations", "Employees", "Separations", "Resignations and terminations in a period with last day, status and exit reason", ["period", "department"], true),
         new("recruitment.pipeline", "Recruitment", "Hiring pipeline", "Applications received in a period by job and stage, with offers and hires", ["period"], true),
         new("helpdesk.tickets", "Helpdesk", "Helpdesk tickets", "Tickets raised in a period with category, priority, status and time to resolve", ["period", "department"], true),
+        new("payroll.payslips", "Payroll", "Payslip register", "Every earning and deduction line of every payslip for a month, one column per item", ["month", "department", "employee"], true),
+        new("leave.ledger", "Leave", "Leave ledger", "Entitlement, carry forward, adjustments and each leave taken in a year, with the running balance", ["year", "department", "employee"], false),
+        new("employees.profile", "Employees", "Employee profile", "Everything on one person's file: job, personal, identity, bank and statutory details", ["employee", "includeLeft"], true),
+        new("performance.reviews", "Performance", "Review results", "Self, manager and final ratings with potential for review cycles in a period", ["period", "department"], true),
     ];
 
     public async Task<IEnumerable<ReportDefinition>> AvailableAsync()
@@ -78,7 +82,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
     {
         ["Employees"] = "employees", ["Attendance"] = "attendance", ["Projects"] = "projects", ["Leave"] = "leave", ["Payroll"] = "payroll",
         ["Expenses"] = "expenses", ["Approvals"] = "approvals", ["Training"] = "training", ["Travel"] = "travel",
-        ["Recruitment"] = "recruitment", ["Helpdesk"] = "helpdesk",
+        ["Recruitment"] = "recruitment", ["Helpdesk"] = "helpdesk", ["Performance"] = "performance",
     };
 
     /// <summary>An HR manager with an access template sees only the reports of the template's modules.</summary>
@@ -631,6 +635,95 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     rows.Select(t => L($"HD-{t.Number:0000}", t.Employee!.FullName, t.Category?.Name, t.Subject, t.Priority.ToString(), ScheduledService.Humanize(t.Status.ToString()),
                         t.ResolvedAtUtc is { } r ? ((int)(r - t.CreatedAtUtc).TotalHours).ToString() : "",
                         (t.ResolvedAtUtc ?? DateTime.UtcNow) > t.DueAtUtc ? "Yes" : "")));
+            }
+            case "payroll.payslips":
+            {
+                var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month && r.Frequency == PayFrequency.Monthly);
+                if (run is null)
+                    return T(def, $"{month:MMMM yyyy}: payroll not processed", ["Note"], [], [L("Process this month's payroll first.")]);
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var slips = await db.Payslips.Include(p => p.Employee).Include(p => p.Lines).Where(p => p.PayrollRunId == run.Id && ids.Contains(p.EmployeeId)).ToListAsync();
+                var earn = slips.SelectMany(s => s.Lines).Where(l => l.Kind == SalaryComponentKind.Earning).Select(l => l.Name).Distinct().ToList();
+                var ded = slips.SelectMany(s => s.Lines).Where(l => l.Kind == SalaryComponentKind.Deduction).Select(l => l.Name).Distinct().ToList();
+                List<string> headers = ["Code", "Name", "Paid days", .. earn, "Gross", .. ded, "Total deductions", "Net pay"];
+                var numeric = Enumerable.Range(2, headers.Count - 2).ToArray();
+                decimal Sum(Payslip s, string name, SalaryComponentKind k) => s.Lines.Where(l => l.Kind == k && l.Name == name).Sum(l => l.Amount);
+                return T(def, $"{month:MMMM yyyy} · {(run.Status == PayrollRunStatus.Finalized ? "finalized" : "draft")}", headers, numeric,
+                    slips.OrderBy(s => s.Employee!.FirstName).Select(s => L([s.Employee!.EmployeeCode, s.Employee.FullName, Num(s.PaidDays),
+                        .. earn.Select(n => M(Sum(s, n, SalaryComponentKind.Earning))), M(s.GrossEarnings),
+                        .. ded.Select(n => M(Sum(s, n, SalaryComponentKind.Deduction))), M(s.GrossEarnings - s.NetPay), M(s.NetPay)])), totals: true);
+            }
+            case "leave.ledger":
+            {
+                var year = f.Year ?? today.Year;
+                var ids = people.Select(e => e.Id);
+                var balances = await db.LeaveBalances.Include(b => b.LeaveType).Where(b => b.Year == year && ids.Contains(b.EmployeeId)).ToListAsync();
+                var names = await people.Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName }).ToDictionaryAsync(e => e.Id);
+                var start = new DateOnly(year, 1, 1);
+                var end = new DateOnly(year, 12, 31);
+                var leaves = await db.LeaveRequests.Where(l => l.Status == LeaveStatus.Approved && l.FromDate >= start && l.FromDate <= end && ids.Contains(l.EmployeeId))
+                    .OrderBy(l => l.FromDate).ToListAsync();
+                var rows = new List<List<string>>();
+                foreach (var b in balances.Where(b => names.ContainsKey(b.EmployeeId)).OrderBy(b => names[b.EmployeeId].Name).ThenBy(b => b.LeaveType!.Name))
+                {
+                    var who = names[b.EmployeeId];
+                    var bal = 0m;
+                    void Add(string date, string entry, decimal days)
+                    {
+                        bal += days;
+                        rows.Add(L(who.EmployeeCode, who.Name, b.LeaveType!.Name, date, entry, days > 0 ? $"+{Num(days)}" : Num(days), Num(bal)));
+                    }
+                    Add(D(start), "Entitlement", b.Entitled);
+                    if (b.CarriedForward != 0) Add(D(start), "Carried forward", b.CarriedForward);
+                    if (b.Adjustment != 0) Add("", string.IsNullOrWhiteSpace(b.AdjustmentNote) ? "Adjustment" : $"Adjustment: {b.AdjustmentNote}", b.Adjustment);
+                    if (b.Credited != 0) Add("", "Comp-off earned", b.Credited);
+                    foreach (var l in leaves.Where(l => l.EmployeeId == b.EmployeeId && l.LeaveTypeId == b.LeaveTypeId))
+                        Add(D(l.FromDate), l.FromDate == l.ToDate ? "Leave taken" : $"Leave taken to {D(l.ToDate)}", -l.Days);
+                }
+                return T(def, $"Leave year {year}", ["Code", "Name", "Leave", "Date", "Entry", "Days", "Balance"], [], rows);
+            }
+            case "employees.profile":
+            {
+                if (f.EmployeeId is null)
+                    return T(def, "Choose a person", ["Note"], [], [L("Pick one employee to see their profile.")]);
+                var e = await People(f with { IncludeLeft = true }).Include(x => x.Department).Include(x => x.Designation).Include(x => x.Manager).Include(x => x.Shift).FirstOrDefaultAsync()
+                    ?? throw new NotFoundException("Employee");
+                var lookupIds = new[] { e.DivisionId, e.SubDepartmentId, e.GradeId, e.CostCenterId, e.RegionId, e.EmployeeGroupId }.Where(x => x != null).Select(x => x!.Value).ToList();
+                var lookups = await db.OrgLookups.Where(l => lookupIds.Contains(l.Id)).ToDictionaryAsync(l => l.Id, l => l.Name);
+                string? Lk(Guid? id) => id is { } g && lookups.TryGetValue(g, out var n) ? n : null;
+                string? Dt(DateOnly? d) => d is { } x ? D(x) : null;
+                var items = new (string Section, string Field, string? Value)[]
+                {
+                    ("Job", "Code", e.EmployeeCode), ("Job", "Name", e.FullName), ("Job", "Department", e.Department?.Name), ("Job", "Designation", e.Designation?.Title),
+                    ("Job", "Manager", e.Manager?.FullName), ("Job", "Division", Lk(e.DivisionId)), ("Job", "Sub-department", Lk(e.SubDepartmentId)), ("Job", "Grade", Lk(e.GradeId)),
+                    ("Job", "Cost center", Lk(e.CostCenterId)), ("Job", "Region", Lk(e.RegionId)), ("Job", "Group", Lk(e.EmployeeGroupId)), ("Job", "Shift", e.Shift?.Name),
+                    ("Job", "Status", Status(e.Status, e.LeavingDate)), ("Job", "Joined", D(e.JoiningDate)), ("Job", "Confirmed", Dt(e.ConfirmationDate)), ("Job", "Contract ends", Dt(e.ContractEndDate)),
+                    ("Job", "Left", Dt(e.LeavingDate)), ("Job", "Exit reason", e.ExitReason),
+                    ("Personal", "Father's name", e.FatherName), ("Personal", "Gender", e.Gender?.ToString()), ("Personal", "Date of birth", Dt(e.DateOfBirth)),
+                    ("Personal", "Place of birth", e.PlaceOfBirth), ("Personal", "Marital status", e.MaritalStatus?.ToString()), ("Personal", "Blood group", e.BloodGroup),
+                    ("Personal", "Nationality", e.Nationality), ("Personal", "Religion", e.Religion),
+                    ("Contact", "Work email", e.Email), ("Contact", "Personal email", e.PersonalEmail), ("Contact", "Phone", e.Phone), ("Contact", "Address", e.Address),
+                    ("Identity", "CNIC", e.Cnic), ("Identity", "CNIC expires", Dt(e.CnicExpiresOn)), ("Identity", "Passport", e.PassportNo), ("Identity", "Passport expires", Dt(e.PassportExpiresOn)),
+                    ("Identity", "Visa", e.VisaNo), ("Identity", "Visa expires", Dt(e.VisaExpiresOn)), ("Identity", "Driving licence", e.DrivingLicenseNo),
+                    ("Pay", "Paid by", ScheduledService.Humanize(e.PaymentMethod.ToString())), ("Pay", "Bank", e.BankName),
+                    ("Pay", "Account title", e.BankAccountTitle), ("Pay", "Account", e.BankAccount), ("Pay", "Branch code", e.BankBranchCode),
+                    ("Statutory", "NTN", e.Ntn), ("Statutory", "EOBI no.", e.EobiNo), ("Statutory", "Social security no.", e.SocialSecurityNo),
+                    ("Statutory", "Provident fund", e.ProvidentFundMember ? "Member" : null), ("Statutory", "Voluntary pension", e.VpsMember ? $"{e.VpsProvider} {e.VpsAccountNo}".Trim() : null),
+                    ("Statutory", "Insurance", string.IsNullOrWhiteSpace(e.InsuranceProvider) ? null : $"{e.InsuranceProvider} {e.InsurancePolicyNo}".Trim()),
+                };
+                return T(def, $"{e.EmployeeCode} · {e.FullName}", ["Section", "Field", "Value"], [],
+                    items.Where(i => !string.IsNullOrWhiteSpace(i.Value)).Select(i => L(i.Section, i.Field, i.Value)));
+            }
+            case "performance.reviews":
+            {
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var rows = await db.PerformanceReviews.Include(r => r.Cycle).Include(r => r.Employee).ThenInclude(e => e!.Department)
+                    .Where(r => r.Cycle!.PeriodFrom <= to && r.Cycle.PeriodTo >= from && ids.Contains(r.EmployeeId))
+                    .OrderBy(r => r.Cycle!.PeriodFrom).ThenBy(r => r.Employee!.FirstName).ToListAsync();
+                return T(def, range, ["Cycle", "Code", "Name", "Department", "Stage", "Self score", "Manager score", "Final rating", "Potential", "Agrees"], [],
+                    rows.Select(r => L(r.Cycle!.Name, r.Employee!.EmployeeCode, r.Employee.FullName, r.Employee.Department?.Name, ScheduledService.Humanize(r.Stage.ToString()),
+                        r.SelfScore is { } s ? Num(s) : "", r.ManagerScore is { } m ? Num(m) : "", r.FinalRating?.ToString(), r.Potential?.ToString(),
+                        r.EmployeeAgrees is { } a ? (a ? "Yes" : "No") : "")));
             }
             default:
                 throw new NotFoundException("Report");
