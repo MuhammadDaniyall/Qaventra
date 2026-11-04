@@ -54,6 +54,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<ReviewCheckIn> ReviewCheckIns => Set<ReviewCheckIn>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<CompanySmtp> CompanySmtps => Set<CompanySmtp>();
     public DbSet<AiMessageLog> AiMessageLogs => Set<AiMessageLog>();
     public DbSet<PayrollGlMapping> PayrollGlMappings => Set<PayrollGlMapping>();
     public DbSet<PushKeys> PushKeys => Set<PushKeys>();

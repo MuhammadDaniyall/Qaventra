@@ -68,6 +68,7 @@ builder.Services.AddScoped<HRMS.Api.Controllers.SettlementApprovalService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions());
 builder.Services.AddSingleton<EmailQueue>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddSingleton<SecretBox>();
 builder.Services.AddHostedService<EmailBackgroundService>();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Push").Get<PushOptions>() ?? new PushOptions());
 builder.Services.AddSingleton<PushQueue>();

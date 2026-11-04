@@ -14,14 +14,94 @@ public record EmailTemplateDto(NotificationKind Kind, string Label, string? Subj
 public record SaveEmailTemplateRequest([Required, StringLength(200)] string Subject, [StringLength(2000)] string? Intro, bool Enabled = true);
 public record EmailLogDto(Guid Id, DateTime CreatedAtUtc, string To, string Subject, string? Kind, EmailLogStatus Status, string? Error);
 public record EmailUsageDto(int SentThisMonth, int FailedThisMonth, int? QuotaPerMonth);
+public record CompanySmtpDto(string Host, int Port, string? User, bool HasPassword, string From, string? FromName, bool EnableSsl, bool IsEnabled);
+/// <param name="Password">Null keeps the saved password; empty clears it.</param>
+public record SaveCompanySmtpRequest([Required, StringLength(200)] string Host, int Port, [StringLength(200)] string? User, [StringLength(300)] string? Password,
+    [Required, EmailAddress, StringLength(200)] string From, [StringLength(100)] string? FromName, bool EnableSsl, bool IsEnabled);
+public record TestEmailRequest([Required, EmailAddress, StringLength(200)] string To);
 
 /// <summary>The company's email wording per notification kind, the log of emails sent, and this month's usage.</summary>
 [ApiController]
 [Route("api/setup/email")]
 [Authorize(Policy = Policies.CompanyUser)]
 [Authorize(Policy = Policies.Hr)]
-public class EmailSettingsController(HrmsDbContext db) : ControllerBase
+public class EmailSettingsController(HrmsDbContext db, HRMS.Api.Services.SecretBox secrets, HRMS.Api.Services.IEmailSender sender) : ControllerBase
 {
+    /// <summary>Mail server ports a company may use (keeps the test send from probing other services).</summary>
+    private static readonly int[] SmtpPorts = [25, 465, 587, 2525];
+
+    [HttpGet("smtp"), Authorize(Policy = Policies.Admin)]
+    public async Task<CompanySmtpDto?> Smtp()
+    {
+        var s = await db.CompanySmtps.AsNoTracking().FirstOrDefaultAsync();
+        return s is null ? null : new CompanySmtpDto(s.Host, s.Port, s.User, s.PasswordCipher is not null, s.From, s.FromName, s.EnableSsl, s.IsEnabled);
+    }
+
+    [HttpPut("smtp"), Authorize(Policy = Policies.Admin)]
+    public async Task<IActionResult> SaveSmtp(SaveCompanySmtpRequest req)
+    {
+        if (!SmtpPorts.Contains(req.Port))
+            throw new HRMS.Domain.Common.DomainException("Use a mail port: 25, 465, 587 or 2525.");
+        if (await IsInternalAsync(req.Host.Trim()))
+            throw new HRMS.Domain.Common.DomainException("Use your mail provider's public server name.");
+        var s = await db.CompanySmtps.FirstOrDefaultAsync();
+        if (s is null)
+            db.CompanySmtps.Add(s = new CompanySmtp());
+        s.Host = req.Host.Trim();
+        s.Port = req.Port;
+        s.User = string.IsNullOrWhiteSpace(req.User) ? null : req.User.Trim();
+        if (req.Password is not null)
+            s.PasswordCipher = req.Password.Length == 0 ? null : secrets.Protect(req.Password);
+        s.From = req.From.Trim();
+        s.FromName = string.IsNullOrWhiteSpace(req.FromName) ? null : req.FromName.Trim();
+        s.EnableSsl = req.EnableSsl;
+        s.IsEnabled = req.IsEnabled;
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
+    /// <summary>A host on this machine or a private network: not a company's mail provider, so refused.</summary>
+    private static async Task<bool> IsInternalAsync(string host)
+    {
+        if (host.Equals("localhost", StringComparison.OrdinalIgnoreCase)) return true;
+        System.Net.IPAddress[] addresses;
+        try
+        {
+            addresses = System.Net.IPAddress.TryParse(host, out var ip) ? [ip] : await System.Net.Dns.GetHostAddressesAsync(host);
+        }
+        catch (System.Net.Sockets.SocketException)
+        {
+            return false; // Unknown names fail later at the test send.
+        }
+        return addresses.Any(a =>
+        {
+            if (System.Net.IPAddress.IsLoopback(a) || a.IsIPv6LinkLocal || a.IsIPv6SiteLocal) return true;
+            var b = a.MapToIPv4().GetAddressBytes();
+            return b[0] == 10 || b[0] == 127 || (b[0] == 172 && b[1] >= 16 && b[1] <= 31) || (b[0] == 192 && b[1] == 168) || (b[0] == 169 && b[1] == 254) || b[0] == 0;
+        });
+    }
+
+    /// <summary>Sends one email through the saved server right away and says whether it worked.</summary>
+    [HttpPost("smtp/test"), Authorize(Policy = Policies.Admin)]
+    public async Task<object> TestSmtp(TestEmailRequest req, CancellationToken ct)
+    {
+        var s = await db.CompanySmtps.AsNoTracking().FirstOrDefaultAsync(ct) ?? throw new HRMS.Domain.Common.DomainException("Save the mail server first.");
+        try
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(20));
+            await sender.SendAsync(new HRMS.Api.Services.EmailMessage(req.To.Trim(), "Test email from Qaventra",
+                "<p>Your mail server works. Emails from Qaventra will go out through it.</p>",
+                Smtp: HRMS.Api.Services.EmailBackgroundService.ToOptions(s, secrets)), timeout.Token);
+            return new { ok = true, error = (string?)null };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            var msg = ex is OperationCanceledException ? "The mail server did not answer in 20 seconds." : ex.Message;
+            return new { ok = false, error = msg.Length > 300 ? msg[..300] : msg };
+        }
+    }
+
     private static readonly Dictionary<NotificationKind, string> Labels = new()
     {
         [NotificationKind.ApprovalNeeded] = "Something waits for approval",

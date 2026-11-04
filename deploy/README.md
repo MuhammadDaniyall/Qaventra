@@ -130,3 +130,9 @@ Useful by hand:
 - The database is reachable only from sites hosted at MonsterASP, not from this computer.
 - Web Deploy (port 8172) refused the site login, so uploads use FTPS instead.
 - Keep a copy of `secrets\production.json`. Losing the JWT key signs everyone out; losing it does not lose data.
+
+## Company mail servers
+
+Company admins can set their own SMTP server under Settings → Email. The password is encrypted with AES-GCM
+using `Secrets:Key` (32+ characters) when set, otherwise a key derived from `Jwt:Key`. Changing that key means
+companies have to enter their mail password again.

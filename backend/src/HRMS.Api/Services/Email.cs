@@ -11,8 +11,9 @@ public record EmailAttachment(string FileName, string ContentType, byte[] Data);
 
 /// <param name="TenantId">The company it is sent for; set to log it and count it against the company's monthly quota.</param>
 /// <param name="ReplyTo">Where replies go, when not the From address (ticket emails point it at the helpdesk inbox).</param>
+/// <param name="Smtp">Send through this server instead of the platform's (the company's own mail server).</param>
 public record EmailMessage(string To, string Subject, string HtmlBody, IReadOnlyList<EmailAttachment>? Attachments = null, Guid? TenantId = null, string? Kind = null,
-    string? ReplyTo = null);
+    string? ReplyTo = null, SmtpOptions? Smtp = null);
 
 /// <summary>SMTP settings ("Smtp" section). Leave Host empty to switch email off; in-app notifications still work.</summary>
 public class SmtpOptions
@@ -33,10 +34,13 @@ public interface IEmailSender
     Task SendAsync(EmailMessage message, CancellationToken ct);
 }
 
-public class SmtpEmailSender(SmtpOptions options) : IEmailSender
+public class SmtpEmailSender(SmtpOptions defaults) : IEmailSender
 {
+    private readonly SmtpOptions options = defaults;
+
     public async Task SendAsync(EmailMessage message, CancellationToken ct)
     {
+        var options = message.Smtp ?? this.options;
         using var client = new SmtpClient(options.Host, options.Port)
         {
             EnableSsl = options.EnableSsl,
@@ -73,7 +77,7 @@ public class EmailQueue
 /// Sends queued emails one by one. Failures are logged and dropped; the in-app notification remains. Company emails
 /// are written to the company's email log and stop for the month once its quota is used up.
 /// </summary>
-public class EmailBackgroundService(EmailQueue queue, IServiceProvider services, SmtpOptions options, ILogger<EmailBackgroundService> log)
+public class EmailBackgroundService(EmailQueue queue, IServiceProvider services, SmtpOptions options, SecretBox secrets, ILogger<EmailBackgroundService> log)
     : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -111,7 +115,11 @@ public class EmailBackgroundService(EmailQueue queue, IServiceProvider services,
             db.UseTenant(tenantId);
             var status = EmailLogStatus.Sent;
             string? error = null;
-            if (!options.IsConfigured)
+            // The company's own mail server, when it has one switched on.
+            var own = await db.CompanySmtps.AsNoTracking().FirstOrDefaultAsync(s => s.IsEnabled, ct);
+            if (own is not null)
+                message = message with { Smtp = ToOptions(own, secrets) };
+            if (own is null && !options.IsConfigured)
                 status = EmailLogStatus.NotConfigured;
             else
             {
@@ -146,4 +154,10 @@ public class EmailBackgroundService(EmailQueue queue, IServiceProvider services,
             log.LogWarning(ex, "Could not send or log email \"{Subject}\".", message.Subject);
         }
     }
+
+    public static SmtpOptions ToOptions(CompanySmtp s, SecretBox secrets) => new()
+    {
+        Host = s.Host, Port = s.Port, User = s.User ?? "", Password = secrets.Unprotect(s.PasswordCipher) ?? "", From = s.From,
+        FromName = string.IsNullOrWhiteSpace(s.FromName) ? "Qaventra" : s.FromName, EnableSsl = s.EnableSsl,
+    };
 }
