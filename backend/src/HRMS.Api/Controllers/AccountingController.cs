@@ -117,19 +117,46 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
     [HttpGet("runs/{id:guid}/journal")]
     public Task<JournalDto> Journal(Guid id) => BuildAsync(id);
 
-    /// <summary>The same voucher as CSV for import into the accounting software.</summary>
+    /// <summary>
+    /// The same voucher as CSV for import into the accounting software: plain (default), "oracle" (GL interface columns)
+    /// or "sap" (posting keys 40/50, cost center per line).
+    /// </summary>
     [HttpGet("runs/{id:guid}/journal.csv")]
-    public async Task<IActionResult> JournalCsv(Guid id)
+    public async Task<IActionResult> JournalCsv(Guid id, [FromQuery] string? format = null)
     {
         var j = await BuildAsync(id);
         if (j.Unmapped.Count > 0)
             throw new DomainException($"Map every payroll line to an account first: {string.Join(", ", j.Unmapped)}.");
-        var sb = new StringBuilder("Date,Account code,Account name,Description,Department,Debit,Credit\r\n");
         static string C(string? s) => s is null ? "" : s.Contains(',') || s.Contains('"') ? $"\"{s.Replace("\"", "\"\"")}\"" : s;
-        foreach (var l in j.Lines)
-            sb.Append(CultureInfo.InvariantCulture, $"{j.Date:yyyy-MM-dd},{C(l.AccountCode)},{C(l.AccountName)},{C(l.Description)},{C(l.Department)},{l.Debit:0.00},{l.Credit:0.00}\r\n");
+        static string A(decimal v) => v > 0 ? v.ToString("0.00", CultureInfo.InvariantCulture) : "";
+        var reference = $"PAYROLL-{j.Year}-{j.Month:00}";
+        var kind = (format ?? "").Trim().ToLowerInvariant();
+        var sb = new StringBuilder();
+        switch (kind)
+        {
+            case "oracle":
+                sb.Append("STATUS,ACCOUNTING_DATE,CURRENCY_CODE,ACTUAL_FLAG,USER_JE_SOURCE_NAME,USER_JE_CATEGORY_NAME,SEGMENT1,SEGMENT2,ENTERED_DR,ENTERED_CR,REFERENCE1,REFERENCE10\r\n");
+                foreach (var l in j.Lines)
+                    sb.Append(CultureInfo.InvariantCulture,
+                        $"NEW,{j.Date:yyyy-MM-dd},PKR,A,Payroll,Payroll,{C(l.AccountCode)},{C(l.Department)},{A(l.Debit)},{A(l.Credit)},{reference},{C(l.Description)}\r\n");
+                break;
+            case "sap":
+                sb.Append("Document date,Posting date,Document type,Currency,Reference,Line item,Posting key,GL account,Amount,Cost center,Item text\r\n");
+                var n = 0;
+                foreach (var l in j.Lines)
+                    sb.Append(CultureInfo.InvariantCulture,
+                        $"{j.Date:dd.MM.yyyy},{j.Date:dd.MM.yyyy},SA,PKR,{reference},{++n},{(l.Debit > 0 ? "40" : "50")},{C(l.AccountCode)},{(l.Debit > 0 ? l.Debit : l.Credit):0.00},{C(l.Department)},{C(l.Description)}\r\n");
+                break;
+            case "":
+                sb.Append("Date,Account code,Account name,Description,Department,Debit,Credit\r\n");
+                foreach (var l in j.Lines)
+                    sb.Append(CultureInfo.InvariantCulture, $"{j.Date:yyyy-MM-dd},{C(l.AccountCode)},{C(l.AccountName)},{C(l.Description)},{C(l.Department)},{l.Debit:0.00},{l.Credit:0.00}\r\n");
+                break;
+            default:
+                throw new DomainException("The format is plain, oracle or sap.");
+        }
         return File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray(), "text/csv",
-            $"payroll-journal-{j.Year}-{j.Month:00}.csv");
+            $"payroll-journal-{j.Year}-{j.Month:00}{(kind == "" ? "" : "-" + kind)}.csv");
     }
 
     private async Task<JournalDto> BuildAsync(Guid runId)

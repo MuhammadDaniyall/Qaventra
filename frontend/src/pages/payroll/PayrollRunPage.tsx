@@ -147,6 +147,14 @@ export function PayrollRunPage() {
               label="Export to Excel"
             />
             <ExportButton path={`/payroll/runs/${run.id}/journal.csv`} fileName={`payroll-journal-${run.year}-${String(run.month).padStart(2, '0')}.csv`} label="Journal (CSV)" />
+            {(['oracle', 'sap'] as const).map((f) => (
+              <ExportButton
+                key={f}
+                path={`/payroll/runs/${run.id}/journal.csv?format=${f}`}
+                fileName={`payroll-journal-${run.year}-${String(run.month).padStart(2, '0')}-${f}.csv`}
+                label={f === 'oracle' ? 'Oracle JV' : 'SAP JV'}
+              />
+            ))}
             {run.status !== 'Finalized' && (
               <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={() => setReprocessOpen(true)}>
                 Reprocess

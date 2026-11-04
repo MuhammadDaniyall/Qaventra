@@ -46,6 +46,12 @@ public class AccountingTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var text = await csv.Content.ReadAsStringAsync();
         Assert.Contains("Account code", text);
         Assert.Contains("5100", text);
+        var oracle = await (await admin.GetAsync($"/api/payroll/runs/{runId}/journal.csv?format=oracle")).Content.ReadAsStringAsync();
+        Assert.Contains("ENTERED_DR", oracle);
+        var sap = await (await admin.GetAsync($"/api/payroll/runs/{runId}/journal.csv?format=sap")).Content.ReadAsStringAsync();
+        Assert.Contains("Posting key", sap);
+        Assert.Contains(",40,5100,", sap);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync($"/api/payroll/runs/{runId}/journal.csv?format=tally")).StatusCode);
 
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.DeleteAsync($"/api/payroll/gl/accounts/{account.GetProperty("id").GetGuid()}")).StatusCode);
     }
