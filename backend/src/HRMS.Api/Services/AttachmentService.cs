@@ -133,6 +133,13 @@ public class AttachmentService(HrmsDbContext db, ICurrentUser me, ApprovalEngine
             throw new DomainException("Upload a PDF, an image (JPG, PNG, WebP) or a Word/Excel file.");
         if (file.Data.Length == 0 || file.Data.Length > MaxBytes)
             throw new DomainException("Files must be smaller than 5 MB.");
+        if (await db.DocumentSettings.FirstOrDefaultAsync(s => s.OwnerType == type) is { } setting)
+        {
+            if (!setting.Enabled)
+                throw new DomainException("Your company has switched off attachments here.");
+            if (file.Data.Length > setting.MaxSizeMb * 1024L * 1024)
+                throw new DomainException($"Files here must be smaller than {setting.MaxSizeMb} MB.");
+        }
         if (await db.Attachments.CountAsync(a => a.OwnerType == type && a.OwnerId == ownerId) >= MaxPerOwner)
             throw new DomainException($"At most {MaxPerOwner} files can be attached here.");
         if (type != AttachmentOwner.EmployeeDocument && (file.Category is not null || file.ExpiresOn is not null))

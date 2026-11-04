@@ -104,4 +104,21 @@ public class AttachmentTests(ApiFactory factory) : IClassFixture<ApiFactory>
         // The employee cannot remove what HR uploaded.
         Assert.Equal(HttpStatusCode.Forbidden, (await worker.DeleteAsync($"/api/attachments/{cnic.GetProperty("id").GetGuid()}")).StatusCode);
     }
+
+    [Fact]
+    public async Task Modules_can_switch_attachments_off_or_limit_their_size()
+    {
+        var (admin, _, _, _, workerId) = await TeamAsync("DocSettings");
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/attachments/settings/EmployeeDocument", new { enabled = true, maxSizeMb = 1 })).StatusCode);
+        var big = await Upload(admin, "EmployeeDocument", workerId, "scan.pdf", new byte[1_200_000]);
+        Assert.Equal(HttpStatusCode.BadRequest, big.StatusCode);
+        await Ok(await Upload(admin, "EmployeeDocument", workerId, "small.pdf", new byte[1000]));
+        var storage = await Ok(await admin.GetAsync("/api/attachments/settings"));
+        var docs = storage.GetProperty("modules").EnumerateArray().Single(m => m.GetProperty("ownerType").GetString() == "EmployeeDocument");
+        Assert.Equal(1, docs.GetProperty("files").GetInt32());
+        Assert.Equal(1000, docs.GetProperty("bytes").GetInt64());
+        Assert.Equal(1, docs.GetProperty("maxSizeMb").GetInt32());
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsJsonAsync("/api/attachments/settings/EmployeeDocument", new { enabled = false, maxSizeMb = 5 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Upload(admin, "EmployeeDocument", workerId, "other.pdf", new byte[1000])).StatusCode);
+    }
 }

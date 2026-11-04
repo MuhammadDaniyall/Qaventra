@@ -20,6 +20,15 @@ public class Attachment : TenantEntity
     public string? UploadedByName { get; set; }
 }
 
+/// <summary>Per module: whether files may be attached there and how large each may be. No row = allowed, 5 MB.</summary>
+public class DocumentSetting : TenantEntity
+{
+    public AttachmentOwner OwnerType { get; set; }
+    public bool Enabled { get; set; } = true;
+    /// <summary>1 to 5.</summary>
+    public int MaxSizeMb { get; set; } = 5;
+}
+
 /// <summary>File bytes, kept apart so listing attachments never loads them. Shares its Id with the attachment.</summary>
 public class AttachmentContent : TenantEntity
 {

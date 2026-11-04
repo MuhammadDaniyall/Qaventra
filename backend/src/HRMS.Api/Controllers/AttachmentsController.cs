@@ -17,6 +17,10 @@ public record AttachmentDto(
 
 public record AttachmentListDto(bool CanAdd, List<AttachmentDto> Items);
 
+public record DocumentSettingDto(AttachmentOwner OwnerType, string Label, bool Enabled, int MaxSizeMb, int Files, long Bytes);
+public record DocumentStorageDto(List<DocumentSettingDto> Modules, int ReceiptFiles, long ReceiptBytes, long TotalBytes);
+public record SaveDocumentSettingRequest(bool Enabled, [Range(1, 5)] int MaxSizeMb);
+
 public class UploadAttachmentForm
 {
     [Required]
@@ -32,6 +36,44 @@ public class UploadAttachmentForm
 [Authorize(Policy = Policies.CompanyUser)]
 public class AttachmentsController(HrmsDbContext db, AttachmentService attachments, ICurrentUser me) : ControllerBase
 {
+    private static readonly Dictionary<AttachmentOwner, string> ModuleLabels = new()
+    {
+        [AttachmentOwner.EmployeeDocument] = "Employee documents",
+        [AttachmentOwner.Leave] = "Leave requests",
+        [AttachmentOwner.Separation] = "Resignations and exits",
+        [AttachmentOwner.Announcement] = "Announcements",
+        [AttachmentOwner.Ticket] = "Help desk tickets",
+        [AttachmentOwner.Candidate] = "Candidates (CVs)",
+        [AttachmentOwner.Travel] = "Travel requests",
+        [AttachmentOwner.TrainingRequest] = "Training requests",
+    };
+
+    /// <summary>Per module: attachments on or off, the size limit, and how much space files take.</summary>
+    [HttpGet("settings"), Authorize(Policy = Policies.Hr)]
+    public async Task<DocumentStorageDto> Settings()
+    {
+        var settings = await db.DocumentSettings.ToDictionaryAsync(s => s.OwnerType);
+        var used = await db.Attachments.GroupBy(a => a.OwnerType).Select(g => new { g.Key, Files = g.Count(), Bytes = g.Sum(a => a.SizeBytes) }).ToDictionaryAsync(x => x.Key);
+        var modules = ModuleLabels.Select(m => new DocumentSettingDto(m.Key, m.Value, settings.GetValueOrDefault(m.Key)?.Enabled ?? true, settings.GetValueOrDefault(m.Key)?.MaxSizeMb ?? 5,
+            used.GetValueOrDefault(m.Key)?.Files ?? 0, used.GetValueOrDefault(m.Key)?.Bytes ?? 0)).ToList();
+        var receipts = await db.ExpenseReceipts.Select(r => (long)r.Data.Length).ToListAsync();
+        return new DocumentStorageDto(modules, receipts.Count, receipts.Sum(), modules.Sum(m => m.Bytes) + receipts.Sum());
+    }
+
+    [HttpPut("settings/{ownerType}"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> SaveSetting(AttachmentOwner ownerType, SaveDocumentSettingRequest req)
+    {
+        if (!ModuleLabels.ContainsKey(ownerType))
+            return NotFound();
+        var s = await db.DocumentSettings.FirstOrDefaultAsync(x => x.OwnerType == ownerType);
+        if (s is null)
+            db.DocumentSettings.Add(s = new DocumentSetting { OwnerType = ownerType });
+        s.Enabled = req.Enabled;
+        s.MaxSizeMb = req.MaxSizeMb;
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     [HttpGet("{ownerType}/{ownerId:guid}")]
     public async Task<AttachmentListDto> List(AttachmentOwner ownerType, Guid ownerId)
     {

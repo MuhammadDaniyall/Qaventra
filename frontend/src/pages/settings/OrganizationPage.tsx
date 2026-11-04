@@ -1,8 +1,9 @@
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, ListPlus, Mail, MapPin, Palmtree, ShieldCheck, Tags } from 'lucide-react';
+import { Briefcase, CalendarHeart, Clock, GitBranch, Layers, FolderOpen, ListPlus, Mail, MapPin, Palmtree, ShieldCheck, Tags } from 'lucide-react';
 import { useUser } from '../../auth/AuthContext';
 import { isCompanyAdmin } from '../../auth/roles';
 import { EmailTab } from './EmailTab';
+import { DocumentsTab } from './DocumentsTab';
 import { SecurityTab } from './SecurityTab';
 import { PageHeader, Tabs } from '../../components/ui';
 import { ApprovalFlowsTab } from './ApprovalFlowsTab';
@@ -17,8 +18,8 @@ import { ShiftsTab } from './ShiftsTab';
 import { ExemptionSettingsCard } from '../attendance/Exemptions';
 import { PenaltyRulesCard } from '../attendance/PenaltyRules';
 
-type Tab = 'departments' | 'designations' | 'lists' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields' | 'email' | 'security';
-const TABS: Tab[] = ['departments', 'designations', 'lists', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields', 'email', 'security'];
+type Tab = 'departments' | 'designations' | 'lists' | 'shifts' | 'offices' | 'holidays' | 'leave-types' | 'approvals' | 'custom-fields' | 'email' | 'documents' | 'security';
+const TABS: Tab[] = ['departments', 'designations', 'lists', 'shifts', 'offices', 'holidays', 'leave-types', 'approvals', 'custom-fields', 'email', 'documents', 'security'];
 
 export function OrganizationPage() {
   const [params, setParams] = useSearchParams();
@@ -44,6 +45,7 @@ export function OrganizationPage() {
           { value: 'approvals', label: 'Approval chains', icon: <GitBranch className="size-4" /> },
           { value: 'custom-fields', label: 'Custom fields', icon: <ListPlus className="size-4" /> },
           { value: 'email', label: 'Email', icon: <Mail className="size-4" /> },
+          { value: 'documents', label: 'Documents', icon: <FolderOpen className="size-4" /> },
           ...(admin ? [{ value: 'security' as const, label: 'Security', icon: <ShieldCheck className="size-4" /> }] : []),
         ]}
       />
@@ -63,6 +65,7 @@ export function OrganizationPage() {
       {tab === 'approvals' && <ApprovalFlowsTab />}
       {tab === 'custom-fields' && <CustomFieldsTab />}
       {tab === 'email' && <EmailTab />}
+      {tab === 'documents' && <DocumentsTab />}
       {tab === 'security' && <SecurityTab />}
     </>
   );
