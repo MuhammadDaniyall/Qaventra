@@ -68,7 +68,13 @@ function ReviewView({ r }: { r: Review }) {
         }
       />
       <RecordStamp className="-mt-2 mb-4" stamps={r.stamps} />
-      <StageBar stage={r.stage} selfReview={r.selfReviewEnabled} hasGoals={r.sections.some((s) => s.kind === 'Goals')} className="mb-6" />
+      <StageBar
+        stage={r.stage}
+        selfReview={r.selfReviewEnabled}
+        hasGoals={r.sections.some((s) => s.kind === 'Goals')}
+        finalReview={!!r.finalReviewer}
+        className="mb-6"
+      />
       {goalsTurn || goalsApproval ? (
         <GoalsEditor r={r} />
       ) : r.stage === 'SelfReview' && r.isEmployee ? (
@@ -79,6 +85,12 @@ function ReviewView({ r }: { r: Review }) {
         <ReadOnly r={r} />
       )}
       {r.stage === 'SignOff' && r.isEmployee && <SignOff r={r} />}
+      {r.stage === 'FinalReview' && r.isFinalReviewer && <FinalReviewCard r={r} />}
+      {r.finalReviewComment && r.stage !== 'FinalReview' && !r.isEmployee && (
+        <Card className="mt-6">
+          <CardHeader title={`Final reviewer: ${r.finalReviewer ?? ''}`} description={r.finalReviewComment} />
+        </Card>
+      )}
       {r.stage === 'Calibration' && r.isHr && !r.isEmployee && <CalibrateCard r={r} />}
       <ReviewExtras reviewId={r.id} isReviewer={r.isReviewer} isEmployee={r.isEmployee} />
       <ConfirmDialog
@@ -453,14 +465,52 @@ function SignOff({ r }: { r: Review }) {
   );
 }
 
+/** The manager's manager agrees with the manager's review or sends it back with a reason. */
+function FinalReviewCard({ r }: { r: Review }) {
+  const toast = useToast();
+  const save = useSave(r.id);
+  const [comment, setComment] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const decide = useMutation({
+    mutationFn: (approve: boolean) => performanceApi.finalReview(r.id, approve, comment.trim() || null),
+    onSuccess: (res, approve) => {
+      save(res);
+      toast.success(approve ? 'Sent to HR' : 'Sent back to the manager');
+    },
+    onError: (err) => setError(errorMessage(err)),
+  });
+  return (
+    <Card className="mt-6 border-accent-200 dark:border-accent-500/30">
+      <CardHeader title="Final review" description={`${r.reviewer ?? 'The manager'} scored ${r.managerScore ?? '—'}. Agree to send it to HR, or send it back with what to change.`} />
+      <CardBody className="space-y-3">
+        <FormError message={error} />
+        <Textarea rows={3} maxLength={4000} value={comment} placeholder="Comment (needed to send back)" onChange={(e) => setComment(e.target.value)} aria-label="Final review comment" />
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" loading={decide.isPending && decide.variables === false} onClick={() => decide.mutate(false)}>
+            Send back
+          </Button>
+          <Button icon={<Check className="size-4" />} loading={decide.isPending && decide.variables === true} onClick={() => decide.mutate(true)}>
+            Agree
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 function CalibrateCard({ r }: { r: Review }) {
   const toast = useToast();
   const qc = useQueryClient();
   const settings = useQuery({ queryKey: qk.performanceSettings, queryFn: performanceApi.settings });
   const [rating, setRating] = useState<number | null>(r.finalRating);
   const [note, setNote] = useState(r.calibrationNote ?? '');
+  const [grace, setGrace] = useState(String(r.graceMarks ?? 0));
+  const changeGrace = (v: string) => {
+    setGrace(v);
+    if (r.managerScore != null) setRating(Math.min(5, Math.max(1, Math.round(r.managerScore + (Number(v) || 0)))));
+  };
   const save = useMutation({
-    mutationFn: () => performanceApi.calibrate(r.id, rating!, note.trim() || null),
+    mutationFn: () => performanceApi.calibrate(r.id, rating!, note.trim() || null, Number(grace) || 0),
     onSuccess: () => {
       toast.success('Final rating saved');
       qc.invalidateQueries({ queryKey: qk.performance });
@@ -472,6 +522,9 @@ function CalibrateCard({ r }: { r: Review }) {
       <CardHeader title="Calibration" description={`Manager score ${r.managerScore ?? '—'}. Adjust the final rating if needed; release it from the cycle page.`} />
       <CardBody className="space-y-3">
         <RatingPicker value={rating} onChange={setRating} labels={settings.data?.ratingLabels} />
+        <Field label="Grace marks" hint={`0 to 1, added to the manager score${r.managerScore != null ? ` (${(r.managerScore + (Number(grace) || 0)).toFixed(2)} with grace)` : ''}`}>
+          <Input type="number" min={0} max={1} step="0.05" value={grace} onChange={(e) => changeGrace(e.target.value)} className="w-32" />
+        </Field>
         <Input value={note} maxLength={4000} placeholder="Why it changed (HR only)" onChange={(e) => setNote(e.target.value)} aria-label="Calibration note" />
         <div className="flex justify-end">
           <Button disabled={!rating} loading={save.isPending} onClick={() => save.mutate()}>

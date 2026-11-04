@@ -262,6 +262,8 @@ public enum ReviewStage
     /// <summary>Released to the employee to accept or disagree.</summary>
     SignOff = 6,
     Done = 7,
+    /// <summary>The manager's manager checks the manager's review (comes between ManagerReview and Calibration).</summary>
+    FinalReview = 8,
 }
 
 public enum ReviewSectionKind

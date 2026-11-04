@@ -42,6 +42,8 @@ public class ReviewCycle : TenantEntity
     /// <summary>The template's sections and self-review flag, frozen at launch so later edits do not change running reviews.</summary>
     public string SectionsJson { get; set; } = "[]";
     public bool SelfReview { get; set; } = true;
+    /// <summary>After the manager, the manager's own manager checks the review before HR calibrates it.</summary>
+    public bool FinalReview { get; set; }
     public DateTime? LaunchedAtUtc { get; set; }
     public DateTime? ClosedAtUtc { get; set; }
 }
@@ -68,6 +70,12 @@ public class PerformanceReview : TenantEntity
     /// <summary>HR's calibrated rating (1..5); the manager's score rounded until HR changes it.</summary>
     public int? FinalRating { get; set; }
     public string? CalibrationNote { get; set; }
+    /// <summary>Marks HR adds on top of the manager's score in calibration (0 to 1 on the 5-point scale).</summary>
+    public decimal GraceMarks { get; set; }
+    /// <summary>The manager's manager, when the cycle has a final review.</summary>
+    public Guid? FinalReviewerEmployeeId { get; set; }
+    public string? FinalReviewComment { get; set; }
+    public DateTime? FinalReviewedAtUtc { get; set; }
     public bool? EmployeeAgrees { get; set; }
     public string? EmployeeSignOffComment { get; set; }
     public DateTime? GoalsSubmittedAtUtc { get; set; }

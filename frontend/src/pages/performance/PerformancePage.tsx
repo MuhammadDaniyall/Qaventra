@@ -246,11 +246,12 @@ function CycleModal({ item, onClose }: { item: ReviewCycle | null; onClose: () =
   const [goalsDue, setGoalsDue] = useState(item?.goalsDue ?? '');
   const [selfDue, setSelfDue] = useState(item?.selfReviewDue ?? '');
   const [managerDue, setManagerDue] = useState(item?.managerReviewDue ?? '');
+  const [finalReview, setFinalReview] = useState(item?.finalReview ?? false);
   const [error, setError] = useState<string | null>(null);
   const launched = item?.status === 'Active';
   const save = useMutation({
     mutationFn: () => {
-      const b = { name: name.trim(), periodFrom: from, periodTo: to, templateId, departmentIds: depts, goalsDue: goalsDue || null, selfReviewDue: selfDue || null, managerReviewDue: managerDue || null };
+      const b = { name: name.trim(), periodFrom: from, periodTo: to, templateId, departmentIds: depts, goalsDue: goalsDue || null, selfReviewDue: selfDue || null, managerReviewDue: managerDue || null, finalReview };
       return item ? performanceApi.updateCycle(item.id, b) : performanceApi.createCycle(b);
     },
     onSuccess: () => {
@@ -317,6 +318,13 @@ function CycleModal({ item, onClose }: { item: ReviewCycle | null; onClose: () =
         <Field label="Manager review due">
           <Input type="date" value={managerDue} onChange={(e) => setManagerDue(e.target.value)} />
         </Field>
+        <div className="sm:col-span-2">
+          <Checkbox
+            label="Final review: the manager's manager checks each review before HR"
+            checked={finalReview}
+            onChange={(e) => setFinalReview(e.target.checked)}
+          />
+        </div>
       </div>
     </Modal>
   );

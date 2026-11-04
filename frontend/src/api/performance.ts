@@ -2,7 +2,7 @@ import { http } from './client';
 import type { RecordStamps } from '../types';
 
 export type ReviewSectionKind = 'Goals' | 'Competencies';
-export type ReviewStage = 'Goals' | 'GoalsSubmitted' | 'SelfReview' | 'ManagerReview' | 'Calibration' | 'SignOff' | 'Done';
+export type ReviewStage = 'Goals' | 'GoalsSubmitted' | 'SelfReview' | 'ManagerReview' | 'FinalReview' | 'Calibration' | 'SignOff' | 'Done';
 export type ReviewCycleStatus = 'Draft' | 'Active' | 'Closed';
 
 export const STAGE_LABELS: Record<ReviewStage, string> = {
@@ -10,12 +10,13 @@ export const STAGE_LABELS: Record<ReviewStage, string> = {
   GoalsSubmitted: 'Goals waiting for approval',
   SelfReview: 'Self review',
   ManagerReview: 'Manager review',
+  FinalReview: 'Final review',
   Calibration: 'With HR',
   SignOff: 'Waiting for sign-off',
   Done: 'Done',
 };
 
-export const STAGE_ORDER: ReviewStage[] = ['Goals', 'GoalsSubmitted', 'SelfReview', 'ManagerReview', 'Calibration', 'SignOff', 'Done'];
+export const STAGE_ORDER: ReviewStage[] = ['Goals', 'GoalsSubmitted', 'SelfReview', 'ManagerReview', 'FinalReview', 'Calibration', 'SignOff', 'Done'];
 export const POTENTIAL_LABELS = ['', 'Low', 'Medium', 'High'];
 
 export interface ReviewSection {
@@ -57,6 +58,7 @@ export interface ReviewCycle {
   reviews: number;
   byStage: Partial<Record<ReviewStage, number>>;
   stamps: RecordStamps;
+  finalReview: boolean;
 }
 
 export interface SaveCycle {
@@ -68,6 +70,7 @@ export interface SaveCycle {
   goalsDue: string | null;
   selfReviewDue: string | null;
   managerReviewDue: string | null;
+  finalReview: boolean;
 }
 
 export interface ReviewItem {
@@ -118,6 +121,10 @@ export interface Review {
   isReviewer: boolean;
   isHr: boolean;
   stamps: RecordStamps;
+  graceMarks: number;
+  finalReviewer: string | null;
+  finalReviewComment: string | null;
+  isFinalReviewer: boolean;
 }
 
 export interface ReviewListItem {
@@ -137,6 +144,7 @@ export interface ReviewListItem {
   employeeAgrees: boolean | null;
   suggestedRaise: number | null;
   stamps: RecordStamps;
+  graceMarks: number;
 }
 
 export interface Calibration {
@@ -175,7 +183,9 @@ export const performanceApi = {
     id: string,
     b: { scores: ScoreInput[]; comment: string | null; strengths: string | null; improvements: string | null; developmentPlan: string | null; potential: number | null; submit: boolean },
   ) => http.put<Review>(`/performance/reviews/${id}/manager`, b),
-  calibrate: (id: string, finalRating: number, note: string | null) => http.post(`/performance/reviews/${id}/calibrate`, { finalRating, note }),
+  calibrate: (id: string, finalRating: number, note: string | null, graceMarks: number) =>
+    http.post(`/performance/reviews/${id}/calibrate`, { finalRating, note, graceMarks }),
+  finalReview: (id: string, approve: boolean, comment: string | null) => http.post<Review>(`/performance/reviews/${id}/final`, { approve, comment }),
   signOff: (id: string, agree: boolean, comment: string | null) => http.post<Review>(`/performance/reviews/${id}/signoff`, { agree, comment }),
   revert: (id: string) => http.post(`/performance/reviews/${id}/revert`),
 };

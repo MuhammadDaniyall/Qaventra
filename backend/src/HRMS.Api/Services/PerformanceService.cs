@@ -32,6 +32,12 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
     /// <summary>The reviewer (their manager at launch); HR stands in, and also when there is no manager.</summary>
     public bool IsReviewer(PerformanceReview r) => me.IsHr() || (me.EmployeeId is { } m && r.ReviewerEmployeeId == m);
 
+    /// <summary>The manager's manager on a cycle with a final review; HR stands in.</summary>
+    public bool IsFinalReviewer(PerformanceReview r) => me.IsHr() || (me.EmployeeId is { } m && r.FinalReviewerEmployeeId == m);
+
+    /// <summary>Scores are shown to the employee only once HR releases the review.</summary>
+    public static bool Released(ReviewStage s) => s is ReviewStage.SignOff or ReviewStage.Done;
+
     public static void ValidateSections(IReadOnlyList<ReviewSection> sections)
     {
         if (sections.Count == 0)
@@ -211,10 +217,23 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
                 throw new DomainException("Rate every item before sending.");
             if (r.Potential is null)
                 throw new DomainException("Set their potential (for the 9-box).");
-            r.Stage = ReviewStage.Calibration;
             r.ManagerSubmittedAtUtc = clock.UtcNow;
             r.FinalRating = PerformanceMath.Rating(r.ManagerScore!.Value);
-            await notify.ToHrAsync(NotificationKind.Performance, $"Manager review done for {await NameAsync(r.EmployeeId)}", $"Score {r.ManagerScore:0.00}", "/performance?tab=cycles");
+            var upper = r.Cycle!.FinalReview && r.ReviewerEmployeeId is { } rev
+                ? await db.Employees.Where(e => e.Id == rev).Select(e => e.ManagerId).FirstOrDefaultAsync()
+                : null;
+            if (upper is { } u && u != r.EmployeeId)
+            {
+                r.Stage = ReviewStage.FinalReview;
+                r.FinalReviewerEmployeeId = u;
+                await notify.ToEmployeesAsync([u], NotificationKind.Performance, $"Check the review of {await NameAsync(r.EmployeeId)}",
+                    $"Score {r.ManagerScore:0.00}", $"/performance/reviews/{r.Id}");
+            }
+            else
+            {
+                r.Stage = ReviewStage.Calibration;
+                await notify.ToHrAsync(NotificationKind.Performance, $"Manager review done for {await NameAsync(r.EmployeeId)}", $"Score {r.ManagerScore:0.00}", "/performance?tab=cycles");
+            }
         }
         await db.SaveChangesAsync();
     }
@@ -241,7 +260,33 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
 
     // ---------- Calibration, release and sign-off ----------
 
-    public async Task CalibrateAsync(Guid reviewId, int finalRating, string? note)
+    /// <summary>The manager's manager agrees (on to HR) or sends the review back to the manager.</summary>
+    public async Task FinalReviewAsync(Guid reviewId, bool approve, string? comment)
+    {
+        var (r, _) = await LoadAsync(reviewId);
+        if (!IsFinalReviewer(r) || IsEmployee(r) || r.Stage != ReviewStage.FinalReview)
+            throw new ForbiddenException("This review is not waiting for your check.");
+        if (!approve && string.IsNullOrWhiteSpace(comment))
+            throw new DomainException("Say what the manager should change.");
+        r.FinalReviewComment = Clean(comment, 4000);
+        r.FinalReviewedAtUtc = clock.UtcNow;
+        var name = await NameAsync(r.EmployeeId);
+        if (approve)
+        {
+            r.Stage = ReviewStage.Calibration;
+            await notify.ToHrAsync(NotificationKind.Performance, $"Review of {name} checked", $"Score {r.ManagerScore:0.00}", "/performance?tab=cycles");
+        }
+        else
+        {
+            r.Stage = ReviewStage.ManagerReview;
+            r.FinalRating = null;
+            r.ManagerSubmittedAtUtc = null;
+            await NotifyReviewerAsync(r, $"Review of {name} sent back to you");
+        }
+        await db.SaveChangesAsync();
+    }
+
+    public async Task CalibrateAsync(Guid reviewId, int finalRating, string? note, decimal? graceMarks = null)
     {
         if (!me.IsHr())
             throw new ForbiddenException("Only HR calibrates ratings.");
@@ -252,6 +297,12 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
             throw new DomainException("This review is not waiting for calibration.");
         if (finalRating is < 1 or > 5)
             throw new DomainException("The final rating goes from 1 to 5.");
+        if (graceMarks is { } g)
+        {
+            if (g is < 0 or > 1)
+                throw new DomainException("Grace marks go from 0 to 1.");
+            r.GraceMarks = g;
+        }
         r.FinalRating = finalRating;
         r.CalibrationNote = Clean(note, 4000);
         await db.SaveChangesAsync();
@@ -316,6 +367,7 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
         r.Stage = r.Stage switch
         {
             ReviewStage.Done or ReviewStage.SignOff => ReviewStage.Calibration,
+            ReviewStage.FinalReview => ReviewStage.ManagerReview,
             ReviewStage.Calibration => ReviewStage.ManagerReview,
             ReviewStage.ManagerReview when r.Cycle!.SelfReview => ReviewStage.SelfReview,
             ReviewStage.ManagerReview or ReviewStage.SelfReview when hasGoals => ReviewStage.Goals,
@@ -342,7 +394,7 @@ public class PerformanceService(HrmsDbContext db, ICurrentUser me, TenantClock c
     public async Task<(PerformanceReview Review, List<ReviewSection> Sections)> LoadAsync(Guid id, bool forWrite = true)
     {
         var r = await db.PerformanceReviews.Include(x => x.Cycle).Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id) ?? throw new NotFoundException("Review");
-        if (!IsEmployee(r) && !IsReviewer(r))
+        if (!IsEmployee(r) && !IsReviewer(r) && !IsFinalReviewer(r))
             throw new NotFoundException("Review");
         if (forWrite && r.Cycle!.Status == ReviewCycleStatus.Closed && !me.IsHr())
             throw new DomainException("This review cycle is closed.");

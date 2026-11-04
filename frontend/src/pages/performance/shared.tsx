@@ -33,8 +33,26 @@ export function RatingPicker({ value, onChange, labels }: { value: number | null
 }
 
 /** Where a review is, as steps. */
-export function StageBar({ stage, selfReview, hasGoals, className }: { stage: ReviewStage; selfReview: boolean; hasGoals: boolean; className?: string }) {
-  const steps = STAGE_ORDER.filter((s) => (hasGoals || (s !== 'Goals' && s !== 'GoalsSubmitted')) && (selfReview || s !== 'SelfReview') && s !== 'GoalsSubmitted');
+export function StageBar({
+  stage,
+  selfReview,
+  hasGoals,
+  finalReview = false,
+  className,
+}: {
+  stage: ReviewStage;
+  selfReview: boolean;
+  hasGoals: boolean;
+  finalReview?: boolean;
+  className?: string;
+}) {
+  const steps = STAGE_ORDER.filter(
+    (s) =>
+      (hasGoals || (s !== 'Goals' && s !== 'GoalsSubmitted')) &&
+      (selfReview || s !== 'SelfReview') &&
+      (finalReview || stage === 'FinalReview' || s !== 'FinalReview') &&
+      s !== 'GoalsSubmitted',
+  );
   const current = STAGE_ORDER.indexOf(stage === 'GoalsSubmitted' ? 'Goals' : stage);
   return (
     <ol className={cn('flex flex-wrap items-center gap-2 text-xs', className)}>

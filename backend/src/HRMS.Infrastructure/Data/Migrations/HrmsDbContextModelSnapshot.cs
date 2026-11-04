@@ -6625,8 +6625,21 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int?>("FinalRating")
                         .HasColumnType("int");
 
+                    b.Property<string>("FinalReviewComment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("FinalReviewedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("FinalReviewerEmployeeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("GoalsSubmittedAtUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("GraceMarks")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Improvements")
                         .HasMaxLength(4000)
@@ -7803,6 +7816,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("FinalReview")
+                        .HasColumnType("bit");
 
                     b.Property<DateOnly?>("GoalsDue")
                         .HasColumnType("date");

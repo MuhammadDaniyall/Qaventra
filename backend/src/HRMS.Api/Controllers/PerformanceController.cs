@@ -22,12 +22,12 @@ public record SavePerformanceTemplateRequest([Required, StringLength(100)] strin
 
 public record SaveCycleRequest(
     [Required, StringLength(150)] string Name, DateOnly PeriodFrom, DateOnly PeriodTo, Guid TemplateId, List<Guid>? DepartmentIds,
-    DateOnly? GoalsDue, DateOnly? SelfReviewDue, DateOnly? ManagerReviewDue);
+    DateOnly? GoalsDue, DateOnly? SelfReviewDue, DateOnly? ManagerReviewDue, bool FinalReview = false);
 
 public record CycleDto(
     Guid Id, string Name, DateOnly PeriodFrom, DateOnly PeriodTo, Guid TemplateId, string Template, List<Guid> DepartmentIds, List<string> Departments,
     DateOnly? GoalsDue, DateOnly? SelfReviewDue, DateOnly? ManagerReviewDue, ReviewCycleStatus Status, int Reviews, Dictionary<string, int> ByStage,
-    RecordStampsDto Stamps);
+    RecordStampsDto Stamps, bool FinalReview);
 
 public record ReviewItemDto(
     Guid Id, int SectionIndex, string Title, string? Description, string? Target, decimal Weight, int? SelfScore, string? SelfComment,
@@ -38,12 +38,13 @@ public record ReviewDto(
     string? Designation, string? Department, Guid? ReviewerEmployeeId, string? Reviewer, ReviewStage Stage, List<ReviewSection> Sections,
     bool SelfReviewEnabled, List<ReviewItemDto> Items, decimal? SelfScore, string? SelfComment, decimal? ManagerScore, string? ManagerComment,
     string? Strengths, string? Improvements, string? DevelopmentPlan, int? Potential, int? FinalRating, string? FinalLabel, string? CalibrationNote,
-    bool? EmployeeAgrees, string? EmployeeSignOffComment, DateOnly? Due, bool IsEmployee, bool IsReviewer, bool IsHr, RecordStampsDto Stamps);
+    bool? EmployeeAgrees, string? EmployeeSignOffComment, DateOnly? Due, bool IsEmployee, bool IsReviewer, bool IsHr, RecordStampsDto Stamps,
+    decimal GraceMarks, string? FinalReviewer, string? FinalReviewComment, bool IsFinalReviewer);
 
 public record ReviewListItemDto(
     Guid Id, Guid CycleId, string Cycle, Guid EmployeeId, string EmployeeName, string EmployeeCode, string? Department, string? Reviewer,
     ReviewStage Stage, decimal? SelfScore, decimal? ManagerScore, int? FinalRating, int? Potential, bool? EmployeeAgrees, decimal? SuggestedRaise,
-    RecordStampsDto Stamps);
+    RecordStampsDto Stamps, decimal GraceMarks = 0);
 
 public record CalibrationDto(List<ReviewListItemDto> Reviews, List<int> BellTarget, List<int> BellActual, List<string> Labels);
 
@@ -57,7 +58,9 @@ public record ManagerReviewRequest(
     [Required] List<ItemScoreInput> Scores, [StringLength(4000)] string? Comment, [StringLength(4000)] string? Strengths, [StringLength(4000)] string? Improvements,
     [StringLength(4000)] string? DevelopmentPlan, int? Potential, bool Submit);
 
-public record CalibrateRequest(int FinalRating, [StringLength(4000)] string? Note);
+public record CalibrateRequest(int FinalRating, [StringLength(4000)] string? Note, decimal? GraceMarks = null);
+
+public record FinalReviewRequest(bool Approve, [StringLength(4000)] string? Comment);
 
 public record ReleaseRequest(List<Guid>? ReviewIds);
 
@@ -163,7 +166,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
             var mine = stages.Where(s => s.CycleId == c.Id).ToList();
             return new CycleDto(c.Id, c.Name, c.PeriodFrom, c.PeriodTo, c.TemplateId, templates.GetValueOrDefault(c.TemplateId) ?? "", ids,
                 ids.Select(i => depts.GetValueOrDefault(i) ?? "").ToList(), c.GoalsDue, c.SelfReviewDue, c.ManagerReviewDue, c.Status, mine.Sum(s => s.Count),
-                mine.ToDictionary(s => s.Stage.ToString(), s => s.Count), RecordStampsDto.Of(c));
+                mine.ToDictionary(s => s.Stage.ToString(), s => s.Count), RecordStampsDto.Of(c), c.FinalReview);
         }).ToList();
     }
 
@@ -241,7 +244,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
         var mine = me.EmployeeId ?? Guid.Empty;
         var list = await ListAsync(db.PerformanceReviews.Where(r => r.EmployeeId == mine && r.Cycle!.Status != ReviewCycleStatus.Draft), await Settings(), maskDraftSelf: false);
         // Scores stay hidden from the employee until HR releases the review.
-        return list.Select(r => r.Stage < ReviewStage.SignOff ? r with { ManagerScore = null, FinalRating = null, Potential = null, SuggestedRaise = null } : r with { SuggestedRaise = null }).ToList();
+        return list.Select(r => !PerformanceService.Released(r.Stage) ? r with { GraceMarks = 0, ManagerScore = null, FinalRating = null, Potential = null, SuggestedRaise = null } : r with { SuggestedRaise = null }).ToList();
     }
 
     /// <summary>Reviews the signed-in user writes as a manager, in running cycles.</summary>
@@ -249,7 +252,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
     public async Task<List<ReviewListItemDto>> TeamReviews()
     {
         var mine = me.EmployeeId ?? Guid.Empty;
-        return (await ListAsync(db.PerformanceReviews.Where(r => r.ReviewerEmployeeId == mine && r.Cycle!.Status == ReviewCycleStatus.Active), await Settings()))
+        return (await ListAsync(db.PerformanceReviews.Where(r => (r.ReviewerEmployeeId == mine || r.FinalReviewerEmployeeId == mine) && r.Cycle!.Status == ReviewCycleStatus.Active), await Settings()))
             .Select(r => r with { SuggestedRaise = null }).ToList();
     }
 
@@ -259,7 +262,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
         var (r, sections) = await perf.LoadAsync(id, forWrite: false);
         var isEmployee = perf.IsEmployee(r);
         var isReviewer = perf.IsReviewer(r) && !isEmployee;
-        var showManager = !isEmployee || r.Stage >= ReviewStage.SignOff;
+        var showManager = !isEmployee || PerformanceService.Released(r.Stage);
         var showSelf = isEmployee || r.Stage > ReviewStage.SelfReview || !r.Cycle!.SelfReview;
         var settings = await Settings();
         var e = await db.Employees.Where(x => x.Id == r.EmployeeId).Select(x => new
@@ -284,7 +287,10 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
             showManager ? r.Strengths : null, showManager ? r.Improvements : null, showManager ? r.DevelopmentPlan : null,
             isEmployee ? null : r.Potential, showManager ? r.FinalRating : null,
             showManager && r.FinalRating is { } f ? settings.RatingLabels[f - 1] : null, me.IsHr() ? r.CalibrationNote : null,
-            r.EmployeeAgrees, r.EmployeeSignOffComment, due, isEmployee, isReviewer, me.IsHr(), RecordStampsDto.Of(r));
+            r.EmployeeAgrees, r.EmployeeSignOffComment, due, isEmployee, isReviewer, me.IsHr(), RecordStampsDto.Of(r),
+            showManager ? r.GraceMarks : 0,
+            r.FinalReviewerEmployeeId is { } fr ? await db.Employees.Where(x => x.Id == fr).Select(x => x.FirstName + " " + x.LastName).FirstOrDefaultAsync() : null,
+            isEmployee ? null : r.FinalReviewComment, perf.IsFinalReviewer(r) && !isEmployee && r.FinalReviewerEmployeeId != null);
     }
 
     [HttpPut("reviews/{id:guid}/goals")]
@@ -325,8 +331,15 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
     [HttpPost("reviews/{id:guid}/calibrate"), Authorize(Policy = Policies.Hr)]
     public async Task<IActionResult> Calibrate(Guid id, CalibrateRequest req)
     {
-        await perf.CalibrateAsync(id, req.FinalRating, req.Note);
+        await perf.CalibrateAsync(id, req.FinalRating, req.Note, req.GraceMarks);
         return NoContent();
+    }
+
+    [HttpPost("reviews/{id:guid}/final")]
+    public async Task<ReviewDto> FinalReview(Guid id, FinalReviewRequest req)
+    {
+        await perf.FinalReviewAsync(id, req.Approve, req.Comment);
+        return await Get(id);
     }
 
     [HttpPost("reviews/{id:guid}/signoff")]
@@ -352,7 +365,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
             r.Id, r.CycleId, Cycle = r.Cycle!.Name, r.EmployeeId, Name = r.Employee!.FirstName + " " + r.Employee.LastName, r.Employee.EmployeeCode,
             Department = r.Employee.Department != null ? r.Employee.Department.Name : null,
             Reviewer = db.Employees.Where(e => e.Id == r.ReviewerEmployeeId).Select(e => e.FirstName + " " + e.LastName).FirstOrDefault(),
-            r.Stage, r.SelfScore, r.ManagerScore, r.FinalRating, r.Potential, r.EmployeeAgrees,
+            r.Stage, r.SelfScore, r.ManagerScore, r.FinalRating, r.Potential, r.EmployeeAgrees, r.GraceMarks,
             Stamps = new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy),
         }).ToListAsync();
         return rows.Select(r => new ReviewListItemDto(r.Id, r.CycleId, r.Cycle, r.EmployeeId, r.Name, r.EmployeeCode, r.Department, r.Reviewer, r.Stage,
@@ -360,7 +373,7 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
             maskDraftSelf && r.Stage <= ReviewStage.SelfReview ? null : r.SelfScore, r.ManagerScore, r.FinalRating, r.Potential, r.EmployeeAgrees,
             // The raise follows the rating people see (after calibration), not the unrounded score.
             r.FinalRating is { } f ? PerformanceMath.Raise(f, settings.RaiseSlabs) : r.ManagerScore is { } s ? PerformanceMath.Raise(s, settings.RaiseSlabs) : null,
-            r.Stamps)).ToList();
+            r.Stamps, r.GraceMarks)).ToList();
     }
 
     private async Task ApplyTemplateAsync(PerformanceTemplate t, SavePerformanceTemplateRequest req)
@@ -397,5 +410,6 @@ public class PerformanceController(HrmsDbContext db, PerformanceService perf, Te
         c.GoalsDue = req.GoalsDue;
         c.SelfReviewDue = req.SelfReviewDue;
         c.ManagerReviewDue = req.ManagerReviewDue;
+        c.FinalReview = req.FinalReview;
     }
 }
