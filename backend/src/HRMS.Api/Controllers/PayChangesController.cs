@@ -64,6 +64,9 @@ public class PayChangesController(HrmsDbContext db, TenantClock clock, ICurrentU
             var components = current.Components.Select(c => (c.Name, c.Kind, c.IsTaxable, c.Amount)).ToList();
             var existing = await db.EmployeeSalaries.Include(x => x.Components).FirstOrDefaultAsync(x => x.EmployeeId == preview.EmployeeId && x.EffectiveFrom == req.EffectiveFrom);
             var target = existing ?? new EmployeeSalary { EmployeeId = preview.EmployeeId, EffectiveFrom = req.EffectiveFrom, EobiApplicable = current.EobiApplicable };
+            // A daily or hourly rate moves with the basic.
+            target.PayBasis = current.PayBasis;
+            target.Rate = current.Rate is { } rate && current.BasicSalary > 0 ? Math.Round(rate * preview.NewBasic / current.BasicSalary, 2) : current.Rate;
             if (existing is null)
                 db.EmployeeSalaries.Add(target);
             else

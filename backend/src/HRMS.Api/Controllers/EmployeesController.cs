@@ -61,7 +61,7 @@ public record SalaryComponentDto([Required, StringLength(100)] string Name, Sala
 
 /// <summary>Also the save request, so Stamps is optional and ignored on save.</summary>
 public record SalaryDto(Guid? Id, DateOnly EffectiveFrom, [Range(0, 100_000_000)] decimal BasicSalary, bool EobiApplicable, List<SalaryComponentDto> Components,
-    RecordStampsDto? Stamps = null);
+    RecordStampsDto? Stamps = null, PayBasis PayBasis = PayBasis.Monthly, [Range(0, 10_000_000)] decimal? Rate = null);
 
 [ApiController]
 [Route("api/employees")]
@@ -272,7 +272,7 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         if (s is null)
             return NoContent();
         return new SalaryDto(s.Id, s.EffectiveFrom, s.BasicSalary, s.EobiApplicable,
-            s.Components.Select(c => new SalaryComponentDto(c.Name, c.Kind, c.Amount, c.IsTaxable)).ToList(), RecordStampsDto.Of(s));
+            s.Components.Select(c => new SalaryComponentDto(c.Name, c.Kind, c.Amount, c.IsTaxable)).ToList(), RecordStampsDto.Of(s), s.PayBasis, s.Rate);
     }
 
     /// <summary>Saves the salary effective from the given date. Same date replaces it; a new date keeps history.</summary>
@@ -284,6 +284,10 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
         var components = req.Components ?? [];
         if (components.Any(c => c is null || string.IsNullOrWhiteSpace(c.Name)))
             throw new DomainException("Every salary component needs a name.");
+        if (!Enum.IsDefined(req.PayBasis))
+            throw new DomainException("Choose monthly, daily or hourly pay.");
+        if (req.PayBasis != PayBasis.Monthly && req.Rate is not > 0)
+            throw new DomainException($"Enter the pay per {(req.PayBasis == PayBasis.Daily ? "day" : "hour")}.");
 
         var salary = await db.EmployeeSalaries.Include(x => x.Components)
             .FirstOrDefaultAsync(x => x.EmployeeId == id && x.EffectiveFrom == req.EffectiveFrom);
@@ -297,7 +301,15 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
             salary.Components.Clear();
         }
 
-        salary.BasicSalary = req.BasicSalary;
+        salary.PayBasis = req.PayBasis;
+        salary.Rate = req.PayBasis == PayBasis.Monthly ? null : req.Rate;
+        // A daily or hourly rate is earned from attendance; the basic on file is what a full month at 26 days or 208 hours would be.
+        salary.BasicSalary = req.PayBasis switch
+        {
+            PayBasis.Daily => Math.Round(req.Rate!.Value * 26, 0),
+            PayBasis.Hourly => Math.Round(req.Rate!.Value * 208, 0),
+            _ => req.BasicSalary,
+        };
         salary.EobiApplicable = req.EobiApplicable;
         salary.Components.AddRange(components.Select(c => new SalaryComponent
         {

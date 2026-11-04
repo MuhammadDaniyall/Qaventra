@@ -3125,6 +3125,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid?>("ModifiedById")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("PayBasis")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Rate")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 

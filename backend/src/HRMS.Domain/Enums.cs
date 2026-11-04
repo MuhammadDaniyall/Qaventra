@@ -462,6 +462,14 @@ public enum LeaveAccrual
     Monthly = 2,
 }
 
+/// <summary>How basic pay is worked out: a fixed monthly salary, or a rate per day attended or per hour worked.</summary>
+public enum PayBasis
+{
+    Monthly = 1,
+    Daily = 2,
+    Hourly = 3,
+}
+
 public enum SalaryComponentKind
 {
     Earning = 1,

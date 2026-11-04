@@ -152,6 +152,14 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 .Select(a => new { a.EmployeeId, a.Status }).ToListAsync())
                 .ToLookup(a => a.EmployeeId, a => a.Status)
             : null;
+        // Daily and hourly paid people: days attended (a half day is half) and hours worked in the period.
+        var ratePaid = salaries.Values.Where(s => s.PayBasis != PayBasis.Monthly).Select(s => s.EmployeeId).ToList();
+        var attended = ratePaid.Count > 0
+            ? (await db.AttendanceRecords.Where(a => ratePaid.Contains(a.EmployeeId) && a.Date >= monthStart && a.Date <= monthEnd
+                                                     && a.Status != AttendanceStatus.Absent && a.Status != AttendanceStatus.OnLeave)
+                .Select(a => new { a.EmployeeId, a.Date, a.Status, a.WorkedMinutes }).ToListAsync())
+                .ToLookup(a => a.EmployeeId)
+            : null;
         var calendars = await schedules.ForEmployeesAsync(employeeIds, monthStart, monthEnd);
         var today = await clock.TodayAsync();
         // Penalty rules (late, early leave, absent…) that cost pay: a monthly run charges its month; other frequencies charge
@@ -204,6 +212,23 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                         continue;
                     unpaid++;
                 }
+            }
+
+            if (salary.PayBasis != PayBasis.Monthly && attended is not null)
+            {
+                // Pay is earned per day or hour, so nothing is prorated or deducted for days not worked.
+                var days = attended[employee.Id].Where(a => a.Date >= employedFrom && a.Date <= employedTo).ToList();
+                var units = salary.PayBasis == PayBasis.Daily
+                    ? days.Sum(a => a.Status == AttendanceStatus.HalfDay ? 0.5m : 1m)
+                    : Math.Round(days.Sum(a => a.WorkedMinutes) / 60m, 2);
+                salary = new EmployeeSalary
+                {
+                    EmployeeId = salary.EmployeeId, EffectiveFrom = salary.EffectiveFrom, EobiApplicable = salary.EobiApplicable, PayBasis = salary.PayBasis, Rate = salary.Rate,
+                    BasicSalary = Math.Round((salary.Rate ?? 0) * units, 0, MidpointRounding.AwayFromZero), Components = salary.Components,
+                };
+                unpaid = 0;
+                if (units == 0)
+                    warnings.Add($"{employee.EmployeeCode} {employee.FullName}: paid by the {(salary.PayBasis == PayBasis.Daily ? "day" : "hour")} with no attendance in the period.");
             }
 
             var employeeClaims = claims.Where(c => c.EmployeeId == employee.Id).ToList();
@@ -390,6 +415,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         EffectiveFrom = s.EffectiveFrom,
         BasicSalary = Math.Round(s.BasicSalary * share, 0, MidpointRounding.AwayFromZero),
         EobiApplicable = s.EobiApplicable,
+        PayBasis = s.PayBasis,
+        Rate = s.Rate,
         Components = s.Components.Select(c => new SalaryComponent { Name = c.Name, Kind = c.Kind, IsTaxable = c.IsTaxable, Amount = Math.Round(c.Amount * share, 0, MidpointRounding.AwayFromZero) }).ToList(),
     };
 

@@ -517,6 +517,9 @@ export interface Salary {
   basicSalary: number;
   eobiApplicable: boolean;
   components: SalaryComponent[];
+  /** Monthly salary, or a rate per day attended / hour worked. */
+  payBasis?: 'Monthly' | 'Daily' | 'Hourly';
+  rate?: number | null;
   /** Sent by the API only; not part of the save request. */
   stamps?: RecordStamps;
 }

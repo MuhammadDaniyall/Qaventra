@@ -50,6 +50,9 @@ function SalaryForm({ employeeId, current }: { employeeId: string; current: Sala
   const [effectiveFrom, setEffectiveFrom] = useState(current?.effectiveFrom ?? todayIso());
   const [basic, setBasic] = useState(current ? String(current.basicSalary) : '');
   const [eobi, setEobi] = useState(current?.eobiApplicable ?? true);
+  const [payBasis, setPayBasis] = useState<'Monthly' | 'Daily' | 'Hourly'>(current?.payBasis ?? 'Monthly');
+  const [rate, setRate] = useState(current?.rate != null ? String(current.rate) : '');
+  const byRate = payBasis !== 'Monthly';
   const [rows, setRows] = useState<Row[]>(() => (current?.components ?? []).map(toRow));
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -61,7 +64,8 @@ function SalaryForm({ employeeId, current }: { employeeId: string; current: Sala
   const basicN = num(basic);
   const earnings = rows.filter((r) => r.kind === 'Earning').reduce((t, r) => t + num(r.amount), 0);
   const deductions = rows.filter((r) => r.kind === 'Deduction').reduce((t, r) => t + num(r.amount), 0);
-  const gross = basicN + earnings;
+  // A rate's month is shown at 26 days or 208 hours, as the API stores it.
+  const gross = (byRate ? num(rate) * (payBasis === 'Daily' ? 26 : 208) : basicN) + earnings;
 
   const save = useMutation({
     mutationFn: (b: Salary) => employeesApi.saveSalary(employeeId, b),
@@ -82,7 +86,8 @@ function SalaryForm({ employeeId, current }: { employeeId: string; current: Sala
     setError(null);
     const fe: Record<string, string> = {};
     if (!effectiveFrom) fe.effectiveFrom = 'Pick the date this salary starts.';
-    if (basic === '' || basicN < 0) fe.basicSalary = 'Enter the basic salary.';
+    if (!byRate && (basic === '' || basicN < 0)) fe.basicSalary = 'Enter the basic salary.';
+    if (byRate && !(num(rate) > 0)) fe.rate = `Enter the pay per ${payBasis === 'Daily' ? 'day' : 'hour'}.`;
     rows.forEach((r, i) => {
       if (!r.name.trim()) fe[`row${i}`] = 'Each component needs a name.';
       else if (r.amount === '' || num(r.amount) < 0) fe[`row${i}`] = 'Enter a positive amount.';
@@ -92,8 +97,10 @@ function SalaryForm({ employeeId, current }: { employeeId: string; current: Sala
     save.mutate({
       id: current?.id ?? null,
       effectiveFrom,
-      basicSalary: basicN,
+      basicSalary: byRate ? 0 : basicN,
       eobiApplicable: eobi,
+      payBasis,
+      rate: byRate ? num(rate) : null,
       components: rows.map((r) => ({ name: r.name.trim(), kind: r.kind, amount: num(r.amount), isTaxable: r.isTaxable })),
     });
   };
@@ -113,9 +120,22 @@ function SalaryForm({ employeeId, current }: { employeeId: string; current: Sala
           />
           <CardBody className="grid gap-4 sm:grid-cols-2">
             {current?.stamps && <RecordStamp stamps={current.stamps} className="sm:col-span-2" />}
-            <Field label="Basic salary (PKR / month)" required error={fieldErrors.basicSalary}>
-              <Input type="number" min={0} step="1" inputMode="numeric" value={basic} onChange={(e) => setBasic(e.target.value)} />
+            <Field label="Paid" hint={byRate ? 'Earned from attendance: days present (a half day is half) or hours worked.' : undefined}>
+              <Select value={payBasis} onChange={(e) => setPayBasis(e.target.value as typeof payBasis)}>
+                <option value="Monthly">Monthly salary</option>
+                <option value="Daily">By the day</option>
+                <option value="Hourly">By the hour</option>
+              </Select>
             </Field>
+            {byRate ? (
+              <Field label={payBasis === 'Daily' ? 'Pay per day (PKR)' : 'Pay per hour (PKR)'} required error={fieldErrors.rate}>
+                <Input type="number" min={0} step="1" inputMode="numeric" value={rate} onChange={(e) => setRate(e.target.value)} />
+              </Field>
+            ) : (
+              <Field label="Basic salary (PKR / month)" required error={fieldErrors.basicSalary}>
+                <Input type="number" min={0} step="1" inputMode="numeric" value={basic} onChange={(e) => setBasic(e.target.value)} />
+              </Field>
+            )}
             <Field label="Effective from" required error={fieldErrors.effectiveFrom}>
               <Input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
             </Field>

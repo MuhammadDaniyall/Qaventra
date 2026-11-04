@@ -101,6 +101,10 @@ public class EmployeeSalary : TenantEntity
     public DateOnly EffectiveFrom { get; set; }
     public decimal BasicSalary { get; set; }
     public bool EobiApplicable { get; set; } = true;
+    /// <summary>Monthly salary, or paid per day attended / per hour worked at <see cref="Rate"/>.</summary>
+    public PayBasis PayBasis { get; set; } = PayBasis.Monthly;
+    /// <summary>Pay per day or per hour when <see cref="PayBasis"/> is Daily or Hourly.</summary>
+    public decimal? Rate { get; set; }
     public List<SalaryComponent> Components { get; set; } = [];
 }
 
