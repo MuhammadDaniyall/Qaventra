@@ -122,3 +122,6 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Email: a company's own mail server (SMTP) with an encrypted password and a test send.
 - Dashboard: who is in today (in / on leave / not in) with a CSV download of the day and the numbers.
 - Documents: attachments on or off and a size limit per module, with storage used.
+- Penalty rules: men/women only, probation/confirmed only.
+- Scheduled reports: last day of the month, every N days.
+- Manpower budget positions: code, grade, cost center, reports to, salary band, job description.
