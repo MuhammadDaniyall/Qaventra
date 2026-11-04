@@ -215,7 +215,8 @@ public class ScheduledController(HrmsDbContext db, ScheduledService scheduled, I
     {
         if (!Enum.IsDefined(r.Kind) || !Enum.IsDefined(r.Frequency))
             throw new DomainException("Choose the report and how often.");
-        if (r.SendHour is < 0 or > 23 || r.Frequency == ReportFrequency.Weekly && r.Day is < 0 or > 6 || r.Frequency == ReportFrequency.Monthly && r.Day is < 1 or > 28)
+        if (r.SendHour is < 0 or > 23 || r.Frequency == ReportFrequency.Weekly && r.Day is < 0 or > 6 || r.Frequency == ReportFrequency.Monthly && r.Day is < 0 or > 28
+            || r.Frequency == ReportFrequency.EveryNDays && r.Day is < 2 or > 30)
             throw new DomainException("Check the day and hour.");
         var extra = ScheduledService.Emails(r.ExtraEmails ?? "");
         if (!preview && (r.RecipientIds ?? []).Count == 0 && extra.Count == 0)

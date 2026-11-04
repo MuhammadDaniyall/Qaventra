@@ -105,5 +105,15 @@ public class ScheduledTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(2, (await Ok(await admin.PostAsync($"/api/scheduled/reports/{id}/send", null))).GetProperty("recipients").GetInt32());
         var draft = await Ok(await admin.PostAsJsonAsync("/api/scheduled/reports/preview", new { name = "Draft", kind = "JoinersAndLeavers", frequency = "Monthly", day = 1, sendHour = 9, recipientIds = new[] { maha } }, ApiFactory.Json));
         Assert.Contains(draft.GetProperty("rows").EnumerateArray(), r => r[0].GetString() == "Joined" && r[2].GetString() == "Sana A");
+
+        // Last day of the month (day 0) and every N days.
+        await Ok(await admin.PostAsJsonAsync("/api/scheduled/reports", new { name = "Month end", kind = "Headcount", frequency = "Monthly", day = 0, sendHour = 9, recipientIds = new[] { maha } }, ApiFactory.Json));
+        await Ok(await admin.PostAsJsonAsync("/api/scheduled/reports", new { name = "Every 10 days", kind = "Headcount", frequency = "EveryNDays", day = 10, sendHour = 9, recipientIds = new[] { maha } }, ApiFactory.Json));
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync("/api/scheduled/reports", new { name = "Bad", kind = "Headcount", frequency = "EveryNDays", day = 1, sendHour = 9, recipientIds = new[] { maha } }, ApiFactory.Json)).StatusCode);
+        var all = (await Ok(await admin.GetAsync("/api/scheduled/reports"))).EnumerateArray().ToList();
+        var monthEnd = all.Single(x => x.GetProperty("name").GetString() == "Month end").GetProperty("nextRunAtUtc").GetDateTime().AddHours(5);
+        Assert.Equal(1, monthEnd.AddDays(1).Day);
+        var every10 = all.Single(x => x.GetProperty("name").GetString() == "Every 10 days").GetProperty("nextRunAtUtc").GetDateTime();
+        Assert.InRange((every10 - DateTime.UtcNow).TotalDays, 8, 11);
     }
 }

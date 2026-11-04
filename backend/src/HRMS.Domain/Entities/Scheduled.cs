@@ -36,7 +36,7 @@ public class ScheduledReport : TenantEntity
     public string Name { get; set; } = "";
     public ReportKind Kind { get; set; }
     public ReportFrequency Frequency { get; set; } = ReportFrequency.Weekly;
-    /// <summary>Weekly: 0 = Sunday … 6 = Saturday. Monthly: day 1–28.</summary>
+    /// <summary>Weekly: 0 = Sunday … 6 = Saturday. Monthly: day 1–28, or 0 for the last day. Every N days: N (2–30).</summary>
     public int Day { get; set; } = 1;
     public int SendHour { get; set; } = 9;
     public string RecipientIds { get; set; } = "";

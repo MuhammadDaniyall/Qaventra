@@ -132,7 +132,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
         if (depts.Count > 0)
             staff = staff.Where(e => e.DepartmentId != null && depts.Contains(e.DepartmentId.Value));
         var current = staff.Where(e => e.Status == EmploymentStatus.Active || e.Status == EmploymentStatus.Probation);
-        var (from, to) = Period(r.Frequency, today);
+        var (from, to) = Period(r.Frequency, today, r.Day);
         switch (r.Kind)
         {
             case ReportKind.Headcount:
@@ -174,7 +174,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             }
             case ReportKind.OnLeave:
             {
-                var until = today.AddDays(r.Frequency == ReportFrequency.Monthly ? 30 : 7);
+                var until = today.AddDays(r.Frequency switch { ReportFrequency.Monthly => 30, ReportFrequency.EveryNDays => Math.Max(7, r.Day), _ => 7 });
                 var ids = current.Select(e => e.Id);
                 var rows = await db.LeaveRequests.Where(l => (l.Status == LeaveStatus.Approved || l.Status == LeaveStatus.Pending) && l.FromDate <= until && l.ToDate >= today && ids.Contains(l.EmployeeId))
                     .OrderBy(l => l.FromDate)
@@ -204,7 +204,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             }
             case ReportKind.ExpiringDocuments:
             {
-                var until = today.AddDays(r.Frequency == ReportFrequency.Monthly ? 60 : 30);
+                var until = today.AddDays(r.Frequency switch { ReportFrequency.Monthly => 60, ReportFrequency.EveryNDays => Math.Max(30, r.Day * 2), _ => 30 });
                 var people = await current.Select(e => new { e.Id, Name = e.FirstName + " " + e.LastName, e.EmployeeCode }).ToListAsync();
                 var ids = people.Select(p => p.Id).ToList();
                 var docs = await ReportCatalog.ExpiriesAsync(db, ids, null, until);
@@ -280,6 +280,8 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
     {
         var local = await clock.ToLocalAsync(afterUtc);
         var day = DateOnly.FromDateTime(local);
+        // Every N days counts from the last send (or from when it was set up).
+        var anchor = DateOnly.FromDateTime(await clock.ToLocalAsync(r.LastSentAtUtc ?? (r.CreatedAtUtc == default ? afterUtc : r.CreatedAtUtc)));
         for (var i = 0; i < 62; i++)
         {
             var d = day.AddDays(i);
@@ -287,7 +289,8 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             {
                 ReportFrequency.Daily => true,
                 ReportFrequency.Weekly => (int)d.DayOfWeek == r.Day,
-                _ => d.Day == r.Day,
+                ReportFrequency.EveryNDays => d > anchor && (d.DayNumber - anchor.DayNumber) % Math.Max(2, r.Day) == 0,
+                _ => r.Day == 0 ? d.AddDays(1).Day == 1 : d.Day == r.Day,
             };
             if (!due)
                 continue;
@@ -346,9 +349,10 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
             """;
     }
 
-    private static (DateOnly From, DateOnly To) Period(ReportFrequency f, DateOnly today) => f switch
+    private static (DateOnly From, DateOnly To) Period(ReportFrequency f, DateOnly today, int day) => f switch
     {
         ReportFrequency.Daily => (today.AddDays(-1), today),
+        ReportFrequency.EveryNDays => (today.AddDays(-Math.Max(2, day)), today),
         ReportFrequency.Weekly => (today.AddDays(-7), today),
         _ => (today.AddMonths(-1), today),
     };

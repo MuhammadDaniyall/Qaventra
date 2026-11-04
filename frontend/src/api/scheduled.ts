@@ -3,7 +3,7 @@ import { http } from './client';
 
 export type AlertKind = 'Birthday' | 'WorkAnniversary' | 'ProbationEnd' | 'DocumentExpiry' | 'NewJoiner' | 'LeaveStarting' | 'NotCheckedIn';
 export type ReportKind = 'Headcount' | 'DailyAttendance' | 'OnLeave' | 'PendingApprovals' | 'ExpiringDocuments' | 'JoinersAndLeavers' | 'ProbationDue';
-export type ReportFrequency = 'Daily' | 'Weekly' | 'Monthly';
+export type ReportFrequency = 'Daily' | 'Weekly' | 'Monthly' | 'EveryNDays';
 
 export const ALERT_KINDS: Record<AlertKind, { label: string; title: string; body: string; hint: string }> = {
   Birthday: { label: 'Birthday', title: 'Happy birthday, {firstname}! 🎂', body: 'Wishing {name} a wonderful year ahead.', hint: 'Uses date of birth' },

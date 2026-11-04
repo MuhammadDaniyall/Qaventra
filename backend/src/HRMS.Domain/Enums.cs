@@ -105,6 +105,8 @@ public enum ReportFrequency
     Daily = 1,
     Weekly = 2,
     Monthly = 3,
+    /// <summary>Every N days (N in Day, 2–30), counted from the last send.</summary>
+    EveryNDays = 4,
 }
 
 public enum TrainingMode

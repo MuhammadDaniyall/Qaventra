@@ -413,7 +413,17 @@ function ReportsTab() {
   });
   const look = useMutation({ mutationFn: scheduledApi.previewReport, onSuccess: setPreview, onError: (e) => toast.error(e) });
   const when = (r: ScheduledReport) =>
-    `${r.frequency === 'Daily' ? 'Every day' : r.frequency === 'Weekly' ? `Every ${WEEKDAYS[r.day]}` : `Monthly on the ${r.day}${['st', 'nd', 'rd'][((((r.day + 90) % 100) - 10) % 10) - 1] ?? 'th'}`} at ${hourLabel(r.sendHour)}`;
+    `${
+      r.frequency === 'Daily'
+        ? 'Every day'
+        : r.frequency === 'Weekly'
+          ? `Every ${WEEKDAYS[r.day]}`
+          : r.frequency === 'EveryNDays'
+            ? `Every ${r.day} days`
+            : r.day === 0
+              ? 'On the last day of each month'
+              : `Monthly on the ${r.day}${['st', 'nd', 'rd'][((((r.day + 90) % 100) - 10) % 10) - 1] ?? 'th'}`
+    } at ${hourLabel(r.sendHour)}`;
   return (
     <Card>
       <CardHeader
@@ -562,7 +572,7 @@ function ReportModal({ item, onClose }: { item: ScheduledReport | null; onClose:
     name: f.name.trim() || REPORT_KINDS[f.kind].label,
     kind: f.kind,
     frequency: f.frequency,
-    day: Number(f.day) || (f.frequency === 'Monthly' ? 1 : 0),
+    day: Number.isFinite(Number(f.day)) && f.day !== '' ? Number(f.day) : f.frequency === 'Monthly' ? 1 : 0,
     sendHour: Number(f.sendHour),
     recipientIds: f.recipients,
     extraEmails: f.extra.trim() || null,
@@ -626,12 +636,13 @@ function ReportModal({ item, onClose }: { item: ScheduledReport | null; onClose:
             value={f.frequency}
             onChange={(e) => {
               const fr = e.target.value as ReportFrequency;
-              setF((x) => ({ ...x, frequency: fr, day: fr === 'Weekly' ? '1' : fr === 'Monthly' ? '1' : '0' }));
+              setF((x) => ({ ...x, frequency: fr, day: fr === 'Weekly' ? '1' : fr === 'Monthly' ? '1' : fr === 'EveryNDays' ? '14' : '0' }));
             }}
           >
             <option value="Daily">Every day</option>
             <option value="Weekly">Every week</option>
             <option value="Monthly">Every month</option>
+            <option value="EveryNDays">Every few days</option>
           </Select>
         </Field>
         <div className="grid grid-cols-2 gap-2">
@@ -648,7 +659,19 @@ function ReportModal({ item, onClose }: { item: ScheduledReport | null; onClose:
           )}
           {f.frequency === 'Monthly' && (
             <Field label="Day of month">
-              <Input type="number" min={1} max={28} value={f.day} onChange={(e) => set('day', e.target.value)} />
+              <Select value={f.day} onChange={(e) => set('day', e.target.value)}>
+                {Array.from({ length: 28 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {i + 1}
+                  </option>
+                ))}
+                <option value={0}>Last day</option>
+              </Select>
+            </Field>
+          )}
+          {f.frequency === 'EveryNDays' && (
+            <Field label="Every (days)">
+              <Input type="number" min={2} max={30} value={f.day} onChange={(e) => set('day', e.target.value)} />
             </Field>
           )}
           <Field label="At">
