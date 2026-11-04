@@ -299,6 +299,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 var recs = await db.AttendanceRecords.Where(a => a.Date == day && ids.Contains(a.EmployeeId)).ToListAsync();
                 var leave = await db.LeaveRequests.Where(l => l.Status == LeaveStatus.Approved && l.FromDate <= day && l.ToDate >= day && ids.Contains(l.EmployeeId))
                     .Select(l => new { l.EmployeeId, Type = l.LeaveType!.Name }).ToListAsync();
+                var openBreaks = await db.AttendanceBreaks.Where(x => x.Date == day && x.EndUtc == null && ids.Contains(x.EmployeeId)).Select(x => x.EmployeeId).ToListAsync();
                 var rows = new List<List<string>>();
                 foreach (var s in staff)
                 {
@@ -308,10 +309,17 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     var status = rec is not null ? ScheduledService.Humanize(rec.Status.ToString()) : day < s.JoiningDate ? "Not joined" : lv is not null ? $"On leave ({lv.Type})"
                         : !working ? "Off" : day > today ? "Not yet" : "Absent";
                     rows.Add(L(s.EmployeeCode, s.Name, s.Department, status, rec is null ? "" : Time(await clock.ToLocalAsync(rec.CheckInUtc)),
-                        rec?.CheckOutUtc is { } co ? Time(await clock.ToLocalAsync(co)) : "", rec is null ? "" : Hours(rec.WorkedMinutes)));
+                        rec?.CheckOutUtc is { } co ? Time(await clock.ToLocalAsync(co)) : "", rec is null ? "" : Hours(rec.WorkedMinutes),
+                        string.Join(", ", new[]
+                        {
+                            rec is not null && sc is not null && sc.IsHoliday(day) ? "Present on holiday" : rec is not null && !working ? "Present on day off" : null,
+                            rec is not null && lv is not null ? "Present on leave" : null,
+                            rec is not null && rec.CheckOutUtc is null && day < today ? "Missing check-out" : null,
+                            rec is not null && openBreaks.Contains(s.Id) && (rec.CheckOutUtc is not null || day < today) ? "Break not ended" : null,
+                        }.Where(x => x is not null))));
                 }
                 return T(def, $"{day:dddd d MMM yyyy}: {recs.Count} in, {rows.Count(r => r[3] == "Absent")} absent, {leave.Count} on leave",
-                    ["Code", "Name", "Department", "Status", "In", "Out", "Hours"], [6], rows);
+                    ["Code", "Name", "Department", "Status", "In", "Out", "Hours", "Flags"], [6], rows);
             }
             case "attendance.register":
             {

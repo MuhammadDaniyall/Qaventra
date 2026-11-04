@@ -21,6 +21,11 @@ public class ReportsExtraTests(ApiFactory factory) : IClassFixture<ApiFactory>
             lines = new[] { new { employeeId = id, percent = 10m } },
         }, ApiFactory.Json)).EnsureSuccessStatusCode();
 
+        var yesterday = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(5)).AddDays(-1);
+        (await admin.PostAsJsonAsync("/api/attendance/manual", new { employeeId = id, date = yesterday.ToString("yyyy-MM-dd"), checkIn = "09:00:00" }, ApiFactory.Json)).EnsureSuccessStatusCode();
+        var daily = await (await admin.PostAsJsonAsync("/api/reports/attendance.daily", new { date = yesterday.ToString("yyyy-MM-dd") }, ApiFactory.Json)).Content.ReadFromJsonAsync<JsonElement>(ApiFactory.Json);
+        Assert.Contains("Missing check-out", daily.GetProperty("rows").EnumerateArray().Single(r => r[1].GetString() == "Rafi R")[7].GetString());
+
         foreach (var key in new[] { "payroll.loans", "payroll.increments", "employees.separations", "recruitment.pipeline", "helpdesk.tickets", "payroll.overtime", "attendance.summary", "payroll.payslips", "leave.ledger", "performance.reviews", "employees.profile" })
         {
             var body = key == "payroll.increments" ? (object)new { from = next.ToString("yyyy-MM-dd"), to = next.AddDays(5).ToString("yyyy-MM-dd") } : new { };
