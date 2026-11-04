@@ -109,3 +109,8 @@ About 36 rows are now fully built. What follows is what is still partial or miss
 - Loan types: limits, markup, processing fee, service period.
 - Reports: overtime, attendance summary.
 
+- Reports: payslip register, leave ledger, employee profile, performance review results.
+- Performance: final review by the manager's manager; grace marks in calibration.
+- Expense quotas: monthly limit, pro-rata for joiners, carry forward, women/men-only types, taxable types paid through payroll.
+- Onboarding: a template can need approval before the onboarding is complete.
+- Payroll: daily and hourly pay earned from attendance.
