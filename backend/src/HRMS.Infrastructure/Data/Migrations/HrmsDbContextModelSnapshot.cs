@@ -6683,6 +6683,12 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int>("Flag")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ForGender")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ForStatus")
+                        .HasColumnType("int");
+
                     b.Property<int>("FreeCount")
                         .HasColumnType("int");
 

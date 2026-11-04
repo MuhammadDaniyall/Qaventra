@@ -26,6 +26,8 @@ export interface PenaltyRule {
   leaveTypeId: string | null;
   isActive: boolean;
   stamps: RecordStamps;
+  forGender?: 'Male' | 'Female' | null;
+  forStatus?: 'Probation' | 'Active' | null;
 }
 export type SavePenaltyRule = Omit<PenaltyRule, 'id' | 'stamps'>;
 

@@ -69,6 +69,9 @@ public class AttendanceDepthTests(ApiFactory factory) : IClassFixture<ApiFactory
         await Ok(await admin.PostAsJsonAsync("/api/attendance-rules/penalties", new { name = "Lates", flag = "Late", everyCount = 2, freeCount = 0, minMinutes = 0, repeat = true, action = "DeductPay", days = 1 }, ApiFactory.Json));
         var leaveType = (await Ok(await admin.GetAsync("/api/setup/leave-types"))).EnumerateArray().First().GetProperty("id").GetGuid();
         await Ok(await admin.PostAsJsonAsync("/api/attendance-rules/penalties", new { name = "Early leave", flag = "EarlyLeave", everyCount = 1, freeCount = 0, minMinutes = 30, repeat = true, action = "DeductLeave", days = 1, leaveTypeId = leaveType }, ApiFactory.Json));
+        // A rule only for women, or only for people on probation, skips this worker (no gender, confirmed).
+        await Ok(await admin.PostAsJsonAsync("/api/attendance-rules/penalties", new { name = "Women short days", flag = "ShortDay", everyCount = 1, freeCount = 0, minMinutes = 0, repeat = true, action = "DeductPay", days = 2, forGender = "Female" }, ApiFactory.Json));
+        await Ok(await admin.PostAsJsonAsync("/api/attendance-rules/penalties", new { name = "Probation short days", flag = "ShortDay", everyCount = 1, freeCount = 0, minMinutes = 0, repeat = true, action = "DeductPay", days = 2, forStatus = "Probation" }, ApiFactory.Json));
         var preview = await Ok(await admin.GetAsync($"/api/attendance-rules/penalties/preview?year={day1.Year}&month={day1.Month}"));
         var row = preview.EnumerateArray().Single(r => r.GetProperty("employeeId").GetGuid() == worker);
         Assert.Equal(0.5m, row.GetProperty("payDays").GetDecimal()); // short day only; one late is under every 2

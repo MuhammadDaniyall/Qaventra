@@ -19,6 +19,8 @@ export function describeRule(r: SavePenaltyRule, leaveName?: string) {
     r.freeCount ? `after ${r.freeCount} free` : '',
     r.minMinutes ? `${r.minMinutes}+ minutes` : '',
     r.repeat ? '' : 'once a month at most',
+    r.forGender ? (r.forGender === 'Female' ? 'women only' : 'men only') : '',
+    r.forStatus ? (r.forStatus === 'Probation' ? 'on probation only' : 'confirmed staff only') : '',
   ].filter(Boolean);
   return `${count}${extras.length ? ` (${extras.join(', ')})` : ''}: ${what}`;
 }
@@ -93,6 +95,8 @@ function RuleModal({ item, onClose }: { item: PenaltyRule | null; onClose: () =>
       days: 0.5,
       leaveTypeId: null,
       isActive: true,
+      forGender: null,
+      forStatus: null,
     },
   );
   const { mutation, error, fieldErrors, setFieldErrors } = useSaveMutation({
@@ -166,6 +170,22 @@ function RuleModal({ item, onClose }: { item: PenaltyRule | null; onClose: () =>
           </Select>
         </Field>
       )}
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Applies to">
+          <Select value={v.forGender ?? ''} onChange={(e) => set({ forGender: (e.target.value || null) as SavePenaltyRule['forGender'] })}>
+            <option value="">Men and women</option>
+            <option value="Female">Women only</option>
+            <option value="Male">Men only</option>
+          </Select>
+        </Field>
+        <Field label="Staff">
+          <Select value={v.forStatus ?? ''} onChange={(e) => set({ forStatus: (e.target.value || null) as SavePenaltyRule['forStatus'] })}>
+            <option value="">Everyone</option>
+            <option value="Probation">On probation only</option>
+            <option value="Active">Confirmed staff only</option>
+          </Select>
+        </Field>
+      </div>
       <Checkbox label="Repeat (a penalty for every group, not just once a month)" checked={v.repeat} onChange={(e) => set({ repeat: e.target.checked })} />
       <Checkbox label="In use" checked={v.isActive} onChange={(e) => set({ isActive: e.target.checked })} />
       <p className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-300">{describeRule(v)}</p>

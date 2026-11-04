@@ -40,6 +40,10 @@ public class PenaltyRule : TenantEntity
     /// <summary>Leave type to deduct from; when its balance runs out, the rest comes off pay.</summary>
     public Guid? LeaveTypeId { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>Only for men or only for women; null = everyone.</summary>
+    public Gender? ForGender { get; set; }
+    /// <summary>Only for people on probation, or only for confirmed (active) staff; null = everyone.</summary>
+    public EmploymentStatus? ForStatus { get; set; }
 }
 
 /// <summary>Penalties worked out when a month's attendance was closed. Leave deductions are applied then; pay ones by payroll.</summary>

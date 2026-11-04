@@ -13,10 +13,11 @@ using Microsoft.EntityFrameworkCore;
 namespace HRMS.Api.Controllers;
 
 public record PenaltyRuleDto(Guid Id, string Name, PenaltyFlag Flag, int EveryCount, int FreeCount, int MinMinutes, bool Repeat, PenaltyAction Action,
-    decimal Days, Guid? LeaveTypeId, bool IsActive, RecordStampsDto Stamps);
+    decimal Days, Guid? LeaveTypeId, bool IsActive, RecordStampsDto Stamps, Gender? ForGender = null, EmploymentStatus? ForStatus = null);
 
 public record SavePenaltyRuleRequest([Required, StringLength(150)] string Name, PenaltyFlag Flag, [Range(1, 31)] int EveryCount, [Range(0, 31)] int FreeCount,
-    [Range(0, 600)] int MinMinutes, bool Repeat, PenaltyAction Action, [Range(0.25, 31)] decimal Days, Guid? LeaveTypeId, bool IsActive = true);
+    [Range(0, 600)] int MinMinutes, bool Repeat, PenaltyAction Action, [Range(0.25, 31)] decimal Days, Guid? LeaveTypeId, bool IsActive = true,
+    Gender? ForGender = null, EmploymentStatus? ForStatus = null);
 
 /// <summary>One rule's outcome for one person in a month.</summary>
 public record PenaltyLine(Guid RuleId, string RuleName, PenaltyFlag Flag, int Occurrences, PenaltyAction Action, decimal Days, Guid? LeaveTypeId);
@@ -69,11 +70,18 @@ public class PenaltyService(HrmsDbContext db, ScheduleService schedules, TenantC
             }
         }
 
+        var who = rules.Any(r => r.ForGender is not null || r.ForStatus is not null)
+            ? await db.Employees.Where(e => ids.Contains(e.Id)).Select(e => new { e.Id, e.Gender, e.Status }).ToDictionaryAsync(e => e.Id)
+            : null;
         foreach (var id in ids)
         {
             var mine = records[id].ToList();
             foreach (var rule in rules)
             {
+                // A rule scoped to men/women or to probation/confirmed staff skips everyone else.
+                if (who is not null && who.TryGetValue(id, out var p)
+                    && ((rule.ForGender is { } g && p.Gender != g) || (rule.ForStatus is { } st && p.Status != st)))
+                    continue;
                 var n = rule.Flag switch
                 {
                     PenaltyFlag.Late => mine.Count(r => r.Status == AttendanceStatus.Late && r.LateMinutes >= rule.MinMinutes),
@@ -261,7 +269,7 @@ public class AttendanceRulesController(HrmsDbContext db, PenaltyService penaltie
     public Task<List<PenaltyRuleDto>> Rules() =>
         db.PenaltyRules.OrderBy(r => r.Flag).ThenBy(r => r.Name)
             .Select(r => new PenaltyRuleDto(r.Id, r.Name, r.Flag, r.EveryCount, r.FreeCount, r.MinMinutes, r.Repeat, r.Action, r.Days, r.LeaveTypeId, r.IsActive,
-                new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy)))
+                new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy), r.ForGender, r.ForStatus))
             .ToListAsync();
 
     [HttpPost("penalties"), Authorize(Policy = Policies.Hr)]
@@ -306,6 +314,12 @@ public class AttendanceRulesController(HrmsDbContext db, PenaltyService penaltie
         r.Days = req.Days;
         r.LeaveTypeId = req.Action == PenaltyAction.DeductLeave ? req.LeaveTypeId : null;
         r.IsActive = req.IsActive;
+        if (req.ForGender is { } g && !Enum.IsDefined(g))
+            throw new DomainException("Choose men, women or everyone.");
+        if (req.ForStatus is { } s && s is not (EmploymentStatus.Probation or EmploymentStatus.Active))
+            throw new DomainException("A rule can be for people on probation or for confirmed staff.");
+        r.ForGender = req.ForGender;
+        r.ForStatus = req.ForStatus;
     }
 
     /// <summary>What the rules would charge each person for a month (recorded charges once the month is closed).</summary>
