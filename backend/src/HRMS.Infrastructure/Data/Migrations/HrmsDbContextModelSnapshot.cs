@@ -1700,6 +1700,12 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Code")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("CostCenterId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -1719,8 +1725,14 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateOnly?>("FilledFrom")
                         .HasColumnType("date");
 
+                    b.Property<Guid?>("GradeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Headcount")
                         .HasColumnType("int");
+
+                    b.Property<string>("JobDescription")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ModifiedAtUtc")
                         .HasColumnType("datetime2");
@@ -1742,6 +1754,17 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ReportsToId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("SalaryMax")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("SalaryMin")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 

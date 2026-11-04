@@ -41,14 +41,28 @@ public class BudgetTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(100000m, sales.GetProperty("monthlyCost").GetDecimal());
 
         // Plan 3 sales officers instead of 2, keep the other lines.
+        bool IsSales(JsonElement l) => l.GetProperty("designationId").ValueKind != JsonValueKind.Null && l.GetProperty("designationId").GetGuid() == desig;
         var lines = detail.GetProperty("lines").EnumerateArray().Select(l => new
         {
             departmentId = l.GetProperty("departmentId").ValueKind == JsonValueKind.Null ? (Guid?)null : l.GetProperty("departmentId").GetGuid(),
             designationId = l.GetProperty("designationId").ValueKind == JsonValueKind.Null ? (Guid?)null : l.GetProperty("designationId").GetGuid(),
             headcount = l.GetProperty("designationId").ValueKind != JsonValueKind.Null && l.GetProperty("designationId").GetGuid() == desig ? 3 : l.GetProperty("headcount").GetInt32(),
             monthlyCost = l.GetProperty("monthlyCost").GetDecimal(),
+            code = IsSales(l) ? "SAL-01" : (string?)null,
+            reportsToCode = (string?)null,
+            salaryMin = IsSales(l) ? 90000m : (decimal?)null,
+            salaryMax = IsSales(l) ? 120000m : (decimal?)null,
+            jobDescription = IsSales(l) ? "Sells to retail clients" : null,
         }).ToList();
+        // A band whose top is under its bottom, or reporting to a code that is not in the plan, is refused.
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/budget/plans/{id2}/positions",
+            new { positions = lines.Select(x => x.code is null ? x : x with { salaryMax = 1m }) }, ApiFactory.Json)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/budget/plans/{id2}/positions",
+            new { positions = lines.Select(x => x.code is null ? x : x with { reportsToCode = "NOPE" }) }, ApiFactory.Json)).StatusCode);
         await Ok(await admin.PutAsJsonAsync($"/api/budget/plans/{id2}/positions", new { positions = lines }, ApiFactory.Json));
+        var saved = (await Ok(await admin.GetAsync($"/api/budget/plans/{id2}"))).GetProperty("lines").EnumerateArray().Single(l => l.GetProperty("code").GetString() == "SAL-01");
+        Assert.Equal(120000m, saved.GetProperty("salaryMax").GetDecimal());
+        Assert.Equal("Sells to retail clients", saved.GetProperty("jobDescription").GetString());
         await Ok(await admin.PostAsync($"/api/budget/plans/{id2}/submit", null));
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync($"/api/budget/plans/{id2}/positions", new { positions = lines }, ApiFactory.Json)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsJsonAsync($"/api/budget/plans/{id2}/decide", new { approve = false }, ApiFactory.Json)).StatusCode);

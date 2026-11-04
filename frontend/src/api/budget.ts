@@ -31,6 +31,13 @@ export interface BudgetLine {
   budgetCost: number;
   actualCost: number;
   variance: number;
+  code?: string | null;
+  gradeId?: string | null;
+  costCenterId?: string | null;
+  reportsToCode?: string | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  jobDescription?: string | null;
 }
 
 export interface BudgetPlan {
@@ -65,6 +72,13 @@ export interface PositionInput {
   monthlyCost: number;
   filledFrom: string | null;
   notes: string | null;
+  code?: string | null;
+  gradeId?: string | null;
+  costCenterId?: string | null;
+  reportsToCode?: string | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  jobDescription?: string | null;
 }
 
 export interface BudgetCheck {

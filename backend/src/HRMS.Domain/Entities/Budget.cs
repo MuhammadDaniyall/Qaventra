@@ -29,4 +29,14 @@ public class BudgetPosition : BaseEntity
     /// <summary>New positions: hired from this date (costed from then). Null means in place for the whole period.</summary>
     public DateOnly? FilledFrom { get; set; }
     public string? Notes { get; set; }
+    /// <summary>Position code, e.g. FIN-ACC-02.</summary>
+    public string? Code { get; set; }
+    public Guid? GradeId { get; set; }
+    public Guid? CostCenterId { get; set; }
+    /// <summary>The position this one reports to (another line of the same plan).</summary>
+    public Guid? ReportsToId { get; set; }
+    /// <summary>Salary band (monthly gross).</summary>
+    public decimal? SalaryMin { get; set; }
+    public decimal? SalaryMax { get; set; }
+    public string? JobDescription { get; set; }
 }

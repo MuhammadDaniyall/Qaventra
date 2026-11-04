@@ -17,13 +17,17 @@ public record BudgetPlanListDto(Guid Id, string Name, DateOnly FromDate, DateOnl
 
 public record SaveBudgetPlanRequest([Required, StringLength(150)] string Name, DateOnly FromDate, DateOnly ToDate, [StringLength(2000)] string? Notes);
 
-public record BudgetPositionRequest(Guid? DepartmentId, Guid? DesignationId, int Headcount, decimal MonthlyCost, DateOnly? FilledFrom, [StringLength(500)] string? Notes);
+public record BudgetPositionRequest(Guid? DepartmentId, Guid? DesignationId, int Headcount, decimal MonthlyCost, DateOnly? FilledFrom, [StringLength(500)] string? Notes,
+    [StringLength(50)] string? Code = null, Guid? GradeId = null, Guid? CostCenterId = null, [StringLength(50)] string? ReportsToCode = null,
+    decimal? SalaryMin = null, decimal? SalaryMax = null, [StringLength(4000)] string? JobDescription = null);
 
 public record SavePositionsRequest([Required] List<BudgetPositionRequest> Positions);
 
 public record BudgetLineDto(
     Guid Id, Guid? DepartmentId, string Department, Guid? DesignationId, string Designation, int Headcount, decimal MonthlyCost, DateOnly? FilledFrom, string? Notes,
-    int OnRoll, int Hiring, int Vacant, decimal BudgetCost, decimal ActualCost, decimal Variance);
+    int OnRoll, int Hiring, int Vacant, decimal BudgetCost, decimal ActualCost, decimal Variance,
+    string? Code = null, Guid? GradeId = null, Guid? CostCenterId = null, string? ReportsToCode = null, decimal? SalaryMin = null, decimal? SalaryMax = null,
+    string? JobDescription = null);
 
 public record UnplannedDto(Guid? DepartmentId, string Department, Guid? DesignationId, string Designation, int OnRoll, decimal MonthlyCost);
 
@@ -109,13 +113,34 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
         var desigs = lines.Where(l => l.DesignationId != null).Select(l => l.DesignationId!.Value).Distinct().ToList();
         if (await db.Departments.CountAsync(d => depts.Contains(d.Id)) != depts.Count || await db.Designations.CountAsync(d => desigs.Contains(d.Id)) != desigs.Count)
             throw new NotFoundException("Department or designation");
+        if (lines.Any(l => l.SalaryMin is < 0 || l.SalaryMax is < 0 || (l.SalaryMin is { } lo && l.SalaryMax is { } hi && hi < lo)))
+            throw new DomainException("Check the salary band: the top is below the bottom.");
+        var codes = lines.Where(l => !string.IsNullOrWhiteSpace(l.Code)).Select(l => l.Code!.Trim()).ToList();
+        if (codes.Count != codes.Distinct(StringComparer.OrdinalIgnoreCase).Count())
+            throw new DomainException("Each position code is used once.");
+        if (lines.Any(l => !string.IsNullOrWhiteSpace(l.ReportsToCode) && !codes.Contains(l.ReportsToCode.Trim(), StringComparer.OrdinalIgnoreCase)))
+            throw new DomainException("\"Reports to\" must be the code of another position in this plan.");
+        if (lines.Any(l => !string.IsNullOrWhiteSpace(l.ReportsToCode) && string.Equals(l.ReportsToCode.Trim(), l.Code?.Trim(), StringComparison.OrdinalIgnoreCase)))
+            throw new DomainException("A position cannot report to itself.");
+        var lookupIds = lines.SelectMany(l => new[] { l.GradeId, l.CostCenterId }).Where(x => x != null).Select(x => x!.Value).Distinct().ToList();
+        var lookups = await db.OrgLookups.Where(x => lookupIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Kind);
+        if (lines.Any(l => (l.GradeId is { } g && lookups.GetValueOrDefault(g) != LookupKind.Grade) || (l.CostCenterId is { } c && lookups.GetValueOrDefault(c) != LookupKind.CostCenter)))
+            throw new DomainException("Choose the grade and cost center from the lists.");
         db.BudgetPositions.RemoveRange(p.Positions);
+        var added = new List<(BudgetPositionRequest Line, BudgetPosition Position)>();
         foreach (var l in lines.Where(l => l.Headcount > 0))
-            db.BudgetPositions.Add(new BudgetPosition
+        {
+            var position = new BudgetPosition
             {
                 PlanId = p.Id, DepartmentId = l.DepartmentId, DesignationId = l.DesignationId, Headcount = l.Headcount, MonthlyCost = l.MonthlyCost, FilledFrom = l.FilledFrom,
-                Notes = Clean(l.Notes),
-            });
+                Notes = Clean(l.Notes), Code = string.IsNullOrWhiteSpace(l.Code) ? null : l.Code.Trim(), GradeId = l.GradeId, CostCenterId = l.CostCenterId,
+                SalaryMin = l.SalaryMin, SalaryMax = l.SalaryMax, JobDescription = string.IsNullOrWhiteSpace(l.JobDescription) ? null : l.JobDescription.Trim(),
+            };
+            db.BudgetPositions.Add(position);
+            added.Add((l, position));
+        }
+        foreach (var (l, position) in added.Where(x => !string.IsNullOrWhiteSpace(x.Line.ReportsToCode)))
+            position.ReportsToId = added.FirstOrDefault(x => string.Equals(x.Position.Code, l.ReportsToCode!.Trim(), StringComparison.OrdinalIgnoreCase)).Position?.Id;
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -215,7 +240,8 @@ public class BudgetController(HrmsDbContext db, TenantClock clock, ICurrentUser 
             var actual = matching.Sum(s => s.Total) * Months(p.FromDate, p.ToDate);
             lines.Add(new BudgetLineDto(x.Id, x.DepartmentId, x.DepartmentId is { } d ? depts.GetValueOrDefault(d) ?? "" : "No department",
                 x.DesignationId, x.DesignationId is { } g ? desigs.GetValueOrDefault(g) ?? "" : "All designations", x.Headcount, x.MonthlyCost, x.FilledFrom, x.Notes,
-                onRoll, hires, Math.Max(0, x.Headcount - onRoll), Math.Round(budget, 0), Math.Round(actual, 0), Math.Round(budget - actual, 0)));
+                onRoll, hires, Math.Max(0, x.Headcount - onRoll), Math.Round(budget, 0), Math.Round(actual, 0), Math.Round(budget - actual, 0),
+                x.Code, x.GradeId, x.CostCenterId, x.ReportsToId is { } rt ? p.Positions.FirstOrDefault(y => y.Id == rt)?.Code : null, x.SalaryMin, x.SalaryMax, x.JobDescription));
         }
         var unplanned = staff.Where(s => !p.Positions.Any(x => x.DepartmentId == s.DepartmentId && (x.DesignationId == null || x.DesignationId == s.DesignationId)))
             .Select(s => new UnplannedDto(s.DepartmentId, s.DepartmentId is { } d ? depts.GetValueOrDefault(d) ?? "" : "No department",

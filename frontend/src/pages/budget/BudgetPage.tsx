@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Calculator, Check, Plus, Send, Trash2, Undo2 } from 'lucide-react';
+import { Calculator, Check, FileText, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { budgetApi, type BudgetPlan, type BudgetStatus, type PositionInput } from '../../api/budget';
 import { useDepartments, useDesignations } from '../../api/hooks';
 import { qk } from '../../api/keys';
+import { useLookups } from '../../api/employeeFile';
 import { RecordStamp } from '../../components/RecordStamp';
 import {
   Badge,
@@ -170,7 +171,23 @@ function PlanView({ id, onDeleted }: { id: string; onDeleted: () => void }) {
   return <Plan p={plan.data!} onDeleted={onDeleted} />;
 }
 
-type Row = { departmentId: string; designationId: string; headcount: string; monthlyCost: string; filledFrom: string; notes: string };
+type Row = {
+  departmentId: string;
+  designationId: string;
+  headcount: string;
+  monthlyCost: string;
+  filledFrom: string;
+  notes: string;
+  code: string;
+  gradeId: string;
+  costCenterId: string;
+  reportsToCode: string;
+  salaryMin: string;
+  salaryMax: string;
+  jobDescription: string;
+};
+
+const NO_DETAILS = { code: '', gradeId: '', costCenterId: '', reportsToCode: '', salaryMin: '', salaryMax: '', jobDescription: '' };
 
 function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
   const toast = useToast();
@@ -185,12 +202,20 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
       monthlyCost: String(l.monthlyCost),
       filledFrom: l.filledFrom ?? '',
       notes: l.notes ?? '',
+      code: l.code ?? '',
+      gradeId: l.gradeId ?? '',
+      costCenterId: l.costCenterId ?? '',
+      reportsToCode: l.reportsToCode ?? '',
+      salaryMin: l.salaryMin != null ? String(l.salaryMin) : '',
+      salaryMax: l.salaryMax != null ? String(l.salaryMax) : '',
+      jobDescription: l.jobDescription ?? '',
     }));
   const [rows, setRows] = useState<Row[]>(toRows);
   const [dirty, setDirty] = useState(false);
   const [deciding, setDeciding] = useState<boolean | null>(null);
   const [note, setNote] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [detail, setDetail] = useState<number | null>(null);
   useEffect(() => {
     setRows(toRows());
     setDirty(false);
@@ -210,6 +235,13 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
             monthlyCost: Number(r.monthlyCost) || 0,
             filledFrom: r.filledFrom || null,
             notes: r.notes.trim() || null,
+            code: r.code.trim() || null,
+            gradeId: r.gradeId || null,
+            costCenterId: r.costCenterId || null,
+            reportsToCode: r.reportsToCode.trim() || null,
+            salaryMin: r.salaryMin ? Number(r.salaryMin) : null,
+            salaryMax: r.salaryMax ? Number(r.salaryMax) : null,
+            jobDescription: r.jobDescription.trim() || null,
           })),
       ),
     onSuccess: () => {
@@ -332,6 +364,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                 <Th className="text-end">Vacant</Th>
                 <Th className="text-end">Budget</Th>
                 <Th className="text-end">Variance</Th>
+                <Th>Details</Th>
                 {p.canEdit && <Th />}
               </Tr>
             </THead>
@@ -411,6 +444,12 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                     <Td className={cn('text-end tabular-nums', !!line?.vacant && 'text-amber-600')}>{line?.vacant ?? '—'}</Td>
                     <Td className="text-end tabular-nums">{line ? formatCurrency(line.budgetCost) : '—'}</Td>
                     <Td className={cn('text-end tabular-nums', line && line.variance < 0 && 'text-red-600')}>{line ? formatCurrency(line.variance) : '—'}</Td>
+                    <Td>
+                      <IconButton label={p.canEdit ? 'Position details' : 'View position details'} onClick={() => setDetail(i)}>
+                        <FileText className="size-4" />
+                      </IconButton>
+                      {r.code && <span className="ms-1 font-mono text-xs text-zinc-500 dark:text-zinc-400">{r.code}</span>}
+                    </Td>
                     {p.canEdit && (
                       <Td>
                         <IconButton
@@ -446,6 +485,7 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
                     monthlyCost: '',
                     filledFrom: todayIso() > p.fromDate ? todayIso() : p.fromDate,
                     notes: '',
+                    ...NO_DETAILS,
                   },
                 ]);
                 setDirty(true);
@@ -457,6 +497,18 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
         )}
       </Card>
 
+      {detail !== null && rows[detail] && (
+        <PositionDetails
+          row={rows[detail]}
+          codes={rows.map((r) => r.code.trim()).filter((c, j) => c && j !== detail)}
+          readOnly={!p.canEdit}
+          onSave={(patch) => {
+            set(detail, patch);
+            setDetail(null);
+          }}
+          onClose={() => setDetail(null)}
+        />
+      )}
       {p.unplanned.length > 0 && (
         <Card>
           <CardHeader title="On the roll but not in the budget" description="People in departments and designations the budget does not cover" />
@@ -509,5 +561,102 @@ function Plan({ p, onDeleted }: { p: BudgetPlan; onDeleted: () => void }) {
         onClose={() => setDeleting(false)}
       />
     </div>
+  );
+}
+
+/** Code, grade, cost center, who it reports to, salary band and job description of one position. Saved with the budget. */
+function PositionDetails({
+  row,
+  codes,
+  readOnly,
+  onSave,
+  onClose,
+}: {
+  row: Row;
+  codes: string[];
+  readOnly: boolean;
+  onSave: (patch: Partial<Row>) => void;
+  onClose: () => void;
+}) {
+  const lookups = useLookups();
+  const [f, setF] = useState({
+    code: row.code,
+    gradeId: row.gradeId,
+    costCenterId: row.costCenterId,
+    reportsToCode: row.reportsToCode,
+    salaryMin: row.salaryMin,
+    salaryMax: row.salaryMax,
+    jobDescription: row.jobDescription,
+  });
+  const set = (k: keyof typeof f, v: string) => setF((x) => ({ ...x, [k]: v }));
+  const of = (kind: string) => (lookups.data ?? []).filter((l) => l.kind === kind && (l.isActive || l.id === f.gradeId || l.id === f.costCenterId));
+  const bandWrong = !!f.salaryMin && !!f.salaryMax && Number(f.salaryMax) < Number(f.salaryMin);
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Position details"
+      footer={
+        readOnly ? (
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        ) : (
+          <>
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button disabled={bandWrong} onClick={() => onSave(f)}>
+              Done
+            </Button>
+          </>
+        )
+      }
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Position code">
+          <Input value={f.code} maxLength={50} disabled={readOnly} placeholder="SAL-01" onChange={(e) => set('code', e.target.value)} />
+        </Field>
+        <Field label="Reports to" hint="Code of another position">
+          <Select value={f.reportsToCode} disabled={readOnly} onChange={(e) => set('reportsToCode', e.target.value)}>
+            <option value="">Nobody</option>
+            {codes.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Grade">
+          <Select value={f.gradeId} disabled={readOnly} onChange={(e) => set('gradeId', e.target.value)}>
+            <option value="">None</option>
+            {of('Grade').map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Cost center">
+          <Select value={f.costCenterId} disabled={readOnly} onChange={(e) => set('costCenterId', e.target.value)}>
+            <option value="">None</option>
+            {of('CostCenter').map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Salary from (Rs / month)">
+          <Input type="number" min={0} value={f.salaryMin} disabled={readOnly} onChange={(e) => set('salaryMin', e.target.value)} />
+        </Field>
+        <Field label="Salary up to" error={bandWrong ? 'Below the bottom of the band.' : undefined}>
+          <Input type="number" min={0} value={f.salaryMax} disabled={readOnly} onChange={(e) => set('salaryMax', e.target.value)} />
+        </Field>
+        <Field label="Job description" className="col-span-2">
+          <Textarea rows={5} maxLength={4000} value={f.jobDescription} disabled={readOnly} onChange={(e) => set('jobDescription', e.target.value)} />
+        </Field>
+      </div>
+    </Modal>
   );
 }
