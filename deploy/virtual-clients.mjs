@@ -214,6 +214,30 @@ const REFUSALS = {
   timesheet: [/is closed\. Ask HR to reopen/, /already (submitted|approved)/i],
   helpdesk: [/the employee closes the ticket after you resolve it/],
   payroll: [/already (finalized|approved|submitted)/i],
+  pay: [/is already claimed/, /already claimed as comp-off/, /Advances can total at most/, /An advance can be at most/, /is finalized\. Choose the next month/,
+    /Overtime counts from/, /No salary is set/],
+  loan: [/already a loan request waiting/, /is up to /, /is repaid in at most/, /is available after \d+ months of service/],
+  compOff: [/already claimed comp-off/, /already claimed as pay/, /is closed\. Ask HR to reopen/, /normal working day/, /extra hours earn/],
+  exemption: [/You have already asked for this day/, /exemption\(s\) a month; this month's are used/, /Ask within \d+ days/, /is closed\. Ask HR to reopen/,
+    /does not take exemption requests/],
+  offDay: [/already have a pending request for those dates/, /already your days off/, /is closed\. Ask HR to reopen/, /You have no shift/],
+  shift: [/already have a shift request waiting/, /You are already on .* on the working days/, /already has a shift request on some/, /have the same schedule on those days/,
+    /is closed\. Ask HR to reopen/, /no longer works here/, /no longer waiting for your answer/],
+  advance: [/An advance is already waiting/],
+  typedExpense: [/is limited to Rs/, /needs a receipt/, /is not open to your grade/, /is only for (women|men)/, /That advance is not open/, /There is no distance from/],
+  travel: [/already have a trip on these dates/, /days' notice/, /The settlement is waiting for HR/, /This trip is settled/, /The trip is still waiting for approval/,
+    /The trip is being settled/, /No settlement is waiting/],
+  asset: [/already have a .* request open/, /already asked to return this/, /already returned this/, /Take that back first/, /is not available/, /already closed/],
+  desk: [/already have a desk that day/, /is already booked that day/, /You have a permanent desk/, /You can book up to/, /Check in on the day/, /no longer active/,
+    /released because nobody checked in/, /That day has passed/],
+  fund: [/withdrawal from this fund is already waiting/, /Only .* is available/],
+  profile: [/already have a change request waiting/, /Nothing has changed/],
+  document: [/switched off attachments/, /At most \d+ files/, /must be smaller than/],
+  ai: [/not switched on/, /used this month's AI questions/, /busy right now/, /key on this site is not valid/, /could not be (made|read)/],
+  performance: [/Rate every item before sending/, /must add up to 100/, /This review cycle is closed/, /not waiting for calibration/, /already been launched/,
+    /Nobody is in scope/],
+  separation: [/already has an open separation/, /has already left/, /Only a requested resignation/, /exit interview opens once/],
+  onboarding: [/This onboarding was cancelled/, /already introduced yourself/],
 };
 
 class Persona {
@@ -573,6 +597,18 @@ async function loadReference(co) {
     if (all.length >= r.total || !r.items.length) break;
   }
   co.ref.staff = all;
+  // Lookups of the other modules; a company without them (or an older server) just skips those actions.
+  const soft = async (path) => {
+    const res = await http('GET', path, undefined, hr.token);
+    return res.ok && Array.isArray(res.data) ? res.data : [];
+  };
+  Object.assign(co.ref, {
+    loanTypes: (await soft('/pay/loan-types')).filter((t) => t.isActive),
+    travelReasons: (await soft('/travel/reasons')).filter((t) => t.isActive),
+    floors: await soft('/desks/floors'),
+    assetTypes: (await soft('/assets/types')).filter((t) => t.isActive),
+    reports: await soft('/reports'),
+  });
 }
 
 const isOff = (co, d) => co.ref.holidays.has(iso(d)) || (co.ref.defaultShift?.weeklyOffDays ?? ['Saturday', 'Sunday']).includes(WEEKDAYS[d.getUTCDay()]);
@@ -843,6 +879,7 @@ async function employeeDay(p, co, d, r, opts) {
     if (opts.workday && r.chance(0.7)) await timesheet(p, co, d, r, opts);
     if (r.chance(0.05)) await requestTraining(p, co, r);
     if (r.chance(0.05)) await suggest(p, co, r);
+    await moreModules(p, co, d, r, EMPLOYEE_MODULES);
   } else if (r.chance(0.3)) await social(p, r);
 }
 
@@ -924,6 +961,7 @@ async function managerDay(m, co, d, r, opts) {
   if (r.chance(0.2)) await nominate(m, r);
   if (r.chance(0.08)) await applyLeave(m, co, d, r);
   if (r.chance(0.08)) await claimExpense(m, d, r);
+  await moreModules(m, co, d, r, MANAGER_MODULES);
 }
 
 // ---------- HR ----------
@@ -1140,6 +1178,696 @@ async function hrDay(hr, co, d, r, opts) {
   await answerTickets(hr, co, r, co.agents.length ? { onlyCategories: hrCats } : {});
   if (r.chance(0.5)) await reviewSuggestions(hr, r);
   await hr.get('Open the HR dashboard', '/dashboard');
+  await moreModules(hr, co, d, r, HR_MODULES);
+}
+
+// ---------- The other modules: pay, loans, comp-off, exemptions, shifts, travel, assets, desks, funds, documents, AI, performance ----------
+
+/** The server dates requests by its own clock: a simulated day ahead of it counts as the server's today. */
+const serverDay = (d) => (d > REAL_TODAY ? REAL_TODAY : d);
+const monthStart = (d) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+const phoneNumber = (r) => `+92 3${r.int(0, 4)}${r.int(0, 9)} ${r.int(1000000, 9999999)}`;
+const CITIES = ['Karachi', 'Islamabad', 'Multan', 'Faisalabad', 'Peshawar', 'Quetta'];
+
+const AI_QUESTIONS = ['How many casual leaves do I have left this year?', 'When is the next public holiday?', 'What was my net pay last month?',
+  'How do I apply for a loan?', 'Who approves my leave requests?', 'How many days was I late this month?', 'What is the notice period for resignation?'];
+const GOALS = [['Ship the customer portal revamp', 'Released to production by the end of the period with no P1 bugs'],
+  ['Cut average ticket resolution time', 'From 3 days to under 2 days'], ['Raise unit test coverage of my modules', 'Above 70% line coverage'],
+  ['Mentor a junior team member', 'Weekly one-to-ones and one completed starter project'], ['Earn a cloud certification', 'AWS or Azure associate level, passed'],
+  ['Automate the monthly release checklist', 'Release time down from a day to two hours'], ['Document the integration APIs', 'Every public endpoint documented in the wiki']];
+
+/** This month's and last month's attendance records (fresh: what earlier runs did may have changed them). */
+async function recentRecords(p, day) {
+  const out = [];
+  for (const m of [addDays(monthStart(day), -1), day]) {
+    const list = (await p.get('Open my attendance', `/attendance/my?year=${m.getUTCFullYear()}&month=${m.getUTCMonth() + 1}`)).data ?? [];
+    out.push(...list);
+  }
+  return out;
+}
+
+/** Overtime for a recent late evening, or an advance against next salary. */
+async function payRequest(p, co, d, r) {
+  const today = serverDay(d);
+  const [year, month] = [REAL_TODAY.getUTCFullYear(), REAL_TODAY.getUTCMonth() + 1];
+  if (r.chance(0.6)) {
+    const day = previousWorkday(co, today);
+    const hours = r.pick([1, 1.5, 2, 2.5, 3]);
+    const reason = r.pick(['Stayed back for the production release.', 'Client call ran late into the evening.', 'Month-end closing work.']);
+    const res = await p.post(`Claim ${hours} h overtime for ${iso(day)}`, '/pay/requests',
+      { kind: 'Overtime', title: null, amount: null, isTaxable: false, year, month, workDate: iso(day), hours, reason }, { refuse: REFUSALS.pay });
+    if (res.ok) p.did(`Claimed ${hours} h overtime for ${iso(day)} (Rs ${Number(res.data.amount).toLocaleString('en-PK')}): “${reason}”`);
+    return;
+  }
+  const amount = r.int(2, 8) * 5000;
+  const reason = r.pick(['School fees for the children are due this week.', 'Car repair after an accident.', 'Shifting to a new house this month.']);
+  const res = await p.post(`Ask for a salary advance of Rs ${amount}`, '/pay/requests',
+    { kind: 'AdvanceSalary', title: null, amount, isTaxable: false, year, month, workDate: null, hours: null, reason }, { refuse: REFUSALS.pay });
+  if (res.ok) p.did(`Asked for a Rs ${amount.toLocaleString('en-PK')} salary advance: “${reason}”`);
+}
+
+/** A loan of a type they qualify for, within its limits, repaid from next month. */
+async function requestLoan(p, co, d, r) {
+  const mine = (await p.get('Open my loans', '/pay/loans/my')).data ?? [];
+  if (mine.some((l) => l.status === 'Pending' || (l.status === 'Approved' && l.remaining > 0))) return;
+  const joined = co.ref.staff.find((e) => e.id === p.employeeId)?.joiningDate;
+  const eligible = co.ref.loanTypes.filter((t) => !t.minServiceMonths || !joined
+    || iso(new Date(Date.UTC(+joined.slice(0, 4), +joined.slice(5, 7) - 1 + t.minServiceMonths, +joined.slice(8, 10)))) <= iso(REAL_TODAY));
+  // Now and then someone asks for a type they are not yet eligible for (the app says no).
+  const t = co.ref.loanTypes.length ? (eligible.length && r.chance(0.9) ? r.pick(eligible) : r.pick(co.ref.loanTypes)) : null;
+  let amount = r.int(5, 40) * 10000;
+  if (t?.maxAmount) amount = Math.min(amount, t.maxAmount);
+  let installments = r.pick([6, 10, 12, 18, 24]);
+  if (t?.maxInstallments) installments = Math.min(installments, t.maxInstallments);
+  const start = new Date(Date.UTC(REAL_TODAY.getUTCFullYear(), REAL_TODAY.getUTCMonth() + 1, 1));
+  const reason = r.pick(['Down payment for a motorbike.', 'Medical treatment for my mother.', 'Wedding of my sister.', 'Renovation of the house.']);
+  const res = await p.post(`Apply for a ${t?.name ?? 'loan'} of Rs ${amount}`, '/pay/loans', {
+    title: t?.name ?? 'Personal loan', amount, installments, startYear: start.getUTCFullYear(), startMonth: start.getUTCMonth() + 1, reason, loanTypeId: t?.id ?? null,
+  }, { refuse: REFUSALS.loan });
+  if (res.ok) p.did(`Applied for a ${t?.name ?? 'loan'} of Rs ${amount.toLocaleString('en-PK')} over ${installments} installments: “${reason}”`);
+}
+
+/** Comp-off for a recent day off they came in to work. */
+async function claimCompOff(p, co, d, r) {
+  const today = serverDay(d);
+  const claimed = new Set(((await p.get('Open my comp-off claims', '/leave/comp-off/my')).data ?? [])
+    .filter((c) => c.status === 'Pending' || c.status === 'Approved').map((c) => c.workedOn));
+  const offDay = (key) => {
+    const cell = co.cal.get(p.employeeId)?.get(key);
+    return cell ? !isWorkday(cell) : isOff(co, parseDate(key));
+  };
+  const worked = (await recentRecords(p, today)).filter((a) => a.date < iso(today) && a.date >= iso(addDays(today, -50)) && !claimed.has(a.date)
+    && offDay(a.date) && a.workedMinutes >= 240);
+  const rec = worked.at(-1);
+  if (!rec) return;
+  const days = rec.workedMinutes >= 420 && r.chance(0.8) ? 1 : 0.5;
+  const reason = r.pick(['Came in on the weekend for the server migration.', 'Weekend support for the client go-live.', 'Worked on the holiday to finish the audit.']);
+  const res = await p.post(`Claim ${days} day comp-off for ${rec.date}`, '/leave/comp-off', { workedOn: rec.date, days, reason }, { refuse: REFUSALS.compOff });
+  if (res.ok) p.did(`Claimed ${days === 1 ? 'a day' : 'half a day'} of comp-off for working on ${rec.date}: “${reason}”`);
+}
+
+/** Annual leave away from home, with the address and phone where they can be reached. */
+async function applyStationLeave(p, co, d, r) {
+  const type = leaveType(co, /annual/i) ?? leaveType(co, /casual/i);
+  if (!type) return;
+  const from = workdaysFrom(co, addDays(d, r.int(7, 30)), 1)[0];
+  const span = workdaysFrom(co, from, r.int(2, 5));
+  const to = span.at(-1);
+  if (!from || to.getUTCFullYear() !== from.getUTCFullYear()) return;
+  const city = r.pick(CITIES.concat(['Murree', 'Skardu', 'Swat']));
+  const extra = {};
+  const reasons = co.ref.leaveReasons.filter((x) => x.leaveTypeId === type.id);
+  if (reasons.length) extra.reasonId = (reasons.find((x) => !x.requiresDocument) ?? reasons[0]).id;
+  const reason = r.pick([`Family visit to ${city}.`, `Trip to ${city} with the family.`, `Attending a wedding in ${city}.`]);
+  const res = await p.post(`Apply for station leave to ${city} ${iso(from)} to ${iso(to)}`, '/leave', {
+    leaveTypeId: type.id, fromDate: iso(from), toDate: iso(to), reason, ...extra,
+    isStationLeave: true, stationAddress: `House ${r.int(1, 300)}, Street ${r.int(1, 40)}, ${city}`, stationPhone: phoneNumber(r),
+  }, { refuse: REFUSALS.leave });
+  if (res.ok) p.did(`Applied for ${type.name} out of station (${city}) ${iso(from)} to ${iso(to)}: “${reason}”`);
+}
+
+/** Excuse for a recent late arrival or early leave, within the monthly quota. */
+async function askExemption(p, co, d, r) {
+  const quota = (await p.get('Check my exemption quota', '/exemptions/quota')).data;
+  if (!quota?.allowed || quota.used >= quota.allowed) return;
+  const today = serverDay(d);
+  const asked = new Set(((await p.get('Open my exemption requests', '/exemptions/my')).data ?? [])
+    .filter((x) => x.status === 'Pending' || x.status === 'Approved').map((x) => x.date));
+  const flagged = (await recentRecords(p, today)).filter((a) => a.date <= iso(today) && a.date >= iso(addDays(REAL_TODAY, -quota.withinDays)) && !asked.has(a.date)
+    && a.date >= iso(monthStart(today)) && (['Late', 'HalfDay', 'ShortDay'].includes(a.status) || a.earlyLeaveMinutes > 0));
+  const rec = flagged.at(-1);
+  if (!rec) return;
+  const reason = rec.status === 'Late'
+    ? r.pick(['Stuck in traffic on the Canal Road after an accident.', 'Dropped my father at the hospital in the morning.', 'Heavy rain; the roads were flooded.'])
+    : r.pick(['Left early for a doctor’s appointment.', 'Had to pick up my child from school; the van did not come.', 'Bank work that could only be done before 5 pm.']);
+  const res = await p.post(`Ask to excuse ${rec.date} (${rec.status === 'Late' ? `${rec.lateMinutes} min late` : rec.status})`, '/exemptions', { date: rec.date, reason },
+    { refuse: REFUSALS.exemption });
+  if (res.ok) p.did(`Asked HR to excuse ${rec.date} (${rec.status === 'Late' ? `late by ${rec.lateMinutes} min` : rec.status === 'Present' ? 'left early' : rec.status}): “${reason}”`);
+}
+
+/** Different weekly days off for a few weeks. */
+async function requestOffDays(p, co, d, r) {
+  const base = d > REAL_TODAY ? d : REAL_TODAY;
+  const from = addDays(base, 7 - ((base.getUTCDay() + 6) % 7)); // next Monday
+  const to = addDays(from, 7 * r.int(2, 6) - 1);
+  const usual = co.ref.defaultShift?.weeklyOffDays ?? ['Saturday', 'Sunday'];
+  const options = [['Friday', 'Saturday'], ['Sunday', 'Monday'], ['Saturday'], ['Friday', 'Sunday']]
+    .filter((o) => [...o].sort().join() !== [...usual].sort().join());
+  const offDays = r.pick(options);
+  const reason = r.pick(['Weekend classes for my MBA on Saturdays.', 'Covering the client’s Friday support window for a few weeks.', 'Family business needs me on Mondays.']);
+  const res = await p.post(`Ask for ${offDays.join(' and ')} off ${iso(from)} to ${iso(to)}`, '/attendance-rules/off-days',
+    { fromDate: iso(from), toDate: iso(to), offDays, reason }, { refuse: REFUSALS.offDay });
+  if (res.ok) p.did(`Asked for ${offDays.join(' and ')} as days off from ${iso(from)} to ${iso(to)}: “${reason}”`);
+}
+
+/** Another shift for a few days, or a swap with a colleague on a different shift. */
+async function requestShiftChange(p, co, d, r) {
+  const base = d > REAL_TODAY ? d : REAL_TODAY;
+  const mine = co.cal.get(p.employeeId)?.get(iso(d))?.defaultShiftId ?? co.ref.defaultShift?.id;
+  const from = workdaysFrom(co, addDays(base, r.int(2, 10)), 1)[0];
+  const to = workdaysFrom(co, from, r.int(1, 5)).at(-1);
+  // A swap only makes sense with someone whose roster differs from theirs on one of those days.
+  const slot = (id, key) => {
+    const c = co.cal.get(id)?.get(key);
+    return c ? `${c.isOff}|${c.shiftId ?? c.defaultShiftId}` : null;
+  };
+  const keys = Array.from({ length: (to - from) / 86_400_000 + 1 }, (_, i) => iso(addDays(from, i)));
+  const colleagues = co.ref.staff.filter((e) => e.id !== p.employeeId && co.cal.has(e.id) && keys.some((k) => slot(e.id, k) && slot(p.employeeId, k) && slot(e.id, k) !== slot(p.employeeId, k)));
+  if (colleagues.length && r.chance(0.3)) {
+    const c = r.pick(colleagues);
+    const reason = r.pick(['Have evening classes those days.', 'Need the mornings free for my mother’s physiotherapy.']);
+    const res = await p.post(`Ask ${c.fullName} to swap shifts ${iso(from)} to ${iso(to)}`, '/attendance/shift-requests/swap',
+      { colleagueId: c.id, from: iso(from), to: iso(to), reason }, { refuse: REFUSALS.shift });
+    if (res.ok) p.did(`Asked ${c.fullName} to swap shifts from ${iso(from)} to ${iso(to)}: “${reason}”`);
+    return;
+  }
+  // The shifts the roster already has them on in those days (the roster can differ from their usual shift).
+  const current = new Set(keys.map((k) => co.cal.get(p.employeeId)?.get(k)).map((c) => c?.shiftId ?? c?.defaultShiftId ?? mine));
+  const others = co.ref.shifts.filter((s) => !current.has(s.id) && s.id !== mine && s.isActive !== false);
+  if (!others.length) return;
+  const s = r.pick(others);
+  const reason = r.pick(['Covering for a colleague on leave.', 'Support for the US client’s release window.', 'Doctor’s appointments in the mornings this week.']);
+  const res = await p.post(`Ask to work the ${s.name} shift ${iso(from)} to ${iso(to)}`, '/attendance/shift-requests/change',
+    { from: iso(from), to: iso(to), shiftId: s.id, reason }, { refuse: REFUSALS.shift });
+  if (res.ok) p.did(`Asked to work the ${s.name} shift from ${iso(from)} to ${iso(to)}: “${reason}”`);
+}
+
+async function requestExpenseAdvance(p, co, d, r) {
+  const mine = (await p.get('Open my expense advances', '/expense-setup/advances/my')).data ?? [];
+  if (mine.some((a) => a.status === 'Pending' || (a.status === 'Approved' && !a.closedAtUtc))) return;
+  const [purpose, amount] = r.pick([['Client visit to Karachi next week', 40000], ['Team offsite arrangements', 25000], ['Trade fair stall material', 30000],
+    ['Field visit to the Multan site', 15000]]);
+  const res = await p.post(`Ask for an expense advance: ${purpose}`, '/expense-setup/advances', { purpose, amount }, { refuse: REFUSALS.advance });
+  if (res.ok) p.did(`Asked for an expense advance of Rs ${amount.toLocaleString('en-PK')} for “${purpose}”`);
+}
+
+/** A claim on one of the company's expense types, within what is left for them this month and year. */
+async function claimTypedExpense(p, co, d, r) {
+  const types = (await p.get('Open my expense types', '/expense-setup/types/for')).data ?? [];
+  if (!types.length) return;
+  const t = r.pick(types);
+  const left = Math.min(t.perClaimLimit ?? Infinity, t.yearlyLimit != null ? t.yearlyLimit - t.usedThisYear : Infinity,
+    t.monthlyLimit != null ? t.monthlyLimit - t.usedThisMonth : Infinity);
+  if (left < 300) return;
+  const today = serverDay(d);
+  let day = addDays(today, -r.int(0, 5));
+  if (day < monthStart(REAL_TODAY)) day = monthStart(REAL_TODAY);
+  const item = { date: iso(day), category: t.category, expenseTypeId: t.id, description: '', amount: 0, receipt: null, quantity: null, fromCity: null, toCity: null };
+  if (t.calculation === 'Distance') {
+    const routes = ((await p.get('Open the distance list', '/expense-setup/routes')).data ?? []).filter((x) => (t.rate ?? 0) * x.km <= left);
+    if (!routes.length) return;
+    const route = r.pick(routes);
+    Object.assign(item, { fromCity: route.fromCity, toCity: route.toCity, amount: Math.round((t.rate ?? 0) * route.km), description: `Drove ${route.fromCity} to ${route.toCity} for a client visit` });
+  } else if (t.calculation === 'PerUnit') {
+    const rate = t.rate ?? 0;
+    const qty = rate ? Math.min(r.int(1, 4), Math.floor(left / rate)) : r.int(1, 3);
+    if (qty < 1) return;
+    Object.assign(item, { quantity: qty, amount: Math.round(rate * qty), description: `${qty} ${t.unit ?? 'unit'}${qty > 1 ? 's' : ''} of ${t.name.toLowerCase()}` });
+  } else {
+    const amount = Math.max(100, Math.floor(Math.min(left, r.int(1000, 8000)) / 50) * 50);
+    Object.assign(item, { amount, description: `${t.name}, ${day.toLocaleString('en-GB', { month: 'long', timeZone: 'UTC' })}` });
+  }
+  if (t.receiptRequired || r.chance(0.4)) item.receipt = tinyReceipt;
+  const open = r.chance(0.5) ? ((await p.get('Open my open advances', '/expense-setup/advances/open')).data ?? []) : [];
+  const advanceId = open.find((a) => a.outstanding > 0)?.id ?? null;
+  const res = await p.post(`Claim ${t.name}`, '/expenses', { title: t.name, items: [item], advanceId }, { refuse: REFUSALS.typedExpense });
+  if (res.ok) p.did(`Claimed ${t.name}: ${item.description}, Rs ${Number(res.data.total).toLocaleString('en-PK')}${advanceId ? ' (against an advance)' : ''}`);
+}
+
+/** A return trip from Lahore with a hotel, giving the notice the company asks for. */
+async function requestTravel(p, co, d, r) {
+  const settings = (await p.get('Open travel', '/travel/me')).data;
+  const base = d > REAL_TODAY ? d : REAL_TODAY;
+  const depart = workdaysFrom(co, addDays(base, (settings?.minNoticeDays ?? 0) + r.int(1, 20)), 1)[0];
+  const back = addDays(depart, r.int(1, 3));
+  const to = r.pick(CITIES);
+  const mode = to === 'Karachi' || to === 'Quetta' ? 'Air' : r.pick(['Air', 'Car', 'CompanyVehicle', 'Train']);
+  const reason = co.ref.travelReasons.length ? r.pick(co.ref.travelReasons) : null;
+  const purpose = r.pick([`Client meetings in ${to}`, `Requirement workshop at the ${to} office`, `Vendor visit in ${to}`, `Conference in ${to}`]);
+  const res = await p.post(`Ask to travel to ${to} ${iso(depart)} to ${iso(back)}`, '/travel', {
+    reasonId: reason?.id ?? null, purpose, tripType: 'Return', isInternational: false, returnOn: iso(back),
+    legs: [{ from: 'Lahore', to, date: iso(depart), mode, preference: mode === 'Air' ? 'Morning flight, aisle seat' : null },
+      { from: to, to: 'Lahore', date: iso(back), mode, preference: null }],
+    urgentReason: null, needsHotel: true, hotelCity: to, checkIn: iso(depart), checkOut: iso(back), needsPickDrop: r.chance(0.5), pickDropNotes: 'Airport pick-up please.',
+    estimatedCost: r.int(4, 12) * 10000, advanceRequested: r.chance(0.4) ? r.int(1, 4) * 5000 : null,
+  }, { refuse: REFUSALS.travel });
+  if (res.ok) p.did(`Asked to travel to ${to} (${mode}) ${iso(depart)} to ${iso(back)}: “${purpose}”`);
+}
+
+/** A new laptop, mouse or access card; now and then a return of something they hold. */
+async function requestAsset(p, co, d, r) {
+  if (!co.ref.assetTypes.length) return;
+  const my = (await p.get('Open my assets', '/assets/my')).data;
+  if (!my) return;
+  const back = my.holding.filter((a) => !a.returnRequested);
+  if (back.length && r.chance(0.15)) {
+    const a = r.pick(back);
+    const res = await p.post(`Ask to return ${a.tag}`, '/assets/requests/return', { assignmentId: a.id, reason: 'No longer needed; working from the office desktop now.' },
+      { refuse: REFUSALS.asset });
+    if (res.ok) p.did(`Asked to return ${a.assetName} (${a.tag})`);
+    return;
+  }
+  const open = new Set(my.requests.filter((x) => x.kind === 'New' && (x.status === 'Pending' || x.status === 'Approved')).map((x) => x.typeId));
+  const held = new Set(my.holding.map((a) => a.type));
+  const choices = co.ref.assetTypes.filter((t) => !open.has(t.id) && (t.allowMultiple || !held.has(t.name)));
+  if (!choices.length) return;
+  const t = r.pick(choices);
+  const reason = r.pick([`My ${t.name.toLowerCase()} is needed for the new project.`, `Lost my ${t.name.toLowerCase()} on the way home; reported to admin.`,
+    `Starting on-site work at the client and need a ${t.name.toLowerCase()}.`]);
+  const neededBy = workdaysFrom(co, addDays(serverDay(d), 3), 1)[0];
+  const res = await p.post(`Ask for a ${t.name}`, '/assets/requests/new', { typeId: t.id, reason, neededBy: iso(neededBy), returnBy: null }, { refuse: REFUSALS.asset });
+  if (res.ok) p.did(`Asked for a ${t.name.toLowerCase()} by ${iso(neededBy)}: “${reason}”`);
+}
+
+/** Checks in to today's desk if it needs a check-in, and books a free desk on a coming day. */
+async function bookDesk(p, co, d, r) {
+  if (!co.ref.floors.length) return;
+  const mine = (await p.get('Open my desk bookings', '/desks/bookings/my')).data ?? [];
+  const now = mine.find((b) => b.canCheckIn);
+  if (now && iso(d) === iso(REAL_TODAY)) {
+    const res = await p.post(`Check in at desk ${now.space}`, `/desks/bookings/${now.id}/check-in`, {}, { refuse: REFUSALS.desk });
+    if (res.ok) p.did(`Checked in at desk ${now.space} (${now.floor})`);
+  }
+  const settings = (await p.get('Open desk settings', '/desks/settings')).data;
+  const ahead = settings?.maxDaysAhead ?? 7;
+  const base = d > REAL_TODAY ? d : REAL_TODAY;
+  const day = workdaysFrom(co, addDays(base, r.int(1, Math.max(1, Math.min(ahead, 6)))), 1)[0];
+  if ((day - REAL_TODAY) / 86_400_000 > ahead) return;
+  if (mine.some((b) => b.date === iso(day) && b.kind === 'Desk' && (b.status === 'Booked' || b.status === 'CheckedIn'))) return;
+  const floor = r.pick(co.ref.floors);
+  const map = (await p.get(`Open the ${floor.name} desk map`, `/desks/floors/${floor.id}/day?date=${iso(day)}`)).data;
+  const free = (map?.spaces ?? []).filter((s) => s.kind === 'Desk' && s.free);
+  if (!free.length) return;
+  const desk = r.pick(free);
+  const res = await p.post(`Book desk ${desk.name} for ${iso(day)}`, '/desks/bookings', { spaceId: desk.id, date: iso(day), from: null, to: null, title: null, attendees: 1 },
+    { refuse: REFUSALS.desk });
+  if (res.ok) p.did(`Booked desk ${desk.name} on ${floor.name} for ${iso(day)}`);
+}
+
+/** Members of the provident fund now and then take out part of their vested balance. */
+async function withdrawFund(p, co, d, r) {
+  const f = (await p.get('Open my provident fund', '/funds/me')).data;
+  if (!f?.pfMember || f.pfVested < 20000) return;
+  const mine = (await p.get('Open my fund withdrawals', '/funds/withdrawals/my')).data ?? [];
+  if (mine.some((w) => w.fund === 'ProvidentFund' && w.status === 'Pending')) return;
+  const amount = Math.max(1000, Math.floor((f.pfVested * r.int(10, 30)) / 100 / 1000) * 1000);
+  const reason = r.pick(['Daughter’s university admission fee.', 'Hajj expenses.', 'Construction of the house roof.']);
+  const res = await p.post(`Withdraw Rs ${amount} from the provident fund`, '/funds/withdrawals', { fund: 'ProvidentFund', amount, reason, payWithSalary: true },
+    { refuse: REFUSALS.fund });
+  if (res.ok) p.did(`Asked to withdraw Rs ${amount.toLocaleString('en-PK')} from the provident fund: “${reason}”`);
+}
+
+async function requestProfileChange(p, co, d, r) {
+  const mine = (await p.get('Open my profile change requests', '/employees/profile-changes/my')).data ?? [];
+  if (mine.some((x) => x.status === 'Pending')) return;
+  const [what, changes, reason] = r.pick([
+    ['phone number', { phone: phoneNumber(r) }, 'Changed my mobile number.'],
+    ['address', { address: `House ${r.int(1, 400)}, Street ${r.int(1, 30)}, ${r.pick(AREAS)}` }, 'Moved to a new house.'],
+    ['bank account', { bankName: r.pick(BANKS), bankAccount: `PK${r.int(10, 99)}${r.pick(['MEZN', 'HABB', 'ALFH', 'MUCB'])}000${r.int(1000000000, 9999999999)}` }, 'Opened a salary account with a new bank.'],
+    ['personal email', { personalEmail: `${p.email.split('@')[0]}.${r.int(10, 99)}@gmail.com` }, 'Please use my personal email for payslips.'],
+  ]);
+  const res = await p.post(`Ask to change my ${what}`, '/employees/profile-changes', { changes, reason }, { refuse: REFUSALS.profile });
+  if (res.ok) p.did(`Asked HR to update their ${what}: “${reason}”`);
+}
+
+/** A scanned document added to their own employee file. */
+async function uploadDocument(p, co, d, r) {
+  const list = (await p.get('Open my documents', `/attachments/EmployeeDocument/${p.employeeId}`)).data;
+  if (!list?.canAdd || list.items.length >= 6) return;
+  const have = new Set(list.items.map((x) => x.category));
+  const choices = [['Cnic', 'cnic-front', 'CNIC (front and back)'], ['Degree', 'bs-degree', 'Bachelor’s degree'], ['ExperienceLetter', 'experience-letter', 'Experience letter from the last employer'],
+    ['Medical', 'medical-certificate', 'Medical fitness certificate'], ['Passport', 'passport', 'Passport bio page']].filter(([c]) => !have.has(c));
+  if (!choices.length) return;
+  const [category, file, note] = r.pick(choices);
+  const f = new FormData();
+  f.append('File', new Blob([Buffer.from(tinyReceipt.base64, 'base64')], { type: 'image/png' }), `${file}.png`);
+  f.append('Category', category);
+  if (category === 'Cnic' || category === 'Passport') f.append('ExpiresOn', iso(addDays(REAL_TODAY, r.int(400, 3000))));
+  f.append('Note', note);
+  const res = await p.req(`Upload my ${note}`, 'POST', `/attachments/EmployeeDocument/${p.employeeId}`, f, { refuse: REFUSALS.document });
+  if (res.ok) p.did(`Uploaded their ${note} to their employee file`);
+}
+
+/** One person a day (at most) asks the AI assistant something short; it runs on a small free quota. */
+function aiAskerOf(co, key) {
+  const r = rng(`${co.name}|ai|${key}|${SEED}`);
+  if (!r.chance(0.6)) return null;
+  return r.pick(co.employees.filter((p) => p.employeeId).map((p) => p.email).sort()) ?? null;
+}
+async function askAi(p, co, d, r) {
+  const status = (await p.get('Check the AI assistant', '/ai/status')).data;
+  if (!status?.enabled || status.used >= status.limit) return;
+  const q = r.pick(AI_QUESTIONS);
+  const res = await p.post(`Ask the AI assistant: ${q}`, '/ai/ask', { messages: [{ role: 'user', text: q }], voice: false }, { refuse: REFUSALS.ai });
+  if (res.ok) p.did(`Asked the AI assistant “${q}” and got: “${String(res.data?.reply ?? '').replace(/\s+/g, ' ').slice(0, 120)}”`);
+}
+
+/** Their own part of a running performance review: goals, self review, sign-off. */
+async function myReview(p, co, d, r) {
+  const list = (await p.get('Open my performance reviews', '/performance/reviews/my')).data ?? [];
+  for (const item of list.filter((x) => ['Goals', 'SelfReview', 'SignOff'].includes(x.stage))) {
+    const rv = (await p.get('Open my review', `/performance/reviews/${item.id}`)).data;
+    if (!rv?.isEmployee) continue;
+    if (rv.stage === 'Goals') {
+      const goals = [];
+      rv.sections.forEach((s, i) => {
+        if (s.kind !== 'Goals') return;
+        const picks = r.shuffle(GOALS).slice(0, r.int(2, 4));
+        const each = Math.floor(100 / picks.length / 5) * 5;
+        picks.forEach(([title, target], j) => goals.push({ sectionIndex: i, title, description: null, target, weight: j === picks.length - 1 ? 100 - each * (picks.length - 1) : each }));
+      });
+      if (!goals.length) continue;
+      const saved = await p.put(`Write my goals for ${rv.cycle}`, `/performance/reviews/${rv.id}/goals`, { goals }, { refuse: REFUSALS.performance });
+      if (!saved.ok) continue;
+      const sent = await p.post(`Send my goals for ${rv.cycle}`, `/performance/reviews/${rv.id}/goals/submit`, {}, { refuse: REFUSALS.performance });
+      if (sent.ok) p.did(`Wrote ${goals.length} goals for ${rv.cycle} and sent them to their manager`);
+    } else if (rv.stage === 'SelfReview') {
+      const scores = rv.items.map((i) => ({ itemId: i.id, score: r.pick([3, 4, 4, 5, 3, 4]), comment: null }));
+      const comment = r.pick(['Delivered the main goals; the documentation goal slipped because of the release crunch.', 'A good half; took on more client work than planned.']);
+      const res = await p.put(`Send my self review for ${rv.cycle}`, `/performance/reviews/${rv.id}/self`, { scores, comment, submit: true }, { refuse: REFUSALS.performance });
+      if (res.ok) p.did(`Sent their self review for ${rv.cycle}`);
+    } else if (rv.stage === 'SignOff') {
+      const agree = r.chance(0.85);
+      const res = await p.post(`Sign off my ${rv.cycle} review`, `/performance/reviews/${rv.id}/signoff`,
+        { agree, comment: agree ? 'Fair review, thank you.' : 'The delivery goal was met; the delay came from the client side.' }, { refuse: REFUSALS.performance });
+      if (res.ok) p.did(`Signed off their ${rv.cycle} review (${agree ? 'agrees' : 'disagrees'}, rated ${rv.finalLabel ?? rv.finalRating})`);
+    }
+  }
+}
+
+/** A manager's part of the team's reviews: approve goals, write the manager review, check reviews as the manager's manager. */
+async function teamReviews(m, co, d, r) {
+  const list = (await m.get('Open the team’s reviews', '/performance/reviews/team')).data ?? [];
+  for (const item of list.filter((x) => ['GoalsSubmitted', 'ManagerReview', 'FinalReview'].includes(x.stage)).slice(0, 4)) {
+    const rv = (await m.get(`Open ${item.employeeName}'s review`, `/performance/reviews/${item.id}`)).data;
+    if (!rv || rv.isEmployee) continue;
+    if (rv.stage === 'GoalsSubmitted' && rv.isReviewer) {
+      const approve = r.chance(0.85);
+      const note = approve ? 'Good goals, approved.' : 'Please make the targets measurable (numbers and dates).';
+      const res = await m.post(`${approve ? 'Approve' : 'Send back'} ${rv.employeeName}'s goals`, `/performance/reviews/${rv.id}/goals/decide`, { approve, note },
+        { refuse: REFUSALS.performance });
+      if (res.ok) m.did(`${approve ? 'Approved' : 'Sent back'} ${rv.employeeName}'s goals for ${rv.cycle}: “${note}”`);
+    } else if (rv.stage === 'ManagerReview' && rv.isReviewer) {
+      const scores = rv.items.map((i) => ({ itemId: i.id, score: r.pick([3, 3, 4, 4, 5, 2]), comment: null }));
+      const res = await m.put(`Write ${rv.employeeName}'s manager review`, `/performance/reviews/${rv.id}/manager`, {
+        scores, comment: 'Reliable and improving; needs to speak up more in design discussions.', strengths: 'Ownership, quality of work',
+        improvements: 'Estimation and stakeholder updates', developmentPlan: 'Lead one feature end to end next half', potential: r.pick([1, 2, 2, 3]), submit: true,
+      }, { refuse: REFUSALS.performance });
+      if (res.ok) m.did(`Wrote and sent ${rv.employeeName}'s manager review for ${rv.cycle}`);
+    } else if (rv.stage === 'FinalReview' && rv.isFinalReviewer) {
+      const approve = r.chance(0.9);
+      const res = await m.post(`Check ${rv.employeeName}'s review`, `/performance/reviews/${rv.id}/final`,
+        { approve, comment: approve ? 'Agree with the rating.' : 'The score looks high against the goals; please revisit.' }, { refuse: REFUSALS.performance });
+      if (res.ok) m.did(`${approve ? 'Agreed with' : 'Sent back'} the manager review of ${rv.employeeName}`);
+    }
+  }
+}
+
+/** Ticks off onboarding tasks assigned to them (HR also gets the tasks for HR). */
+async function onboardingTasks(p, co, d, r) {
+  const tasks = (await p.get('Open my onboarding tasks', '/onboarding/my-tasks')).data ?? [];
+  const due = tasks.filter((t) => t.canDo && t.dueOn <= iso(addDays(REAL_TODAY, 3))).slice(0, 3);
+  for (const t of due) {
+    const res = await p.post(`Tick off onboarding task “${t.title}”`, `/onboarding/tasks/${t.id}`, { done: true, note: r.chance(0.3) ? 'Done.' : null },
+      { refuse: REFUSALS.onboarding });
+    if (res.ok) p.did(`Ticked off “${t.title}” in ${t.forEmployee ?? 'a new joiner'}'s onboarding`);
+  }
+}
+
+/** Swaps colleagues asked for, trips that need settling, the exit interview, a new joiner's introduction. */
+async function followUps(p, co, d, r) {
+  const swaps = ((await p.get('Open my shift requests', '/attendance/shift-requests/my')).data ?? [])
+    .filter((x) => x.kind === 'Swap' && x.status === 'AwaitingColleague' && x.swapWithEmployeeId === p.employeeId);
+  for (const s of swaps) {
+    const accept = r.chance(0.8);
+    const res = await p.post(`${accept ? 'Agree to' : 'Decline'} ${s.employeeName}'s shift swap`, `/attendance/shift-requests/${s.id}/${accept ? 'accept' : 'decline'}`, {},
+      { refuse: REFUSALS.shift });
+    if (res.ok) p.did(`${accept ? 'Agreed to' : 'Declined'} ${s.employeeName}'s shift swap (${s.fromDate} to ${s.toDate})`);
+  }
+  const trips = ((await p.get('Open my trips', '/travel/my')).data ?? []).filter((t) => (t.status === 'Approved' || t.status === 'Booked')
+    && (t.settlement === 'None' || t.settlement === 'Returned') && t.returnOn <= iso(REAL_TODAY));
+  for (const t of trips.slice(0, 1)) {
+    const days = (parseDate(t.returnOn) - parseDate(t.departOn)) / 86_400_000 + 1;
+    const expenses = [
+      { date: t.departOn, category: 'Meals', description: 'Meals during the trip', amount: r.int(3, 9) * 1000 },
+      { date: t.returnOn, category: 'Travel', description: 'Taxi to and from the airport', amount: r.int(2, 6) * 1000 },
+    ];
+    const res = await p.post(`Settle my trip to ${t.destination}`, `/travel/${t.id}/settlement`, { expenses, perDiemDays: days, note: null }, { refuse: REFUSALS.travel });
+    if (res.ok) p.did(`Sent the settlement for the ${t.destination} trip (${days} days' allowance, Rs ${expenses.reduce((s, x) => s + x.amount, 0).toLocaleString('en-PK')} spent)`);
+  }
+  const exit = (await p.get('Open my exit', '/separations/my')).data;
+  if (exit?.summary?.status === 'InProgress' && !exit.exitInterviewAtUtc) {
+    const rating = r.pick([3, 4, 4, 5]);
+    const res = await p.put('Fill in the exit interview', `/separations/${exit.summary.id}/exit-interview`, {
+      exitReason: r.pick(['Better opportunity', 'Higher studies', 'Relocation']), rating, wouldRecommend: rating >= 4,
+      feedback: 'Good team and learning; salary reviews could be more regular.',
+    }, { refuse: REFUSALS.separation });
+    if (res.ok) p.did(`Filled in the exit interview (${rating}/5)`);
+  }
+  if (p.joinedOn && p.joinedOn >= iso(addDays(REAL_TODAY, -30))) {
+    const welcome = (await p.get('Open the welcome page', '/onboarding/welcome')).data;
+    if (welcome?.onboarding && !welcome.onboarding.summary.introduced) {
+      const res = await p.post('Introduce myself to the team', '/onboarding/introduce', {
+        answers: { about: 'Happy to be here; I work mostly on backend services.', previous: r.pick(['Arbisoft', 'NetSol Technologies', 'FAST NUCES']), hobbies: r.pick(['Cricket and hiking', 'Reading and cooking', 'Photography']), funFact: null },
+      }, { refuse: REFUSALS.onboarding });
+      if (res.ok) p.did('Introduced themselves to the team on the welcome page');
+    }
+  }
+}
+
+/** Very rarely someone resigns (never the HR manager, the line manager or the helpdesk agent: the demo keeps its cast). */
+async function resign(p, co, d, r) {
+  if (p === co.hr || p === co.mgr || p.role !== 'employee' || co.agents.includes(p)) return;
+  const mine = (await p.get('Open my exit', '/separations/my')).data;
+  if (mine && ['Requested', 'InProgress'].includes(mine.summary?.status)) return;
+  const last = workdaysFrom(co, addDays(serverDay(d), 30), 1)[0];
+  const reason = r.pick(['Got an offer abroad.', 'Moving to Islamabad with my family.', 'Going for a master’s degree.']);
+  const res = await p.post('Resign', '/separations/resign', { proposedLastDay: iso(last), reason }, { refuse: REFUSALS.separation });
+  if (res.ok) p.did(`Resigned, proposing ${iso(last)} as the last working day: “${reason}”`);
+}
+
+// ---------- HR: the other modules ----------
+
+/** Seeds a couple of loan types and an expense type if the company has none, as HR would before opening them up. */
+async function hrSetup(hr, co, d, r) {
+  if (!co.ref.loanTypes.length) {
+    for (const t of [{ name: 'Personal loan', maxAmount: 300000, maxInstallments: 12, markupPercent: 0, processingFee: 0, minServiceMonths: 6, isActive: true },
+      { name: 'Car loan', maxAmount: 1500000, maxInstallments: 36, markupPercent: 5, processingFee: 2000, minServiceMonths: 12, isActive: true }]) {
+      const res = await hr.post(`Add the ${t.name} loan type`, '/pay/loan-types', t);
+      if (res.ok) hr.did(`Added the ${t.name} loan type (up to Rs ${t.maxAmount.toLocaleString('en-PK')}, ${t.maxInstallments} installments)`);
+    }
+    co.ref.loanTypes = ((await hr.get('Open loan types', '/pay/loan-types')).data ?? []).filter((t) => t.isActive);
+  }
+  const types = (await hr.get('Open expense types', '/expense-setup/types')).data;
+  if (types && !types.length) {
+    const res = await hr.post('Add the Mobile bill expense type', '/expense-setup/types', {
+      name: 'Mobile bill', category: 'Mobile', calculation: 'Amount', unit: null, rate: null, perClaimLimit: 5000, yearlyLimit: 36000, receiptRequired: false,
+      gradeIds: [], isActive: true, gradeRates: [], monthlyLimit: 3000,
+    });
+    if (res.ok) hr.did('Added the Mobile bill expense type (Rs 3,000 a month)');
+  }
+}
+
+/** Runs a few reports from the reports page. */
+async function runReports(hr, co, d, r) {
+  if (!co.ref.reports.length) return;
+  const today = serverDay(d);
+  const last = addDays(monthStart(today), -1);
+  for (const def of r.shuffle(co.ref.reports).slice(0, r.int(1, 3))) {
+    const payroll = def.key.startsWith('payroll.');
+    const m = payroll ? last : today;
+    const needEmployee = def.filters.includes('employee') && (['employees.profile', 'payroll.taxcertificate'].includes(def.key) || r.chance(0.25));
+    const who = needEmployee ? r.pick(co.ref.staff) : null;
+    const year = def.key === 'payroll.taxcertificate' ? today.getUTCFullYear() + (today.getUTCMonth() >= 6 ? 1 : 0) : m.getUTCFullYear();
+    const res = await hr.post(`Run the ${def.name} report`, `/reports/${def.key}`, {
+      from: iso(monthStart(m)), to: iso(payroll ? last : today), date: iso(today), year, month: m.getUTCMonth() + 1, departmentIds: [], employeeId: who?.id ?? null,
+      includeLeft: false, groupIds: null,
+    });
+    if (res.ok) hr.did(`Ran the “${def.name}” report${who ? ` for ${who.fullName}` : ''} (${res.data?.rows?.length ?? 0} rows)`);
+  }
+}
+
+async function previewScheduledReport(hr, co, d, r) {
+  const list = (await hr.get('Open scheduled reports', '/scheduled/reports')).data ?? [];
+  if (list.length && r.chance(0.7)) {
+    const s = r.pick(list);
+    const res = await hr.get(`Preview the scheduled report “${s.name}”`, `/scheduled/reports/${s.id}/preview`);
+    if (res.ok) hr.did(`Previewed the scheduled report “${s.name}” (${res.data?.rows?.length ?? 0} rows)`);
+    return;
+  }
+  const kind = r.pick(['Headcount', 'DailyAttendance', 'OnLeave', 'PendingApprovals', 'ExpiringDocuments', 'JoinersAndLeavers', 'ProbationDue']);
+  const res = await hr.post(`Preview a ${kind} report before scheduling it`, '/scheduled/reports/preview', {
+    name: '', kind, frequency: 'Weekly', day: 1, sendHour: 9, recipientIds: [], extraEmails: '', departmentIds: [], isActive: true,
+  });
+  if (res.ok) hr.did(`Previewed a weekly ${kind} report before scheduling it (${res.data?.rows?.length ?? 0} rows)`);
+}
+
+/** Launches a quarterly cycle when none is running, and calibrates and releases reviews that reached HR. */
+async function performanceCycle(hr, co, d, r) {
+  const cycles = (await hr.get('Open review cycles', '/performance/cycles')).data;
+  if (!cycles) return;
+  const active = cycles.filter((c) => c.status === 'Active');
+  const today = serverDay(d);
+  if (!active.length) {
+    const q = Math.floor(today.getUTCMonth() / 3);
+    const name = `Q${q + 1} ${today.getUTCFullYear()} review`;
+    const templates = (await hr.get('Open review templates', '/performance/templates')).data ?? [];
+    if (!cycles.some((c) => c.name === name) && templates.length) {
+      const from = new Date(Date.UTC(today.getUTCFullYear(), q * 3, 1));
+      const to = addDays(new Date(Date.UTC(today.getUTCFullYear(), q * 3 + 3, 1)), -1);
+      const made = await hr.post(`Create the ${name} cycle`, '/performance/cycles', {
+        name, periodFrom: iso(from), periodTo: iso(to), templateId: templates[0].id, departmentIds: [],
+        goalsDue: iso(addDays(today, 7)), selfReviewDue: iso(addDays(today, 30)), managerReviewDue: iso(addDays(today, 45)), finalReview: false,
+      }, { refuse: REFUSALS.performance });
+      const cycle = made.ok ? ((await hr.get('Open review cycles', '/performance/cycles')).data ?? []).find((c) => c.name === name) : null;
+      if (cycle) {
+        const res = await hr.post(`Launch the ${name} cycle`, `/performance/cycles/${cycle.id}/launch`, {}, { refuse: REFUSALS.performance });
+        if (res.ok) hr.did(`Launched the ${name} review cycle for ${res.data?.reviews ?? 0} people`);
+      }
+    }
+  }
+  for (const c of active.filter((x) => x.byStage?.Calibration)) {
+    const cal = (await hr.get(`Open calibration for ${c.name}`, `/performance/cycles/${c.id}/calibration`)).data;
+    const ids = [];
+    for (const rv of (cal?.reviews ?? []).filter((x) => x.stage === 'Calibration' && x.employeeId !== hr.employeeId).slice(0, 5)) {
+      const base = Math.round(rv.managerScore ?? rv.finalRating ?? 3);
+      const finalRating = Math.min(5, Math.max(1, base + (r.chance(0.2) ? r.pick([-1, 1]) : 0)));
+      const graceMarks = r.pick([0, 0, 0, 0.25, 0.5]);
+      const res = await hr.post(`Calibrate ${rv.employeeName}'s review`, `/performance/reviews/${rv.id}/calibrate`,
+        { finalRating, note: finalRating !== base ? 'Adjusted against the bell curve across teams.' : null, graceMarks }, { refuse: REFUSALS.performance });
+      if (res.ok) {
+        ids.push(rv.id);
+        hr.did(`Calibrated ${rv.employeeName}'s ${c.name} review at ${finalRating}${graceMarks ? ` with ${graceMarks} grace marks` : ''}`);
+      }
+    }
+    if (ids.length) {
+      const res = await hr.post(`Release ${ids.length} reviews of ${c.name}`, `/performance/cycles/${c.id}/release`, { reviewIds: ids }, { refuse: REFUSALS.performance });
+      if (res.ok) hr.did(`Released ${res.data?.released ?? ids.length} ${c.name} reviews to the employees`);
+    }
+  }
+}
+
+/** The travel desk: books approved trips, pays requested advances, settles returned trips. */
+async function travelDesk(hr, co, d, r) {
+  const mine = (t) => t.employeeId === hr.employeeId;
+  for (const t of ((await hr.get('Open trips to book', '/travel/all?filter=book')).data ?? []).filter((x) => !mine(x)).slice(0, 2)) {
+    const trip = (await hr.get(`Open ${t.employeeName}'s trip`, `/travel/${t.id}`)).data;
+    if (!trip) continue;
+    const nights = Math.max(1, (parseDate(trip.returnOn) - parseDate(trip.departOn)) / 86_400_000);
+    const legs = trip.legs.map((l) => ({ legId: l.id, bookingRef: `${l.mode === 'Air' ? 'PK' : 'BK'}-${r.int(100000, 999999)}`, bookingCost: (l.mode === 'Air' ? r.int(18, 32) : r.int(3, 9)) * 1000 }));
+    const hotel = trip.needsHotel ? r.pick(['Pearl Continental', 'Avari Hotel', 'Hotel One', 'Ramada']) : null;
+    const res = await hr.post(`Book ${t.employeeName}'s trip to ${t.destination}`, `/travel/${t.id}/booking`, {
+      legs, hotelName: hotel, hotelRef: hotel ? `HTL-${r.int(1000, 9999)}` : null, hotelCost: hotel ? nights * r.int(12, 22) * 1000 : null, notes: 'Tickets emailed to the traveller.',
+    }, { refuse: REFUSALS.travel });
+    if (res.ok) hr.did(`Booked ${t.employeeName}'s trip to ${t.destination}${hotel ? ` with ${hotel}` : ''}`);
+  }
+  for (const t of ((await hr.get('Open trips waiting for an advance', '/travel/all?filter=advance')).data ?? []).filter((x) => !mine(x)).slice(0, 2)) {
+    const res = await hr.post(`Pay ${t.employeeName}'s travel advance`, `/travel/${t.id}/advance`, { amount: t.advanceRequested, paidOn: iso(REAL_TODAY), via: 'Bank transfer' },
+      { refuse: REFUSALS.travel });
+    if (res.ok) hr.did(`Paid ${t.employeeName} a travel advance of Rs ${Number(t.advanceRequested).toLocaleString('en-PK')}`);
+  }
+  for (const t of ((await hr.get('Open settlements to check', '/travel/all?filter=settle')).data ?? []).filter((x) => !mine(x)).slice(0, 2)) {
+    const approve = r.chance(0.85);
+    const note = approve ? 'Checked against the receipts.' : 'Please attach the hotel invoice and split the taxi fares.';
+    const res = await hr.post(`${approve ? 'Approve' : 'Return'} ${t.employeeName}'s travel settlement`, `/travel/${t.id}/settlement/${approve ? 'approve' : 'return'}`, { note },
+      { refuse: REFUSALS.travel });
+    if (res.ok) hr.did(`${approve ? 'Approved' : 'Sent back'} ${t.employeeName}'s settlement for ${t.destination}: “${note}”`);
+  }
+}
+
+/** Hands over approved asset requests from stock and takes back returns. */
+async function fulfilAssets(hr, co, d, r) {
+  const list = ((await hr.get('Open asset requests to fulfil', '/assets/requests')).data ?? []).filter((x) => x.canFulfill).slice(0, 3);
+  for (const q of list) {
+    if (q.kind === 'Return') {
+      const res = await hr.post(`Take back ${q.assetLabel ?? q.type} from ${q.employeeName}`, `/assets/requests/${q.id}/fulfill`,
+        { assetId: null, on: iso(REAL_TODAY), condition: 'Good', notes: 'Received back in working order.' }, { refuse: REFUSALS.asset });
+      if (res.ok) hr.did(`Took back ${q.assetLabel ?? q.type} from ${q.employeeName}`);
+      continue;
+    }
+    const stock = (await hr.get(`Find a ${q.type} in stock`, `/assets?status=Available&typeId=${q.typeId}`)).data ?? [];
+    if (!stock.length) {
+      hr.did(`No ${q.type.toLowerCase()} in stock for ${q.employeeName}; asked admin to buy one`);
+      continue;
+    }
+    const a = stock[0];
+    const res = await hr.post(`Hand over ${a.tag} to ${q.employeeName}`, `/assets/requests/${q.id}/fulfill`,
+      { assetId: a.id, on: iso(REAL_TODAY), condition: a.condition === 'New' ? 'New' : 'Good', notes: 'Handed over at the admin desk.' }, { refuse: REFUSALS.asset });
+    if (res.ok) hr.did(`Handed over ${a.name} (${a.tag}) to ${q.employeeName}`);
+  }
+}
+
+/** Who is in the office, the month's trends and how much space documents take. */
+async function lookAround(hr, co, d) {
+  const inOffice = (await hr.get('See who is in the office', `/desks/in-office?date=${iso(serverDay(d))}`)).data;
+  const trends = (await hr.get('Open attendance trends', '/dashboard/trends')).data;
+  const docs = (await hr.get('Open document settings', '/attachments/settings')).data;
+  if (inOffice || trends || docs)
+    hr.did(`Looked at who is in (${inOffice?.length ?? 0} desks booked today), the attendance trends and document storage (${Math.round((docs?.totalBytes ?? 0) / 1024)} KB used)`);
+}
+
+/** Accepts resignations waiting for HR. */
+async function handleResignations(hr, co, d, r) {
+  const list = ((await hr.get('Open resignations', '/separations?status=Requested')).data ?? []).filter((s) => s.employeeId !== hr.employeeId);
+  for (const s of list.slice(0, 2)) {
+    const res = await hr.post(`Accept ${s.employeeName}'s resignation`, `/separations/${s.id}/accept`,
+      { lastWorkingDay: s.proposedLastDay, noticePeriodDays: 30, note: 'Accepted after a talk with the line manager. The clearance checklist follows.' }, { refuse: REFUSALS.separation });
+    if (res.ok) hr.did(`Accepted ${s.employeeName}'s resignation; last working day ${s.proposedLastDay}`);
+  }
+}
+
+/** The other modules, per role: [task id, daily chance, label, action]. Kept rare: a 10–25 person company sees a few of each a week. */
+const EMPLOYEE_MODULES = [
+  ['pay-request', 0.04, 'Claim overtime or ask for an advance', payRequest],
+  ['loan', 0.012, 'Apply for a loan', requestLoan],
+  ['comp-off', 0.05, 'Claim comp-off for a day off worked', claimCompOff],
+  ['station-leave', 0.015, 'Apply for leave out of station', applyStationLeave],
+  ['exemption', 0.08, 'Ask to excuse a late arrival or early leave', askExemption],
+  ['off-days', 0.012, 'Ask for different days off', requestOffDays],
+  ['shift-change', 0.025, 'Ask for a shift change or swap', requestShiftChange],
+  ['expense-advance', 0.015, 'Ask for an expense advance', requestExpenseAdvance],
+  ['typed-expense', 0.05, 'Claim a typed expense', claimTypedExpense],
+  ['travel', 0.02, 'Ask to travel', requestTravel],
+  ['asset', 0.025, 'Ask for an asset', requestAsset],
+  ['desk', 0.08, 'Book a desk', bookDesk],
+  ['fund', 0.008, 'Withdraw from the provident fund', withdrawFund],
+  ['profile-change', 0.015, 'Ask to update my profile', requestProfileChange],
+  ['document', 0.025, 'Upload a document to my file', uploadDocument],
+  ['my-review', 0.25, 'My performance review', myReview],
+  ['follow-ups', 0.35, 'Swaps, trip settlements and other follow-ups', followUps],
+  ['resign', 0.0006, 'Resign', resign],
+];
+const MANAGER_MODULES = [
+  ['team-reviews', 0.4, 'The team’s performance reviews', teamReviews],
+  ['my-review', 0.2, 'My performance review', myReview],
+  ['onboarding', 0.3, 'Onboarding tasks', onboardingTasks],
+  ['desk', 0.05, 'Book a desk', bookDesk],
+];
+const HR_MODULES = [
+  ['setup-types', 0.3, 'Loan and expense types', hrSetup],
+  ['reports', 0.25, 'Run reports', runReports],
+  ['scheduled-report', 0.12, 'Preview a scheduled report', previewScheduledReport],
+  ['performance', 0.25, 'Review cycle: launch, calibrate, release', performanceCycle],
+  ['team-reviews', 0.3, 'The team’s performance reviews', teamReviews],
+  ['my-review', 0.2, 'My performance review', myReview],
+  ['onboarding', 0.5, 'Onboarding tasks for HR', onboardingTasks],
+  ['travel-desk', 0.4, 'Travel desk: bookings, advances, settlements', travelDesk],
+  ['assets', 0.4, 'Hand over and take back assets', fulfilAssets],
+  ['look-around', 0.3, 'Who is in, trends and document storage', lookAround],
+  ['resignations', 0.3, 'Resignations waiting for HR', handleResignations],
+];
+
+/** Backfill: the same modules played straight through for a past day. */
+async function moreModules(p, co, d, r, modules) {
+  for (const [, chance, label, fn] of modules) {
+    if (!r.chance(chance)) continue;
+    try {
+      await fn(p, co, d, r);
+    } catch (e) {
+      record({ ...p.where(), persona: p.label, kind: 'failed', intent: label, method: '-', path: '-', query: '', status: 'script error', title: e.message, body: String(e.stack).slice(0, 400) });
+    }
+  }
+  if (modules === EMPLOYEE_MODULES && aiAskerOf(co, iso(d)) === p.email) await askAi(p, co, d, r);
 }
 
 // ---------- Backfill: a whole past day at once ----------
@@ -1304,6 +2032,7 @@ function planDay(co, p, d) {
     task('tickets-1', at(0.1, 0.3), 'Answer HR tickets', hrTickets);
     task('tickets-2', at(0.6, 0.8), 'Answer HR tickets', hrTickets);
     if (r.chance(0.5)) task('suggestions', at(0.3, 0.9), 'Review suggestions', (p, co, d, r) => reviewSuggestions(p, r));
+    for (const [id, chance, label, fn] of HR_MODULES) if (r.chance(chance)) task(id, at(0.1, 0.9), label, fn);
   } else if (p.role === 'manager') {
     task('inbox-1', arrive + r.int(15, 45), 'Morning approvals', (p, co, d, r) => workInbox(p, r));
     task('team', arrive + r.int(30, 75), 'Look at who is in today', (p, co, d) => p.get('Look at the team’s attendance', `/attendance/daily?date=${iso(d)}`));
@@ -1312,6 +2041,7 @@ function planDay(co, p, d) {
     if (r.chance(0.2)) task('nominate', at(), 'Nominate the team for training', (p, co, d, r) => nominate(p, r));
     if (r.chance(0.08)) task('leave', at(), 'Apply for leave', (p, co, d, r) => applyLeave(p, co, d, r));
     if (r.chance(0.08)) task('expense', at(), 'Claim expenses', (p, co, d, r) => claimExpense(p, d, r));
+    for (const [id, chance, label, fn] of MANAGER_MODULES) if (r.chance(chance)) task(id, at(), label, fn);
   } else if (p.role === 'agent') {
     const queue = (p, co, d, r) => answerTickets(p, co, r, { onlyCategories: co.ref.helpdesk.filter((c) => c.agentIds?.includes(p.employeeId)).map((c) => c.id) });
     task('tickets-1', at(0.03, 0.2), 'Work the helpdesk queue', queue);
@@ -1329,6 +2059,8 @@ function planDay(co, p, d) {
     if (r.chance(0.7)) task('timesheet', leave - r.int(10, 40), 'Fill in the timesheet', (p, co, d, r) => timesheet(p, co, d, r, { submitDay }));
     if (r.chance(0.05)) task('training', at(), 'Ask for training', (p, co, d, r) => requestTraining(p, co, r));
     if (r.chance(0.05)) task('suggest', at(), 'Make a suggestion', (p, co, d, r) => suggest(p, co, r));
+    for (const [id, chance, label, fn] of EMPLOYEE_MODULES) if (r.chance(chance)) task(id, at(), label, fn);
+    if (aiAskerOf(co, key) === p.email) task('ai', at(0.2, 0.8), 'Ask the AI assistant', askAi);
   }
   return plan;
 }
@@ -1704,7 +2436,7 @@ async function main() {
       await loadReference(co);
       await growCast(co, rng(`${co.name}|cast|${SEED}`));
       for (const p of cast(co)) if (!p.token) await p.signIn();
-      await loadCalendar(co, addDays(BACKFILL ? addDays(LAST_DAY, -(DAYS - 1)) : TODAY, -10), addDays(TODAY, 1));
+      await loadCalendar(co, addDays(BACKFILL ? addDays(LAST_DAY, -(DAYS - 1)) : TODAY, -10), addDays(TODAY, 21)); // ahead: shift requests check the coming roster
       companies.push(co);
     } catch (e) {
       lines.push(`${stamp} ${file}: ${e.message}`);

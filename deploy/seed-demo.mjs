@@ -7,7 +7,7 @@
 // Signed in as the platform owner it creates the company (stops if it already exists). Signed in as a company admin it
 // fills that admin's own company instead (stops if the demo people are already there). Then departments, people, logins, attendance from a biometric
 // machine, leave, a finalized payroll with its journal, performance reviews, hiring, training, helpdesk and more.
-// The demo logins are written to deploy/secrets/demo-logins.txt (git-ignored).
+// The demo logins are written to deploy/secrets/demo-logins.txt (git-ignored), or to --out <file>.
 
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -1019,7 +1019,7 @@ async function main() {
 
   if (ownCompany) return finish();
   // Write the logins down.
-  const out = join(here, 'secrets', 'demo-logins.txt');
+  const out = arg('out', join(here, 'secrets', 'demo-logins.txt'));
   const lines = [
     `${ownCompany ? first.me.companyName : COMPANY} on ${BASE}`,
     `Created ${new Date().toISOString()}`,
