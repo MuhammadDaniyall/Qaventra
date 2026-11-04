@@ -31,6 +31,6 @@ public class IdCardTemplateTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal("SE-2", d.GetProperty("code").GetString());
         (await admin.PutAsJsonAsync($"/api/designations/{d.GetProperty("id").GetGuid()}", new { title = "Senior Engineer" })).EnsureSuccessStatusCode();
         var list = await (await admin.GetAsync("/api/designations")).Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("SE-2", list[0].GetProperty("code").GetString());
+        Assert.Equal("SE-2", list.EnumerateArray().Single(x => x.GetProperty("id").GetGuid() == d.GetProperty("id").GetGuid()).GetProperty("code").GetString());
     }
 }
