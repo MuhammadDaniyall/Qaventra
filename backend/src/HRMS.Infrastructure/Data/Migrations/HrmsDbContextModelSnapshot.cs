@@ -9535,6 +9535,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int?>("EmailQuotaPerMonth")
                         .HasColumnType("int");
 
+                    b.Property<string>("IdCardTemplateJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 

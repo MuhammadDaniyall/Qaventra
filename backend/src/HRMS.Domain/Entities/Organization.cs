@@ -21,6 +21,8 @@ public class Tenant : BaseEntity
     public int? AiMessagesPerMonth { get; set; }
     /// <summary>Comma-separated email domains people may sign in with (company admins always can). Null = any.</summary>
     public string? AllowedEmailDomains { get; set; }
+    /// <summary>The ID card design (colour, fields, back side, orientation) as JSON, shared by everyone in HR.</summary>
+    public string? IdCardTemplateJson { get; set; }
 
     public BillingCycle? BillingCycle { get; set; }
     /// <summary>Fixed base fee per billing cycle, in PKR (optional).</summary>

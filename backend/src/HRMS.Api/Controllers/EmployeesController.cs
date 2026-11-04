@@ -129,6 +129,28 @@ public class EmployeesController(HrmsDbContext db, EmployeeService employees, IC
                 e.BloodGroup, e.JoiningDate, e.Phone))
             .ToListAsync();
 
+    /// <summary>The company's ID card design (JSON the page understands); empty until HR saves one.</summary>
+    [HttpGet("id-card-template"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> IdCardTemplate()
+    {
+        var json = await db.Tenants.Where(t => t.Id == db.CurrentTenantId).Select(t => t.IdCardTemplateJson).FirstOrDefaultAsync();
+        return Content(string.IsNullOrWhiteSpace(json) ? "{}" : json, "application/json");
+    }
+
+    [HttpPut("id-card-template"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> SaveIdCardTemplate([FromBody] System.Text.Json.JsonElement template)
+    {
+        if (template.ValueKind != System.Text.Json.JsonValueKind.Object)
+            throw new DomainException("The design must be an object.");
+        var json = template.GetRawText();
+        if (json.Length > 4000)
+            throw new DomainException("The design is too large.");
+        var tenant = await db.Tenants.FirstAsync(t => t.Id == db.CurrentTenantId);
+        tenant.IdCardTemplateJson = json;
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
+
     /// <summary>Current employees with their manager, for the org chart. Everyone in the company may see it.</summary>
     [HttpGet("org-chart")]
     public Task<List<OrgChartNodeDto>> OrgChart() =>

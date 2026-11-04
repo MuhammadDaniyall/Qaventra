@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { IdCard, Printer } from 'lucide-react';
 import qrcode from 'qrcode-generator';
@@ -29,10 +29,26 @@ interface Template {
   showPhone: boolean;
   showQr: boolean;
   footer: string;
+  /** Upright card (54 × 85.6 mm) instead of landscape. */
+  portrait: boolean;
+  /** Print each card's back next to its front, to cut and fold. */
+  printBack: boolean;
+  /** A second line on the back, e.g. the office address or emergency number. */
+  backLine2: string;
 }
 
 const KEY = 'hrms.id-card-template';
-const DEFAULT: Template = { color: '#4F46E5', showBloodGroup: true, showJoining: true, showPhone: false, showQr: true, footer: 'If found, please return to the HR office.' };
+const DEFAULT: Template = {
+  color: '#4F46E5',
+  showBloodGroup: true,
+  showJoining: true,
+  showPhone: false,
+  showQr: true,
+  footer: 'If found, please return to the HR office.',
+  portrait: false,
+  printBack: false,
+  backLine2: '',
+};
 
 function readTemplate(): Template {
   try {
@@ -62,6 +78,12 @@ export function IdCardsPage() {
     queryKey: ['employees', 'id-cards', department],
     queryFn: () => http.get<CardData[]>('/employees/id-cards', { departmentId: department || undefined }),
   });
+  // The design lives on the server so every HR user prints the same card; this browser's copy is only a fallback.
+  const saved = useQuery({ queryKey: ['employees', 'id-card-template'], queryFn: () => http.get<Partial<Template>>('/employees/id-card-template') });
+  useEffect(() => {
+    if (saved.data && Object.keys(saved.data).length) setTpl({ ...DEFAULT, ...saved.data });
+  }, [saved.data]);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const set = (patch: Partial<Template>) =>
     setTpl((t) => {
       const next = { ...t, ...patch };
@@ -70,6 +92,8 @@ export function IdCardsPage() {
       } catch {
         // ignore
       }
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => void http.put('/employees/id-card-template', next).catch(() => undefined), 700);
       return next;
     });
 
@@ -113,6 +137,11 @@ export function IdCardsPage() {
               <Field label="Back line">
                 <Input value={tpl.footer} maxLength={80} onChange={(e) => set({ footer: e.target.value })} />
               </Field>
+              <Field label="Second back line" hint="Office address or emergency number">
+                <Input value={tpl.backLine2} maxLength={80} onChange={(e) => set({ backLine2: e.target.value })} />
+              </Field>
+              <Checkbox label="Upright card" description="Portrait instead of landscape" checked={tpl.portrait} onChange={(e) => set({ portrait: e.target.checked })} />
+              <Checkbox label="Print the back too" description="Each back next to its front, to cut and fold" checked={tpl.printBack} onChange={(e) => set({ printBack: e.target.checked })} />
             </CardBody>
           </Card>
           <Card>
@@ -159,9 +188,16 @@ export function IdCardsPage() {
       </div>
       {/* Only this part prints: fronts in a grid, ten to an A4 sheet. */}
       <div className="print-area hidden print:grid print:grid-cols-2 print:gap-[6mm]">
-        {selected.map((c) => (
-          <IdCardFront key={c.id} card={c} tpl={tpl} company={company} />
-        ))}
+        {selected.map((c) =>
+          tpl.printBack ? (
+            <div key={c.id} className="col-span-2 flex gap-[6mm] print:break-inside-avoid">
+              <IdCardFront card={c} tpl={tpl} company={company} />
+              <IdCardBack tpl={tpl} company={company} />
+            </div>
+          ) : (
+            <IdCardFront key={c.id} card={c} tpl={tpl} company={company} />
+          ),
+        )}
       </div>
     </>
   );
@@ -170,12 +206,15 @@ export function IdCardsPage() {
 function IdCardFront({ card, tpl, company }: { card: CardData; tpl: Template; company: string }) {
   const qr = useMemo(() => (tpl.showQr ? qrSvg(`${company} | ${card.employeeCode} | ${card.name}`) : ''), [tpl.showQr, company, card]);
   return (
-    <div className="relative flex h-[54mm] w-[85.6mm] shrink-0 flex-col overflow-hidden rounded-[3mm] border border-zinc-200 bg-white text-zinc-900 shadow-sm print:break-inside-avoid print:shadow-none" dir="ltr">
+    <div
+      className={`relative flex shrink-0 flex-col overflow-hidden rounded-[3mm] border border-zinc-200 bg-white text-zinc-900 shadow-sm print:break-inside-avoid print:shadow-none ${tpl.portrait ? 'h-[85.6mm] w-[54mm]' : 'h-[54mm] w-[85.6mm]'}`}
+      dir="ltr"
+    >
       <div className="flex items-center gap-[2mm] px-[3mm] py-[2mm] text-white" style={{ background: tpl.color }}>
         <LogoMark className="size-[6mm] rounded-[1.2mm] ring-1 ring-white/40" />
         <span className="truncate text-[3mm] font-semibold tracking-wide">{company}</span>
       </div>
-      <div className="flex flex-1 gap-[3mm] px-[3mm] py-[2.5mm]">
+      <div className={`flex flex-1 gap-[3mm] px-[3mm] py-[2.5mm] ${tpl.portrait ? 'flex-col items-center text-center' : ''}`}>
         <div
           className="flex h-[24mm] w-[19mm] shrink-0 items-center justify-center rounded-[1.5mm] text-[6mm] font-semibold"
           style={{ background: `${tpl.color}1a`, color: tpl.color }}
@@ -186,7 +225,7 @@ function IdCardFront({ card, tpl, company }: { card: CardData; tpl: Template; co
           <p className="line-clamp-2 text-[3.4mm] leading-tight font-bold">{card.name}</p>
           <p className="truncate text-zinc-600">{card.designation ?? ''}</p>
           <p className="truncate text-zinc-600">{card.department ?? ''}</p>
-          <dl className="mt-[1.5mm] grid grid-cols-[auto_1fr] gap-x-[2mm]">
+          <dl className={`mt-[1.5mm] grid grid-cols-[auto_1fr] gap-x-[2mm] ${tpl.portrait ? 'text-start' : ''}`}>
             <dt className="text-zinc-500">ID</dt>
             <dd className="font-mono font-semibold">{card.employeeCode}</dd>
             {tpl.showBloodGroup && card.bloodGroup && (
@@ -209,7 +248,7 @@ function IdCardFront({ card, tpl, company }: { card: CardData; tpl: Template; co
             )}
           </dl>
         </div>
-        {qr && <div className="size-[16mm] shrink-0 self-end [&>svg]:size-full" dangerouslySetInnerHTML={{ __html: qr }} />}
+        {qr && <div className={`size-[16mm] shrink-0 [&>svg]:size-full ${tpl.portrait ? 'self-center' : 'self-end'}`} dangerouslySetInnerHTML={{ __html: qr }} />}
       </div>
       <div className="h-[1.5mm]" style={{ background: tpl.color }} />
     </div>
@@ -218,11 +257,15 @@ function IdCardFront({ card, tpl, company }: { card: CardData; tpl: Template; co
 
 function IdCardBack({ tpl, company }: { tpl: Template; company: string }) {
   return (
-    <div className="flex h-[54mm] w-[85.6mm] shrink-0 flex-col items-center justify-center gap-[2mm] rounded-[3mm] border border-zinc-200 bg-white p-[4mm] text-center text-zinc-700 shadow-sm" dir="ltr">
+    <div
+      className={`flex shrink-0 flex-col items-center justify-center gap-[2mm] rounded-[3mm] border border-zinc-200 bg-white p-[4mm] text-center text-zinc-700 shadow-sm print:shadow-none ${tpl.portrait ? 'h-[85.6mm] w-[54mm]' : 'h-[54mm] w-[85.6mm]'}`}
+      dir="ltr"
+    >
       <p className="text-[3.2mm] font-semibold" style={{ color: tpl.color }}>
         {company}
       </p>
       <p className="text-[2.6mm]">{tpl.footer}</p>
+      {tpl.backLine2 && <p className="text-[2.4mm] text-zinc-600">{tpl.backLine2}</p>}
       <div className="mt-[3mm] h-px w-[50mm] bg-zinc-300" />
       <p className="text-[2.2mm] text-zinc-500">Authorised signature</p>
     </div>
