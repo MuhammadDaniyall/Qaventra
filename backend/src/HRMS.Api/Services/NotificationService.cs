@@ -48,7 +48,7 @@ public class NotificationService
     public Task ToHrAsync(NotificationKind kind, string title, string? body, string? link, bool includeMe = false, bool email = true) =>
         ToUsersAsync(_db.Users.Where(u => u.Role == UserRole.HrManager || u.Role == UserRole.CompanyAdmin), kind, title, body, link, includeMe, email);
 
-    private async Task ToUsersAsync(IQueryable<User> users, NotificationKind kind, string title, string? body, string? link, bool includeMe, bool email)
+    public async Task ToUsersAsync(IQueryable<User> users, NotificationKind kind, string title, string? body, string? link, bool includeMe, bool email)
     {
         var me = includeMe ? null : _me.UserId;
         var recipients = await users.Where(u => u.IsActive && u.Id != me)

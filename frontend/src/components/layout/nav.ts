@@ -1,5 +1,6 @@
 import {
   Banknote,
+  Bot,
   Boxes,
   Building2,
   CalendarCheck,
@@ -155,6 +156,7 @@ export const NAV: NavSection[] = [
     title: 'Administration',
     icon: Settings2,
     items: [
+      { to: '/ai-team', label: 'AI Team', icon: Bot, roles: HR_ROLES, module: 'reports' },
       { to: '/payroll', label: 'Payroll', icon: Wallet, roles: HR_ROLES, module: 'payroll' },
       { to: '/attendance/machines', label: 'Attendance machines', icon: Fingerprint, roles: HR_ROLES, module: 'attendance' },
       { to: '/helpdesk/queue', label: 'Help desk queue', icon: Headset, roles: HR_ROLES, module: 'helpdesk' },

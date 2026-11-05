@@ -62,6 +62,7 @@ builder.Services.AddScoped<OnBehalfService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton(builder.Configuration.GetSection("Ai").Get<AiOptions>() ?? new AiOptions());
 builder.Services.AddScoped<AiAssistantService>();
+builder.Services.AddScoped<RobotService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.FundService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.ExpenseAdvanceService>();
 builder.Services.AddScoped<HRMS.Api.Controllers.SettlementApprovalService>();
@@ -79,6 +80,7 @@ builder.Services.AddSingleton(builder.Configuration.GetSection("HelpdeskInbox").
 builder.Services.AddSingleton<HelpdeskInbox>();
 builder.Services.AddHostedService<HelpdeskInboxService>();
 builder.Services.AddHostedService<ScheduledWorkService>();
+builder.Services.AddHostedService<RobotWorkService>();
 builder.Services.AddScoped<LeaveService>();
 builder.Services.AddScoped<LetterService>();
 builder.Services.AddScoped<SeparationService>();

@@ -57,6 +57,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<CompanySmtp> CompanySmtps => Set<CompanySmtp>();
     public DbSet<DocumentSetting> DocumentSettings => Set<DocumentSetting>();
     public DbSet<AiMessageLog> AiMessageLogs => Set<AiMessageLog>();
+    public DbSet<AiRobot> AiRobots => Set<AiRobot>();
+    public DbSet<AiRobotRun> AiRobotRuns => Set<AiRobotRun>();
+    public DbSet<AiRobotProposal> AiRobotProposals => Set<AiRobotProposal>();
     public DbSet<PayrollGlMapping> PayrollGlMappings => Set<PayrollGlMapping>();
     public DbSet<PushKeys> PushKeys => Set<PushKeys>();
     public DbSet<AttendanceRequest> AttendanceRequests => Set<AttendanceRequest>();
@@ -720,6 +723,33 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Intro).HasMaxLength(2000);
         });
 
+        b.Entity<AiRobot>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Kind }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.LastSummary).HasMaxLength(2000);
+        });
+        b.Entity<AiRobotRun>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.RobotId, x.StartedAtUtc });
+            e.HasOne(x => x.Robot).WithMany().HasForeignKey(x => x.RobotId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(x => x.StartedByName).HasMaxLength(200);
+            e.Property(x => x.Summary).HasMaxLength(2000);
+            e.Property(x => x.Error).HasMaxLength(1000);
+        });
+        b.Entity<AiRobotProposal>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => new { x.TenantId, x.RobotId, x.SubjectKey });
+            e.HasOne(x => x.Robot).WithMany().HasForeignKey(x => x.RobotId).OnDelete(DeleteBehavior.NoAction);
+            e.Property(x => x.Action).HasMaxLength(50);
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.Detail).HasMaxLength(4000);
+            e.Property(x => x.SubjectKey).HasMaxLength(100);
+            e.Property(x => x.Link).HasMaxLength(300);
+            e.Property(x => x.DecidedByName).HasMaxLength(200);
+            e.Property(x => x.Note).HasMaxLength(1000);
+        });
         b.Entity<AiMessageLog>(e =>
         {
             e.HasIndex(x => new { x.TenantId, x.CreatedAtUtc });

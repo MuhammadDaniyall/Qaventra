@@ -1806,6 +1806,26 @@ async function lookAround(hr, co, d) {
     hr.did(`Looked at who is in (${inOffice?.length ?? 0} desks booked today), the attendance trends and document storage (${Math.round((docs?.totalBytes ?? 0) / 1024)} KB used)`);
 }
 
+/** AI Team: runs one robot a day (in turn), approves or rejects what it proposes and reads the activity log. */
+async function aiTeam(hr, co, d, r) {
+  const team = (await hr.get('Open AI Team', '/ai-team')).data;
+  if (!team?.robots?.length || team.stopped) return;
+  const robot = team.robots[Math.floor(serverDay(d).getTime() / 86_400_000) % team.robots.length];
+  if (robot.canPropose && robot.autonomy === 'Advisory')
+    await hr.put(`Let ${robot.name} propose changes`, `/ai-team/${robot.id}`,
+      { enabled: robot.enabled, autonomy: 'Supervised', ownerUserId: robot.ownerUserId, runHour: robot.runHour, runsPerMonth: robot.runsPerMonth });
+  const run = await hr.post(`Run ${robot.name}`, `/ai-team/${robot.id}/run`, {});
+  if (run.ok) hr.did(`Ran ${robot.name}: ${run.data.summary}`);
+  const waiting = (await hr.get('Open the robots’ approval inbox', '/ai-team/proposals')).data ?? [];
+  for (const p of waiting.slice(0, 3)) {
+    const approve = r.chance(0.8);
+    const res = await hr.post(`${approve ? 'Approve' : 'Reject'}: ${p.title}`, `/ai-team/proposals/${p.id}/decide`,
+      { approve, note: approve ? null : 'Not needed this time.', body: null });
+    if (res.ok) hr.did(`${approve ? 'Approved' : 'Rejected'} the robot's proposal: ${p.title}`);
+  }
+  await hr.get('Read the AI Team activity log', '/ai-team/runs');
+}
+
 /** Accepts resignations waiting for HR. */
 async function handleResignations(hr, co, d, r) {
   const list = ((await hr.get('Open resignations', '/separations?status=Requested')).data ?? []).filter((s) => s.employeeId !== hr.employeeId);
@@ -1855,6 +1875,7 @@ const HR_MODULES = [
   ['assets', 0.4, 'Hand over and take back assets', fulfilAssets],
   ['look-around', 0.3, 'Who is in, trends and document storage', lookAround],
   ['resignations', 0.3, 'Resignations waiting for HR', handleResignations],
+  ['ai-team', 0.6, 'AI Team: run a robot and decide its proposals', aiTeam],
 ];
 
 /** Backfill: the same modules played straight through for a past day. */
