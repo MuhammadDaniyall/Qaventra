@@ -56,7 +56,35 @@ export interface AiWriteResult {
   remaining: number;
 }
 
+export interface AiPolicyAnswer {
+  answer: string;
+  found: boolean;
+  sources: { title: string; kind: string }[];
+  usedAi: boolean;
+}
+
+export interface AiReportInfo {
+  key: string;
+  title: string;
+  about: string;
+}
+
+export interface AiReportResult {
+  report: string;
+  title: string;
+  explanation: string | null;
+  params: { department: string | null; location: string | null; from: string; to: string; status: string | null };
+  columns: string[];
+  rows: string[][];
+  usedAi: boolean;
+  truncated: boolean;
+}
+
 export const aiApi = {
+  policy: (question: string, language: string) => http.post<AiPolicyAnswer>('/ai/policy', { question, language }),
+  reports: () => http.get<AiReportInfo[]>('/ai/reports'),
+  report: (body: { question?: string; report?: string; from?: string; to?: string; department?: string; location?: string }) =>
+    http.post<AiReportResult>('/ai/report', body),
   write: (kind: AiWriteKind, brief: string, draft: string, tone: string, language: string) =>
     http.post<AiWriteResult>('/ai/write', { kind, brief, draft, tone, language }),
   status: () => http.get<AiStatus>('/ai/status'),

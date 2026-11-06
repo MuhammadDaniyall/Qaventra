@@ -1,3 +1,4 @@
+import { PolicyAsk } from '../../components/ai/PolicyAsk';
 import { AiWriteButton } from '../../components/ai/AiWriteButton';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -73,6 +74,7 @@ export function AnnouncementsPage() {
           { value: 'polls', label: 'Polls', icon: <BarChart3 className="size-4" /> },
         ]}
       />
+      {tab === 'news' && <PolicyAsk />}
       {tab === 'news' ? <AnnouncementList hr={hr} /> : <PollList hr={hr} />}
       {creating === 'announcement' && <AnnouncementModal item={null} onClose={() => setCreating(null)} />}
       {creating === 'poll' && <PollModal onClose={() => setCreating(null)} />}

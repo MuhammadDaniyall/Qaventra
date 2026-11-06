@@ -1543,6 +1543,35 @@ async function askAi(p, co, d, r) {
   if (res.ok) p.did(`Asked the AI assistant “${q}” and got: “${String(res.data?.reply ?? '').replace(/\s+/g, ' ').slice(0, 120)}”`);
 }
 
+const POLICY_QUESTIONS = ['Maternity leave kitni hai?', 'How many casual leaves do we get in a year?', 'Can I carry forward my annual leave?',
+  'Work from home ki policy kya hai?', 'Sick leave ke liye medical certificate kab chahiye?', 'When is the next public holiday?', 'What is the notice period for resignation?'];
+
+/** Asks a question about company policy; the answer comes only from the company's own policies and leave settings. */
+async function askPolicy(p, co, d, r) {
+  const q = r.pick(POLICY_QUESTIONS);
+  const res = await p.post(`Ask about policies: ${q}`, '/ai/policy', { question: q, language: r.chance(0.2) ? 'ur' : 'en' });
+  if (res.ok)
+    p.did(`Asked “${q}”: ${res.data.found ? `answer from ${res.data.sources.map((s) => s.title).join(', ')}` : 'not in company policy, ask HR'}`);
+}
+
+const REPORT_QUESTIONS = ['Lahore ke kitne log is mahine late aaye', 'Who was absent last month?', 'Headcount by department', 'Leave taken this month',
+  'Payroll totals last month', 'New joiners this year', 'Who left this year?', 'Pending approvals', 'Documents expiring soon', 'Is mahine kitne log late aaye'];
+
+/** HR asks for a report in plain words; the server picks a whitelisted report and runs it. Sometimes runs one straight from the list. */
+async function askReport(hr, co, d, r) {
+  let res;
+  if (r.chance(0.3)) {
+    const list = (await hr.get('Open the report list', '/ai/reports')).data ?? [];
+    if (!list.length) return;
+    const pick = r.pick(list);
+    res = await hr.post(`Run the ${pick.title} report`, '/ai/report', { report: pick.key });
+  } else {
+    const q = r.pick(REPORT_QUESTIONS);
+    res = await hr.post(`Ask for a report: ${q}`, '/ai/report', { question: q });
+  }
+  if (res.ok) hr.did(`Report “${res.data.title}” (${res.data.params.from} to ${res.data.params.to}): ${res.data.rows.length} rows${res.data.usedAi ? ', picked by AI' : ''}`);
+}
+
 /** Their own part of a running performance review: goals, self review, sign-off. */
 async function myReview(p, co, d, r) {
   const list = (await p.get('Open my performance reviews', '/performance/reviews/my')).data ?? [];
@@ -1882,6 +1911,7 @@ const EMPLOYEE_MODULES = [
   ['document', 0.025, 'Upload a document to my file', uploadDocument],
   ['my-review', 0.25, 'My performance review', myReview],
   ['follow-ups', 0.35, 'Swaps, trip settlements and other follow-ups', followUps],
+  ['policy-question', 0.04, 'Ask about company policy', askPolicy],
   ['resign', 0.0006, 'Resign', resign],
 ];
 const MANAGER_MODULES = [
@@ -1903,6 +1933,8 @@ const HR_MODULES = [
   ['look-around', 0.3, 'Who is in, trends and document storage', lookAround],
   ['resignations', 0.3, 'Resignations waiting for HR', handleResignations],
   ['ai-team', 0.6, 'AI Team: run a robot and decide its proposals', aiTeam],
+  ['ai-report', 0.3, 'Ask for a report in plain words', askReport],
+  ['policy-question', 0.1, 'Ask about company policy', askPolicy],
 ];
 
 /** Backfill: the same modules played straight through for a past day. */

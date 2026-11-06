@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, KeyRound, Languages, LogOut, UserCircle } from 'lucide-react';
+import { ChevronDown, Download, KeyRound, LogOut, UserCircle } from 'lucide-react';
 import { useAuth, useUser } from '../../auth/AuthContext';
 import { cn } from '../../lib/cn';
 import { roleLabel } from '../../lib/format';
-import { tx, useT } from '../../lib/i18n';
+import { tx } from '../../lib/i18n';
+import { installApp, useCanInstall } from '../../lib/install';
 import { Avatar } from '../ui';
+import { LanguagePicker } from '../ui/LanguagePicker';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 
 export function UserMenu() {
@@ -15,7 +17,7 @@ export function UserMenu() {
   const [open, setOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { lang, setLang } = useT();
+  const canInstall = useCanInstall();
 
   useEffect(() => {
     if (!open) return;
@@ -43,7 +45,7 @@ export function UserMenu() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="flex items-center gap-2 rounded-lg p-1 pe-2 transition-colors hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-accent-500 dark:hover:bg-zinc-800"
+        className="flex items-center gap-2 rounded-xl p-1 pe-2 transition-colors hover:bg-zinc-900/[0.05] focus-visible:outline-2 focus-visible:outline-accent-500 dark:hover:bg-white/[0.07]"
       >
         <Avatar name={user.fullName} />
         <span className="hidden text-start sm:block">
@@ -58,7 +60,7 @@ export function UserMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute end-0 z-40 mt-2 w-60 animate-pop-in rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+          className="absolute end-0 z-40 mt-2 w-64 animate-pop-in rounded-2xl border border-zinc-200/80 bg-white/95 p-1.5 shadow-xl shadow-indigo-950/10 backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/95"
         >
           <div className="px-2.5 py-2">
             <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.fullName}</p>
@@ -89,19 +91,22 @@ export function UserMenu() {
           >
             <KeyRound className="size-4 text-zinc-500 dark:text-zinc-400" /> {tx('Change password')}
           </button>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={() => {
-              setOpen(false);
-              setLang(lang === 'ur' ? 'en' : 'ur');
-            }}
-          >
-            <Languages className="size-4 text-zinc-500 dark:text-zinc-400" />
-            {/* Each option is written in its own language so people can find it. */}
-            {lang === 'ur' ? <span lang="en">English</span> : <span lang="ur">اردو</span>}
-          </button>
+          {canInstall && (
+            <button
+              type="button"
+              role="menuitem"
+              className={item}
+              onClick={() => {
+                setOpen(false);
+                void installApp();
+              }}
+            >
+              <Download className="size-4 text-zinc-500 dark:text-zinc-400" /> {tx('Install app')}
+            </button>
+          )}
+          <div className="px-1.5 py-1.5">
+            <LanguagePicker className="w-full justify-between" onPicked={() => setOpen(false)} />
+          </div>
           <div className="my-1 h-px bg-zinc-100 dark:bg-zinc-800" />
           <button
             type="button"

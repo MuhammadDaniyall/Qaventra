@@ -53,6 +53,8 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
+        hero
+        eyebrow="Your AI Team is on duty"
         title={`${tx(greeting())}, ${user.fullName.split(' ')[0]}`}
         description={`${todayLabel()} · ${user.companyName ?? 'your company'}`}
         actions={

@@ -18,6 +18,17 @@
   --animate-slide-in-right: slide-in-right 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-slide-in-left: slide-in-left 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-pop-in: pop-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-sheet-up: sheet-up 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-glow: glow 14s ease-in-out infinite alternate;
+
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes glow {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(-4%, 3%, 0) scale(1.08); }
+  }
 
   @keyframes fade-in {
     from { opacity: 0; }
@@ -75,9 +86,23 @@
     font-family: 'Noto Sans Arabic', var(--font-sans);
     line-height: 1.7;
   }
+  html[lang='ar'] body {
+    font-family: 'IBM Plex Sans Arabic', var(--font-sans);
+    line-height: 1.6;
+  }
+  /* Arabic script has no letter-spacing or upper case; small caps labels would break the joined letters. */
+  html:is([lang='ur'], [lang='ar']) :is(.uppercase, .tracking-wide, .tracking-wider, .tracking-tight) {
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
   body {
     @apply bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100;
     font-feature-settings: 'cv11', 'ss01';
+    /* Phones never scroll sideways; clip (not hidden) keeps sticky headers working. */
+    overflow-x: clip;
   }
   button:not(:disabled),
   [role='button']:not(:disabled) {
@@ -88,6 +113,30 @@
 /* Arrows that mean "forward" or "back" point the other way in Urdu (right-to-left). */
 [dir='rtl'] :is(.lucide-chevron-right, .lucide-chevron-left, .lucide-arrow-right, .lucide-arrow-left, .lucide-arrow-up-right, .lucide-chevrons-right, .lucide-chevrons-left) {
   scale: -1 1;
+}
+
+/* Frosted glass panels (top bar, tab bar, menus), as on the sign-in page. */
+@utility glass {
+  background-color: color-mix(in oklab, var(--color-white) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  &:where(.dark, .dark *) {
+    background-color: color-mix(in oklab, var(--color-zinc-950) 70%, transparent);
+  }
+}
+
+/* The brand gradient: indigo through violet to fuchsia. */
+@utility bg-brand {
+  background-image: linear-gradient(110deg, var(--color-indigo-600), var(--color-violet-600) 55%, var(--color-fuchsia-600));
+}
+@utility text-brand {
+  background-image: linear-gradient(110deg, var(--color-indigo-600), var(--color-violet-600) 55%, var(--color-fuchsia-600));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  &:where(.dark, .dark *) {
+    background-image: linear-gradient(110deg, var(--color-indigo-300), var(--color-violet-300) 55%, var(--color-fuchsia-300));
+  }
 }
 
 @utility no-scrollbar {

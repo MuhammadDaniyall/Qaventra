@@ -78,7 +78,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <div className="absolute inset-0 animate-fade-in bg-zinc-950/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 animate-fade-in bg-zinc-950/50 backdrop-blur-sm" onClick={onClose} />
       <div
         ref={panel}
         role="dialog"
@@ -86,12 +86,16 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'relative flex max-h-[92vh] w-full animate-pop-in flex-col rounded-t-2xl border border-zinc-200 bg-white shadow-2xl outline-none sm:rounded-2xl',
-          'dark:border-zinc-800 dark:bg-zinc-900',
+          // Phones: a bottom sheet that slides up, clears the home indicator and keeps the buttons in thumb reach.
+          'relative flex max-h-[92dvh] w-full animate-sheet-up flex-col overflow-hidden rounded-t-3xl border border-b-0 border-zinc-200/80 bg-white shadow-2xl outline-none',
+          'pb-[env(safe-area-inset-bottom)] sm:animate-pop-in sm:rounded-2xl sm:border-b sm:pb-0',
+          'dark:border-white/10 dark:bg-zinc-900',
           modalSizes[size],
         )}
       >
-        <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-3">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent" aria-hidden="true" />
+        <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-zinc-300 sm:hidden dark:bg-zinc-700" aria-hidden="true" />
+        <div className="flex items-start justify-between gap-4 px-5 pt-3 pb-3 sm:px-6 sm:pt-5">
           <div>
             <h2 id={titleId} className="text-base font-semibold text-zinc-900 dark:text-white">
               {tx(title)}
@@ -104,9 +108,9 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             </IconButton>
           )}
         </div>
-        {children && <div className="overflow-y-auto px-6 pb-5">{children}</div>}
+        {children && <div className="overscroll-contain overflow-y-auto px-5 pb-5 sm:px-6">{children}</div>}
         {footer && (
-          <div className="flex flex-wrap justify-end gap-2 rounded-b-2xl border-t border-zinc-100 bg-zinc-50/60 px-6 py-3.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+          <div className="flex flex-wrap justify-end gap-2 border-t border-zinc-100 bg-zinc-50/60 px-5 py-3.5 max-sm:[&>*]:min-h-11 max-sm:[&>*]:flex-1 sm:px-6 dark:border-white/[0.06] dark:bg-white/[0.02]">
             {footer}
           </div>
         )}
@@ -137,7 +141,7 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
 
   return createPortal(
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 animate-fade-in bg-zinc-950/40 backdrop-blur-[2px]" onClick={onClose} />
+      <div className="absolute inset-0 animate-fade-in bg-zinc-950/50 backdrop-blur-sm" onClick={onClose} />
       <div
         ref={panel}
         role="dialog"
@@ -145,8 +149,8 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'absolute inset-y-0 end-0 flex w-full animate-slide-in-right flex-col rtl:animate-slide-in-left border-s border-zinc-200 bg-white shadow-2xl outline-none',
-          'dark:border-zinc-800 dark:bg-zinc-900',
+          'absolute inset-y-0 end-0 flex w-full animate-slide-in-right flex-col rtl:animate-slide-in-left border-s border-zinc-200/80 bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-2xl outline-none',
+          'dark:border-white/10 dark:bg-zinc-900',
           drawerWidths[width],
         )}
       >
