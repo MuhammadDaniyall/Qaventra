@@ -82,7 +82,7 @@ export function Tabs<T extends string>({
         ref={bar}
         role="tablist"
         onScroll={measure}
-        className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-zinc-200 px-1 dark:border-zinc-800"
+        className="no-scrollbar -mx-1 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-zinc-200/80 px-1 dark:border-white/[0.08]"
       >
         {items.map((item, i) => {
           const active = item.value === value;
@@ -105,11 +105,12 @@ export function Tabs<T extends string>({
                 refs.current[next]?.focus();
               }}
               className={cn(
-                '-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap transition-colors',
-                'focus-visible:rounded-t-md focus-visible:outline-2 focus-visible:outline-accent-500',
+                'relative mt-1 mb-1.5 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                'after:absolute after:inset-x-2 after:-bottom-1.5 after:h-0.5 after:rounded-full after:transition-opacity',
+                'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500',
                 active
-                  ? 'border-accent-600 text-accent-700 dark:border-accent-400 dark:text-accent-300'
-                  : 'border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200',
+                  ? 'text-accent-700 after:bg-gradient-to-r after:from-indigo-500 after:to-fuchsia-500 after:opacity-100 dark:text-accent-300'
+                  : 'text-zinc-500 after:opacity-0 hover:bg-zinc-900/[0.04] hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-white/[0.05] dark:hover:text-zinc-200',
               )}
             >
               {item.icon}
@@ -126,7 +127,7 @@ export function Tabs<T extends string>({
           onClick={() => nudge(-1)}
           className={cn(arrow, 'start-0 justify-start bg-gradient-to-r from-zinc-50 via-zinc-50/90 to-transparent rtl:bg-gradient-to-l dark:from-zinc-950 dark:via-zinc-950/90')}
         >
-          <ChevronLeft className="size-5 rtl:rotate-180" />
+          <ChevronLeft className="size-5" />
         </button>
       )}
       {edges.end && (
@@ -137,7 +138,7 @@ export function Tabs<T extends string>({
           onClick={() => nudge(1)}
           className={cn(arrow, 'end-0 justify-end bg-gradient-to-l from-zinc-50 via-zinc-50/90 to-transparent rtl:bg-gradient-to-r dark:from-zinc-950 dark:via-zinc-950/90')}
         >
-          <ChevronRight className="size-5 rtl:rotate-180" />
+          <ChevronRight className="size-5" />
         </button>
       )}
     </div>

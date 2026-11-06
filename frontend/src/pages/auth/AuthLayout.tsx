@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Bot, CalendarCheck, CheckCircle2, Fingerprint, Lock, ShieldCheck, Sparkles, Wallet } from 'lucide-react';
 import { Logo } from '../../components/layout/Logo';
+import { LanguagePicker } from '../../components/ui/LanguagePicker';
 import { APP_NAME } from '../../lib/brand';
 import { cn } from '../../lib/cn';
-import { tx, useT } from '../../lib/i18n';
+import { tx } from '../../lib/i18n';
 
 /** What the AI Team "says" on the showcase, one line at a time. */
 const ROBOT_LINES = [
@@ -156,7 +157,6 @@ function Showcase() {
 }
 
 export function AuthLayout({ title, subtitle, children }: { title: string; subtitle: ReactNode; children: ReactNode }) {
-  const { lang, setLang } = useT();
   return (
     <div className="grid min-h-screen bg-white lg:grid-cols-[1fr_1.15fr] dark:bg-zinc-950">
       <div className="relative flex flex-col overflow-hidden px-6 py-8 sm:px-10">
@@ -166,14 +166,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
 
         <div className="relative flex items-center justify-between">
           <Logo />
-          {/* Each option is written in its own language so people can find it. */}
-          <button
-            type="button"
-            onClick={() => setLang(lang === 'ur' ? 'en' : 'ur')}
-            className="rounded-full border border-zinc-200 px-3.5 py-1.5 text-sm font-medium text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-accent-500 dark:border-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-900"
-          >
-            {lang === 'ur' ? <span lang="en">English</span> : <span lang="ur">اردو</span>}
-          </button>
+          <LanguagePicker />
         </div>
 
         <div className="relative mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">

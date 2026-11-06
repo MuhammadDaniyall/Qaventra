@@ -12,3 +12,4 @@ export { PageHeader } from './PageHeader';
 export { StatCard } from './StatCard';
 export { Tabs } from './Tabs';
 export { Avatar } from './Avatar';
+export { LanguagePicker } from './LanguagePicker';

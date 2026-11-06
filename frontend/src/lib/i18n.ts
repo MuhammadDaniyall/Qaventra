@@ -1,19 +1,36 @@
 import { useCallback, useSyncExternalStore, type ReactNode } from 'react';
 import { UR } from './i18n-ur';
+import { AR } from './i18n-ar';
 
 /**
- * English and Urdu. English text is the key: `t('Save')` gives the Urdu when Urdu is on and a translation
+ * English, Urdu and Arabic. English text is the key: `t('Save')` gives the Urdu when Urdu is on and a translation
  * exists, otherwise the English, so untranslated screens keep working. Shared components translate their own
  * string props (titles, labels, buttons), which is how most of the app is covered without touching each page.
  */
-export type Lang = 'en' | 'ur';
+export type Lang = 'en' | 'ur' | 'ar';
+
+/** The language picker's options, each written in its own language so people can find it. */
+export const LANGS: { value: Lang; label: string }[] = [
+  { value: 'en', label: 'English' },
+  { value: 'ur', label: 'اردو' },
+  { value: 'ar', label: 'العربية' },
+];
+
+const DICTS: Record<Lang, Record<string, string> | null> = { en: null, ur: UR, ar: AR };
+const FONTS: Partial<Record<Lang, string>> = {
+  ur: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap',
+  ar: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap',
+};
+
+export const isRtl = (lang: Lang) => lang === 'ur' || lang === 'ar';
 
 const KEY = 'hrms.lang';
 const listeners = new Set<() => void>();
 
 function read(): Lang {
   try {
-    return localStorage.getItem(KEY) === 'ur' ? 'ur' : 'en';
+    const v = localStorage.getItem(KEY);
+    return v === 'ur' || v === 'ar' ? v : 'en';
   } catch {
     return 'en';
   }
@@ -21,16 +38,17 @@ function read(): Lang {
 
 let current: Lang = read();
 
-/** Sets <html lang dir> and loads the Urdu font the first time it is needed. */
+/** Sets <html lang dir> and loads the language's font the first time it is needed. */
 export function applyLang(lang: Lang = current) {
   const html = document.documentElement;
   html.lang = lang;
-  html.dir = lang === 'ur' ? 'rtl' : 'ltr';
-  if (lang === 'ur' && !document.getElementById('font-ur')) {
+  html.dir = isRtl(lang) ? 'rtl' : 'ltr';
+  const font = FONTS[lang];
+  if (font && !document.getElementById(`font-${lang}`)) {
     const link = document.createElement('link');
-    link.id = 'font-ur';
+    link.id = `font-${lang}`;
     link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap';
+    link.href = font;
     document.head.appendChild(link);
   }
 }
@@ -52,8 +70,9 @@ function subscribe(fn: () => void) {
 }
 
 export function translate(text: string, lang: Lang = current): string {
-  if (lang !== 'ur') return text;
-  return UR[text] ?? UR[text.trim()] ?? text;
+  const dict = DICTS[lang];
+  if (!dict) return text;
+  return dict[text] ?? dict[text.trim()] ?? text;
 }
 
 /** The current language and a translator that re-renders when the language changes. */

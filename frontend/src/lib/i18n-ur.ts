@@ -75,6 +75,9 @@ export const UR: Record<string, string> = {
   'Switch to dark mode': 'ڈارک موڈ',
   'Switch to light mode': 'لائٹ موڈ',
   Notifications: 'اطلاعات',
+  Language: 'زبان',
+  'Install app': 'ایپ انسٹال کریں',
+  'Your AI Team is on duty': 'آپ کی AI ٹیم ڈیوٹی پر ہے',
 
   // Roles
   Employee: 'ملازم',

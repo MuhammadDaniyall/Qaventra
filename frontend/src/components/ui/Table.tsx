@@ -16,14 +16,14 @@ export function Table({ children, className }: { children: ReactNode; className?
 
 export function THead({ children }: { children: ReactNode }) {
   return (
-    <thead className="border-b border-zinc-200 bg-zinc-50/70 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-400">
+    <thead className="border-b border-zinc-200/80 bg-gradient-to-b from-zinc-50 to-zinc-50/40 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:border-white/[0.06] dark:from-white/[0.03] dark:to-transparent dark:text-zinc-400">
       {children}
     </thead>
   );
 }
 
 export function TBody({ children }: { children: ReactNode }) {
-  return <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">{children}</tbody>;
+  return <tbody className="divide-y divide-zinc-100 dark:divide-white/[0.05]">{children}</tbody>;
 }
 
 export function Tr({
@@ -34,8 +34,8 @@ export function Tr({
   return (
     <tr
       className={cn(
-        'transition-colors hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30',
-        onClick && 'cursor-pointer hover:bg-zinc-50 focus-visible:bg-zinc-50 focus-visible:outline-none dark:hover:bg-zinc-800/50 dark:focus-visible:bg-zinc-800/50',
+        'transition-colors hover:bg-accent-50/40 dark:hover:bg-white/[0.03]',
+        onClick && 'cursor-pointer hover:bg-accent-50/70 focus-visible:bg-accent-50/70 focus-visible:outline-none dark:hover:bg-accent-500/[0.07] dark:focus-visible:bg-accent-500/[0.07]',
         className,
       )}
       onClick={onClick}
@@ -82,7 +82,7 @@ export function Pagination({
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100 px-4 py-3 text-xs text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100/80 px-4 py-3 text-xs text-zinc-500 dark:border-white/[0.06] dark:text-zinc-400">
       <span>
         {from}–{to} of {total.toLocaleString()}
       </span>
