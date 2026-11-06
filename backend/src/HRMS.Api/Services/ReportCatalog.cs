@@ -464,9 +464,6 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 return T(def, range, ["Code", "Name", "Kind", "Title", "Month", "Amount", "Taxable", "Paid"], [5],
                     rows.Select(r => L(r.EmployeeCode, r.Name, r.Kind.ToString(), r.Title, new DateOnly(r.Year, r.Month, 1).ToString("MMM yyyy"), M(r.Amount), r.IsTaxable ? "Yes" : "No", r.Paid ? "Yes" : "")), totals: true);
             }
-            case "payroll.sheet":
-            case "payroll.bank":
-            case "payroll.tax":
             case "payroll.gratuityprovision":
             {
                 var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
@@ -500,6 +497,9 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                     slips.Select(s => L(s.EmployeeCode, s.Name, s.GccNationality ?? "No", run.PayrollCountry == "SA" ? s.IqamaNo ?? "" : s.LabourCardNo ?? "",
                         M(s.SocialInsuranceEmployee), M(s.SocialInsuranceEmployer), M(s.SocialInsuranceEmployee + s.SocialInsuranceEmployer))), totals: true);
             }
+            case "payroll.sheet":
+            case "payroll.bank":
+            case "payroll.tax":
             case "payroll.eobi":
             case "payroll.cash":
             case "payroll.socialsecurity":
