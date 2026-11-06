@@ -1007,7 +1007,4 @@ export const UR: Record<string, string> = {
   'Pay per day': 'یومیہ تنخواہ',
   'Start free trial': 'مفت ٹرائل شروع کریں',
   'All tools': 'تمام ٹولز',
-  Absences: 'غیر حاضریاں',
-  Leavers: 'چھوڑنے والے',
-  rows: 'قطاریں',
 };
