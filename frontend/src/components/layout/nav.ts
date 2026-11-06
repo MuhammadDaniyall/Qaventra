@@ -22,6 +22,7 @@ import {
   Factory,
   Calculator,
   ChartLine,
+  TableProperties,
   FileBarChart,
   Target,
   Rocket,
@@ -157,6 +158,7 @@ export const NAV: NavSection[] = [
     icon: Settings2,
     items: [
       { to: '/ai-team', label: 'AI Team', icon: Bot, roles: HR_ROLES, module: 'reports' },
+      { to: '/ai-reports', label: 'Ask for a report', icon: TableProperties, roles: HR_ROLES, module: 'reports' },
       { to: '/payroll', label: 'Payroll', icon: Wallet, roles: HR_ROLES, module: 'payroll' },
       { to: '/attendance/machines', label: 'Attendance machines', icon: Fingerprint, roles: HR_ROLES, module: 'attendance' },
       { to: '/helpdesk/queue', label: 'Help desk queue', icon: Headset, roles: HR_ROLES, module: 'helpdesk' },
