@@ -100,6 +100,7 @@ public class SubscriptionService(HrmsDbContext db, TenantAccessChecker access, I
         }
 
         // 3. The subscription records and the company itself.
+        await db.TenantInvoices.Where(i => i.TenantId == tenantId).ExecuteDeleteAsync();
         await db.TenantPayments.Where(p => p.TenantId == tenantId).ExecuteDeleteAsync();
         await db.Tenants.Where(t => t.Id == tenantId).ExecuteDeleteAsync();
 

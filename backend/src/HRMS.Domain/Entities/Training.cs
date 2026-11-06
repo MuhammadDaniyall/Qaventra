@@ -85,3 +85,68 @@ public class TrainingRequest : TenantEntity
     /// <summary>Outside courses: done, certificate attached.</summary>
     public DateOnly? CompletedOn { get; set; }
 }
+
+/// <summary>A multiple-choice test for a course. Answers are scored on the server; the right options never reach the browser before submission.</summary>
+public class TrainingQuiz : TenantEntity
+{
+    public Guid ProgramId { get; set; }
+    public TrainingProgram? Program { get; set; }
+    public string Title { get; set; } = "";
+    public string? Instructions { get; set; }
+    /// <summary>Percent of questions that must be right to pass (1–100).</summary>
+    public int PassPercent { get; set; } = 60;
+    /// <summary>Minutes allowed from start to submit; null = no limit.</summary>
+    public int? TimeLimitMinutes { get; set; }
+    /// <summary>Attempts each person may make; 0 = unlimited.</summary>
+    public int MaxAttempts { get; set; } = 3;
+    public bool IsActive { get; set; } = true;
+    public List<TrainingQuizQuestion> Questions { get; set; } = [];
+}
+
+public class TrainingQuizQuestion : TenantEntity
+{
+    public Guid QuizId { get; set; }
+    public int Order { get; set; }
+    public string Text { get; set; } = "";
+    /// <summary>The choices as a JSON array of strings (2–6).</summary>
+    public string OptionsJson { get; set; } = "[]";
+    /// <summary>Index of the right choice in <see cref="OptionsJson"/>.</summary>
+    public int CorrectIndex { get; set; }
+}
+
+/// <summary>One sitting of a quiz. Open until submitted; a late submission is recorded as failed.</summary>
+public class TrainingQuizAttempt : TenantEntity
+{
+    public Guid QuizId { get; set; }
+    public TrainingQuiz? Quiz { get; set; }
+    public Guid EmployeeId { get; set; }
+    public Employee? Employee { get; set; }
+    public DateTime StartedAtUtc { get; set; }
+    /// <summary>Submit by this time (time limit plus a short grace); null = no limit.</summary>
+    public DateTime? DeadlineUtc { get; set; }
+    public DateTime? SubmittedAtUtc { get; set; }
+    /// <summary>Question ids in the order they were shown (JSON array).</summary>
+    public string QuestionIdsJson { get; set; } = "[]";
+    /// <summary>Chosen option per question id (JSON object), stored on submission.</summary>
+    public string? AnswersJson { get; set; }
+    public int Correct { get; set; }
+    public int Total { get; set; }
+    public int ScorePercent { get; set; }
+    public bool Passed { get; set; }
+    public bool TimedOut { get; set; }
+}
+
+/// <summary>Issued when a quiz is passed. The code lets anyone check it on the public verify page.</summary>
+public class TrainingCertificate : TenantEntity
+{
+    public Guid AttemptId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public Guid ProgramId { get; set; }
+    /// <summary>Short random code, unique across all companies, used in the public verify link.</summary>
+    public string Code { get; set; } = "";
+    public DateOnly IssuedOn { get; set; }
+    /// <summary>Name and course as printed, kept even if the record or course is renamed later.</summary>
+    public string EmployeeName { get; set; } = "";
+    public string CourseTitle { get; set; } = "";
+    public int ScorePercent { get; set; }
+}

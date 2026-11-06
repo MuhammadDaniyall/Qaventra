@@ -12,6 +12,8 @@ public static class AccessCodes
     public const string CompanyInactive = "CompanyInactive";
     public const string SubscriptionExpired = "SubscriptionExpired";
     public const string UserInactive = "UserInactive";
+    /// <summary>The request belongs to a module that is not part of the company's package.</summary>
+    public const string ModuleDisabled = "ModuleDisabled";
 }
 
 /// <summary>Answers "may this company / user use the system right now?", cached briefly so it can run on every request.</summary>
@@ -19,19 +21,25 @@ public class TenantAccessChecker(IServiceScopeFactory scopes, IMemoryCache cache
 {
     private static readonly TimeSpan CacheFor = TimeSpan.FromSeconds(30);
 
-    private record TenantState(bool IsActive, DateOnly? EndsOn, string TimeZoneId);
+    private record TenantState(bool IsActive, DateOnly? EndsOn, string TimeZoneId, string? EnabledModules);
 
-    public async Task<TenantAccess> TenantAsync(Guid tenantId)
-    {
-        var state = await cache.GetOrCreateAsync($"tenant-access:{tenantId}", async entry =>
+    private Task<TenantState?> StateAsync(Guid tenantId) =>
+        cache.GetOrCreateAsync($"tenant-access:{tenantId}", async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheFor;
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<HrmsDbContext>();
             return await db.Tenants.Where(t => t.Id == tenantId)
-                .Select(t => new TenantState(t.IsActive, t.SubscriptionEndsOn, t.TimeZoneId))
+                .Select(t => new TenantState(t.IsActive, t.SubscriptionEndsOn, t.TimeZoneId, t.EnabledModules))
                 .FirstOrDefaultAsync();
         });
+
+    /// <summary>The company's package modules, or null when it has every module.</summary>
+    public async Task<HashSet<string>?> ModulesAsync(Guid tenantId) => AccessModules.CompanyModules((await StateAsync(tenantId))?.EnabledModules);
+
+    public async Task<TenantAccess> TenantAsync(Guid tenantId)
+    {
+        var state = await StateAsync(tenantId);
 
         if (state is null)
             return TenantAccess.Inactive; // deleted company
@@ -101,9 +109,17 @@ public class TenantAccessMiddleware(RequestDelegate next)
             }
             else if (me.TenantId is { } tenantId)
             {
+                var path = http.Request.Path.Value ?? "";
                 var access = await checker.TenantAsync(tenantId);
-                if (access != TenantAccess.Allowed)
+                // The company admin may still open billing on an expired subscription, to pay and get going again.
+                var paying = access == TenantAccess.Expired && me.Role == UserRole.CompanyAdmin && IsBilling(path);
+                if (access != TenantAccess.Allowed && !paying)
                     (code, message) = TenantAccessChecker.Describe(access);
+                else if (AccessModules.For(path) is { } module && await checker.ModulesAsync(tenantId) is { } enabled && !enabled.Contains(module))
+                {
+                    var label = AccessModules.All.First(m => m.Key == module).Label;
+                    (code, message) = (AccessCodes.ModuleDisabled, $"{label} is not part of your company's package. Ask your administrator to upgrade.");
+                }
             }
 
             if (code is not null)
@@ -117,4 +133,6 @@ public class TenantAccessMiddleware(RequestDelegate next)
         }
         await next(http);
     }
+
+    private static bool IsBilling(string path) => path.StartsWith("/api/billing", StringComparison.OrdinalIgnoreCase);
 }

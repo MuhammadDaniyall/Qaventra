@@ -54,6 +54,24 @@ public static class AccessModules
         return best;
     }
 
+    /// <summary>Modules every company always has, whatever its package: they hold the company itself.</summary>
+    public static readonly string[] Core = ["employees", "organization", "approvals"];
+
+    /// <summary>
+    /// The modules a company's package turns on, from <c>Tenant.EnabledModules</c>. Null means every module, which is
+    /// how companies created before packages existed keep everything.
+    /// </summary>
+    public static HashSet<string>? CompanyModules(string? enabledCsv) =>
+        enabledCsv is null ? null : [.. Parse(enabledCsv), .. Core];
+
+    /// <summary>The stored value for a set of modules: null when it is every module.</summary>
+    public static string? ToCompanyCsv(IEnumerable<string>? keys)
+    {
+        if (keys is null) return null;
+        var set = keys.Where(k => All.Any(m => m.Key == k)).Concat(Core).ToHashSet();
+        return All.All(m => set.Contains(m.Key)) ? null : string.Join(",", All.Where(m => set.Contains(m.Key)).Select(m => m.Key));
+    }
+
     public static List<string> Parse(string? csv) =>
         (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(k => All.Any(m => m.Key == k)).ToList();
 }

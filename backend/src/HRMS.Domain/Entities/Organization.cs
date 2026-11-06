@@ -50,6 +50,14 @@ public class Tenant : BaseEntity
         var seats = MaxEmployees ?? currentEmployees;
         return (PlanPrice ?? 0) + (PricePerEmployee ?? 0) * seats * (int)cycle;
     }
+    /// <summary>The package the company is on (prices and limits are copied onto the company when it is set).</summary>
+    public Guid? PlanId { get; set; }
+    /// <summary>Last day of the free trial, when the company started on one.</summary>
+    public DateOnly? TrialEndsOn { get; set; }
+    /// <summary>Comma-separated module keys the company may use. Null = every module (companies from before packages keep everything).</summary>
+    public string? EnabledModules { get; set; }
+    /// <summary>Company logo as a small data URL (PNG/JPEG/SVG), printed on certificates.</summary>
+    public string? LogoDataUrl { get; set; }
     /// <summary>Last day the company may use the system (inclusive, company-local). Null means no expiry.</summary>
     public DateOnly? SubscriptionEndsOn { get; set; }
 

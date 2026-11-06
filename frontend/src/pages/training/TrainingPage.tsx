@@ -46,8 +46,9 @@ import {
 import { formatCurrency, formatDate, formatDateTimeUtc, toIsoDate, todayIso } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { ComplianceBadge, Rating } from './shared';
+import { QuizzesTab } from './QuizzesTab';
 
-type Tab = 'mine' | 'sessions' | 'catalog' | 'compliance' | 'requests' | 'report';
+type Tab = 'mine' | 'sessions' | 'catalog' | 'quizzes' | 'compliance' | 'requests' | 'report';
 
 /** Courses, sessions, my training and requests for everyone; compliance for managers; catalog, requests and reports for HR. */
 export function TrainingPage() {
@@ -61,6 +62,7 @@ export function TrainingPage() {
     'mine',
     'sessions',
     'catalog',
+    'quizzes',
     ...(m.isHr || m.hasTeam ? (['compliance'] as Tab[]) : []),
     ...(m.isHr ? (['requests', 'report'] as Tab[]) : []),
   ];
@@ -70,6 +72,7 @@ export function TrainingPage() {
     mine: 'My training',
     sessions: 'Sessions',
     catalog: 'Courses',
+    quizzes: 'Quizzes',
     compliance: m.isHr ? 'Compliance' : 'My team',
     requests: 'Requests',
     report: 'Reports',
@@ -89,6 +92,7 @@ export function TrainingPage() {
       {tab === 'mine' && <MineTab />}
       {tab === 'sessions' && <SessionsTab me={m} />}
       {tab === 'catalog' && <CatalogTab me={m} onAsk={setAsking} />}
+      {tab === 'quizzes' && <QuizzesTab me={m} />}
       {tab === 'compliance' && <ComplianceTab me={m} />}
       {tab === 'requests' && <RequestsTab all />}
       {tab === 'report' && <ReportTab />}

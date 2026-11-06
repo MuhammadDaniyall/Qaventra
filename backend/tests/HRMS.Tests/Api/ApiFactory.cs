@@ -18,6 +18,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string SuperAdminEmail = "root@hrms.test";
     public const string SuperAdminPassword = "Test-Only-Root-Pass-1";
+    /// <summary>Webhook secret the tests sign Safepay notifications with (test only, not a real key).</summary>
+    public const string SafepayTestSecret = "test-only-webhook-secret";
 
     private readonly string _database = $"HRMS_Tests_{Guid.NewGuid():N}";
 
@@ -35,6 +37,10 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("SuperAdmin:Email", SuperAdminEmail);
         builder.UseSetting("SuperAdmin:Password", SuperAdminPassword);
         builder.UseSetting("RateLimit:AuthPerMinute", "1000");
+        builder.UseSetting("RateLimit:PublicPerMinute", "1000");
+        builder.UseSetting("Payments:Safepay:Enabled", "true");
+        builder.UseSetting("Payments:Safepay:ApiKey", "sandbox-test-key");
+        builder.UseSetting("Payments:Safepay:WebhookSecret", SafepayTestSecret);
     }
 
     public Task InitializeAsync() => Task.CompletedTask;

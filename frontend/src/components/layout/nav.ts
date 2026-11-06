@@ -35,6 +35,7 @@ import {
   UserMinus,
   ClipboardCheck,
   ClipboardList,
+  CreditCard,
   Lightbulb,
   ShieldCheck,
   FolderKanban,
@@ -64,6 +65,8 @@ export interface NavItem {
   end?: boolean;
   /** Access-template module: HR users with a template see it only when included; others see it when included. */
   module?: string;
+  /** Package module when it differs from (or there is no) access-template module: hidden when the company's package leaves it out. */
+  plan?: string;
 }
 
 export interface NavSection {
@@ -82,40 +85,41 @@ export const NAV: NavSection[] = [
       { to: '/platform/companies', label: 'Companies', icon: Building2, roles: SA },
       { to: '/platform/audit-logs', label: 'Audit logs', icon: ScrollText, roles: SA },
       { to: '/platform/tax-years', label: 'Tax years', icon: Percent, roles: SA },
+      { to: '/platform/billing', label: 'Packages and payments', icon: CreditCard, roles: SA },
       { to: '/dashboard', label: 'Home', icon: House, roles: COMPANY_ROLES },
       { to: '/me/requests', label: 'Requests', icon: Send, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/approvals', label: 'Approvals', icon: Inbox, roles: APPROVER_ROLES },
-      { to: '/announcements', label: 'Announcements', icon: Megaphone, roles: COMPANY_ROLES },
+      { to: '/announcements', label: 'Announcements', icon: Megaphone, roles: COMPANY_ROLES, plan: 'announcements' },
     ],
   },
   {
     title: 'Time',
     icon: CalendarClock,
     items: [
-      { to: '/me/attendance', label: 'My attendance', icon: CalendarClock, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/leave', label: 'My leave', icon: CalendarDays, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/timesheets', label: 'Timesheet', icon: ClipboardList, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/projects', label: 'Projects', icon: FolderKanban, roles: COMPANY_ROLES },
-      { to: '/piece-work', label: 'Piece work', icon: Factory, roles: COMPANY_ROLES },
+      { to: '/me/attendance', label: 'My attendance', icon: CalendarClock, roles: COMPANY_ROLES, needsEmployee: true, plan: 'attendance' },
+      { to: '/me/leave', label: 'My leave', icon: CalendarDays, roles: COMPANY_ROLES, needsEmployee: true, plan: 'leave' },
+      { to: '/timesheets', label: 'Timesheet', icon: ClipboardList, roles: COMPANY_ROLES, needsEmployee: true, plan: 'projects' },
+      { to: '/projects', label: 'Projects', icon: FolderKanban, roles: COMPANY_ROLES, plan: 'projects' },
+      { to: '/piece-work', label: 'Piece work', icon: Factory, roles: COMPANY_ROLES, plan: 'piecework' },
     ],
   },
   {
     title: 'Pay',
     icon: Wallet,
     items: [
-      { to: '/me/payslips', label: 'My payslips', icon: FileText, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/expenses', label: 'My expenses', icon: Receipt, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/pay', label: 'Pay requests', icon: Banknote, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/payslips', label: 'My payslips', icon: FileText, roles: COMPANY_ROLES, needsEmployee: true, plan: 'payroll' },
+      { to: '/me/expenses', label: 'My expenses', icon: Receipt, roles: COMPANY_ROLES, needsEmployee: true, plan: 'expenses' },
+      { to: '/me/pay', label: 'Pay requests', icon: Banknote, roles: COMPANY_ROLES, needsEmployee: true, plan: 'payroll' },
     ],
   },
   {
     title: 'Growth',
     icon: Target,
     items: [
-      { to: '/performance', label: 'Performance', icon: Target, roles: COMPANY_ROLES },
-      { to: '/training', label: 'Training', icon: GraduationCap, roles: COMPANY_ROLES },
-      { to: '/recruitment', label: 'Recruitment', icon: BriefcaseBusiness, roles: COMPANY_ROLES },
-      { to: '/suggestions', label: 'Suggestions', icon: Lightbulb, roles: COMPANY_ROLES },
+      { to: '/performance', label: 'Performance', icon: Target, roles: COMPANY_ROLES, plan: 'performance' },
+      { to: '/training', label: 'Training', icon: GraduationCap, roles: COMPANY_ROLES, plan: 'training' },
+      { to: '/recruitment', label: 'Recruitment', icon: BriefcaseBusiness, roles: COMPANY_ROLES, plan: 'recruitment' },
+      { to: '/suggestions', label: 'Suggestions', icon: Lightbulb, roles: COMPANY_ROLES, plan: 'suggestions' },
     ],
   },
   {
@@ -123,9 +127,9 @@ export const NAV: NavSection[] = [
     icon: Building2,
     items: [
       { to: '/org-chart', label: 'Org chart', icon: Network, roles: COMPANY_ROLES },
-      { to: '/desks', label: 'Desks and rooms', icon: Armchair, roles: COMPANY_ROLES },
-      { to: '/travel', label: 'Travel', icon: Plane, roles: COMPANY_ROLES },
-      { to: '/helpdesk', label: 'Help desk', icon: LifeBuoy, roles: COMPANY_ROLES, needsEmployee: true, end: true },
+      { to: '/desks', label: 'Desks and rooms', icon: Armchair, roles: COMPANY_ROLES, plan: 'desks' },
+      { to: '/travel', label: 'Travel', icon: Plane, roles: COMPANY_ROLES, plan: 'travel' },
+      { to: '/helpdesk', label: 'Help desk', icon: LifeBuoy, roles: COMPANY_ROLES, needsEmployee: true, end: true, plan: 'helpdesk' },
     ],
   },
   {
@@ -134,9 +138,9 @@ export const NAV: NavSection[] = [
     items: [
       { to: '/me/profile', label: 'My profile', icon: UserCircle, roles: COMPANY_ROLES, needsEmployee: true },
       { to: '/me/documents', label: 'My documents', icon: FolderOpen, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/assets', label: 'My assets', icon: Laptop, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/clearances', label: 'Exit clearances', icon: ClipboardCheck, roles: COMPANY_ROLES, needsEmployee: true },
-      { to: '/me/resignation', label: 'Resignation', icon: DoorOpen, roles: COMPANY_ROLES, needsEmployee: true },
+      { to: '/me/assets', label: 'My assets', icon: Laptop, roles: COMPANY_ROLES, needsEmployee: true, plan: 'assets' },
+      { to: '/clearances', label: 'Exit clearances', icon: ClipboardCheck, roles: COMPANY_ROLES, needsEmployee: true, plan: 'separations' },
+      { to: '/me/resignation', label: 'Resignation', icon: DoorOpen, roles: COMPANY_ROLES, needsEmployee: true, plan: 'separations' },
     ],
   },
   {
@@ -172,17 +176,18 @@ export const NAV: NavSection[] = [
       { to: '/settings', label: 'Organization', icon: Settings2, roles: HR_ROLES, module: 'organization' },
       { to: '/settings/access', label: 'Access', icon: ShieldCheck, roles: ['CompanyAdmin'] },
       { to: '/audit-logs', label: 'Audit logs', icon: ScrollText, roles: ['CompanyAdmin'] },
+      { to: '/billing', label: 'Billing', icon: CreditCard, roles: ['CompanyAdmin'] },
     ],
   },
 ];
 
 /** Bottom tab bar on phones: the screens people open every day. */
-export const MOBILE_TABS: { to: string; label: string; icon: LucideIcon; needsEmployee?: boolean; approver?: boolean; end?: boolean }[] = [
+export const MOBILE_TABS: { to: string; label: string; icon: LucideIcon; needsEmployee?: boolean; approver?: boolean; end?: boolean; plan?: string }[] = [
   { to: '/dashboard', label: 'Home', icon: House },
-  { to: '/me/attendance', label: 'Attendance', icon: CalendarClock, needsEmployee: true },
+  { to: '/me/attendance', label: 'Attendance', icon: CalendarClock, needsEmployee: true, plan: 'attendance' },
   { to: '/me/requests', label: 'Requests', icon: Send, needsEmployee: true },
   { to: '/approvals', label: 'Approvals', icon: Inbox, approver: true },
-  { to: '/me/payslips', label: 'Pay', icon: Wallet, needsEmployee: true },
+  { to: '/me/payslips', label: 'Pay', icon: Wallet, needsEmployee: true, plan: 'payroll' },
 ];
 
 export function navFor(user: Me): NavSection[] {
@@ -192,6 +197,9 @@ export function navFor(user: Me): NavSection[] {
     // Self-service needs an employee record (the owner inside a company has none).
     items: s.items.filter((i) => {
       if (i.needsEmployee && !user.employeeId) return false;
+      // Modules outside the company's package are hidden for everyone.
+      const pkg = i.plan ?? i.module;
+      if (user.companyModules && pkg && !user.companyModules.includes(pkg)) return false;
       const mods = user.modules;
       // HR users on a template only see its modules; others see a module's screens when their template includes it.
       if (i.roles.includes(role)) return !(mods && role === 'HrManager' && i.module && !mods.includes(i.module));

@@ -90,6 +90,10 @@ builder.Services.AddScoped<CompanySetupService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<PayrollService>();
 builder.Services.AddScoped<SubscriptionService>();
+builder.Services.AddSingleton(builder.Configuration.GetSection("Payments").Get<PaymentOptions>() ?? new PaymentOptions());
+builder.Services.AddScoped<IPaymentGateway, ManualBankGateway>();
+builder.Services.AddScoped<IPaymentGateway, SafepayGateway>();
+builder.Services.AddScoped<BillingService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<TenantAccessChecker>();
 
@@ -132,6 +136,15 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("careers", http => RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(10) }));
+    // Free public calculators and certificate checks.
+    var publicPerMinute = builder.Configuration.GetValue("RateLimit:PublicPerMinute", 30);
+    o.AddPolicy("public", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = publicPerMinute, Window = TimeSpan.FromMinutes(1) }));
+    // Payment provider notifications.
+    o.AddPolicy("webhook", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1) }));
 });
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
