@@ -21,7 +21,7 @@ export function EmptyState({
 }) {
   return (
     <div className={cn('flex flex-col items-center justify-center px-6 py-14 text-center', className)}>
-      <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-accent-50 text-accent-600 ring-8 ring-accent-50/50 dark:bg-accent-500/10 dark:text-accent-300 dark:ring-accent-500/5">
+      <div className="relative mb-4 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/30 ring-8 ring-indigo-500/[0.07] dark:ring-indigo-400/[0.08]">
         <Icon className="size-5" aria-hidden="true" />
       </div>
       <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{tx(title)}</h3>

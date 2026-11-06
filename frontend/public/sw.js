@@ -1,8 +1,8 @@
 // Qaventra service worker: keeps the app shell available offline so the installed app opens without a
 // connection, and shows push notifications. API calls are never cached: HR data must always be live, so
 // offline screens show the "you're offline" bar instead of stale numbers.
-const CACHE = 'qaventra-shell-v1';
-const SHELL = ['/', '/favicon.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'qaventra-shell-v2';
+const SHELL = ['/', '/favicon.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/icon-maskable-192.png', '/icon-maskable-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

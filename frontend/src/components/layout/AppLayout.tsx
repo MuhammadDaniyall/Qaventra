@@ -54,12 +54,19 @@ export function AppLayout() {
     });
 
   return (
-    <div className="flex min-h-screen">
+    <div className="relative isolate flex min-h-screen">
+      {/* Soft brand glows behind everything, as on the sign-in page. */}
+      <div className="no-print pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-48 start-1/4 size-[560px] rounded-full bg-indigo-400/[0.13] blur-[120px] motion-safe:animate-glow dark:bg-indigo-500/[0.12]" />
+        <div className="absolute top-1/3 -end-40 size-[460px] rounded-full bg-fuchsia-400/[0.10] blur-[120px] motion-safe:animate-glow dark:bg-fuchsia-500/[0.08]" style={{ animationDelay: '-7s' }} />
+        <div className="absolute -bottom-40 -start-32 size-[420px] rounded-full bg-sky-300/[0.10] blur-[120px] dark:bg-violet-500/[0.07]" />
+      </div>
+
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'no-print sticky top-0 hidden h-screen shrink-0 border-e border-zinc-200 bg-white transition-[width] duration-200 lg:block',
-          'dark:border-zinc-800 dark:bg-zinc-900/60',
+          'no-print glass sticky top-0 hidden h-screen shrink-0 border-e border-zinc-200/70 transition-[width] duration-200 lg:block',
+          'dark:border-white/[0.06]',
           collapsed ? 'w-[68px]' : 'w-64',
         )}
       >
@@ -69,8 +76,8 @@ export function AppLayout() {
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="no-print fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
-          <div className="absolute inset-0 animate-fade-in bg-zinc-950/40" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 start-0 w-72 max-w-[85vw] animate-slide-in-left rtl:animate-slide-in-right border-e border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="absolute inset-0 animate-fade-in bg-zinc-950/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute inset-y-0 start-0 w-72 max-w-[85vw] animate-slide-in-left rtl:animate-slide-in-right rounded-e-3xl border-e border-zinc-200/80 bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-2xl dark:border-white/10 dark:bg-zinc-900">
             <Sidebar collapsed={false} onToggleCollapsed={toggleCollapsed} mobile onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
@@ -79,7 +86,7 @@ export function AppLayout() {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="no-print sticky top-0 z-30">
         {user.isActingAsOwner && <OwnerBanner companyName={user.companyName ?? 'this company'} />}
-        <header className="flex h-14 items-center gap-3 border-b border-zinc-200 bg-white/80 px-4 backdrop-blur sm:px-6 dark:border-zinc-800 dark:bg-zinc-950/80">
+        <header className="glass flex min-h-14 items-center gap-2 border-b border-zinc-200/70 ps-[max(1rem,env(safe-area-inset-left))] pe-[max(1rem,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] sm:gap-3 sm:px-6 dark:border-white/[0.06]">
           <IconButton label="Open menu" className="lg:hidden" onClick={() => setMobileOpen(true)}>
             <Menu className="size-5" />
           </IconButton>
@@ -91,7 +98,9 @@ export function AppLayout() {
               </>
             ) : (
               <>
-                <Building2 className="size-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-sm shadow-indigo-500/30">
+                  <Building2 className="size-3.5" />
+                </span>
                 <span className="truncate font-medium text-zinc-800 dark:text-zinc-200">{user.companyName}</span>
               </>
             )}
@@ -111,8 +120,8 @@ export function AppLayout() {
         </div>
         <main
           className={cn(
-            'print-reset mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8',
-            !isPlatformOwner(user) && 'pb-24 lg:pb-8',
+            'print-reset mx-auto w-full max-w-7xl min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8',
+            !isPlatformOwner(user) && 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-8',
           )}
         >
           <Outlet />
