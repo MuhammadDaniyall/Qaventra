@@ -9,7 +9,7 @@
 //   Each person gets a plan for the day, worked out again identically on every run (seeded by company + person + date):
 //   arrival (shift start with jitter, now and then late), breaks (lunch/Zuhr, Asr prayer, tea), departure (shift end with
 //   jitter, some overtime, a few leave early or forget to check out), a few absences and sick days, and daytime work
-//   spread over the hours in the office (leave, expenses, helpdesk, letters, timesheets, training, suggestions, manager
+//   spread over the hours in the office (leave, expenses, helpdesk, letters, timesheets, training and course quizzes, suggestions, manager
 //   approvals, HR work: joiners, attendance fixes, announcements, recruitment, payroll near the month end). Shifts, off
 //   days and holidays come from the roster (/attendance/roster), as on the app's Roster screen.
 //   A run does every action whose time has come and that is not done yet, then waits for the actions due in the next
@@ -1893,6 +1893,94 @@ async function handleResignations(hr, co, d, r) {
 }
 
 /** The other modules, per role: [task id, daily chance, label, action]. Kept rare: a 10–25 person company sees a few of each a week. */
+// ---------- Course quizzes and certificates (HR builds them, employees take them) ----------
+
+/** Quiz bank HR uses; employees "know" the right answer most of the time, so some pass and some do not. */
+const QUIZ_BANK = [
+  ['Which number do you call for Rescue in Punjab?', ['15', '1122', '115', '1717'], 1],
+  ['Where do you go when the fire alarm rings?', ['Stay at your desk', 'The assembly point', 'The lift', 'The roof'], 1],
+  ['Which fire extinguisher is used on electrical fires?', ['Water', 'CO2', 'Foam', 'Wet cloth'], 1],
+  ['Who should you tell first about a data breach?', ['Nobody', 'Your manager and IT', 'A friend', 'Social media'], 1],
+  ['How often should you change a shared password?', ['Never', 'When asked or if it may be known', 'Every hour', 'Only after leaving'], 1],
+  ['What do you do with a suspicious email link?', ['Click it', 'Report it to IT', 'Forward it to everyone', 'Reply asking'], 1],
+  ['Harassment at work should be reported to…', ['No one', 'The inquiry committee or HR', 'Only friends', 'Customers'], 1],
+];
+const QUIZ_REFUSALS = [/used all \d+ attempts/, /has no questions yet/, /already been submitted/, /AI did not answer/, /Add a course description/,
+  /AI allowance/, /People have taken this quiz/];
+
+/** HR keeps one quiz per active course: builds it (now and then asks the AI for a first draft), and looks at the results. */
+async function hrQuizzes(hr, co, d, r) {
+  const quizzes = (await hr.get('Open the course quizzes', '/training/quizzes')).data ?? [];
+  const programs = ((await hr.get('Open the course catalog', '/training/programs')).data ?? []).filter((x) => x.isActive);
+  const missing = programs.filter((x) => !quizzes.some((q) => q.programId === x.id));
+  if (missing.length) {
+    const program = r.pick(missing);
+    let questions = r.shuffle([...QUIZ_BANK]).slice(0, 5);
+    questions = questions.map(([text, options, correctIndex]) => ({ text, options, correctIndex }));
+    if (r.chance(0.3)) {
+      const draft = await hr.post(`Ask the AI to draft quiz questions for ${program.title}`, '/training/quizzes/draft',
+        { programId: program.id, count: 5, courseText: `${program.title}. ${program.description ?? ''} Fire safety: call Rescue 1122, leave by the stairs, meet at the assembly point, use CO2 on electrical fires. Information security: report suspicious emails and data breaches to IT and your manager.` },
+        { refuse: QUIZ_REFUSALS });
+      // HR checks the draft and keeps the questions that look right.
+      if (draft.ok && draft.data?.questions?.length) {
+        questions = [...draft.data.questions.slice(0, 3), ...questions.slice(0, 2)];
+        hr.did(`AI drafted ${draft.data.questions.length} quiz questions for ${program.title}`);
+      }
+    }
+    const res = await hr.post(`Build a quiz for ${program.title}`, '/training/quizzes', {
+      programId: program.id, title: `${program.title} check`, instructions: 'Pick one answer for each question.', passPercent: 60,
+      timeLimitMinutes: r.chance(0.5) ? 10 : null, maxAttempts: 3, isActive: true, questions,
+    }, { refuse: QUIZ_REFUSALS });
+    if (res.ok) hr.did(`Built a ${questions.length}-question quiz for ${program.title}`);
+  }
+  const taken = quizzes.filter((q) => q.takers > 0);
+  if (taken.length) {
+    const q = r.pick(taken);
+    const rows = (await hr.get(`See who passed ${q.title}`, `/training/quizzes/${q.id}/attempts`)).data ?? [];
+    hr.check('Quiz results', rows.every((x) => x.passed === (x.scorePercent >= q.passPercent && !x.timedOut)), 'GET', `/training/quizzes/${q.id}/attempts`,
+      'A result does not match its score and the pass mark.');
+  }
+}
+
+/** An employee takes a quiz they have not passed: the questions come without answers, the server marks them, a pass gives a certificate. */
+async function takeQuiz(p, co, d, r) {
+  const quizzes = ((await p.get('Open my course quizzes', '/training/quizzes')).data ?? [])
+    .filter((q) => q.isActive && !q.passed && (q.maxAttempts === 0 || q.attemptsUsed < q.maxAttempts || q.openAttemptId));
+  if (!quizzes.length) return;
+  const quiz = r.pick(quizzes);
+  const paper = await p.post(`Start the quiz ${quiz.title}`, `/training/quizzes/${quiz.id}/start`, {}, { refuse: QUIZ_REFUSALS });
+  if (!paper.ok) return;
+  p.check('Quiz questions hide the answers', paper.data.questions.every((q) => !('correctIndex' in q)), 'POST', `/training/quizzes/${quiz.id}/start`,
+    'The questions sent before submitting include the right answers.');
+  const known = new Map(QUIZ_BANK.map(([text, , right]) => [text, right]));
+  const answers = {};
+  for (const q of paper.data.questions) {
+    const right = known.get(q.text);
+    answers[q.id] = right !== undefined && r.chance(0.75) ? right : r.int(0, q.options.length - 1);
+  }
+  const res = await p.post(`Submit the quiz ${quiz.title}`, `/training/quizzes/attempts/${paper.data.attemptId}/submit`, { answers }, { refuse: QUIZ_REFUSALS });
+  if (!res.ok) return;
+  const x = res.data;
+  p.check('Quiz score', x.correct <= x.total && x.passed === (x.scorePercent >= x.passPercent && !x.timedOut), 'POST', '/training/quizzes/attempts/{id}/submit',
+    `Scored ${x.correct}/${x.total} (${x.scorePercent}%) against a pass mark of ${x.passPercent}% but passed=${x.passed}.`);
+  p.did(`Took the quiz ${quiz.title}: ${x.scorePercent}% (${x.passed ? 'passed' : 'not passed'})`);
+  if (x.certificateId) {
+    const cert = await p.get('Open my certificate', `/training/certificates/${x.certificateId}`);
+    const check = await p.get('Check the certificate on the public verify page', `/public/certificates/${x.certificateCode}`);
+    if (cert.ok && check.ok)
+      p.check('Certificate verifies', check.data.employeeName === cert.data.employeeName && Object.keys(check.data).length === 3, 'GET', '/public/certificates/{code}',
+        'The public check shows a different name or more than the name, course and date.');
+  }
+}
+
+/** Someone looks up their take-home pay on the free public salary tax calculator. */
+async function salaryTaxTool(p, co, d, r) {
+  const salary = r.pick([45_000, 85_000, 150_000, 320_000, 600_000]);
+  const res = await p.get(`Work out tax on Rs ${salary.toLocaleString('en-PK')} a month`, `/public/tools/salary-tax?monthlySalary=${salary}`);
+  if (res.ok) p.check('Salary tax calculator', res.data.monthlyTakeHome === salary - res.data.monthlyTax, 'GET', '/public/tools/salary-tax',
+    'Take-home pay is not salary minus tax.');
+}
+
 const EMPLOYEE_MODULES = [
   ['pay-request', 0.04, 'Claim overtime or ask for an advance', payRequest],
   ['loan', 0.012, 'Apply for a loan', requestLoan],
@@ -1906,6 +1994,8 @@ const EMPLOYEE_MODULES = [
   ['travel', 0.02, 'Ask to travel', requestTravel],
   ['asset', 0.025, 'Ask for an asset', requestAsset],
   ['desk', 0.08, 'Book a desk', bookDesk],
+  ['quiz', 0.08, 'Take a course quiz', takeQuiz],
+  ['salary-tax-tool', 0.02, 'Use the free salary tax calculator', salaryTaxTool],
   ['fund', 0.008, 'Withdraw from the provident fund', withdrawFund],
   ['profile-change', 0.015, 'Ask to update my profile', requestProfileChange],
   ['document', 0.025, 'Upload a document to my file', uploadDocument],
@@ -1933,6 +2023,7 @@ const HR_MODULES = [
   ['look-around', 0.3, 'Who is in, trends and document storage', lookAround],
   ['resignations', 0.3, 'Resignations waiting for HR', handleResignations],
   ['ai-team', 0.6, 'AI Team: run a robot and decide its proposals', aiTeam],
+  ['quizzes', 0.3, 'Build course quizzes and look at the results', hrQuizzes],
   ['ai-report', 0.3, 'Ask for a report in plain words', askReport],
   ['policy-question', 0.1, 'Ask about company policy', askPolicy],
 ];
