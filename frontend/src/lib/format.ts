@@ -7,9 +7,24 @@ const MONTHS_LONG = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-export function formatCurrency(value: number | null | undefined): string {
+const western = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 });
+let currency = 'PKR';
+
+/** The company's payroll currency (PKR, AED, SAR); set from the signed-in user. */
+export function setCurrency(code: string | null | undefined) {
+  currency = code || 'PKR';
+}
+
+/** "PKR", "AED" or "SAR" for labels such as "Basic salary (AED / month)". */
+export function currencyCode(): string {
+  return currency;
+}
+
+/** Rs 12,50,000 for Pakistan; AED 12,500.50 / SAR 12,500 in the Gulf. */
+export function formatCurrency(value: number | null | undefined, code: string = currency): string {
   if (value == null) return '—';
-  return `${value < 0 ? '-' : ''}Rs ${lakh.format(Math.abs(value))}`;
+  const sign = value < 0 ? '-' : '';
+  return code === 'PKR' ? `${sign}Rs ${lakh.format(Math.abs(value))}` : `${sign}${code} ${western.format(Math.abs(value))}`;
 }
 
 export function formatNumber(value: number | null | undefined): string {

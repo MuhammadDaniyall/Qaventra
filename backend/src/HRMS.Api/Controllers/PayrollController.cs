@@ -20,7 +20,7 @@ public record PayrollRunDto(
     int Employees, decimal TotalGross, decimal TotalDeductions, decimal TotalNet, DateTime? SubmittedAtUtc, string? ApprovedByName, DateTime? ApprovedAtUtc,
     string? ApprovalNote, DateTime? DisbursedAtUtc, string? DisbursedVia, int Held,
     PayFrequency Frequency = PayFrequency.Monthly, DateOnly PeriodStart = default, DateOnly PeriodEnd = default, string Label = "",
-    RecordStampsDto? Stamps = null);
+    RecordStampsDto? Stamps = null, string Currency = "PKR", string PayrollCountry = "PK");
 
 /// <summary>A weekly, bi-weekly or semi-monthly period: any day inside it picks it.</summary>
 public record ProcessPeriodRequest(PayFrequency Frequency, DateOnly Date);
@@ -45,7 +45,8 @@ public record PayslipDto(
     string EmployeeCode, string EmployeeName, string? Department, string? Designation, string? Cnic, string? BankName, string? BankAccount,
     int DaysInMonth, decimal UnpaidDays, decimal PaidDays,
     decimal GrossEarnings, decimal TaxableIncome, decimal IncomeTax, decimal EobiEmployee, decimal EobiEmployer,
-    decimal OtherDeductions, decimal NetPay, List<PayslipLineDto> Lines, string? Label = null);
+    decimal OtherDeductions, decimal NetPay, List<PayslipLineDto> Lines, string? Label = null,
+    string Currency = "PKR", string PayrollCountry = "PK", decimal SocialInsuranceEmployee = 0, decimal SocialInsuranceEmployer = 0, string? Iban = null);
 
 public record PayrollSettingsDto(
     [Range(0, 1_000_000)] decimal EobiEmployeeContribution, [Range(0, 1_000_000)] decimal EobiEmployerContribution, bool DeductAbsentDays,
@@ -56,7 +57,18 @@ public record PayrollSettingsDto(
     bool GratuityOnGross = false, [Range(0, 50)] decimal SocialSecurityPercent = 0, [Range(0, 10_000_000)] decimal? SocialSecurityWageCeiling = null,
     [Range(0, 5)] decimal HolidayOvertimeMultiplier = 2m, [Range(0, 5)] decimal OffDayOvertimeMultiplier = 2m, [Range(0, 480)] int OvertimeMinMinutes = 0,
     [Range(0, 120)] int OvertimeRoundMinutes = 0, bool VpsEnabled = false, [Range(0, 100)] decimal VpsCreditCapPercent = 20m,
-    DayOfWeek PayWeekStartsOn = DayOfWeek.Monday, DateOnly? BiWeeklyAnchor = null);
+    DayOfWeek PayWeekStartsOn = DayOfWeek.Monday, DateOnly? BiWeeklyAnchor = null,
+    [RegularExpression("^(PK|AE|SA)$", ErrorMessage = "Payroll country must be PK, AE or SA.")] string PayrollCountry = "PK",
+    [RegularExpression("^[A-Z]{3}$", ErrorMessage = "Currency must be a 3-letter code such as PKR, AED or SAR.")] string? Currency = null,
+    [Range(0, 30)] decimal GosiAnnuityEmployeePercent = 9m, [Range(0, 30)] decimal GosiAnnuityEmployerPercent = 9m,
+    [Range(0, 10)] decimal GosiSanedEmployeePercent = 0.75m, [Range(0, 10)] decimal GosiSanedEmployerPercent = 0.75m,
+    [Range(0, 10)] decimal GosiHazardEmployerPercent = 2m, [Range(0, 1_000_000)] decimal GosiWageFloor = 1500m, [Range(0, 1_000_000)] decimal GosiWageCeiling = 45000m,
+    [Range(0, 5)] decimal GosiNewEntrantStepPercent = 0.5m, [Range(0, 30)] decimal GosiNewEntrantMaxPercent = 11m,
+    [Range(0, 30)] decimal PensionEmployeePercent = 11m, [Range(0, 30)] decimal PensionEmployerPercent = 12.5m,
+    [Range(0, 1_000_000)] decimal PensionWageFloor = 3000m, [Range(0, 1_000_000)] decimal PensionWageCeiling = 70000m, bool PensionOnGross = true,
+    GratuityWage GulfGratuityWage = GratuityWage.Basic,
+    [StringLength(20)] string? WpsEmployerId = null, [StringLength(20)] string? WpsBankRoutingCode = null,
+    [StringLength(34)] string? WpsEmployerIban = null, [StringLength(20)] string? WpsAgentId = null);
 
 [ApiController]
 [Route("api/payroll")]
@@ -147,6 +159,46 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         return NoContent();
     }
 
+    /// <summary>
+    /// WPS salary file of a finalized UAE or Saudi run: the UAE SIF (EDR lines + SCR) or the Saudi bank / Mudad CSV.
+    /// People paid in cash or by cheque are left out.
+    /// </summary>
+    [HttpGet("runs/{id:guid}/wps"), Authorize(Policy = Policies.Hr)]
+    public async Task<IActionResult> WpsFile(Guid id, [FromServices] TenantClock clock)
+    {
+        var run = await db.PayrollRuns.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id) ?? throw new NotFoundException("Payroll run");
+        if (run.Status != PayrollRunStatus.Finalized)
+            throw new DomainException("Finalize the payroll before downloading the WPS file.");
+        if (run.PayrollCountry is not (PayrollRegime.Uae or PayrollRegime.Saudi))
+            throw new DomainException("WPS files are for UAE and Saudi payroll.");
+        var s = await db.PayrollSettings.AsNoTracking().FirstOrDefaultAsync() ?? new PayrollSettings();
+        if (string.IsNullOrWhiteSpace(s.WpsEmployerId))
+            throw new DomainException("Enter the employer establishment ID in payroll settings first.");
+        var slips = await db.Payslips.AsNoTracking().Include(p => p.Lines).Include(p => p.Employee)
+            .Where(p => p.PayrollRunId == id && p.NetPay > 0 && p.Employee!.PaymentMethod == PaymentMethod.BankTransfer)
+            .OrderBy(p => p.Employee!.EmployeeCode).ToListAsync();
+        var uae = run.PayrollCountry == PayrollRegime.Uae;
+        var missing = slips.Where(p => string.IsNullOrWhiteSpace(p.Employee!.Iban) || string.IsNullOrWhiteSpace(uae ? p.Employee.LabourCardNo : p.Employee.IqamaNo))
+            .Select(p => p.Employee!.EmployeeCode).ToList();
+        if (missing.Count > 0)
+            throw new DomainException($"Add the IBAN and {(uae ? "labour card (MOHRE person ID)" : "Iqama / national ID")} for: {string.Join(", ", missing.Take(20))}.");
+        var lines = slips.Select(p =>
+        {
+            var earn = p.Lines.Where(l => l.Kind == SalaryComponentKind.Earning).ToList();
+            var basic = earn.Where(l => l.Name == "Basic Salary").Sum(l => l.Amount);
+            var housing = earn.Where(l => PayrollRegime.IsHousing(l.Name)).Sum(l => l.Amount);
+            // SIF: fixed = regular salary after deductions; variable = this period's one-off pay (overtime, piece work, expenses).
+            var oneOff = Math.Max(0, Math.Min(p.NetPay, earn.Where(l => l.Name.StartsWith("Overtime") || l.Name == "Expense reimbursement" || l.Name.StartsWith("Piece work")).Sum(l => l.Amount)));
+            return new WpsLine(p.Employee!.EmployeeCode, p.Employee.FullName, uae ? p.Employee.LabourCardNo : p.Employee.IqamaNo, p.Employee.BankBranchCode,
+                p.Employee.Iban, p.NetPay - oneOff, oneOff, p.NetPay, basic, housing, p.GrossEarnings - basic - housing, p.GrossEarnings - p.NetPay, (int)Math.Ceiling(p.UnpaidDays));
+        }).ToList();
+        var er = new WpsEmployer(s.WpsEmployerId, s.WpsBankRoutingCode, s.WpsEmployerIban, s.WpsAgentId, $"PAYROLL{run.PeriodEnd:yyyyMM}", run.Currency);
+        var (name, content) = uae
+            ? WpsFiles.UaeSif(er, lines, run.PeriodStart, run.PeriodEnd, await clock.LocalNowAsync())
+            : WpsFiles.SaudiCsv(er, lines, run.PeriodEnd);
+        return File(System.Text.Encoding.UTF8.GetBytes(content), uae ? "text/plain" : "text/csv", name);
+    }
+
     /// <summary>Employees see payslips only once the month is finalized.</summary>
     [HttpGet("my-payslips")]
     public async Task<List<PayslipSummaryDto>> MyPayslips()
@@ -182,7 +234,8 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
             p.DaysInMonth, p.UnpaidDays, p.PaidDays, p.GrossEarnings, p.TaxableIncome, p.IncomeTax, p.EobiEmployee, p.EobiEmployer,
             p.OtherDeductions, p.NetPay,
             p.Lines.OrderBy(l => l.Kind).Select(l => new PayslipLineDto(l.Name, l.Kind, l.Amount)).ToList(),
-            PayPeriods.Label(p.PayrollRun.Frequency, p.PayrollRun.PeriodStart, p.PayrollRun.PeriodEnd));
+            PayPeriods.Label(p.PayrollRun.Frequency, p.PayrollRun.PeriodStart, p.PayrollRun.PeriodEnd),
+            p.PayrollRun.Currency, p.PayrollRun.PayrollCountry, p.SocialInsuranceEmployee, p.SocialInsuranceEmployer, e.Iban);
     }
 
     /// <summary>
@@ -211,7 +264,11 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
             s.LatesPerPenalty, s.LatePenaltyDays, s.DeductHalfDays, s.RequireApproval, s.EncashOnGross,
             s.ProvidentFundEnabled, s.PfEmployeePercent, s.PfEmployerPercent, s.PfOnGross, s.PfVestingYears, s.GratuityEnabled, s.GratuityDaysPerYear,
             s.GratuityMinYears, s.GratuityOnGross, s.SocialSecurityPercent, s.SocialSecurityWageCeiling, s.HolidayOvertimeMultiplier, s.OffDayOvertimeMultiplier,
-            s.OvertimeMinMinutes, s.OvertimeRoundMinutes, s.VpsEnabled, s.VpsCreditCapPercent, s.PayWeekStartsOn, s.BiWeeklyAnchor);
+            s.OvertimeMinMinutes, s.OvertimeRoundMinutes, s.VpsEnabled, s.VpsCreditCapPercent, s.PayWeekStartsOn, s.BiWeeklyAnchor,
+            PayrollRegime.Normalize(s.PayrollCountry), s.Currency, s.GosiAnnuityEmployeePercent, s.GosiAnnuityEmployerPercent, s.GosiSanedEmployeePercent,
+            s.GosiSanedEmployerPercent, s.GosiHazardEmployerPercent, s.GosiWageFloor, s.GosiWageCeiling, s.GosiNewEntrantStepPercent, s.GosiNewEntrantMaxPercent,
+            s.PensionEmployeePercent, s.PensionEmployerPercent, s.PensionWageFloor, s.PensionWageCeiling, s.PensionOnGross, s.GulfGratuityWage,
+            s.WpsEmployerId, s.WpsBankRoutingCode, s.WpsEmployerIban, s.WpsAgentId);
     }
 
     [HttpPut("settings"), Authorize(Policy = Policies.Hr)]
@@ -251,6 +308,33 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         s.VpsCreditCapPercent = req.VpsCreditCapPercent;
         s.PayWeekStartsOn = req.PayWeekStartsOn;
         s.BiWeeklyAnchor = req.BiWeeklyAnchor;
+        // Country: changing it switches the currency to the country's own unless another one is chosen.
+        var country = PayrollRegime.Normalize(req.PayrollCountry);
+        if (country != PayrollRegime.Normalize(s.PayrollCountry) && (req.Currency is null || req.Currency == s.Currency))
+            s.Currency = PayrollRegime.DefaultCurrency(country);
+        else if (req.Currency is { } cur)
+            s.Currency = cur;
+        s.PayrollCountry = country;
+        s.GosiAnnuityEmployeePercent = req.GosiAnnuityEmployeePercent;
+        s.GosiAnnuityEmployerPercent = req.GosiAnnuityEmployerPercent;
+        s.GosiSanedEmployeePercent = req.GosiSanedEmployeePercent;
+        s.GosiSanedEmployerPercent = req.GosiSanedEmployerPercent;
+        s.GosiHazardEmployerPercent = req.GosiHazardEmployerPercent;
+        s.GosiWageFloor = req.GosiWageFloor;
+        s.GosiWageCeiling = req.GosiWageCeiling;
+        s.GosiNewEntrantStepPercent = req.GosiNewEntrantStepPercent;
+        s.GosiNewEntrantMaxPercent = req.GosiNewEntrantMaxPercent;
+        s.PensionEmployeePercent = req.PensionEmployeePercent;
+        s.PensionEmployerPercent = req.PensionEmployerPercent;
+        s.PensionWageFloor = req.PensionWageFloor;
+        s.PensionWageCeiling = req.PensionWageCeiling;
+        s.PensionOnGross = req.PensionOnGross;
+        s.GulfGratuityWage = req.GulfGratuityWage;
+        static string? T(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+        s.WpsEmployerId = T(req.WpsEmployerId);
+        s.WpsBankRoutingCode = T(req.WpsBankRoutingCode);
+        s.WpsEmployerIban = T(req.WpsEmployerIban)?.Replace(" ", "").ToUpperInvariant();
+        s.WpsAgentId = T(req.WpsAgentId);
         await db.SaveChangesAsync();
         return NoContent();
     }
@@ -270,7 +354,7 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
         r.Id, r.Year, r.Month, r.Status, r.TaxYearCode, r.ProcessedAtUtc, r.FinalizedAtUtc,
         r.Payslips.Count, r.TotalGross, r.TotalDeductions, r.TotalNet, r.SubmittedAtUtc, r.ApprovedByName, r.ApprovedAtUtc, r.ApprovalNote,
         r.DisbursedAtUtc, r.DisbursedVia, db.SalaryHolds.Count(h => h.Year == r.Year && h.Month == r.Month && h.ReleasedAtUtc == null),
-        r.Frequency, r.PeriodStart, r.PeriodEnd, "", new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy));
+        r.Frequency, r.PeriodStart, r.PeriodEnd, "", new RecordStampsDto(r.CreatedAtUtc, r.CreatedBy, r.ModifiedAtUtc, r.ModifiedBy), r.Currency, r.PayrollCountry);
 
     private static System.Linq.Expressions.Expression<Func<Payslip, PayslipSummaryDto>> SummaryDto() => p => new PayslipSummaryDto(
         p.Id, p.PayrollRun!.Year, p.PayrollRun.Month, p.PayrollRun.Status, p.EmployeeId, p.Employee!.EmployeeCode, p.Employee.FirstName + " " + p.Employee.LastName,

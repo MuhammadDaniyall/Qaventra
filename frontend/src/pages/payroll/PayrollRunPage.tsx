@@ -155,6 +155,13 @@ export function PayrollRunPage() {
                 label={f === 'oracle' ? 'Oracle JV' : 'SAP JV'}
               />
             ))}
+            {run.status === 'Finalized' && (run.payrollCountry === 'AE' || run.payrollCountry === 'SA') && (
+              <ExportButton
+                path={`/payroll/runs/${run.id}/wps`}
+                fileName={run.payrollCountry === 'AE' ? `wps-${run.year}-${String(run.month).padStart(2, '0')}.SIF` : `payroll-${run.year}-${String(run.month).padStart(2, '0')}-SA.csv`}
+                label={run.payrollCountry === 'AE' ? 'WPS file (SIF)' : 'Bank / Mudad file'}
+              />
+            )}
             {run.status !== 'Finalized' && (
               <Button variant="secondary" icon={<RefreshCw className="size-4" />} onClick={() => setReprocessOpen(true)}>
                 Reprocess

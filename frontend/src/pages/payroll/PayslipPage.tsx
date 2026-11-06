@@ -136,11 +136,16 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
         <section className="flex flex-wrap items-end justify-between gap-4 rounded-xl bg-zinc-50 p-5 dark:bg-zinc-800/50">
           <div>
             <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase dark:text-zinc-400">Net pay</p>
-            <p className="mt-1 text-4xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay)}</p>
+            <p className="mt-1 text-4xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{formatCurrency(p.netPay, p.currency)}</p>
           </div>
           <div className="text-end text-xs text-zinc-500 dark:text-zinc-400">
-            <p>Taxable income: {formatCurrency(p.taxableIncome)}</p>
-            {p.eobiEmployer > 0 && <p>Employer EOBI contribution: {formatCurrency(p.eobiEmployer)}</p>}
+            {(p.payrollCountry ?? 'PK') === 'PK' && <p>Taxable income: {formatCurrency(p.taxableIncome, p.currency)}</p>}
+            {p.eobiEmployer > 0 && <p>Employer EOBI contribution: {formatCurrency(p.eobiEmployer, p.currency)}</p>}
+            {(p.socialInsuranceEmployer ?? 0) > 0 && (
+              <p>
+                {p.payrollCountry === 'SA' ? 'Employer GOSI contribution' : 'Employer pension contribution'}: {formatCurrency(p.socialInsuranceEmployer, p.currency)}
+              </p>
+            )}
           </div>
         </section>
 

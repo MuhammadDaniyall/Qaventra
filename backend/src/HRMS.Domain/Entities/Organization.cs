@@ -169,6 +169,16 @@ public class Employee : TenantEntity
     public DateOnly? InsuranceExpiresOn { get; set; }
     public string? BankBranchCode { get; set; }
     public string? BankAccountTitle { get; set; }
+    /// <summary>International bank account number (needed for UAE and Saudi WPS salary files).</summary>
+    public string? Iban { get; set; }
+    /// <summary>UAE: 14-digit MOHRE person ID from the labour card (the WPS employee ID).</summary>
+    public string? LabourCardNo { get; set; }
+    /// <summary>Saudi: national ID (Saudis) or Iqama number (residents), 10 digits.</summary>
+    public string? IqamaNo { get; set; }
+    /// <summary>GCC citizenship as a country code (SA, AE, QA, OM, BH, KW); null for everyone else. Drives GOSI and GPSSA.</summary>
+    public string? GccNationality { get; set; }
+    /// <summary>Saudi: first registered with GOSI on or after 3 July 2024, so the new annuity rates apply.</summary>
+    public bool GosiNewEntrant { get; set; }
 
     // ---------- Company file ----------
     public Guid? DivisionId { get; set; }

@@ -43,6 +43,9 @@ export interface Me {
   modules?: string[] | null;
   /** Modules in the company's package; null = every module. */
   companyModules?: string[] | null;
+  /** Company payroll currency (PKR, AED, SAR) and country (PK, AE, SA). */
+  currency?: string;
+  payrollCountry?: string;
 }
 
 export interface Session {
@@ -697,6 +700,9 @@ export interface PayrollRun {
   periodEnd: string;
   /** "October 2026", or "Week 12–18 Oct 2026" for shorter periods. */
   label: string;
+  /** Country (PK, AE, SA) and currency the run was calculated in. */
+  currency?: string;
+  payrollCountry?: string;
   /** Null on the dashboard's last-payroll summary. */
   stamps: RecordStamps | null;
 }
@@ -770,6 +776,12 @@ export interface Payslip {
   netPay: number;
   lines: PayslipLine[];
   label?: string | null;
+  currency?: string;
+  payrollCountry?: string;
+  /** GOSI (Saudi) or GPSSA pension (UAE nationals). */
+  socialInsuranceEmployee?: number;
+  socialInsuranceEmployer?: number;
+  iban?: string | null;
 }
 
 export interface PayrollSettings {
@@ -803,7 +815,32 @@ export interface PayrollSettings {
   offDayOvertimeMultiplier?: number;
   overtimeMinMinutes?: number;
   overtimeRoundMinutes?: number;
+  payrollCountry?: PayrollCountry;
+  currency?: string | null;
+  gosiAnnuityEmployeePercent?: number;
+  gosiAnnuityEmployerPercent?: number;
+  gosiSanedEmployeePercent?: number;
+  gosiSanedEmployerPercent?: number;
+  gosiHazardEmployerPercent?: number;
+  gosiWageFloor?: number;
+  gosiWageCeiling?: number;
+  gosiNewEntrantStepPercent?: number;
+  gosiNewEntrantMaxPercent?: number;
+  pensionEmployeePercent?: number;
+  pensionEmployerPercent?: number;
+  pensionWageFloor?: number;
+  pensionWageCeiling?: number;
+  pensionOnGross?: boolean;
+  gulfGratuityWage?: GratuityWage;
+  wpsEmployerId?: string | null;
+  wpsBankRoutingCode?: string | null;
+  wpsEmployerIban?: string | null;
+  wpsAgentId?: string | null;
 }
+
+/** PK = Pakistan (default), AE = UAE, SA = Saudi Arabia. */
+export type PayrollCountry = 'PK' | 'AE' | 'SA';
+export type GratuityWage = 'Basic' | 'BasicPlusHousing' | 'Gross';
 
 // ---- Dashboard ----
 export interface NameCount {

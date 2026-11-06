@@ -1,22 +1,53 @@
-import { useState, type FormEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { payrollApi } from '../../api/payroll';
-import { ApiError, errorMessage } from '../../api/client';
-import { qk } from '../../api/keys';
-import { Button, Card, CardBody, CardHeader, ErrorState, Field, FormError, Input, PageHeader, PageSpinner, Select, Switch, useToast } from '../../components/ui';
-import { tx } from '../../lib/i18n';
-import type { PayrollSettings } from '../../types';
+import { useState, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { payrollApi } from "../../api/payroll";
+import { ApiError, errorMessage } from "../../api/client";
+import { qk } from "../../api/keys";
+import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  ErrorState,
+  Field,
+  FormError,
+  Input,
+  PageHeader,
+  PageSpinner,
+  Select,
+  Switch,
+  useToast,
+} from "../../components/ui";
+import { tx } from "../../lib/i18n";
+import { currencyCode, setCurrency } from "../../lib/format";
+import type { PayrollSettings } from "../../types";
+import {
+  COUNTRY_CURRENCY,
+  CountryCard,
+  GulfCards,
+  type GulfForm,
+} from "./GulfSettingsCards";
 
 export function PayrollSettingsPage() {
-  const settings = useQuery({ queryKey: qk.payrollSettings, queryFn: payrollApi.settings });
+  const settings = useQuery({
+    queryKey: qk.payrollSettings,
+    queryFn: payrollApi.settings,
+  });
   return (
     <>
-      <PageHeader title="Payroll settings" back={{ to: '/payroll', label: 'Payroll' }} description="Company-wide rules used when processing payroll." />
+      <PageHeader
+        title="Payroll settings"
+        back={{ to: "/payroll", label: "Payroll" }}
+        description="Company-wide rules used when processing payroll."
+      />
       {settings.isLoading ? (
         <PageSpinner />
       ) : settings.isError || !settings.data ? (
         <Card>
-          <ErrorState error={settings.error} onRetry={() => settings.refetch()} />
+          <ErrorState
+            error={settings.error}
+            onRetry={() => settings.refetch()}
+          />
         </Card>
       ) : (
         <SettingsForm key={settings.dataUpdatedAt} initial={settings.data} />
@@ -28,15 +59,29 @@ export function PayrollSettingsPage() {
 function SettingsForm({ initial }: { initial: PayrollSettings }) {
   const toast = useToast();
   const qc = useQueryClient();
-  const [employee, setEmployee] = useState(String(initial.eobiEmployeeContribution));
-  const [employer, setEmployer] = useState(String(initial.eobiEmployerContribution));
+  const [employee, setEmployee] = useState(
+    String(initial.eobiEmployeeContribution),
+  );
+  const [employer, setEmployer] = useState(
+    String(initial.eobiEmployerContribution),
+  );
   const [deductAbsent, setDeductAbsent] = useState(initial.deductAbsentDays);
-  const [overtime, setOvertime] = useState(String(initial.overtimeMultiplier ?? 1.5));
-  const [latesPer, setLatesPer] = useState(String(initial.latesPerPenalty ?? 0));
-  const [penaltyDays, setPenaltyDays] = useState(String(initial.latePenaltyDays ?? 1));
+  const [overtime, setOvertime] = useState(
+    String(initial.overtimeMultiplier ?? 1.5),
+  );
+  const [latesPer, setLatesPer] = useState(
+    String(initial.latesPerPenalty ?? 0),
+  );
+  const [penaltyDays, setPenaltyDays] = useState(
+    String(initial.latePenaltyDays ?? 1),
+  );
   const [halfDays, setHalfDays] = useState(initial.deductHalfDays ?? false);
-  const [requireApproval, setRequireApproval] = useState(initial.requireApproval ?? false);
-  const [encashOnGross, setEncashOnGross] = useState(initial.encashOnGross ?? false);
+  const [requireApproval, setRequireApproval] = useState(
+    initial.requireApproval ?? false,
+  );
+  const [encashOnGross, setEncashOnGross] = useState(
+    initial.encashOnGross ?? false,
+  );
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [x, setX] = useState({
@@ -46,26 +91,57 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
     pfOnGross: initial.pfOnGross ?? false,
     pfVestingYears: String(initial.pfVestingYears ?? 0),
     vpsEnabled: initial.vpsEnabled ?? false,
-    payWeekStartsOn: initial.payWeekStartsOn ?? 'Monday',
-    biWeeklyAnchor: initial.biWeeklyAnchor ?? '',
+    payWeekStartsOn: initial.payWeekStartsOn ?? "Monday",
+    biWeeklyAnchor: initial.biWeeklyAnchor ?? "",
     vpsCreditCapPercent: String(initial.vpsCreditCapPercent ?? 20),
     gratuityEnabled: initial.gratuityEnabled ?? false,
     gratuityDaysPerYear: String(initial.gratuityDaysPerYear ?? 30),
     gratuityMinYears: String(initial.gratuityMinYears ?? 1),
     gratuityOnGross: initial.gratuityOnGross ?? false,
     socialSecurityPercent: String(initial.socialSecurityPercent ?? 0),
-    socialSecurityWageCeiling: initial.socialSecurityWageCeiling != null ? String(initial.socialSecurityWageCeiling) : '',
+    socialSecurityWageCeiling:
+      initial.socialSecurityWageCeiling != null
+        ? String(initial.socialSecurityWageCeiling)
+        : "",
     holidayOvertimeMultiplier: String(initial.holidayOvertimeMultiplier ?? 2),
     offDayOvertimeMultiplier: String(initial.offDayOvertimeMultiplier ?? 2),
     overtimeMinMinutes: String(initial.overtimeMinMinutes ?? 0),
     overtimeRoundMinutes: String(initial.overtimeRoundMinutes ?? 0),
   });
   const setXv = (p: Partial<typeof x>) => setX((v) => ({ ...v, ...p }));
+  const country = initial.payrollCountry ?? "PK";
+  const [g, setG] = useState<GulfForm>({
+    payrollCountry: country,
+    currency: initial.currency ?? COUNTRY_CURRENCY[country],
+    gosiAnnuityEmployeePercent: String(initial.gosiAnnuityEmployeePercent ?? 9),
+    gosiAnnuityEmployerPercent: String(initial.gosiAnnuityEmployerPercent ?? 9),
+    gosiSanedEmployeePercent: String(initial.gosiSanedEmployeePercent ?? 0.75),
+    gosiSanedEmployerPercent: String(initial.gosiSanedEmployerPercent ?? 0.75),
+    gosiHazardEmployerPercent: String(initial.gosiHazardEmployerPercent ?? 2),
+    gosiWageFloor: String(initial.gosiWageFloor ?? 1500),
+    gosiWageCeiling: String(initial.gosiWageCeiling ?? 45000),
+    gosiNewEntrantStepPercent: String(initial.gosiNewEntrantStepPercent ?? 0.5),
+    gosiNewEntrantMaxPercent: String(initial.gosiNewEntrantMaxPercent ?? 11),
+    pensionEmployeePercent: String(initial.pensionEmployeePercent ?? 11),
+    pensionEmployerPercent: String(initial.pensionEmployerPercent ?? 12.5),
+    pensionWageFloor: String(initial.pensionWageFloor ?? 3000),
+    pensionWageCeiling: String(initial.pensionWageCeiling ?? 70000),
+    pensionOnGross: initial.pensionOnGross ?? true,
+    gulfGratuityWage: initial.gulfGratuityWage ?? "Basic",
+    wpsEmployerId: initial.wpsEmployerId ?? "",
+    wpsBankRoutingCode: initial.wpsBankRoutingCode ?? "",
+    wpsEmployerIban: initial.wpsEmployerIban ?? "",
+    wpsAgentId: initial.wpsAgentId ?? "",
+  });
+  const setGv = (p: Partial<GulfForm>) => setG((v) => ({ ...v, ...p }));
+  // Pakistan-only items (EOBI, provident fund, VPS, PESSI, gratuity fund) are hidden for UAE and Saudi payroll.
+  const pk = g.payrollCountry === "PK";
 
   const save = useMutation({
     mutationFn: (b: PayrollSettings) => payrollApi.saveSettings(b),
-    onSuccess: () => {
-      toast.success('Payroll settings saved');
+    onSuccess: (_, b) => {
+      setCurrency(b.currency);
+      toast.success("Payroll settings saved");
       qc.invalidateQueries({ queryKey: qk.payrollSettings });
     },
     onError: (err) => {
@@ -80,14 +156,19 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
     const a = Number(employee);
     const b = Number(employer);
     const fe: Record<string, string> = {};
-    if (employee === '' || !Number.isFinite(a) || a < 0) fe.eobiEmployeeContribution = 'Enter an amount of 0 or more.';
-    if (employer === '' || !Number.isFinite(b) || b < 0) fe.eobiEmployerContribution = 'Enter an amount of 0 or more.';
+    if (employee === "" || !Number.isFinite(a) || a < 0)
+      fe.eobiEmployeeContribution = "Enter an amount of 0 or more.";
+    if (employer === "" || !Number.isFinite(b) || b < 0)
+      fe.eobiEmployerContribution = "Enter an amount of 0 or more.";
     const ot = Number(overtime);
-    if (overtime === '' || !Number.isFinite(ot) || ot < 0 || ot > 5) fe.overtimeMultiplier = 'Between 0 and 5 (e.g. 1.5 or 2).';
+    if (overtime === "" || !Number.isFinite(ot) || ot < 0 || ot > 5)
+      fe.overtimeMultiplier = "Between 0 and 5 (e.g. 1.5 or 2).";
     const lp = Number(latesPer);
     const pd = Number(penaltyDays);
-    if (!Number.isInteger(lp) || lp < 0 || lp > 31) fe.latesPerPenalty = 'A whole number from 0 to 31.';
-    if (!Number.isFinite(pd) || pd < 0 || pd > 5) fe.latePenaltyDays = 'Between 0 and 5 (e.g. 0.5 or 1).';
+    if (!Number.isInteger(lp) || lp < 0 || lp > 31)
+      fe.latesPerPenalty = "A whole number from 0 to 31.";
+    if (!Number.isFinite(pd) || pd < 0 || pd > 5)
+      fe.latePenaltyDays = "Between 0 and 5 (e.g. 0.5 or 1).";
     setFieldErrors(fe);
     if (Object.keys(fe).length) return;
     save.mutate({
@@ -114,26 +195,75 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
       gratuityMinYears: Number(x.gratuityMinYears) || 0,
       gratuityOnGross: x.gratuityOnGross,
       socialSecurityPercent: Number(x.socialSecurityPercent) || 0,
-      socialSecurityWageCeiling: x.socialSecurityWageCeiling ? Number(x.socialSecurityWageCeiling) : null,
+      socialSecurityWageCeiling: x.socialSecurityWageCeiling
+        ? Number(x.socialSecurityWageCeiling)
+        : null,
       holidayOvertimeMultiplier: Number(x.holidayOvertimeMultiplier) || 0,
       offDayOvertimeMultiplier: Number(x.offDayOvertimeMultiplier) || 0,
       overtimeMinMinutes: Number(x.overtimeMinMinutes) || 0,
       overtimeRoundMinutes: Number(x.overtimeRoundMinutes) || 0,
+      payrollCountry: g.payrollCountry,
+      currency: g.currency,
+      gosiAnnuityEmployeePercent: Number(g.gosiAnnuityEmployeePercent) || 0,
+      gosiAnnuityEmployerPercent: Number(g.gosiAnnuityEmployerPercent) || 0,
+      gosiSanedEmployeePercent: Number(g.gosiSanedEmployeePercent) || 0,
+      gosiSanedEmployerPercent: Number(g.gosiSanedEmployerPercent) || 0,
+      gosiHazardEmployerPercent: Number(g.gosiHazardEmployerPercent) || 0,
+      gosiWageFloor: Number(g.gosiWageFloor) || 0,
+      gosiWageCeiling: Number(g.gosiWageCeiling) || 0,
+      gosiNewEntrantStepPercent: Number(g.gosiNewEntrantStepPercent) || 0,
+      gosiNewEntrantMaxPercent: Number(g.gosiNewEntrantMaxPercent) || 0,
+      pensionEmployeePercent: Number(g.pensionEmployeePercent) || 0,
+      pensionEmployerPercent: Number(g.pensionEmployerPercent) || 0,
+      pensionWageFloor: Number(g.pensionWageFloor) || 0,
+      pensionWageCeiling: Number(g.pensionWageCeiling) || 0,
+      pensionOnGross: g.pensionOnGross,
+      gulfGratuityWage: g.gulfGratuityWage,
+      wpsEmployerId: g.wpsEmployerId || null,
+      wpsBankRoutingCode: g.wpsBankRoutingCode || null,
+      wpsEmployerIban: g.wpsEmployerIban || null,
+      wpsAgentId: g.wpsAgentId || null,
     });
   };
 
   return (
     <form onSubmit={submit} noValidate>
-      <Card className="max-w-2xl">
-        <CardHeader title="EOBI & attendance" description="EOBI applies to employees whose salary has EOBI turned on." />
+      <CountryCard g={g} set={setGv} />
+      <Card className="mt-6 max-w-2xl">
+        <CardHeader
+          title={pk ? "EOBI & attendance" : "Attendance"}
+          description={
+            pk
+              ? "EOBI applies to employees whose salary has EOBI turned on."
+              : "Absences, late arrivals and approvals."
+          }
+        />
         <CardBody className="space-y-5">
           <FormError message={error} />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="EOBI employee share (PKR / month)" error={fieldErrors.eobiEmployeeContribution}>
-              <Input type="number" min={0} inputMode="numeric" value={employee} onChange={(e) => setEmployee(e.target.value)} />
+          <div className={pk ? "grid gap-4 sm:grid-cols-2" : "hidden"}>
+            <Field
+              label="EOBI employee share (PKR / month)"
+              error={fieldErrors.eobiEmployeeContribution}
+            >
+              <Input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={employee}
+                onChange={(e) => setEmployee(e.target.value)}
+              />
             </Field>
-            <Field label="EOBI employer share (PKR / month)" error={fieldErrors.eobiEmployerContribution}>
-              <Input type="number" min={0} inputMode="numeric" value={employer} onChange={(e) => setEmployer(e.target.value)} />
+            <Field
+              label="EOBI employer share (PKR / month)"
+              error={fieldErrors.eobiEmployerContribution}
+            >
+              <Input
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={employer}
+                onChange={(e) => setEmployer(e.target.value)}
+              />
             </Field>
           </div>
           <Field
@@ -141,7 +271,15 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
             hint="Hourly basic = basic salary / 30 / 8. Common values: 1.5, or 2 under the Factories Act."
             error={fieldErrors.overtimeMultiplier}
           >
-            <Input type="number" min={0} max={5} step="0.25" value={overtime} onChange={(e) => setOvertime(e.target.value)} className="max-w-32" />
+            <Input
+              type="number"
+              min={0}
+              max={5}
+              step="0.25"
+              value={overtime}
+              onChange={(e) => setOvertime(e.target.value)}
+              className="max-w-32"
+            />
           </Field>
           <Switch
             checked={deductAbsent}
@@ -150,16 +288,36 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
             description="Working days without attendance or approved paid leave are unpaid."
           />
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Late arrival penalty</p>
-            <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">Shown as its own deduction on the payslip. Set late arrivals to 0 to switch it off.</p>
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+              Late arrival penalty
+            </p>
+            <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+              Shown as its own deduction on the payslip. Set late arrivals to 0
+              to switch it off.
+            </p>
             <div className="flex flex-wrap items-end gap-3 text-sm text-zinc-700 dark:text-zinc-300">
               <span className="pb-2">Every</span>
               <Field label="Late arrivals" error={fieldErrors.latesPerPenalty}>
-                <Input type="number" min={0} max={31} value={latesPer} onChange={(e) => setLatesPer(e.target.value)} className="w-24" />
+                <Input
+                  type="number"
+                  min={0}
+                  max={31}
+                  value={latesPer}
+                  onChange={(e) => setLatesPer(e.target.value)}
+                  className="w-24"
+                />
               </Field>
               <span className="pb-2">deduct</span>
               <Field label="Days of pay" error={fieldErrors.latePenaltyDays}>
-                <Input type="number" min={0} max={5} step="0.5" value={penaltyDays} onChange={(e) => setPenaltyDays(e.target.value)} className="w-24" />
+                <Input
+                  type="number"
+                  min={0}
+                  max={5}
+                  step="0.5"
+                  value={penaltyDays}
+                  onChange={(e) => setPenaltyDays(e.target.value)}
+                  className="w-24"
+                />
               </Field>
             </div>
           </div>
@@ -184,7 +342,10 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
         </CardBody>
       </Card>
       <Card className="mt-6 max-w-2xl">
-        <CardHeader title="Overtime by day" description="Rates for overtime on holidays and days off; small claims and rounding." />
+        <CardHeader
+          title="Overtime by day"
+          description="Rates for overtime on holidays and days off; small claims and rounding."
+        />
         <CardBody className="grid gap-4 sm:grid-cols-2">
           <Field label="Holiday rate (x hourly basic)">
             <Input
@@ -193,7 +354,9 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
               max={5}
               step="0.25"
               value={x.holidayOvertimeMultiplier}
-              onChange={(e) => setXv({ holidayOvertimeMultiplier: e.target.value })}
+              onChange={(e) =>
+                setXv({ holidayOvertimeMultiplier: e.target.value })
+              }
             />
           </Field>
           <Field label="Day-off rate (x hourly basic)">
@@ -203,42 +366,99 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
               max={5}
               step="0.25"
               value={x.offDayOvertimeMultiplier}
-              onChange={(e) => setXv({ offDayOvertimeMultiplier: e.target.value })}
+              onChange={(e) =>
+                setXv({ offDayOvertimeMultiplier: e.target.value })
+              }
             />
           </Field>
           <Field label="Counts from (minutes)" hint="0 = any">
-            <Input type="number" min={0} max={480} value={x.overtimeMinMinutes} onChange={(e) => setXv({ overtimeMinMinutes: e.target.value })} />
+            <Input
+              type="number"
+              min={0}
+              max={480}
+              value={x.overtimeMinMinutes}
+              onChange={(e) => setXv({ overtimeMinMinutes: e.target.value })}
+            />
           </Field>
           <Field label="Round down to (minutes)" hint="e.g. 30; 0 = exact">
-            <Input type="number" min={0} max={120} value={x.overtimeRoundMinutes} onChange={(e) => setXv({ overtimeRoundMinutes: e.target.value })} />
+            <Input
+              type="number"
+              min={0}
+              max={120}
+              value={x.overtimeRoundMinutes}
+              onChange={(e) => setXv({ overtimeRoundMinutes: e.target.value })}
+            />
           </Field>
         </CardBody>
       </Card>
-      <Card className="mt-6 max-w-2xl">
-        <CardHeader
-          title="Provident fund"
-          description="Members are ticked on each person's file. Contributions go into the fund each time payroll is finalized."
-        />
-        <CardBody className="space-y-4">
-          <Switch checked={x.providentFundEnabled} onChange={(v) => setXv({ providentFundEnabled: v })} label="Run a provident fund" />
-          {x.providentFundEnabled && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Member share (%)">
-                <Input type="number" min={0} max={50} step="0.01" value={x.pfEmployeePercent} onChange={(e) => setXv({ pfEmployeePercent: e.target.value })} />
-              </Field>
-              <Field label="Company share (%)">
-                <Input type="number" min={0} max={50} step="0.01" value={x.pfEmployerPercent} onChange={(e) => setXv({ pfEmployerPercent: e.target.value })} />
-              </Field>
-              <Field label="Company share vests after (years)" hint="0 = at once">
-                <Input type="number" min={0} max={30} value={x.pfVestingYears} onChange={(e) => setXv({ pfVestingYears: e.target.value })} />
-              </Field>
-              <div className="sm:col-span-3">
-                <Switch checked={x.pfOnGross} onChange={(v) => setXv({ pfOnGross: v })} label="On gross salary" description="Off: on basic salary." />
-              </div>
-            </div>
-          )}
-        </CardBody>
-      </Card>
+      {!pk && <GulfCards g={g} set={setGv} />}
+      {pk && (
+        <>
+          <Card className="mt-6 max-w-2xl">
+            <CardHeader
+              title="Provident fund"
+              description="Members are ticked on each person's file. Contributions go into the fund each time payroll is finalized."
+            />
+            <CardBody className="space-y-4">
+              <Switch
+                checked={x.providentFundEnabled}
+                onChange={(v) => setXv({ providentFundEnabled: v })}
+                label="Run a provident fund"
+              />
+              {x.providentFundEnabled && (
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <Field label="Member share (%)">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={50}
+                      step="0.01"
+                      value={x.pfEmployeePercent}
+                      onChange={(e) =>
+                        setXv({ pfEmployeePercent: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Company share (%)">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={50}
+                      step="0.01"
+                      value={x.pfEmployerPercent}
+                      onChange={(e) =>
+                        setXv({ pfEmployerPercent: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field
+                    label="Company share vests after (years)"
+                    hint="0 = at once"
+                  >
+                    <Input
+                      type="number"
+                      min={0}
+                      max={30}
+                      value={x.pfVestingYears}
+                      onChange={(e) =>
+                        setXv({ pfVestingYears: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <div className="sm:col-span-3">
+                    <Switch
+                      checked={x.pfOnGross}
+                      onChange={(v) => setXv({ pfOnGross: v })}
+                      label="On gross salary"
+                      description="Off: on basic salary."
+                    />
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        </>
+      )}
       <Card className="mt-6 max-w-2xl">
         <CardHeader
           title="Weekly and bi-weekly pay"
@@ -246,78 +466,161 @@ function SettingsForm({ initial }: { initial: PayrollSettings }) {
         />
         <CardBody className="grid gap-4 sm:grid-cols-2">
           <Field label="Pay week starts on">
-            <Select value={x.payWeekStartsOn} onChange={(e) => setXv({ payWeekStartsOn: e.target.value as NonNullable<PayrollSettings['payWeekStartsOn']> })}>
-              {(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const).map((d) => (
+            <Select
+              value={x.payWeekStartsOn}
+              onChange={(e) =>
+                setXv({
+                  payWeekStartsOn: e.target.value as NonNullable<
+                    PayrollSettings["payWeekStartsOn"]
+                  >,
+                })
+              }
+            >
+              {(
+                [
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
+                ] as const
+              ).map((d) => (
                 <option key={d} value={d}>
                   {tx(d)}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="First day of a two-week period" hint="Leave empty to count from Monday 5 January 2026">
-            <Input type="date" value={x.biWeeklyAnchor} onChange={(e) => setXv({ biWeeklyAnchor: e.target.value })} />
-          </Field>
-        </CardBody>
-      </Card>
-      <Card className="mt-6 max-w-2xl">
-        <CardHeader
-          title="Voluntary pension (VPS)"
-          description="Members and their shares are set on each person's file. The member's share is deducted and lowers their income tax (section 63); the company's share is a cost."
-        />
-        <CardBody className="space-y-4">
-          <Switch checked={x.vpsEnabled} onChange={(v) => setXv({ vpsEnabled: v })} label="Deduct voluntary pension" />
-          {x.vpsEnabled && (
-            <Field label="Tax credit on up to (% of taxable pay)" hint="The law allows 20%" className="max-w-xs">
-              <Input type="number" min={0} max={100} step="0.5" value={x.vpsCreditCapPercent} onChange={(e) => setXv({ vpsCreditCapPercent: e.target.value })} />
-            </Field>
-          )}
-        </CardBody>
-      </Card>
-      <Card className="mt-6 max-w-2xl">
-        <CardHeader title="Gratuity" description="Due = salary ÷ 30 × days per year × years of service, once the minimum service is reached." />
-        <CardBody className="space-y-4">
-          <Switch checked={x.gratuityEnabled} onChange={(v) => setXv({ gratuityEnabled: v })} label="Pay gratuity" />
-          {x.gratuityEnabled && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Days of salary per year">
-                <Input type="number" min={0} max={90} value={x.gratuityDaysPerYear} onChange={(e) => setXv({ gratuityDaysPerYear: e.target.value })} />
-              </Field>
-              <Field label="Minimum service (years)">
-                <Input type="number" min={0} max={30} step="0.5" value={x.gratuityMinYears} onChange={(e) => setXv({ gratuityMinYears: e.target.value })} />
-              </Field>
-              <div className="sm:col-span-2">
-                <Switch
-                  checked={x.gratuityOnGross}
-                  onChange={(v) => setXv({ gratuityOnGross: v })}
-                  label="On gross salary"
-                  description="Off: on basic salary."
-                />
-              </div>
-            </div>
-          )}
-        </CardBody>
-      </Card>
-      <Card className="mt-6 max-w-2xl">
-        <CardHeader
-          title="Social security (PESSI / SESSI)"
-          description="Employer contribution for people with a social security number on their file. 0 turns it off."
-        />
-        <CardBody className="grid gap-4 sm:grid-cols-2">
-          <Field label="Employer contribution (% of wages)">
+          <Field
+            label="First day of a two-week period"
+            hint="Leave empty to count from Monday 5 January 2026"
+          >
             <Input
-              type="number"
-              min={0}
-              max={50}
-              step="0.01"
-              value={x.socialSecurityPercent}
-              onChange={(e) => setXv({ socialSecurityPercent: e.target.value })}
+              type="date"
+              value={x.biWeeklyAnchor}
+              onChange={(e) => setXv({ biWeeklyAnchor: e.target.value })}
             />
           </Field>
-          <Field label="Wage ceiling (PKR)" hint="Wages above this are not counted">
-            <Input type="number" min={0} value={x.socialSecurityWageCeiling} onChange={(e) => setXv({ socialSecurityWageCeiling: e.target.value })} />
-          </Field>
         </CardBody>
       </Card>
+      {pk && (
+        <>
+          <Card className="mt-6 max-w-2xl">
+            <CardHeader
+              title="Voluntary pension (VPS)"
+              description="Members and their shares are set on each person's file. The member's share is deducted and lowers their income tax (section 63); the company's share is a cost."
+            />
+            <CardBody className="space-y-4">
+              <Switch
+                checked={x.vpsEnabled}
+                onChange={(v) => setXv({ vpsEnabled: v })}
+                label="Deduct voluntary pension"
+              />
+              {x.vpsEnabled && (
+                <Field
+                  label="Tax credit on up to (% of taxable pay)"
+                  hint="The law allows 20%"
+                  className="max-w-xs"
+                >
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.5"
+                    value={x.vpsCreditCapPercent}
+                    onChange={(e) =>
+                      setXv({ vpsCreditCapPercent: e.target.value })
+                    }
+                  />
+                </Field>
+              )}
+            </CardBody>
+          </Card>
+          <Card className="mt-6 max-w-2xl">
+            <CardHeader
+              title="Gratuity"
+              description="Due = salary ÷ 30 × days per year × years of service, once the minimum service is reached."
+            />
+            <CardBody className="space-y-4">
+              <Switch
+                checked={x.gratuityEnabled}
+                onChange={(v) => setXv({ gratuityEnabled: v })}
+                label="Pay gratuity"
+              />
+              {x.gratuityEnabled && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Days of salary per year">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={90}
+                      value={x.gratuityDaysPerYear}
+                      onChange={(e) =>
+                        setXv({ gratuityDaysPerYear: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="Minimum service (years)">
+                    <Input
+                      type="number"
+                      min={0}
+                      max={30}
+                      step="0.5"
+                      value={x.gratuityMinYears}
+                      onChange={(e) =>
+                        setXv({ gratuityMinYears: e.target.value })
+                      }
+                    />
+                  </Field>
+                  <div className="sm:col-span-2">
+                    <Switch
+                      checked={x.gratuityOnGross}
+                      onChange={(v) => setXv({ gratuityOnGross: v })}
+                      label="On gross salary"
+                      description="Off: on basic salary."
+                    />
+                  </div>
+                </div>
+              )}
+            </CardBody>
+          </Card>
+          <Card className="mt-6 max-w-2xl">
+            <CardHeader
+              title="Social security (PESSI / SESSI)"
+              description="Employer contribution for people with a social security number on their file. 0 turns it off."
+            />
+            <CardBody className="grid gap-4 sm:grid-cols-2">
+              <Field label="Employer contribution (% of wages)">
+                <Input
+                  type="number"
+                  min={0}
+                  max={50}
+                  step="0.01"
+                  value={x.socialSecurityPercent}
+                  onChange={(e) =>
+                    setXv({ socialSecurityPercent: e.target.value })
+                  }
+                />
+              </Field>
+              <Field
+                label={`Wage ceiling (${currencyCode()})`}
+                hint="Wages above this are not counted"
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  value={x.socialSecurityWageCeiling}
+                  onChange={(e) =>
+                    setXv({ socialSecurityWageCeiling: e.target.value })
+                  }
+                />
+              </Field>
+            </CardBody>
+          </Card>
+        </>
+      )}
       <div className="mt-6 flex max-w-2xl justify-end">
         <Button type="submit" loading={save.isPending}>
           Save settings

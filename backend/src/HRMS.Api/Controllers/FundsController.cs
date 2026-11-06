@@ -6,6 +6,7 @@ using HRMS.Api.Services;
 using HRMS.Domain;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
+using HRMS.Domain.Services;
 using HRMS.Infrastructure.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -47,10 +48,10 @@ public class FundService(HrmsDbContext db, ICurrentUser me, TenantClock clock, A
         var people = await db.Employees.Where(e => employeeIds.Contains(e.Id))
             .Select(e => new { e.Id, Name = e.FirstName + " " + e.LastName, e.EmployeeCode, e.JoiningDate, e.LeavingDate, e.ProvidentFundMember }).ToListAsync();
         var entries = (await db.FundEntries.Where(f => employeeIds.Contains(f.EmployeeId) && f.Date <= asOf).ToListAsync()).ToLookup(f => f.EmployeeId);
-        var salaries = new Dictionary<Guid, (decimal Basic, decimal Gross)>();
+        var salaries = new Dictionary<Guid, (decimal Basic, decimal Housing, decimal Gross)>();
         foreach (var p in people)
-            if (await LetterService.CurrentSalaryAsync(db, p.Id, asOf) is { } s)
-                salaries[p.Id] = (s.Basic, s.Gross);
+            if (await LetterService.CurrentSalaryPartsAsync(db, p.Id, asOf) is { } s)
+                salaries[p.Id] = s;
         return people.Select(p =>
         {
             var mine = entries[p.Id].ToList();
@@ -67,7 +68,10 @@ public class FundService(HrmsDbContext db, ICurrentUser me, TenantClock clock, A
             var vestedBalance = vested ? balance : employeeShare + profit - withdrawn;
             var salary = salaries.GetValueOrDefault(p.Id);
             var gratuityBase = settings.GratuityOnGross ? salary.Gross : salary.Basic;
-            var accrued = settings.GratuityEnabled ? GratuityCalculator.Accrued(gratuityBase, settings.GratuityDaysPerYear, years, settings.GratuityMinYears) : 0m;
+            // UAE / Saudi: the statutory end-of-service award as if the person left today (not resigning) - the provision.
+            var accrued = !settings.IsPakistan
+                ? GulfGratuity.For(settings.PayrollCountry, LetterService.GratuityWageOf(salary, settings.GulfGratuityWage), p.JoiningDate, end, false)?.Amount ?? 0m
+                : settings.GratuityEnabled ? GratuityCalculator.Accrued(gratuityBase, settings.GratuityDaysPerYear, years, settings.GratuityMinYears) : 0m;
             var gWithdrawn = -mine.Where(x => x.Fund == FundKind.Gratuity && x.Kind is FundEntryKind.Withdrawal or FundEntryKind.Adjustment).Sum(x => x.EmployeeAmount + x.EmployerAmount);
             var gOpening = mine.Where(x => x.Fund == FundKind.Gratuity && x.Kind is FundEntryKind.Opening or FundEntryKind.Contribution).Sum(x => x.EmployeeAmount + x.EmployerAmount);
             return new FundSummaryDto(p.Id, p.Name, p.EmployeeCode, p.ProvidentFundMember, employeeShare, employerShare, profit, withdrawn, balance,

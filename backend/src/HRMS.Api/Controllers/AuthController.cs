@@ -23,7 +23,7 @@ public record SessionDto(string Token, DateTime ExpiresAtUtc, MeDto User);
 
 /// <summary>For a SuperAdmin who has opened a company, TenantId/CompanyName describe that company and IsActingAsOwner is true.</summary>
 public record MeDto(Guid Id, string Email, string FullName, UserRole Role, Guid? TenantId, string? CompanyName, Guid? EmployeeId, bool IsActingAsOwner, DateOnly? SubscriptionEndsOn, bool MustChangePassword,
-    List<string>? Modules = null, List<string>? CompanyModules = null);
+    List<string>? Modules = null, List<string>? CompanyModules = null, string Currency = "PKR", string PayrollCountry = "PK");
 
 [ApiController]
 [Route("api/auth")]

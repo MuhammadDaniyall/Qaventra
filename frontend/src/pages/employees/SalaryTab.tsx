@@ -20,7 +20,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { RecordStamp } from '../../components/RecordStamp';
-import { formatCurrency, formatDate, todayIso } from '../../lib/format';
+import { currencyCode, formatCurrency, formatDate, todayIso } from '../../lib/format';
 import type { Salary, SalaryComponent, SalaryComponentKind } from '../../types';
 
 interface Row extends Omit<SalaryComponent, 'amount'> {
@@ -128,11 +128,11 @@ function SalaryForm({ employeeId, current }: { employeeId: string; current: Sala
               </Select>
             </Field>
             {byRate ? (
-              <Field label={payBasis === 'Daily' ? 'Pay per day (PKR)' : 'Pay per hour (PKR)'} required error={fieldErrors.rate}>
+              <Field label={payBasis === 'Daily' ? `Pay per day (${currencyCode()})` : `Pay per hour (${currencyCode()})`} required error={fieldErrors.rate}>
                 <Input type="number" min={0} step="1" inputMode="numeric" value={rate} onChange={(e) => setRate(e.target.value)} />
               </Field>
             ) : (
-              <Field label="Basic salary (PKR / month)" required error={fieldErrors.basicSalary}>
+              <Field label={`Basic salary (${currencyCode()} / month)`} required error={fieldErrors.basicSalary}>
                 <Input type="number" min={0} step="1" inputMode="numeric" value={basic} onChange={(e) => setBasic(e.target.value)} />
               </Field>
             )}

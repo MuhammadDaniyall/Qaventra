@@ -239,19 +239,33 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
 
         if (s.Status == SeparationStatus.Completed)
         {
-            var frozen = SettlementCalculator.Calculate(Inputs(s, gross, lastDay, s.ExpenseReimbursement));
+            var frozen = SettlementCalculator.Calculate(Inputs(s, gross, lastDay, s.ExpenseReimbursement, s.GratuityAmount));
             return new SettlementSnapshot(gross, salary is not null, balances, [],
-                frozen with { LeaveEncashment = s.LeaveEncashmentAmount, NoticeRecovery = s.NoticeRecoveryAmount, Net = s.NetSettlement });
+                frozen with { LeaveEncashment = s.LeaveEncashmentAmount, NoticeRecovery = s.NoticeRecoveryAmount, Net = s.NetSettlement, Gratuity = s.GratuityAmount });
         }
 
+        // UAE / Saudi end-of-service gratuity is part of the settlement; Pakistan keeps its gratuity fund (withdrawn separately).
+        var gratuity = await GulfGratuityAsync(s, lastDay);
         var claims = await PayableClaims(s.EmployeeId).Select(c => new PayableClaim(c.Id, c.Title, c.Total - c.AdvanceAdjusted)).ToListAsync();
-        var result = SettlementCalculator.Calculate(Inputs(s, gross, lastDay, claims.Sum(c => c.Total)));
-        return new SettlementSnapshot(gross, salary is not null, balances, claims, result);
+        var result = SettlementCalculator.Calculate(Inputs(s, gross, lastDay, claims.Sum(c => c.Total), gratuity?.Amount ?? 0));
+        return new SettlementSnapshot(gross, salary is not null, balances, claims, result with { GratuityNote = gratuity?.Explanation });
     }
 
-    private static SettlementInput Inputs(Separation s, decimal gross, DateOnly lastDay, decimal expenses) => new(
+    private static SettlementInput Inputs(Separation s, decimal gross, DateOnly lastDay, decimal expenses, decimal gratuity) => new(
         gross, s.EncashedLeaveDays, s.NoticePeriodDays, s.NoticeDate, lastDay, s.RecoverNoticeShortfall,
-        expenses, s.OtherAdditions, s.OtherDeductions);
+        expenses, s.OtherAdditions, s.OtherDeductions, gratuity);
+
+    /// <summary>The UAE or Saudi gratuity for this exit; null under Pakistan payroll.</summary>
+    private async Task<GulfGratuityResult?> GulfGratuityAsync(Separation s, DateOnly lastDay)
+    {
+        var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
+        if (settings.IsPakistan)
+            return null;
+        var joined = await db.Employees.Where(e => e.Id == s.EmployeeId).Select(e => e.JoiningDate).FirstAsync();
+        var parts = await LetterService.CurrentSalaryPartsAsync(db, s.EmployeeId, lastDay);
+        var wage = parts is { } p ? LetterService.GratuityWageOf(p, settings.GulfGratuityWage) : 0m;
+        return GulfGratuity.For(settings.PayrollCountry, wage, joined, lastDay, s.Type == SeparationType.Resignation);
+    }
 
     /// <summary>Approved claims not yet paid, including ones sitting on a draft payroll run.</summary>
     private IQueryable<ExpenseClaim> PayableClaims(Guid employeeId) =>
@@ -283,6 +297,7 @@ public class SeparationService(HrmsDbContext db, ICurrentUser me, TenantClock cl
         s.NoticeRecoveryAmount = snapshot.Result.NoticeRecovery;
         s.ExpenseReimbursement = snapshot.Result.ExpenseReimbursement;
         s.NetSettlement = snapshot.Result.Net;
+        s.GratuityAmount = snapshot.Result.Gratuity;
         s.Status = SeparationStatus.Completed;
         s.CompletedAtUtc = clock.UtcNow;
 

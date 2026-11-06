@@ -1114,6 +1114,7 @@ async function payroll(hr, d) {
     [year, month] = [prev.getUTCFullYear(), prev.getUTCMonth() + 1];
   } else if (dom < 27 && !nextMonth) return;
   const runs = (await hr.get('Open payroll runs', '/payroll/runs')).data ?? [];
+  await gulfPayroll(hr, runs, year, month);
   const label = `${year}-${pad(month)}`;
   const existing = runs.find((x) => (x.frequency ?? 'Monthly') === 'Monthly' && x.year === year && x.month === month)
     ?? runs.find((x) => (x.frequency ?? 'Monthly') === 'Monthly' && String(x.periodStart ?? '').startsWith(label));
@@ -1126,8 +1127,24 @@ async function payroll(hr, d) {
   const run = res.data.run ?? {};
   const slips = res.data.payslips ?? [];
   const net = run.totalNet ?? slips.reduce((s, p) => s + (p.netPay ?? p.net ?? 0), 0);
-  hr.did(`Processed draft payroll for ${label}: ${slips.length} payslips, net Rs ${Math.round(net).toLocaleString('en-PK')}${res.data.warnings?.length ? `; warnings: ${res.data.warnings.join(' / ')}` : ''}`);
+  hr.did(`Processed draft payroll for ${label}: ${slips.length} payslips, net ${run.currency && run.currency !== 'PKR' ? run.currency : 'Rs'} ${Math.round(net).toLocaleString('en-PK')}${res.data.warnings?.length ? `; warnings: ${res.data.warnings.join(' / ')}` : ''}`);
   if (slips[0]) await hr.get('Open a payslip from the draft run', `/payroll/payslips/${slips[0].id}`);
+}
+
+/**
+ * UAE / Saudi companies (payroll country AE or SA): GOSI / GPSSA and end-of-service provision reports, and the WPS
+ * salary file of the latest finalized month. Pakistan companies (all current demo companies) skip this.
+ */
+async function gulfPayroll(hr, runs, year, month) {
+  const country = hr.me?.payrollCountry ?? 'PK';
+  if (country !== 'AE' && country !== 'SA') return;
+  await hr.post('Open the end-of-service provision report', '/reports/payroll.gratuityprovision', {});
+  await hr.post(`Open the ${country === 'SA' ? 'GOSI' : 'GPSSA'} contributions report`, '/reports/payroll.gulfinsurance', { year, month });
+  const done = runs.find((x) => x.status === 'Finalized' && x.payrollCountry === country);
+  if (!done) return;
+  const res = await hr.get(`Download the ${country === 'SA' ? 'bank / Mudad' : 'WPS SIF'} file`, `/payroll/runs/${done.id}/wps`,
+    { refuse: [/IBAN|labour card|Iqama|establishment ID/i] });
+  if (res.ok) hr.did(`Downloaded the WPS salary file for ${done.year}-${pad(done.month)} (${String(res.text ?? '').split('\n').filter(Boolean).length} lines)`);
 }
 
 /** Replies to and resolves tickets in the queue the agent sees; HR only takes the HR categories when an IT agent exists. */

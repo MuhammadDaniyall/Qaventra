@@ -9,7 +9,8 @@ public record SettlementInput(
     bool RecoverNoticeShortfall,
     decimal ExpenseReimbursement,
     decimal OtherAdditions,
-    decimal OtherDeductions);
+    decimal OtherDeductions,
+    decimal Gratuity = 0);
 
 public record SettlementResult(
     decimal DailyRate,
@@ -20,7 +21,9 @@ public record SettlementResult(
     decimal ExpenseReimbursement,
     decimal OtherAdditions,
     decimal OtherDeductions,
-    decimal Net);
+    decimal Net,
+    decimal Gratuity = 0,
+    string? GratuityNote = null);
 
 /// <summary>
 /// Final settlement on top of the last month's salary (which payroll pays, prorated to the leaving date).
@@ -40,7 +43,10 @@ public static class SettlementCalculator
         var shortfall = Math.Max(0, i.NoticePeriodDays - served);
         var recovery = i.RecoverNoticeShortfall ? Math.Round(daily * shortfall, 0, MidpointRounding.AwayFromZero) : 0m;
 
-        var net = encashment + i.ExpenseReimbursement + i.OtherAdditions - recovery - i.OtherDeductions;
-        return new SettlementResult(daily, encashment, served, shortfall, recovery, i.ExpenseReimbursement, i.OtherAdditions, i.OtherDeductions, net);
+        if (i.Gratuity < 0)
+            throw new ArgumentOutOfRangeException(nameof(i), "Gratuity cannot be negative.");
+        // UAE / Saudi end-of-service gratuity (0 under Pakistan payroll, whose gratuity fund is withdrawn separately).
+        var net = encashment + i.ExpenseReimbursement + i.OtherAdditions + i.Gratuity - recovery - i.OtherDeductions;
+        return new SettlementResult(daily, encashment, served, shortfall, recovery, i.ExpenseReimbursement, i.OtherAdditions, i.OtherDeductions, net, i.Gratuity);
     }
 }

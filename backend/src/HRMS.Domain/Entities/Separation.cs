@@ -42,6 +42,8 @@ public class Separation : TenantEntity
     public decimal NoticeRecoveryAmount { get; set; }
     public decimal ExpenseReimbursement { get; set; }
     public decimal NetSettlement { get; set; }
+    /// <summary>UAE / Saudi end-of-service gratuity paid in the settlement (0 under Pakistan payroll).</summary>
+    public decimal GratuityAmount { get; set; }
     public DateTime? CompletedAtUtc { get; set; }
 
     // ---------- Exit interview (template questions and panel) ----------

@@ -24,8 +24,10 @@ public class SessionService(HrmsDbContext db, JwtTokenService tokens)
         var modules = user.AccessTemplateId is { } t
             ? AccessModules.Parse(await db.AccessTemplates.IgnoreQueryFilters().Where(x => x.Id == t).Select(x => x.Modules).FirstOrDefaultAsync())
             : null;
+        var regime = tenantId is null ? null
+            : await db.PayrollSettings.IgnoreQueryFilters().Where(x => x.TenantId == tenantId).Select(x => new { x.Currency, x.PayrollCountry }).FirstOrDefaultAsync();
         return new MeDto(user.Id, user.Email, user.FullName, user.Role, tenantId, company?.Name, user.EmployeeId, acting is not null, company?.SubscriptionEndsOn,
             user.MustChangePassword && acting is null, modules,
-            AccessModules.CompanyModules(company?.EnabledModules)?.ToList());
+            AccessModules.CompanyModules(company?.EnabledModules)?.ToList(), regime?.Currency ?? "PKR", regime?.PayrollCountry ?? "PK");
     }
 }

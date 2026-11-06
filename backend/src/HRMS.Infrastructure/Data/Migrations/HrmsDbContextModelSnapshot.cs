@@ -3269,11 +3269,22 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("GccNationality")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
+
                     b.Property<int?>("Gender")
                         .HasColumnType("int");
 
+                    b.Property<bool>("GosiNewEntrant")
+                        .HasColumnType("bit");
+
                     b.Property<Guid?>("GradeId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Iban")
+                        .HasMaxLength(34)
+                        .HasColumnType("nvarchar(34)");
 
                     b.Property<DateOnly?>("InsuranceExpiresOn")
                         .HasColumnType("date");
@@ -3286,11 +3297,19 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("IqamaNo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<bool>("IsBlacklisted")
                         .HasColumnType("bit");
 
                     b.Property<DateOnly>("JoiningDate")
                         .HasColumnType("date");
+
+                    b.Property<string>("LabourCardNo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -6529,6 +6548,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)")
+                        .HasDefaultValue("PKR");
+
                     b.Property<DateTime?>("DisbursedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -6554,6 +6580,13 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<int>("Month")
                         .HasColumnType("int");
+
+                    b.Property<string>("PayrollCountry")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)")
+                        .HasDefaultValue("PK");
 
                     b.Property<DateOnly>("PeriodEnd")
                         .HasColumnType("date");
@@ -6622,6 +6655,13 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)")
+                        .HasDefaultValue("PKR");
+
                     b.Property<bool>("DeductAbsentDays")
                         .HasColumnType("bit");
 
@@ -6639,6 +6679,42 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("GosiAnnuityEmployeePercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("GosiAnnuityEmployerPercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("GosiHazardEmployerPercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("GosiNewEntrantMaxPercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("GosiNewEntrantStepPercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("GosiSanedEmployeePercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("GosiSanedEmployerPercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("GosiWageCeiling")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GosiWageFloor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("GratuityDaysPerYear")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -6652,6 +6728,9 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("GratuityOnGross")
                         .HasColumnType("bit");
+
+                    b.Property<int>("GulfGratuityWage")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("HolidayOvertimeMultiplier")
                         .HasPrecision(18, 2)
@@ -6691,6 +6770,32 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<int>("PayWeekStartsOn")
                         .HasColumnType("int");
 
+                    b.Property<string>("PayrollCountry")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)")
+                        .HasDefaultValue("PK");
+
+                    b.Property<decimal>("PensionEmployeePercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("PensionEmployerPercent")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<bool>("PensionOnGross")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("PensionWageCeiling")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PensionWageFloor")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("PfEmployeePercent")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -6728,6 +6833,22 @@ namespace HRMS.Infrastructure.Data.Migrations
 
                     b.Property<bool>("VpsEnabled")
                         .HasColumnType("bit");
+
+                    b.Property<string>("WpsAgentId")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("WpsBankRoutingCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("WpsEmployerIban")
+                        .HasMaxLength(34)
+                        .HasColumnType("nvarchar(34)");
+
+                    b.Property<string>("WpsEmployerId")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.HasKey("Id");
 
@@ -6805,6 +6926,14 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PfEmployer")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SocialInsuranceEmployee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SocialInsuranceEmployer")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -8993,6 +9122,10 @@ namespace HRMS.Infrastructure.Data.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("ExpenseReimbursement")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GratuityAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 

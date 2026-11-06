@@ -7,6 +7,7 @@ import { ACCESS_BLOCK_CODES, ApiError, errorMessage, getPlatformToken, isAccessB
 import { platformApi } from '../api/platform';
 import { Button, EmptyState, useToast } from '../components/ui';
 import type { LoginRequest, Me, Session } from '../types';
+import { setCurrency } from '../lib/format';
 
 interface AuthState {
   user: Me | null;
@@ -190,6 +191,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(session.token);
     setUser(session.user);
   }, []);
+  // Money on every screen shows the company's payroll currency (PKR, AED or SAR).
+  setCurrency(user?.currency);
   const value = useMemo(
     () => ({ user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged }),
     [user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged],

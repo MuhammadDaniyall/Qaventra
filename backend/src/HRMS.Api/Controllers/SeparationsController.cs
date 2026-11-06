@@ -56,7 +56,7 @@ public record SettlementDto(
     bool HasSalary, decimal MonthlyGross, decimal DailyRate, List<LeaveBalanceLeft> LeaveBalances, List<PayableClaim> Claims,
     decimal EncashedLeaveDays, decimal LeaveEncashment, int NoticeServedDays, int NoticeShortfallDays, bool RecoverNoticeShortfall,
     decimal NoticeRecovery, decimal ExpenseReimbursement, decimal OtherAdditions, decimal OtherDeductions, string? Note,
-    decimal Net, DateTime? SavedAtUtc);
+    decimal Net, DateTime? SavedAtUtc, decimal Gratuity = 0, string? GratuityNote = null);
 
 [ApiController]
 [Route("api/separations")]
@@ -185,7 +185,7 @@ public class SeparationsController(HrmsDbContext db, SeparationService separatio
                 snap.HasSalary, snap.MonthlyGross, r.DailyRate, snap.LeaveBalances.ToList(), snap.Claims.ToList(),
                 s.EncashedLeaveDays, r.LeaveEncashment, r.NoticeServedDays, r.NoticeShortfallDays, s.RecoverNoticeShortfall,
                 r.NoticeRecovery, r.ExpenseReimbursement, r.OtherAdditions, r.OtherDeductions, s.SettlementNote,
-                r.Net, s.SettlementSavedAtUtc);
+                r.Net, s.SettlementSavedAtUtc, r.Gratuity, r.GratuityNote);
         }
 
         return new SeparationDto(
