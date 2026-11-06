@@ -14,6 +14,8 @@ export const payrollApi = {
   undisburse: (id: string) => http.post(`/payroll/runs/${id}/undisburse`),
   myPayslips: () => http.get<PayslipSummary[]>('/payroll/my-payslips'),
   payslip: (id: string) => http.get<Payslip>(`/payroll/payslips/${id}`),
+  explainPayslip: (id: string, lang: string) =>
+    http.post<{ summary: string; points: string[]; changes: string[] }>(`/payroll/payslips/${id}/explain?lang=${lang}`),
   settings: () => http.get<PayrollSettings>('/payroll/settings'),
   saveSettings: (b: PayrollSettings) => http.put('/payroll/settings', b),
 };

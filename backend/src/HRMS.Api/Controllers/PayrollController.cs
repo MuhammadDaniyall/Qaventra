@@ -185,6 +185,24 @@ public class PayrollController(HrmsDbContext db, PayrollService payroll, ICurren
             PayPeriods.Label(p.PayrollRun.Frequency, p.PayrollRun.PeriodStart, p.PayrollRun.PeriodEnd));
     }
 
+    /// <summary>
+    /// Explains a payslip in plain words with the free AI, compared with the person's previous finalized payslip. Same
+    /// access as reading the payslip.
+    /// </summary>
+    [HttpPost("payslips/{id:guid}/explain")]
+    public async Task<AiPayslipExplain> Explain(Guid id, [FromServices] AiAssistantService ai, [FromQuery] string? lang = null)
+    {
+        var slip = await Payslip(id);
+        var cur = await db.Payslips.AsNoTracking().Where(x => x.Id == id)
+            .Select(x => new { x.EmployeeId, x.PayrollRun!.PeriodEnd, x.PayrollRun.Frequency }).FirstAsync();
+        var prevId = await db.Payslips.AsNoTracking()
+            .Where(x => x.EmployeeId == cur.EmployeeId && x.PayrollRun!.Frequency == cur.Frequency && x.PayrollRun.PeriodEnd < cur.PeriodEnd
+                        && x.PayrollRun.Status == PayrollRunStatus.Finalized)
+            .OrderByDescending(x => x.PayrollRun!.PeriodEnd).Select(x => (Guid?)x.Id).FirstOrDefaultAsync();
+        var prev = prevId is { } pid ? await Payslip(pid) : null;
+        return await ai.ExplainPayslipAsync(slip, prev, lang);
+    }
+
     [HttpGet("settings"), Authorize(Policy = Policies.Hr)]
     public async Task<PayrollSettingsDto> GetSettings()
     {

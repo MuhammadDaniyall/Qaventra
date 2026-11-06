@@ -859,6 +859,10 @@ async function social(p, r) {
     if (slips[0]) {
       const s = await p.get('Open the latest payslip', `/payroll/payslips/${slips[0].id}`);
       if (s.ok) p.did('Looked at the latest payslip');
+      if (r.chance(0.3)) {
+        const x = await p.post('Ask AI to explain my payslip', `/payroll/payslips/${slips[0].id}/explain?lang=${r.chance(0.3) ? 'ur' : 'en'}`, {});
+        if (x.ok) p.did(`Payslip explained: ${x.data.summary.slice(0, 60)}`);
+      }
     }
   }
 }

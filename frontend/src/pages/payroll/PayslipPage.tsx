@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { Printer } from 'lucide-react';
+import { Printer, Sparkles } from 'lucide-react';
+import { errorMessage } from '../../api/client';
+import { tx, useT } from '../../lib/i18n';
 import { payrollApi } from '../../api/payroll';
 import { qk } from '../../api/keys';
 import { useUser } from '../../auth/AuthContext';
@@ -31,6 +33,8 @@ export function PayslipPage() {
 }
 
 function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: string } }) {
+  const { lang } = useT();
+  const explain = useMutation({ mutationFn: () => payrollApi.explainPayslip(p.id, lang) });
   useDocumentTitle(`Payslip ${p.employeeCode} ${(p.label || monthLabel(p.year, p.month))}`);
   const earnings = p.lines.filter((l) => l.kind === 'Earning');
   // Lines already include basic salary, income tax and EOBI (employee) as separate entries.
@@ -55,11 +59,44 @@ function PayslipView({ p, back }: { p: Payslip; back: { to: string; label: strin
           title={`Payslip · ${(p.label || monthLabel(p.year, p.month))}`}
           description={p.employeeName}
           actions={
-            <Button icon={<Printer className="size-4" />} onClick={() => window.print()}>
-              Print
-            </Button>
+            <>
+              <Button variant="secondary" icon={<Sparkles className="size-4" />} loading={explain.isPending} onClick={() => explain.mutate()}>
+                Explain with AI
+              </Button>
+              <Button icon={<Printer className="size-4" />} onClick={() => window.print()}>
+                Print
+              </Button>
+            </>
           }
         />
+        {(explain.data || explain.error) && (
+          <div className="mx-auto mb-4 max-w-3xl rounded-xl border border-indigo-200/70 bg-gradient-to-br from-indigo-50 to-fuchsia-50 p-5 text-sm dark:border-indigo-400/20 dark:from-indigo-500/10 dark:to-fuchsia-500/10">
+            <p className="flex items-center gap-1.5 font-semibold text-indigo-800 dark:text-indigo-200">
+              <Sparkles className="size-4" /> {tx('Your payslip, explained')}
+            </p>
+            {explain.error ? (
+              <p className="mt-2 text-red-600 dark:text-red-400">{errorMessage(explain.error)}</p>
+            ) : (
+              explain.data && (
+                <>
+                  <p className="mt-2 leading-relaxed text-zinc-800 dark:text-zinc-200">{explain.data.summary}</p>
+                  {explain.data.changes.length > 0 && (
+                    <>
+                      <p className="mt-3 font-medium text-zinc-900 dark:text-white">{tx('What changed since last time')}</p>
+                      <ul className="mt-1 list-disc space-y-0.5 ps-5 text-zinc-700 dark:text-zinc-300">
+                        {explain.data.changes.map((c, i) => <li key={i}>{c}</li>)}
+                      </ul>
+                    </>
+                  )}
+                  <ul className="mt-3 list-disc space-y-0.5 ps-5 text-zinc-700 dark:text-zinc-300">
+                    {explain.data.points.map((c, i) => <li key={i}>{c}</li>)}
+                  </ul>
+                  <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{tx('Written by AI from the numbers above. If something looks wrong, ask HR.')}</p>
+                </>
+              )
+            )}
+          </div>
+        )}
       </div>
 
       <article className="print-area mx-auto max-w-3xl rounded-xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-10 dark:border-zinc-800 dark:bg-zinc-900">
