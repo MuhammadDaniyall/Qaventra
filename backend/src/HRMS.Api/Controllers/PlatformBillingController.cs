@@ -91,10 +91,10 @@ public class PlatformBillingController(HrmsDbContext db, BillingService billing)
 
     /// <summary>Every company's invoices; by default those waiting for a bank transfer to be checked.</summary>
     [HttpGet("invoices")]
-    public async Task<List<InvoiceDto>> Invoices([FromQuery] InvoiceStatus? status = InvoiceStatus.AwaitingApproval, [FromQuery] Guid? companyId = null)
+    public async Task<List<InvoiceDto>> Invoices([FromQuery] InvoiceStatus? status = null, [FromQuery] bool all = false, [FromQuery] Guid? companyId = null)
     {
         var q = db.TenantInvoices.AsQueryable();
-        if (status is { } s) q = q.Where(i => i.Status == s);
+        if (!all) { var s = status ?? InvoiceStatus.AwaitingApproval; q = q.Where(i => i.Status == s); }
         if (companyId is { } c) q = q.Where(i => i.TenantId == c);
         var list = await BillingController.InvoiceQuery(q.OrderByDescending(i => i.CreatedAtUtc).Take(300)).ToListAsync();
         var ids = list.Select(i => i.TenantId).Distinct().ToList();

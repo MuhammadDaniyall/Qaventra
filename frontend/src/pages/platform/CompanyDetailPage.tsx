@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
+import { CompanyPlanCard } from '../billing/BillingPages';
 import { Activity, Banknote, KeyRound, LogIn, Pencil, Power, Receipt, Trash2, UserCog, Users } from 'lucide-react';
 import { platformApi } from '../../api/platform';
 import { qk } from '../../api/keys';
@@ -98,6 +99,7 @@ export function CompanyDetailPage() {
       </div>
 
       <SubscriptionCard company={c} onRecordPayment={() => actions.run('payment', c)} onEdit={() => actions.run('edit', c)} />
+      <CompanyPlanCard companyId={c.id} />
 
       <Card className="mt-6">
         <CardHeader title="Payments" description="Subscription payments you have recorded for this company." />

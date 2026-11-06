@@ -12,7 +12,9 @@ const tabCls = 'flex flex-1 flex-col items-center justify-center gap-0.5 py-2 te
 export function MobileTabBar({ onMore }: { onMore: () => void }) {
   const user = useUser();
   const approver = isApprover(user);
-  const tabs = MOBILE_TABS.filter((t) => (!t.needsEmployee || user.employeeId) && (!t.approver || approver)).slice(0, 4);
+  const tabs = MOBILE_TABS.filter(
+    (t) => (!t.needsEmployee || user.employeeId) && (!t.approver || approver) && !(t.plan && user.companyModules && !user.companyModules.includes(t.plan)),
+  ).slice(0, 4);
 
   return (
     <nav

@@ -41,6 +41,8 @@ export interface Me {
   mustChangePassword: boolean;
   /** Access template modules; null = the role's usual access. */
   modules?: string[] | null;
+  /** Modules in the company's package; null = every module. */
+  companyModules?: string[] | null;
 }
 
 export interface Session {

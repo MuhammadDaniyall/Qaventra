@@ -36,6 +36,13 @@ const BudgetPage = lazy(() => import('./pages/budget/BudgetPage').then((m) => ({
 const PieceWorkPage = lazy(() => import('./pages/piecework/PieceWorkPage').then((m) => ({ default: m.PieceWorkPage })));
 const DesksPage = lazy(() => import('./pages/desks/DesksPage').then((m) => ({ default: m.DesksPage })));
 const ScheduledPage = lazy(() => import('./pages/scheduled/ScheduledPage').then((m) => ({ default: m.ScheduledPage })));
+const TakeQuizPage = lazy(() => import('./pages/training/QuizPages').then((m) => ({ default: m.TakeQuizPage })));
+const CertificatePage = lazy(() => import('./pages/training/QuizPages').then((m) => ({ default: m.CertificatePage })));
+const VerifyCertificatePage = lazy(() => import('./pages/training/QuizPages').then((m) => ({ default: m.VerifyCertificatePage })));
+const ToolsIndexPage = lazy(() => import('./pages/tools/ToolsPages').then((m) => ({ default: m.ToolsIndexPage })));
+const ToolPage = lazy(() => import('./pages/tools/ToolsPages').then((m) => ({ default: m.ToolPage })));
+const BillingPage = lazy(() => import('./pages/billing/BillingPages').then((m) => ({ default: m.BillingPage })));
+const PlatformBillingPage = lazy(() => import('./pages/billing/BillingPages').then((m) => ({ default: m.PlatformBillingPage })));
 const TrainingPage = lazy(() => import('./pages/training/TrainingPage').then((m) => ({ default: m.TrainingPage })));
 const SessionPage = lazy(() => import('./pages/training/SessionPage').then((m) => ({ default: m.SessionPage })));
 const TravelPage = lazy(() => import('./pages/travel/TravelPage').then((m) => ({ default: m.TravelPage })));
@@ -112,9 +119,17 @@ export default function App() {
         <Route path="/careers/status/:token" element={<CandidateStatusPage />} />
         <Route path="/careers/:company" element={<CareersPage />} />
         <Route path="/careers/:company/:job" element={<CareersPage />} />
+        {/* Free public tools and certificate checks (no sign-in). */}
+        <Route path="/tools" element={<ToolsIndexPage />} />
+        <Route path="/tools/:slug" element={<ToolPage />} />
+        <Route path="/verify/:code" element={<VerifyCertificatePage />} />
       </Route>
 
       <Route element={<RequireAuth />}>
+        {/* Printable pages, without the app's menus. */}
+        <Route element={<Lazy />}>
+          <Route path="/training/certificates/:id" element={<CertificatePage />} />
+        </Route>
         <Route element={<AppLayout />}>
           <Route element={<Lazy />}>
             {/* Platform (owner, not inside a company) */}
@@ -124,6 +139,7 @@ export default function App() {
               <Route path="/platform/companies/:id" element={<CompanyDetailPage />} />
               <Route path="/platform/audit-logs" element={<AuditLogsPage />} />
               <Route path="/platform/tax-years" element={<TaxYearsPage />} />
+              <Route path="/platform/billing" element={<PlatformBillingPage />} />
             </Route>
 
             {/* Company area */}
@@ -159,6 +175,7 @@ export default function App() {
               <Route path="/piece-work" element={<PieceWorkPage />} />
               <Route path="/training" element={<TrainingPage />} />
               <Route path="/training/sessions/:id" element={<SessionPage />} />
+              <Route path="/training/quizzes/:id/take" element={<TakeQuizPage />} />
               <Route path="/travel" element={<TravelPage />} />
               <Route path="/travel/:id" element={<TripPage />} />
               <Route path="/recruitment" element={<RecruitmentPage />} />
@@ -211,6 +228,7 @@ export default function App() {
               <Route element={<RequireRole roles={['CompanyAdmin']} />}>
                 <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="/settings/access" element={<AccessPage />} />
+                <Route path="/billing" element={<BillingPage />} />
               </Route>
             </Route>
 
