@@ -30,6 +30,9 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<Payslip> Payslips => Set<Payslip>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<TenantPayment> TenantPayments => Set<TenantPayment>();
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<TenantInvoice> TenantInvoices => Set<TenantInvoice>();
+    public DbSet<PaymentWebhookEvent> PaymentWebhookEvents => Set<PaymentWebhookEvent>();
     public DbSet<LetterTemplate> LetterTemplates => Set<LetterTemplate>();
     public DbSet<IssuedLetter> IssuedLetters => Set<IssuedLetter>();
     public DbSet<Separation> Separations => Set<Separation>();
@@ -159,6 +162,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
     public DbSet<TrainingSession> TrainingSessions => Set<TrainingSession>();
     public DbSet<TrainingEnrollment> TrainingEnrollments => Set<TrainingEnrollment>();
     public DbSet<TrainingRequest> TrainingRequests => Set<TrainingRequest>();
+    public DbSet<TrainingQuiz> TrainingQuizzes => Set<TrainingQuiz>();
+    public DbSet<TrainingQuizQuestion> TrainingQuizQuestions => Set<TrainingQuizQuestion>();
+    public DbSet<TrainingQuizAttempt> TrainingQuizAttempts => Set<TrainingQuizAttempt>();
+    public DbSet<TrainingCertificate> TrainingCertificates => Set<TrainingCertificate>();
     public DbSet<TravelReason> TravelReasons => Set<TravelReason>();
     public DbSet<TravelRequest> TravelRequests => Set<TravelRequest>();
     public DbSet<TravelLeg> TravelLegs => Set<TravelLeg>();
@@ -192,6 +199,39 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.CareersSlug).HasMaxLength(60);
             e.HasIndex(x => x.CareersSlug).IsUnique().HasFilter("[CareersSlug] IS NOT NULL");
+            e.Property(x => x.EnabledModules).HasMaxLength(1000);
+            e.HasOne<SubscriptionPlan>().WithMany().HasForeignKey(x => x.PlanId);
+        });
+
+        b.Entity<SubscriptionPlan>(e =>
+        {
+            e.HasIndex(x => x.Name).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(100);
+            e.Property(x => x.Description).HasMaxLength(1000);
+            e.Property(x => x.Modules).HasMaxLength(1000);
+        });
+
+        b.Entity<TenantInvoice>(e =>
+        {
+            e.HasIndex(x => x.Number).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Status });
+            e.HasIndex(x => new { x.Provider, x.ProviderReference });
+            e.HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId);
+            e.Property(x => x.Number).HasMaxLength(40);
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.Provider).HasMaxLength(30);
+            e.Property(x => x.ProviderReference).HasMaxLength(200);
+            e.Property(x => x.ProofFileName).HasMaxLength(260);
+            e.Property(x => x.ProofContentType).HasMaxLength(100);
+            e.Property(x => x.ReviewNote).HasMaxLength(1000);
+        });
+
+        b.Entity<PaymentWebhookEvent>(e =>
+        {
+            e.HasIndex(x => new { x.Provider, x.EventKey }).IsUnique();
+            e.Property(x => x.Provider).HasMaxLength(30);
+            e.Property(x => x.EventKey).HasMaxLength(300);
+            e.Property(x => x.Result).HasMaxLength(500);
         });
 
         b.Entity<TenantPayment>(e =>
@@ -1360,6 +1400,42 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.HasOne<Employee>().WithMany().HasForeignKey(x => x.TrainerEmployeeId);
         });
 
+        b.Entity<TrainingQuiz>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.ProgramId });
+            e.Property(x => x.Title).HasMaxLength(150);
+            e.Property(x => x.Instructions).HasMaxLength(2000);
+            e.HasOne(x => x.Program).WithMany().HasForeignKey(x => x.ProgramId);
+            e.HasMany(x => x.Questions).WithOne().HasForeignKey(x => x.QuizId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<TrainingQuizQuestion>(e =>
+        {
+            e.Property(x => x.Text).HasMaxLength(1000);
+            e.Property(x => x.OptionsJson).HasMaxLength(4000);
+        });
+
+        b.Entity<TrainingQuizAttempt>(e =>
+        {
+            e.HasIndex(x => new { x.QuizId, x.EmployeeId });
+            e.HasOne(x => x.Quiz).WithMany().HasForeignKey(x => x.QuizId);
+            e.HasOne(x => x.Employee).WithMany().HasForeignKey(x => x.EmployeeId);
+            e.Property(x => x.QuestionIdsJson).HasMaxLength(8000);
+            e.Property(x => x.AnswersJson).HasMaxLength(8000);
+        });
+
+        b.Entity<TrainingCertificate>(e =>
+        {
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.EmployeeId });
+            e.HasOne<TrainingQuizAttempt>().WithMany().HasForeignKey(x => x.AttemptId);
+            e.HasOne<Employee>().WithMany().HasForeignKey(x => x.EmployeeId);
+            e.HasOne<TrainingProgram>().WithMany().HasForeignKey(x => x.ProgramId);
+            e.Property(x => x.Code).HasMaxLength(20);
+            e.Property(x => x.EmployeeName).HasMaxLength(200);
+            e.Property(x => x.CourseTitle).HasMaxLength(150);
+        });
+
         b.Entity<TrainingEnrollment>(e =>
         {
             e.HasIndex(x => new { x.SessionId, x.EmployeeId }).IsUnique();
@@ -1567,7 +1643,7 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         || t == typeof(AttachmentContent) || t == typeof(LoanRepayment)
         || t == typeof(AnnouncementRead) || t == typeof(PollOption) || t == typeof(PollVote) || t == typeof(CustomFieldValue)
         || t == typeof(TicketComment) || t == typeof(TicketType) || t == typeof(OnboardingTemplateTask) || t == typeof(OnboardingTask) || t == typeof(ReviewItem) || t == typeof(ApplicationEvent) || t == typeof(InterviewFeedback)
-        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason)
+        || t == typeof(TravelLeg) || t == typeof(TravelExpense) || t == typeof(TrainingEnrollment) || t == typeof(TrainingQuizQuestion) || t == typeof(PieceRate) || t == typeof(BudgetPosition) || t == typeof(LeaveReason)
         || t == typeof(Dependant) || t == typeof(Qualification) || t == typeof(WorkExperience)
         || t == typeof(ProjectMember) || t == typeof(ProjectTask) || t == typeof(TimesheetLine) || t == typeof(ExpenseTypeRate)
         || t == typeof(ClearanceTemplateItem) || t == typeof(ExitQuestion) || t == typeof(InterviewQuestion);

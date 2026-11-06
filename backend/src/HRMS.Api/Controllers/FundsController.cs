@@ -1,3 +1,4 @@
+using HRMS.Domain.Services;
 using System.ComponentModel.DataAnnotations;
 using HRMS.Api.Auth;
 using HRMS.Api.Infrastructure;
@@ -60,14 +61,13 @@ public class FundService(HrmsDbContext db, ICurrentUser me, TenantClock clock, A
             var profit = pf.Where(x => x.Kind == FundEntryKind.Profit).Sum(x => x.EmployeeAmount + x.EmployerAmount);
             var withdrawn = -pf.Where(x => x.Kind is FundEntryKind.Withdrawal or FundEntryKind.Adjustment).Sum(x => x.EmployeeAmount + x.EmployerAmount);
             var end = p.LeavingDate is { } l && l < asOf ? l : asOf;
-            var years = Math.Max(0, Math.Round((end.DayNumber - p.JoiningDate.DayNumber + 1) / 365.25m, 2));
+            var years = GratuityCalculator.ServiceYears(p.JoiningDate, end);
             var vested = settings.PfVestingYears == 0 || years >= settings.PfVestingYears;
             var balance = employeeShare + employerShare + profit - withdrawn;
             var vestedBalance = vested ? balance : employeeShare + profit - withdrawn;
             var salary = salaries.GetValueOrDefault(p.Id);
             var gratuityBase = settings.GratuityOnGross ? salary.Gross : salary.Basic;
-            var accrued = settings.GratuityEnabled && years >= settings.GratuityMinYears
-                ? Math.Round(gratuityBase / 30m * settings.GratuityDaysPerYear * years, 0, MidpointRounding.AwayFromZero) : 0m;
+            var accrued = settings.GratuityEnabled ? GratuityCalculator.Accrued(gratuityBase, settings.GratuityDaysPerYear, years, settings.GratuityMinYears) : 0m;
             var gWithdrawn = -mine.Where(x => x.Fund == FundKind.Gratuity && x.Kind is FundEntryKind.Withdrawal or FundEntryKind.Adjustment).Sum(x => x.EmployeeAmount + x.EmployerAmount);
             var gOpening = mine.Where(x => x.Fund == FundKind.Gratuity && x.Kind is FundEntryKind.Opening or FundEntryKind.Contribution).Sum(x => x.EmployeeAmount + x.EmployerAmount);
             return new FundSummaryDto(p.Id, p.Name, p.EmployeeCode, p.ProvidentFundMember, employeeShare, employerShare, profit, withdrawn, balance,
