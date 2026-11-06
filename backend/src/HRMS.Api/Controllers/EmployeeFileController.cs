@@ -33,7 +33,9 @@ public record EmployeeFileDto(
     [Range(-90, 90)] double? OwnLatitude = null, [Range(-180, 180)] double? OwnLongitude = null, [Range(20, 100_000)] int? OwnRadiusMeters = null,
     PaymentMethod PaymentMethod = PaymentMethod.BankTransfer, bool ProvidentFundMember = false,
     bool VpsMember = false, [StringLength(150)] string? VpsProvider = null, [StringLength(50)] string? VpsAccountNo = null,
-    [Range(0, 50)] decimal VpsEmployeePercent = 0, [Range(0, 50)] decimal VpsEmployerPercent = 0, PayFrequency PayFrequency = PayFrequency.Monthly);
+    [Range(0, 50)] decimal VpsEmployeePercent = 0, [Range(0, 50)] decimal VpsEmployerPercent = 0, PayFrequency PayFrequency = PayFrequency.Monthly,
+    [StringLength(34)] string? Iban = null, [StringLength(20)] string? LabourCardNo = null, [StringLength(20)] string? IqamaNo = null,
+    [RegularExpression("^(SA|AE|QA|OM|BH|KW)$", ErrorMessage = "GCC nationality must be SA, AE, QA, OM, BH or KW.")] string? GccNationality = null, bool GosiNewEntrant = false);
 
 public record DependantDto(
     [Required, StringLength(150)] string Name, [Required, StringLength(50)] string Relation,
@@ -149,7 +151,8 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
             e.DivisionId, e.SubDepartmentId, e.GradeId, e.CostCenterId, e.RegionId, e.EmployeeGroupId, e.ConfirmationDate, e.ContractEndDate,
             e.PunchCode, e.ExitTypeId, e.ExitReason, e.IsBlacklisted, e.BlacklistReason,
             e.AllowWebCheckIn, e.AllowMobileCheckIn, e.CheckInAnywhere, e.AllowedIps, e.OwnLatitude, e.OwnLongitude, e.OwnRadiusMeters,
-            e.PaymentMethod, e.ProvidentFundMember, e.VpsMember, e.VpsProvider, e.VpsAccountNo, e.VpsEmployeePercent, e.VpsEmployerPercent, e.PayFrequency);
+            e.PaymentMethod, e.ProvidentFundMember, e.VpsMember, e.VpsProvider, e.VpsAccountNo, e.VpsEmployeePercent, e.VpsEmployerPercent, e.PayFrequency,
+            e.Iban, e.LabourCardNo, e.IqamaNo, e.GccNationality, e.GosiNewEntrant);
     }
 
     [HttpPut("employees/{id:guid}/file"), Authorize(Policy = Policies.Hr)]
@@ -181,6 +184,8 @@ public class EmployeeFileController(HrmsDbContext db, ICurrentUser me) : Control
         e.Ntn = T(f.Ntn); e.EobiNo = T(f.EobiNo); e.SocialSecurityNo = T(f.SocialSecurityNo);
         e.InsuranceProvider = T(f.InsuranceProvider); e.InsurancePolicyNo = T(f.InsurancePolicyNo); e.InsuranceExpiresOn = f.InsuranceExpiresOn;
         e.BankBranchCode = T(f.BankBranchCode); e.BankAccountTitle = T(f.BankAccountTitle);
+        e.Iban = T(f.Iban)?.Replace(" ", "").ToUpperInvariant(); e.LabourCardNo = T(f.LabourCardNo); e.IqamaNo = T(f.IqamaNo);
+        e.GccNationality = T(f.GccNationality); e.GosiNewEntrant = f.GosiNewEntrant;
         e.DivisionId = f.DivisionId; e.SubDepartmentId = f.SubDepartmentId; e.GradeId = f.GradeId; e.CostCenterId = f.CostCenterId;
         e.RegionId = f.RegionId; e.EmployeeGroupId = f.EmployeeGroupId;
         e.ConfirmationDate = f.ConfirmationDate; e.ContractEndDate = f.ContractEndDate; e.PunchCode = T(f.PunchCode);

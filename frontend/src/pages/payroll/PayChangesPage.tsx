@@ -33,7 +33,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { formatCurrency, formatDate, formatDateTimeUtc, monthLabel } from '../../lib/format';
+import { currencyCode, formatCurrency, formatDate, formatDateTimeUtc, monthLabel } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 
 type Tab = 'revise' | 'recurring' | 'holds' | 'encash' | 'history';
@@ -230,7 +230,7 @@ function ReviseTab({ onDone }: { onDone: () => void }) {
                         onChange={(e) => (setRows((x) => x.map((y, j) => (j === i ? { ...y, mode: e.target.value as Row['mode'] } : y))), setPreview(null))}
                       >
                         <option value="percent">Percent</option>
-                        <option value="amount">Amount (PKR)</option>
+                        <option value="amount">{`Amount (${currencyCode()})`}</option>
                       </Select>
                     </Td>
                     <Td>
@@ -421,7 +421,7 @@ function RecurringModal({ item, onClose }: { item: RecurringItem | null; onClose
         <Field label="Title" required>
           <Input value={f.title} maxLength={150} onChange={(e) => set('title', e.target.value)} placeholder="Car allowance" />
         </Field>
-        <Field label="Amount per month (PKR)" required>
+        <Field label={`Amount per month (${currencyCode()})`} required>
           <Input type="number" min={1} value={f.amount} onChange={(e) => set('amount', e.target.value)} />
         </Field>
         <Field label="Type">
@@ -568,7 +568,7 @@ function EncashTab() {
   const encash = useMutation({
     mutationFn: () => payChangesApi.encash({ employeeId: f.employeeId, leaveTypeId: f.leaveTypeId, days: Number(f.days), note: f.note.trim() || null }),
     onSuccess: (r) => {
-      toast.success(`PKR ${r.amount.toLocaleString()} added to this month's salary`);
+      toast.success(`${formatCurrency(r.amount)} added to this month's salary`);
       setF({ employeeId: '', leaveTypeId: '', days: '', note: '' });
       qc.invalidateQueries({ queryKey: qk.leave });
       qc.invalidateQueries({ queryKey: qk.pay });

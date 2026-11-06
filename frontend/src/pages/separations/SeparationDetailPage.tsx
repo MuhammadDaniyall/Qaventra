@@ -410,7 +410,8 @@ function SettlementCard({ s, st }: { s: Separation; st: Settlement }) {
   const round = (n: number) => Math.round(n);
   const encashAmount = round(st.dailyRate * (Number(encash) || 0));
   const recovery = recover ? round(st.dailyRate * st.noticeShortfallDays) : 0;
-  const net = completed ? st.net : encashAmount + st.expenseReimbursement + (Number(additions) || 0) - recovery - (Number(deductions) || 0);
+  const gratuity = st.gratuity ?? 0;
+  const net = completed ? st.net : encashAmount + st.expenseReimbursement + gratuity + (Number(additions) || 0) - recovery - (Number(deductions) || 0);
   const dirty =
     Number(encash) !== st.encashedLeaveDays ||
     recover !== st.recoverNoticeShortfall ||
@@ -537,6 +538,7 @@ function SettlementCard({ s, st }: { s: Separation; st: Settlement }) {
               amount={st.expenseReimbursement}
               sub={st.claims.length ? st.claims.map((c) => c.title).join(', ') : completed ? undefined : 'None outstanding'}
             />
+            {(gratuity > 0 || st.gratuityNote) && <Line label="End-of-service gratuity" amount={gratuity} sub={st.gratuityNote ?? undefined} />}
             <Line label="Other additions" amount={completed ? st.otherAdditions : Number(additions) || 0} />
             <Line label="Notice shortfall recovery" amount={completed ? st.noticeRecovery : recovery} negative />
             <Line label="Other deductions" amount={completed ? st.otherDeductions : Number(deductions) || 0} negative />

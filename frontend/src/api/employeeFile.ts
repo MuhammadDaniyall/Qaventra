@@ -88,6 +88,12 @@ export interface EmployeeFile {
   vpsEmployeePercent: number;
   vpsEmployerPercent: number;
   payFrequency: 'Monthly' | 'SemiMonthly' | 'BiWeekly' | 'Weekly';
+  /** Gulf payroll: IBAN, UAE labour card (MOHRE person ID), Saudi Iqama / national ID, GCC citizenship and GOSI new entrant. */
+  iban?: string | null;
+  labourCardNo?: string | null;
+  iqamaNo?: string | null;
+  gccNationality?: string | null;
+  gosiNewEntrant?: boolean;
 }
 
 export interface Dependant {

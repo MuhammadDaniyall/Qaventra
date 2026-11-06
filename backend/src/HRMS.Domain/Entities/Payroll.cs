@@ -69,6 +69,51 @@ public class PayrollSettings : TenantEntity
     public int OvertimeMinMinutes { get; set; }
     /// <summary>Hours are rounded down to this many minutes (0 = exact).</summary>
     public int OvertimeRoundMinutes { get; set; }
+
+    // ---------- Country (payroll regime) ----------
+    /// <summary>PK (default: FBR tax, EOBI, PF, VPS), AE (UAE: no tax, GPSSA, WPS SIF) or SA (Saudi: no tax, GOSI, Mudad file).</summary>
+    public string PayrollCountry { get; set; } = "PK";
+    /// <summary>Currency shown on payslips, reports and screens (PKR, AED, SAR).</summary>
+    public string Currency { get; set; } = "PKR";
+
+    // ---------- Saudi GOSI (see GosiRates for the official defaults and their source) ----------
+    public decimal GosiAnnuityEmployeePercent { get; set; } = 9m;
+    public decimal GosiAnnuityEmployerPercent { get; set; } = 9m;
+    public decimal GosiSanedEmployeePercent { get; set; } = 0.75m;
+    public decimal GosiSanedEmployerPercent { get; set; } = 0.75m;
+    public decimal GosiHazardEmployerPercent { get; set; } = 2m;
+    public decimal GosiWageFloor { get; set; } = 1500m;
+    public decimal GosiWageCeiling { get; set; } = 45000m;
+    /// <summary>July 2024 reform: yearly rise (each side) of the annuity rate for new Saudi entrants, from July 2025.</summary>
+    public decimal GosiNewEntrantStepPercent { get; set; } = 0.5m;
+    public decimal GosiNewEntrantMaxPercent { get; set; } = 11m;
+
+    // ---------- UAE pension for nationals (GPSSA; see PensionRates) ----------
+    public decimal PensionEmployeePercent { get; set; } = 11m;
+    public decimal PensionEmployerPercent { get; set; } = 12.5m;
+    public decimal PensionWageFloor { get; set; } = 3000m;
+    public decimal PensionWageCeiling { get; set; } = 70000m;
+    /// <summary>Contribution salary is the gross (true) or basic + housing (false).</summary>
+    public bool PensionOnGross { get; set; } = true;
+
+    // ---------- Gulf end-of-service gratuity ----------
+    /// <summary>Wage the UAE / Saudi gratuity is worked out on (UAE law: basic).</summary>
+    public HRMS.Domain.Services.GratuityWage GulfGratuityWage { get; set; } = HRMS.Domain.Services.GratuityWage.Basic;
+
+    // ---------- WPS salary file ----------
+    /// <summary>UAE: 13-digit MOHRE establishment ID. Saudi: Mudad / MHRSD establishment number.</summary>
+    public string? WpsEmployerId { get; set; }
+    /// <summary>UAE: the employer bank's 9-digit routing code.</summary>
+    public string? WpsBankRoutingCode { get; set; }
+    /// <summary>The paying company account.</summary>
+    public string? WpsEmployerIban { get; set; }
+    /// <summary>UAE: routing code of the WPS agent (bank or exchange house) used when an employee has none.</summary>
+    public string? WpsAgentId { get; set; }
+
+    public HRMS.Domain.Services.GosiRates Gosi => new(GosiAnnuityEmployeePercent, GosiAnnuityEmployerPercent, GosiSanedEmployeePercent, GosiSanedEmployerPercent,
+        GosiHazardEmployerPercent, GosiWageFloor, GosiWageCeiling, GosiNewEntrantStepPercent, GosiNewEntrantMaxPercent);
+    public HRMS.Domain.Services.PensionRates Pension => new(PensionEmployeePercent, PensionEmployerPercent, PensionWageFloor, PensionWageCeiling);
+    public bool IsPakistan => HRMS.Domain.Services.PayrollRegime.IsPakistan(PayrollCountry);
 }
 
 /// <summary>A Pakistani tax year (July–June) with its salaried-income slabs. Shared by all companies.</summary>
@@ -139,6 +184,9 @@ public class PayrollRun : TenantEntity
     public decimal TotalGross { get; set; }
     public decimal TotalDeductions { get; set; }
     public decimal TotalNet { get; set; }
+    /// <summary>Country and currency the run was calculated in, so old runs keep theirs if the setting changes.</summary>
+    public string PayrollCountry { get; set; } = "PK";
+    public string Currency { get; set; } = "PKR";
     public List<Payslip> Payslips { get; set; } = [];
 }
 
@@ -164,6 +212,9 @@ public class Payslip : TenantEntity
     public decimal VpsEmployer { get; set; }
     public decimal VpsTaxCredit { get; set; }
     public decimal SocialSecurityEmployer { get; set; }
+    /// <summary>Gulf social insurance: GOSI (Saudi) or GPSSA pension (UAE nationals). The employee share is also a deduction line.</summary>
+    public decimal SocialInsuranceEmployee { get; set; }
+    public decimal SocialInsuranceEmployer { get; set; }
     public decimal OtherDeductions { get; set; }
     public decimal NetPay { get; set; }
     public List<PayslipLine> Lines { get; set; } = [];

@@ -39,24 +39,28 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         var daysInMonth = pay.Days;
         var warnings = new List<string>();
 
+        var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
+        // UAE and Saudi payroll: no income tax, EOBI, PF, VPS or PESSI; GOSI or GPSSA instead.
+        var gulf = !settings.IsPakistan;
+        var country = PayrollRegime.Normalize(settings.PayrollCountry);
+
         var taxYear = await db.TaxYears.Include(t => t.Slabs)
             .Where(t => t.StartDate <= monthStart)
             .OrderByDescending(t => t.StartDate)
             .FirstOrDefaultAsync()
+            ?? (gulf ? new TaxYear { Code = "", StartDate = new DateOnly(monthStart.Year, 1, 1), EndDate = new DateOnly(monthStart.Year, 12, 31) } : null)
             ?? throw new DomainException("No tax year is configured for this period.");
         // The tax year the period falls in. With no slabs set up for it yet the latest slabs are used, but year-to-date
         // tax, months left and adjustments still follow the period's own year, not the old one.
         var yearStart = new DateOnly(taxYear.StartDate.Year, taxYear.StartDate.Month, 1);
         var taxYearCode = taxYear.Code;
-        if (monthStart > taxYear.EndDate)
+        if (!gulf && monthStart > taxYear.EndDate)
         {
             while (yearStart.AddYears(1) <= monthStart)
                 yearStart = yearStart.AddYears(1);
             taxYearCode = $"{yearStart.Year}-{(yearStart.Year + 1) % 100:D2}";
             warnings.Add($"Tax year {taxYearCode} is not set up yet, so the {taxYear.Code} slabs were used. Ask the platform owner to add {taxYearCode}, then reprocess.");
         }
-
-        var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
 
         var run = await db.PayrollRuns.Include(r => r.Payslips).FirstOrDefaultAsync(r => r.Frequency == pay.Frequency && r.PeriodStart == pay.Start);
         if (run is { Status: PayrollRunStatus.Finalized })
@@ -300,24 +304,57 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             var fundBase = (settings.PfOnGross
                 ? salary.BasicSalary + salary.Components.Where(c => c.Kind == SalaryComponentKind.Earning).Sum(c => c.Amount)
                 : salary.BasicSalary) * paidFactor;
-            var pf = settings.ProvidentFundEnabled && employee.ProvidentFundMember;
+            var pf = !gulf && settings.ProvidentFundEnabled && employee.ProvidentFundMember;
             var pfEmployee = pf ? Math.Round(fundBase * settings.PfEmployeePercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
             var pfEmployer = pf ? Math.Round(fundBase * settings.PfEmployerPercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
             if (pfEmployee > 0)
                 extras.Add(new PayItem("Provident fund", SalaryComponentKind.Deduction, pfEmployee, false));
 
             // Voluntary pension: shares of the earned basic; the member's own share is deducted and earns a tax credit.
-            var vps = settings.VpsEnabled && employee.VpsMember;
+            var vps = !gulf && settings.VpsEnabled && employee.VpsMember;
             var vpsBase = salary.BasicSalary * paidFactor;
             var vpsEmployee = vps ? Math.Round(vpsBase * employee.VpsEmployeePercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
             var vpsEmployer = vps ? Math.Round(vpsBase * employee.VpsEmployerPercent / 100m, 0, MidpointRounding.AwayFromZero) : 0m;
             if (vpsEmployee > 0)
                 extras.Add(new PayItem($"Voluntary pension ({employee.VpsProvider ?? "VPS"})", SalaryComponentKind.Deduction, vpsEmployee, false));
 
+            // Gulf social insurance on the earned basic (+ housing): GOSI for Saudi payroll, GPSSA pension for UAE nationals.
+            var (insuranceEmployee, insuranceEmployer) = (0m, 0m);
+            if (gulf)
+            {
+                var housing = salary.Components.Where(c => c.Kind == SalaryComponentKind.Earning && PayrollRegime.IsHousing(c.Name)).Sum(c => c.Amount) * paidFactor;
+                var grossPay = (salary.BasicSalary + salary.Components.Where(c => c.Kind == SalaryComponentKind.Earning).Sum(c => c.Amount)) * paidFactor;
+                var basicPay = salary.BasicSalary * paidFactor;
+                var otherGcc = employee.GccNationality is { } gcc && gcc != country;
+                if (otherGcc)
+                    warnings.Add($"{employee.EmployeeCode} {employee.FullName}: GCC national of {employee.GccNationality}; the GCC pension extension is not calculated, add it as a pay item if due.");
+                if (paidFactor > 0 && country == PayrollRegime.Saudi)
+                {
+                    var g = GosiCalculator.Calculate(settings.Gosi, basicPay, housing, employee.GccNationality == PayrollRegime.Saudi, employee.GosiNewEntrant, monthEnd, monthly ? 1m : share);
+                    insuranceEmployee = Math.Round(g.Employee, 2);
+                    insuranceEmployer = Math.Round(g.Employer, 2);
+                    if (insuranceEmployee > 0)
+                        extras.Add(new PayItem($"GOSI ({g.AnnuityPercent:0.##}% annuities + {settings.GosiSanedEmployeePercent:0.##}% SANED)", SalaryComponentKind.Deduction, insuranceEmployee, false));
+                }
+                else if (paidFactor > 0 && country == PayrollRegime.Uae)
+                {
+                    var p = PensionCalculator.Calculate(settings.Pension, settings.PensionOnGross ? grossPay : basicPay + housing,
+                        employee.GccNationality == PayrollRegime.Uae, monthly ? 1m : share);
+                    insuranceEmployee = p.Employee;
+                    insuranceEmployer = p.Employer;
+                    if (insuranceEmployee > 0)
+                        extras.Add(new PayItem($"Pension GPSSA ({settings.PensionEmployeePercent:0.##}%)", SalaryComponentKind.Deduction, insuranceEmployee, false));
+                }
+            }
+
             // Regular pay is annualised; one-off earnings add their own extra tax once, in the period they are paid.
-            Func<decimal, decimal, decimal>? taxFor = monthly ? null
+            Func<decimal, decimal, decimal>? taxFor = gulf ? (_, _) => 0m : monthly ? null
                 : (t, oneOff) => PayPeriods.PeriodTax(taxYear, t, pay.Frequency) + PayrollCalculator.OneOffTax(taxYear, t * PayPeriods.PerYear(pay.Frequency), oneOff);
-            if (adjustments[employee.Id].Any() && !monthly)
+            if (gulf)
+            {
+                // No income tax in the Gulf: tax adjustments do not apply.
+            }
+            else if (adjustments[employee.Id].Any() && !monthly)
             {
                 var adj = adjustments[employee.Id].ToList();
                 decimal Sum(TaxAdjustmentKind k) => adj.Where(a => a.Kind == k).Sum(a => a.Amount);
@@ -366,10 +403,10 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             }
 
             var result = PayrollCalculator.Calculate(new PayrollInput(
-                salary, taxYear, daysInMonth, unpaid, monthlyItems ? settings.EobiEmployeeContribution : 0m, monthlyItems ? settings.EobiEmployerContribution : 0m,
+                salary, taxYear, daysInMonth, unpaid, monthlyItems && !gulf ? settings.EobiEmployeeContribution : 0m, monthlyItems && !gulf ? settings.EobiEmployerContribution : 0m,
                 employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted) - taxableExpenses, extras, taxFor));
             var wages = result.GrossEarnings - (employeeClaims.Sum(c => c.Total - c.AdvanceAdjusted) - taxableExpenses);
-            var socialSecurity = settings.SocialSecurityPercent > 0 && !string.IsNullOrEmpty(employee.SocialSecurityNo)
+            var socialSecurity = !gulf && settings.SocialSecurityPercent > 0 && !string.IsNullOrEmpty(employee.SocialSecurityNo)
                 ? Math.Round(Math.Min(wages, settings.SocialSecurityWageCeiling is { } ceiling ? ceiling * share : wages) * settings.SocialSecurityPercent / 100m, 0, MidpointRounding.AwayFromZero)
                 : 0m;
 
@@ -391,6 +428,8 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
                 VpsEmployer = vpsEmployer,
                 VpsTaxCredit = vpsCredit,
                 SocialSecurityEmployer = socialSecurity,
+                SocialInsuranceEmployee = insuranceEmployee,
+                SocialInsuranceEmployer = insuranceEmployer,
                 OtherDeductions = result.OtherDeductions,
                 NetPay = result.NetPay,
                 Lines = result.Lines.Select(l => new PayslipLine { Name = l.Name, Kind = l.Kind, Amount = l.Amount }).ToList(),
@@ -399,7 +438,9 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
             db.Payslips.Add(payslip);
         }
 
-        run.TaxYearCode = taxYear.Code;
+        run.TaxYearCode = gulf ? "" : taxYear.Code;
+        run.PayrollCountry = country;
+        run.Currency = string.IsNullOrWhiteSpace(settings.Currency) ? PayrollRegime.DefaultCurrency(country) : settings.Currency;
         run.ProcessedAtUtc = clock.UtcNow;
         run.TotalGross = run.Payslips.Sum(p => p.GrossEarnings);
         run.TotalNet = run.Payslips.Sum(p => p.NetPay);
@@ -441,7 +482,7 @@ public class PayrollService(HrmsDbContext db, ScheduleService schedules, TenantC
         run.ApprovalNote = null;
         var month = Label(run);
         var admins = await db.Users.Where(u => u.Role == UserRole.CompanyAdmin && u.IsActive && u.EmployeeId != null).Select(u => u.EmployeeId!.Value).ToListAsync();
-        await notify.ToEmployeesAsync(admins, NotificationKind.ApprovalNeeded, $"Payroll for {month} to approve", $"Net pay PKR {run.TotalNet:N0}", $"/payroll/runs/{run.Id}");
+        await notify.ToEmployeesAsync(admins, NotificationKind.ApprovalNeeded, $"Payroll for {month} to approve", $"Net pay {PayrollRegime.Money(run.TotalNet, run.Currency)}", $"/payroll/runs/{run.Id}");
         await db.SaveChangesAsync();
     }
 

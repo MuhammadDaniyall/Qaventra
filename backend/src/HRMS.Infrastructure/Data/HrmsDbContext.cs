@@ -238,6 +238,10 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.Address).HasMaxLength(500);
             e.Property(x => x.PersonalEmail).HasMaxLength(256);
             e.Property(x => x.BloodGroup).HasMaxLength(5);
+            e.Property(x => x.Iban).HasMaxLength(34);
+            e.Property(x => x.LabourCardNo).HasMaxLength(20);
+            e.Property(x => x.IqamaNo).HasMaxLength(20);
+            e.Property(x => x.GccNationality).HasMaxLength(2);
             e.HasIndex(x => new { x.TenantId, x.EmployeeCode }).IsUnique();
             e.HasOne(x => x.Manager).WithMany().HasForeignKey(x => x.ManagerId);
             foreach (var n in new[] { nameof(Employee.FatherName), nameof(Employee.PlaceOfBirth), nameof(Employee.Nationality), nameof(Employee.Religion),
@@ -550,6 +554,16 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
         {
             e.HasIndex(x => x.TenantId).IsUnique();
             e.Property(x => x.OvertimeMultiplier).HasPrecision(5, 2);
+            e.Property(x => x.PayrollCountry).HasMaxLength(2).HasDefaultValue("PK");
+            e.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("PKR");
+            e.Property(x => x.WpsEmployerId).HasMaxLength(20);
+            e.Property(x => x.WpsBankRoutingCode).HasMaxLength(20);
+            e.Property(x => x.WpsEmployerIban).HasMaxLength(34);
+            e.Property(x => x.WpsAgentId).HasMaxLength(20);
+            foreach (var p in new[] { "GosiAnnuityEmployeePercent", "GosiAnnuityEmployerPercent", "GosiSanedEmployeePercent",
+                         "GosiSanedEmployerPercent", "GosiHazardEmployerPercent", "GosiNewEntrantStepPercent",
+                         "GosiNewEntrantMaxPercent", "PensionEmployeePercent", "PensionEmployerPercent" })
+                e.Property<decimal>(p).HasPrecision(7, 4);
         });
 
         b.Entity<TaxYear>(e =>
@@ -576,6 +590,8 @@ public class HrmsDbContext(DbContextOptions<HrmsDbContext> options, ICurrentUser
             e.Property(x => x.ApprovedByName).HasMaxLength(200);
             e.Property(x => x.ApprovalNote).HasMaxLength(1000);
             e.Property(x => x.DisbursedVia).HasMaxLength(100);
+            e.Property(x => x.PayrollCountry).HasMaxLength(2).HasDefaultValue("PK");
+            e.Property(x => x.Currency).HasMaxLength(3).HasDefaultValue("PKR");
             e.HasMany(x => x.Payslips).WithOne(x => x.PayrollRun).HasForeignKey(x => x.PayrollRunId).OnDelete(DeleteBehavior.Cascade);
         });
 

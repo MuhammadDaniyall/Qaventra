@@ -74,7 +74,10 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
       { key: 'insurancePolicyNo', label: 'Policy no.', max: 40 },
       { key: 'insuranceExpiresOn', label: 'Cover ends', type: 'date' },
       { key: 'bankAccountTitle', label: 'Bank account title', max: 100 },
-      { key: 'bankBranchCode', label: 'Bank branch code', max: 40 },
+      { key: 'bankBranchCode', label: 'Bank branch code', max: 40, placeholder: 'UAE: bank routing code' },
+      { key: 'iban', label: 'IBAN', max: 34 },
+      { key: 'labourCardNo', label: 'Labour card no. (UAE)', max: 20, placeholder: 'MOHRE person ID' },
+      { key: 'iqamaNo', label: 'Iqama / national ID (Saudi)', max: 20 },
     ],
   },
   {
@@ -224,6 +227,35 @@ export function EmployeeFileCard({ employeeId, departmentId, editable }: { emplo
               </Select>
             ) : (
               tx({ Monthly: 'Monthly', SemiMonthly: 'Twice a month', BiWeekly: 'Every two weeks', Weekly: 'Weekly' }[v.payFrequency ?? 'Monthly'])
+            )}
+          </Item>
+          <Item label="GCC nationality">
+            {draft ? (
+              <div className="space-y-3">
+                <Select value={v.gccNationality ?? ''} onChange={(e) => setDraft({ ...v, gccNationality: e.target.value || null })}>
+                  <option value="">{tx('Not a GCC national')}</option>
+                  <option value="SA">{tx('Saudi')}</option>
+                  <option value="AE">{tx('Emirati')}</option>
+                  <option value="QA">{tx('Qatari')}</option>
+                  <option value="OM">{tx('Omani')}</option>
+                  <option value="BH">{tx('Bahraini')}</option>
+                  <option value="KW">{tx('Kuwaiti')}</option>
+                </Select>
+                {v.gccNationality === 'SA' && (
+                  <Checkbox
+                    label="GOSI new entrant (first registered from 3 July 2024)"
+                    checked={v.gosiNewEntrant ?? false}
+                    onChange={(e) => set('gosiNewEntrant', e.target.checked)}
+                  />
+                )}
+              </div>
+            ) : v.gccNationality ? (
+              <span>
+                {v.gccNationality}
+                {v.gosiNewEntrant ? ` · ${tx('GOSI new entrant')}` : ''}
+              </span>
+            ) : (
+              <span className="text-zinc-500 dark:text-zinc-400">{tx('Not a GCC national')}</span>
             )}
           </Item>
           <Item label="Provident fund">

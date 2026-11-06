@@ -3,6 +3,7 @@ using HRMS.Api.Infrastructure;
 using HRMS.Domain;
 using HRMS.Domain.Common;
 using HRMS.Domain.Entities;
+using HRMS.Domain.Services;
 using HRMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,6 +54,8 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         new("payroll.vps", "Payroll", "Voluntary pension (VPS)", "Member and company contributions for a month, with the tax credit, to send to the pension funds", ["month", "department"], true),
         new("payroll.pf", "Payroll", "Provident fund balances", "Employee and employer shares, profit, withdrawals and vested balance", ["department", "includeLeft"], true),
         new("payroll.gratuity", "Payroll", "Gratuity liability", "Years of service and gratuity due today", ["department"], true),
+        new("payroll.gratuityprovision", "Payroll", "End-of-service provision (UAE / Saudi)", "Gratuity each person has earned under UAE or Saudi labour law, if they left today or resigned today", ["department"], true),
+        new("payroll.gulfinsurance", "Payroll", "GOSI / GPSSA contributions", "Saudi GOSI or UAE GPSSA pension: employee and employer shares for a month", ["month", "department"], true),
         new("payroll.commission", "Payroll", "Commission and bonuses", "Approved commission, bonus and allowance requests in a period", ["period", "department", "employee"], true),
         new("expenses.claims", "Expenses", "Expense claims", "Claims submitted in a period with status and payment", ["period", "department", "employee"], true),
         new("approvals.pending", "Approvals", "Pending approvals", "Everything waiting, who it waits for and how long", ["department"], false),
@@ -464,6 +467,39 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
             case "payroll.sheet":
             case "payroll.bank":
             case "payroll.tax":
+            case "payroll.gratuityprovision":
+            {
+                var settings = await db.PayrollSettings.FirstOrDefaultAsync() ?? new PayrollSettings();
+                if (settings.IsPakistan)
+                    return T(def, "Pakistan payroll", ["Note"], [], [L("This report is for UAE or Saudi payroll. Pakistan gratuity is in the Gratuity liability report.")]);
+                var list = await people.OrderBy(e => e.FirstName).Select(e => new { e.Id, e.EmployeeCode, Name = e.FirstName + " " + e.LastName, e.JoiningDate }).ToListAsync();
+                var rows = new List<List<string>>();
+                foreach (var e in list)
+                {
+                    var parts = await LetterService.CurrentSalaryPartsAsync(db, e.Id, today);
+                    var wage = parts is { } w ? LetterService.GratuityWageOf(w, settings.GulfGratuityWage) : 0m;
+                    var full = GulfGratuity.For(settings.PayrollCountry, wage, e.JoiningDate, today, false);
+                    var resign = GulfGratuity.For(settings.PayrollCountry, wage, e.JoiningDate, today, true);
+                    rows.Add(L(e.EmployeeCode, e.Name, D(e.JoiningDate), (full?.ServiceYears ?? 0).ToString("0.##"), M(wage), M(full?.Amount ?? 0), M(resign?.Amount ?? 0)));
+                }
+                return T(def, $"As of {today:d MMM yyyy} · {settings.Currency} · wage: {settings.GulfGratuityWage}", ["Code", "Name", "Joined", "Years", "Monthly wage", "Provision (leaving)", "If resigned"], [3, 4, 5, 6], rows, totals: true);
+            }
+            case "payroll.gulfinsurance":
+            {
+                var run = await db.PayrollRuns.FirstOrDefaultAsync(r => r.Year == month.Year && r.Month == month.Month && r.Frequency == PayFrequency.Monthly);
+                if (run is null)
+                    return T(def, $"{month:MMMM yyyy}: payroll not processed", ["Note"], [], [L("Process this month's payroll first.")]);
+                var ids = People(f with { IncludeLeft = true }).Select(e => e.Id);
+                var slips = await db.Payslips.Where(p => p.PayrollRunId == run.Id && ids.Contains(p.EmployeeId) && (p.SocialInsuranceEmployee > 0 || p.SocialInsuranceEmployer > 0))
+                    .OrderBy(p => p.Employee!.FirstName)
+                    .Select(p => new { p.Employee!.EmployeeCode, Name = p.Employee.FirstName + " " + p.Employee.LastName, p.Employee.GccNationality, p.Employee.IqamaNo, p.Employee.LabourCardNo,
+                        p.SocialInsuranceEmployee, p.SocialInsuranceEmployer })
+                    .ToListAsync();
+                var scheme = run.PayrollCountry == "SA" ? "GOSI" : run.PayrollCountry == "AE" ? "GPSSA" : "Social insurance";
+                return T(def, $"{month:MMMM yyyy} · {scheme} · {run.Currency}", ["Code", "Name", "GCC national", "ID", "Employee share", "Employer share", "Total"], [4, 5, 6],
+                    slips.Select(s => L(s.EmployeeCode, s.Name, s.GccNationality ?? "No", run.PayrollCountry == "SA" ? s.IqamaNo ?? "" : s.LabourCardNo ?? "",
+                        M(s.SocialInsuranceEmployee), M(s.SocialInsuranceEmployer), M(s.SocialInsuranceEmployee + s.SocialInsuranceEmployer))), totals: true);
+            }
             case "payroll.eobi":
             case "payroll.cash":
             case "payroll.socialsecurity":
@@ -819,7 +855,8 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
     private static string D(DateOnly d) => d.ToString("d MMM yyyy");
     private static string N(int n) => n.ToString();
     private static string Num(decimal n) => n.ToString("0.##");
-    private static string M(decimal n) => n.ToString("N0");
+    /// <summary>Whole amounts as before (PKR); AED / SAR fils and halalas keep up to two decimals.</summary>
+    private static string M(decimal n) => n.ToString("#,0.##");
     private static string Time(DateTime t) => t.ToString("HH:mm");
     private static string Hours(int minutes) => $"{minutes / 60m:0.#} h";
 

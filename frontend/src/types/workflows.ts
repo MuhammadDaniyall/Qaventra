@@ -210,6 +210,9 @@ export interface Settlement {
   note: string | null;
   net: number;
   savedAtUtc: string | null;
+  /** UAE / Saudi end-of-service gratuity and how it was worked out (0 under Pakistan payroll). */
+  gratuity?: number;
+  gratuityNote?: string | null;
 }
 
 export interface Separation {

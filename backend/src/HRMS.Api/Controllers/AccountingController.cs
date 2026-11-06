@@ -22,7 +22,7 @@ public record GlMappingItem(PayrollGlLine Line, Guid? GlAccountId);
 
 /// <summary>One journal line. Department is set on the expense lines, which are split by department.</summary>
 public record JournalLineDto(string AccountCode, string AccountName, string Description, string? Department, decimal Debit, decimal Credit);
-public record JournalDto(int Year, int Month, DateOnly Date, List<JournalLineDto> Lines, decimal TotalDebit, decimal TotalCredit, List<string> Unmapped);
+public record JournalDto(int Year, int Month, DateOnly Date, List<JournalLineDto> Lines, decimal TotalDebit, decimal TotalCredit, List<string> Unmapped, string Currency = "PKR");
 
 /// <summary>Chart of accounts, payroll GL mapping and the monthly payroll journal voucher for the accounting system.</summary>
 [ApiController]
@@ -138,14 +138,14 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
                 sb.Append("STATUS,ACCOUNTING_DATE,CURRENCY_CODE,ACTUAL_FLAG,USER_JE_SOURCE_NAME,USER_JE_CATEGORY_NAME,SEGMENT1,SEGMENT2,ENTERED_DR,ENTERED_CR,REFERENCE1,REFERENCE10\r\n");
                 foreach (var l in j.Lines)
                     sb.Append(CultureInfo.InvariantCulture,
-                        $"NEW,{j.Date:yyyy-MM-dd},PKR,A,Payroll,Payroll,{C(l.AccountCode)},{C(l.Department)},{A(l.Debit)},{A(l.Credit)},{reference},{C(l.Description)}\r\n");
+                        $"NEW,{j.Date:yyyy-MM-dd},{j.Currency},A,Payroll,Payroll,{C(l.AccountCode)},{C(l.Department)},{A(l.Debit)},{A(l.Credit)},{reference},{C(l.Description)}\r\n");
                 break;
             case "sap":
                 sb.Append("Document date,Posting date,Document type,Currency,Reference,Line item,Posting key,GL account,Amount,Cost center,Item text\r\n");
                 var n = 0;
                 foreach (var l in j.Lines)
                     sb.Append(CultureInfo.InvariantCulture,
-                        $"{j.Date:dd.MM.yyyy},{j.Date:dd.MM.yyyy},SA,PKR,{reference},{++n},{(l.Debit > 0 ? "40" : "50")},{C(l.AccountCode)},{(l.Debit > 0 ? l.Debit : l.Credit):0.00},{C(l.Department)},{C(l.Description)}\r\n");
+                        $"{j.Date:dd.MM.yyyy},{j.Date:dd.MM.yyyy},SA,{j.Currency},{reference},{++n},{(l.Debit > 0 ? "40" : "50")},{C(l.AccountCode)},{(l.Debit > 0 ? l.Debit : l.Credit):0.00},{C(l.Department)},{C(l.Description)}\r\n");
                 break;
             case "":
                 sb.Append("Date,Account code,Account name,Description,Department,Debit,Credit\r\n");
@@ -167,7 +167,7 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
             {
                 Department = p.Employee!.Department != null ? p.Employee.Department.Name : "Unassigned",
                 p.GrossEarnings, p.IncomeTax, p.EobiEmployee, p.EobiEmployer, p.PfEmployee, p.PfEmployer, p.VpsEmployee, p.VpsEmployer, p.SocialSecurityEmployer,
-                p.OtherDeductions, p.NetPay,
+                p.OtherDeductions, p.NetPay, p.SocialInsuranceEmployee, p.SocialInsuranceEmployer,
             })
             .ToListAsync();
         var accounts = await db.GlAccounts.ToDictionaryAsync(a => a.Id);
@@ -190,15 +190,17 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
         {
             Add(PayrollGlLine.SalaryExpense, $"Salaries {month}", d.Key, d.Sum(s => s.GrossEarnings), 0);
             Add(PayrollGlLine.EmployerContributionExpense, $"Employer contributions {month}", d.Key,
-                d.Sum(s => s.EobiEmployer + s.PfEmployer + s.VpsEmployer + s.SocialSecurityEmployer), 0);
+                d.Sum(s => s.EobiEmployer + s.PfEmployer + s.VpsEmployer + s.SocialSecurityEmployer + s.SocialInsuranceEmployer), 0);
         }
         Add(PayrollGlLine.IncomeTaxPayable, $"Income tax withheld {month}", null, 0, slips.Sum(s => s.IncomeTax));
         Add(PayrollGlLine.EobiPayable, $"EOBI {month}", null, 0, slips.Sum(s => s.EobiEmployee + s.EobiEmployer));
         Add(PayrollGlLine.ProvidentFundPayable, $"Provident fund {month}", null, 0, slips.Sum(s => s.PfEmployee + s.PfEmployer));
         Add(PayrollGlLine.SocialSecurityPayable, $"Social security {month}", null, 0, slips.Sum(s => s.SocialSecurityEmployer));
+        // Gulf: GOSI (Saudi) or GPSSA pension (UAE nationals), both shares.
+        Add(PayrollGlLine.SocialSecurityPayable, $"{(run.PayrollCountry == "SA" ? "GOSI" : "GPSSA pension")} {month}", null, 0, slips.Sum(s => s.SocialInsuranceEmployee + s.SocialInsuranceEmployer));
         Add(PayrollGlLine.PensionPayable, $"Voluntary pension {month}", null, 0, slips.Sum(s => s.VpsEmployee + s.VpsEmployer));
         // Provident fund and pension are inside "other deductions" on the payslip; they already have their own lines above.
-        Add(PayrollGlLine.OtherDeductionsPayable, $"Other deductions {month}", null, 0, slips.Sum(s => s.OtherDeductions - s.PfEmployee - s.VpsEmployee));
+        Add(PayrollGlLine.OtherDeductionsPayable, $"Other deductions {month}", null, 0, slips.Sum(s => s.OtherDeductions - s.PfEmployee - s.VpsEmployee - s.SocialInsuranceEmployee));
         Add(PayrollGlLine.SalaryPayable, $"Net salaries payable {month}", null, 0, slips.Sum(s => s.NetPay));
 
         // Rounding on individual payslips can leave the voucher a rupee out; show it rather than hide it.
@@ -206,6 +208,6 @@ public class AccountingController(HrmsDbContext db) : ControllerBase
         if (diff != 0)
             Add(PayrollGlLine.SalaryPayable, "Rounding difference", null, diff < 0 ? -diff : 0, diff > 0 ? diff : 0);
 
-        return new JournalDto(run.Year, run.Month, date, lines, lines.Sum(l => l.Debit), lines.Sum(l => l.Credit), unmapped);
+        return new JournalDto(run.Year, run.Month, date, lines, lines.Sum(l => l.Debit), lines.Sum(l => l.Credit), unmapped, run.Currency);
     }
 }

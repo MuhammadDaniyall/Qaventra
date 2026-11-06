@@ -233,6 +233,26 @@ public class LetterService(HrmsDbContext db, ICurrentUser me, TenantClock clock,
         return (s.BasicSalary, s.BasicSalary + s.Components.Where(c => c.Kind == SalaryComponentKind.Earning).Sum(c => c.Amount));
     }
 
+    /// <summary>Basic, housing (components named housing / accommodation) and gross, for the Gulf gratuity wage.</summary>
+    public static async Task<(decimal Basic, decimal Housing, decimal Gross)?> CurrentSalaryPartsAsync(HrmsDbContext db, Guid employeeId, DateOnly on)
+    {
+        var s = await db.EmployeeSalaries.Include(x => x.Components)
+            .Where(x => x.EmployeeId == employeeId && x.EffectiveFrom <= on)
+            .OrderByDescending(x => x.EffectiveFrom).FirstOrDefaultAsync();
+        if (s is null)
+            return null;
+        var earnings = s.Components.Where(c => c.Kind == SalaryComponentKind.Earning).ToList();
+        return (s.BasicSalary, earnings.Where(c => PayrollRegime.IsHousing(c.Name)).Sum(c => c.Amount), s.BasicSalary + earnings.Sum(c => c.Amount));
+    }
+
+    /// <summary>The monthly wage the company's Gulf gratuity is worked out on.</summary>
+    public static decimal GratuityWageOf((decimal Basic, decimal Housing, decimal Gross) s, GratuityWage wage) => wage switch
+    {
+        GratuityWage.BasicPlusHousing => s.Basic + s.Housing,
+        GratuityWage.Gross => s.Gross,
+        _ => s.Basic,
+    };
+
     /// <summary>Display name of the signed-in user, including the platform owner (who belongs to no company).</summary>
     public static Task<string?> CurrentUserNameAsync(HrmsDbContext db, ICurrentUser me) =>
         db.Users.IgnoreQueryFilters().Where(u => u.Id == me.UserId).Select(u => u.FullName).FirstOrDefaultAsync();
