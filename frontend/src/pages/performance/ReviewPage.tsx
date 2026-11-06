@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
+import { AiWriteButton } from '../../components/ai/AiWriteButton';
 import { Check, Plus, Send, Trash2, Undo2 } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
@@ -340,7 +341,18 @@ function ScoreForm({ r, mode }: { r: Review; mode: 'self' | 'manager' }) {
       ))}
       <Card>
         <CardBody className="grid gap-4 sm:grid-cols-2">
-          <Field label={self ? 'Overall, how did your year go?' : 'Overall comment'} className="sm:col-span-2">
+          <Field
+            label={self ? 'Overall, how did your year go?' : 'Overall comment'}
+            className="sm:col-span-2"
+            action={
+              <AiWriteButton
+                kind="review"
+                draft={comment}
+                context={[strengths && `Strengths: ${strengths}`, improvements && `To develop: ${improvements}`, self && 'Written by the employee about their own year, in first person.'].filter(Boolean).join('\n') || undefined}
+                onResult={(text) => setComment(text)}
+              />
+            }
+          >
             <Textarea rows={3} maxLength={4000} value={comment} onChange={(e) => setComment(e.target.value)} />
           </Field>
           {!self && (

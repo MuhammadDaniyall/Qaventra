@@ -834,4 +834,10 @@ export const UR: Record<string, string> = {
   'Show password': 'پاس ورڈ دکھائیں',
   'Hide password': 'پاس ورڈ چھپائیں',
   'Caps Lock is on': 'کیپس لاک آن ہے',
+  'Write with AI': 'AI سے لکھیں',
+  'Improve my text': 'میری تحریر بہتر کریں',
+  'Write draft': 'مسودہ لکھیں',
+  'Write new draft': 'نیا مسودہ لکھیں',
+  'What do you need?': 'آپ کو کیا چاہیے؟',
+  'Say in a line or two what you need. You can edit the draft before saving.': 'ایک دو لائنوں میں بتائیں کیا چاہیے۔ محفوظ کرنے سے پہلے آپ مسودہ بدل سکتے ہیں۔',
 };

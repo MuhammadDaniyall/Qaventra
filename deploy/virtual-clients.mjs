@@ -1808,6 +1808,12 @@ async function lookAround(hr, co, d) {
 
 /** AI Team: runs one robot a day (in turn), approves or rejects what it proposes and reads the activity log. */
 async function aiTeam(hr, co, d, r) {
+  if (r.chance(0.4)) {
+    const kind = r.pick(['announcement', 'job_ad', 'letter', 'policy', 'email']);
+    const w = await hr.post(`Write a ${kind.replace('_', ' ')} with AI`, '/ai/write',
+      { kind, brief: `${co.name}: ${r.pick(['office timings change from next month', 'team lunch on Friday', 'hiring a sales executive in Lahore', 'experience letter for a leaving employee', 'remind staff to submit timesheets'])}`, tone: 'Professional and friendly', language: r.chance(0.2) ? 'ur' : 'en' });
+    if (w.ok) hr.did(`AI wrote: ${(w.data.title ?? w.data.text).slice(0, 60)}`);
+  }
   const team = (await hr.get('Open AI Team', '/ai-team')).data;
   if (!team?.robots?.length || team.stopped) return;
   const robot = team.robots[Math.floor(serverDay(d).getTime() / 86_400_000) % team.robots.length];

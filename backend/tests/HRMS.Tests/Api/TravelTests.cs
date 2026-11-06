@@ -83,7 +83,7 @@ public class TravelTests(ApiFactory factory) : IClassFixture<ApiFactory>
             legs = legs.EnumerateArray().Select(l => new { legId = l.GetProperty("id").GetGuid(), bookingRef = "PK-30" + l.GetProperty("order").GetInt32(), bookingCost = 25000 }),
             hotelName = "Marriott", hotelRef = "H-1", hotelCost = 30000,
         }, ApiFactory.Json));
-        await Ok(await deskClient.PostAsJsonAsync($"/api/travel/{id}/advance", new { amount = 20000, paidOn = Iso(Today), via = "Cash" }, ApiFactory.Json));
+        await Ok(await deskClient.PostAsJsonAsync($"/api/travel/{id}/advance", new { amount = 20000, paidOn = Iso(Today.AddDays(-1)), via = "Cash" }, ApiFactory.Json));
         var booked = await Ok(await sanaClient.GetAsync($"/api/travel/{id}"));
         Assert.Equal("Booked", booked.GetProperty("status").GetString());
         Assert.Equal(80000m, booked.GetProperty("bookedCost").GetDecimal());
@@ -144,7 +144,7 @@ public class TravelTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, (await omarClient.GetAsync($"/api/travel/{id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await omarClient.GetAsync("/api/travel/all")).StatusCode);
         await Ok(await managerClient.PostAsJsonAsync($"/api/travel/{id}/approve", new { }));
-        await Ok(await admin.PostAsJsonAsync($"/api/travel/{id}/advance", new { amount = 50000, paidOn = Iso(Today), via = "Bank" }, ApiFactory.Json));
+        await Ok(await admin.PostAsJsonAsync($"/api/travel/{id}/advance", new { amount = 50000, paidOn = Iso(Today.AddDays(-1)), via = "Bank" }, ApiFactory.Json));
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<HRMS.Infrastructure.Data.HrmsDbContext>();
@@ -184,7 +184,7 @@ public class TravelTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         var id = (await Ok(await sanaClient.PostAsJsonAsync("/api/travel", Trip(Today.AddDays(10), Today.AddDays(11), advance: 30000), ApiFactory.Json))).GetProperty("id").GetGuid();
         await Ok(await managerClient.PostAsJsonAsync($"/api/travel/{id}/approve", new { }));
-        await Ok(await admin.PostAsJsonAsync($"/api/travel/{id}/advance", new { amount = 30000, paidOn = Iso(Today), via = "Bank" }, ApiFactory.Json));
+        await Ok(await admin.PostAsJsonAsync($"/api/travel/{id}/advance", new { amount = 30000, paidOn = Iso(Today.AddDays(-1)), via = "Bank" }, ApiFactory.Json));
         await Ok(await sanaClient.PostAsJsonAsync($"/api/travel/{id}/cancel", new { note = "Client postponed" }, ApiFactory.Json));
 
         var trip = await Ok(await sanaClient.GetAsync($"/api/travel/{id}"));

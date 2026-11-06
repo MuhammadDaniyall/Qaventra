@@ -49,7 +49,16 @@ export interface AiInsights {
   madeAtUtc: string;
 }
 
+export type AiWriteKind = 'announcement' | 'job_ad' | 'requirements' | 'letter' | 'policy' | 'review' | 'email' | 'improve';
+export interface AiWriteResult {
+  title: string | null;
+  text: string;
+  remaining: number;
+}
+
 export const aiApi = {
+  write: (kind: AiWriteKind, brief: string, draft: string, tone: string, language: string) =>
+    http.post<AiWriteResult>('/ai/write', { kind, brief, draft, tone, language }),
   status: () => http.get<AiStatus>('/ai/status'),
   screenCv: (applicationId: string, refresh = false) => http.post<AiCvScreen>(`/ai/cv/${applicationId}?refresh=${refresh}`),
   insights: (refresh = false) => http.get<AiInsights>('/ai/insights', { refresh }),

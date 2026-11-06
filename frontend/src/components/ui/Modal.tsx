@@ -24,6 +24,9 @@ function useOverlay(open: boolean, onClose: () => void, panel: React.RefObject<H
     const t = window.setTimeout(focusFirst, 10);
 
     const onKey = (e: KeyboardEvent) => {
+      // With a dialog open on top of another (e.g. "Write with AI" over a form), only the top one reacts.
+      const dialogs = document.querySelectorAll('[role="dialog"]');
+      if (panel.current && dialogs.length > 1 && dialogs[dialogs.length - 1] !== panel.current) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
         onCloseRef.current();

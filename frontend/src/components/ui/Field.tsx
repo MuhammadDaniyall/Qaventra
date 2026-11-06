@@ -30,11 +30,13 @@ interface FieldProps {
   error?: string;
   required?: boolean;
   className?: string;
+  /** A small control shown at the end of the label row, such as "Write with AI". */
+  action?: ReactNode;
   children: ReactElement<{ id?: string; 'aria-invalid'?: boolean; 'aria-describedby'?: string }>;
 }
 
 /** Label + control + hint/error. Wires id, aria-invalid and aria-describedby onto the child. */
-export function Field({ label, hint, error, required, className, children }: FieldProps) {
+export function Field({ label, hint, error, required, className, action, children }: FieldProps) {
   const id = useId();
   const descId = `${id}-desc`;
   const child = isValidElement(children)
@@ -46,10 +48,13 @@ export function Field({ label, hint, error, required, className, children }: Fie
     : children;
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label htmlFor={id} className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {tx(label)}
-        {required && <span className="ms-0.5 text-red-500">*</span>}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label htmlFor={id} className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          {tx(label)}
+          {required && <span className="ms-0.5 text-red-500">*</span>}
+        </label>
+        {action}
+      </div>
       {child}
       {error ? (
         <p id={descId} className="text-xs text-red-600 dark:text-red-400">

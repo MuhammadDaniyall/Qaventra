@@ -1,3 +1,4 @@
+import { AiWriteButton } from '../../components/ai/AiWriteButton';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -284,7 +285,22 @@ function AnnouncementModal({ item, onClose }: { item: Announcement | null; onClo
         <Field label="Title" required className="sm:col-span-2">
           <Input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Office closed on Friday" />
         </Field>
-        <Field label="Message" required className="sm:col-span-2">
+        <Field
+          label="Message"
+          required
+          className="sm:col-span-2"
+          action={
+            <AiWriteButton
+              kind="announcement"
+              draft={body}
+              context={title.trim() ? `Title: ${title.trim()}` : undefined}
+              onResult={(text, t) => {
+                setBody(text);
+                if (t && !title.trim()) setTitle(t);
+              }}
+            />
+          }
+        >
           <Textarea rows={5} maxLength={8000} value={body} onChange={(e) => setBody(e.target.value)} />
         </Field>
         <Field label="Type">

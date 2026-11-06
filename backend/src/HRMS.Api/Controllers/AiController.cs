@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace HRMS.Api.Controllers;
 
 public record AiTurnRequest([Required, RegularExpression("user|assistant")] string Role, [Required, StringLength(4000)] string Text);
+public record AiWriteRequest([Required, StringLength(30)] string Kind, [StringLength(2000)] string? Brief, [StringLength(12000)] string? Draft,
+    [StringLength(60)] string? Tone, [StringLength(5)] string? Language);
 public record AiAskRequest([Required, MinLength(1), MaxLength(40)] List<AiTurnRequest> Messages, bool Voice = false);
 
 /// <summary>The AI HR assistant: answers questions from the person's own data and prepares requests for them to confirm.</summary>
@@ -32,6 +34,10 @@ public class AiController(AiAssistantService ai, IWebHostEnvironment env) : Cont
     [HttpPost("cv/{applicationId:guid}"), Authorize(Policy = Policies.Hr)]
     public Task<AiCvScreen> ScreenCv(Guid applicationId, [FromServices] AttachmentService files, [FromQuery] bool refresh = false) =>
         ai.ScreenCvAsync(applicationId, files, refresh);
+
+    /// <summary>Writes or improves HR text (announcements, job ads, letters, policies, reviews) for the person to edit.</summary>
+    [HttpPost("write")]
+    public Task<AiWriteResult> Write(AiWriteRequest req) => ai.WriteAsync(req.Kind, req.Brief, req.Draft, req.Tone, req.Language);
 
     // The site redirects http to https, and a redirect would drop the sign-in header on the assistant's lookups.
     string BaseUrl() => $"{(env.IsDevelopment() ? Request.Scheme : "https")}://{Request.Host}";

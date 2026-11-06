@@ -1,3 +1,4 @@
+import { AiWriteButton } from '../../components/ai/AiWriteButton';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileUp, Star } from 'lucide-react';
@@ -320,10 +321,20 @@ export function JobPostModal({
             ))}
           </Select>
         </Field>
-        <Field label="About the job" required className="sm:col-span-2">
+        <Field
+          label="About the job"
+          required
+          className="sm:col-span-2"
+          action={<AiWriteButton kind="job_ad" draft={f.description} context={[f.title && `Job title: ${f.title}`, f.location && `Location: ${f.location}`, `Type: ${EMPLOYMENT_LABELS[f.employmentType]}`].filter(Boolean).join('\n')} onResult={(text) => set('description', text)} />}
+        >
           <Textarea rows={5} value={f.description} maxLength={8000} onChange={(e) => set('description', e.target.value)} />
         </Field>
-        <Field label="Requirements" hint="One per line" className="sm:col-span-2">
+        <Field
+          label="Requirements"
+          hint="One per line"
+          className="sm:col-span-2"
+          action={<AiWriteButton kind="requirements" draft={f.requirements} context={[f.title && `Job title: ${f.title}`, f.location && `Location: ${f.location}`, `Type: ${EMPLOYMENT_LABELS[f.employmentType]}`].filter(Boolean).join('\n')} onResult={(text) => set('requirements', text)} />}
+        >
           <Textarea rows={4} value={f.requirements} maxLength={8000} onChange={(e) => set('requirements', e.target.value)} />
         </Field>
         <Field label="Salary from (PKR a month)">

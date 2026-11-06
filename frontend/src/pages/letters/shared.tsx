@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { lettersApi } from '../../api/letters';
 import { qk } from '../../api/keys';
 import { Textarea } from '../../components/ui';
+import { AiWriteButton } from '../../components/ai/AiWriteButton';
 import type { LetterCategory } from '../../types/workflows';
 
 export const LETTER_CATEGORIES: LetterCategory[] = [
@@ -65,7 +66,13 @@ export function BodyEditor({
   const placeholders = usePlaceholders();
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5" aria-label="Insert a field">
+      <div className="flex flex-wrap items-center gap-1.5" aria-label="Insert a field">
+        <AiWriteButton
+          kind="letter"
+          draft={value}
+          context={(placeholders.data ?? []).length ? `Fields you may use: ${(placeholders.data ?? []).map((p) => p.key).join(' ')}` : undefined}
+          onResult={(text) => onChange(text)}
+        />
         {(placeholders.data ?? []).map((p) => (
           <button
             key={p.key}
