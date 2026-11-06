@@ -8,6 +8,7 @@ import { ToastProvider } from './components/ui';
 import App from './App';
 import { APP_NAME } from './lib/brand';
 import { applyLang, useT } from './lib/i18n';
+import './lib/install';
 import './index.css';
 
 document.title = APP_NAME;

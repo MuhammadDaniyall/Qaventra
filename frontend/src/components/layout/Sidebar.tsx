@@ -64,13 +64,13 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
         title={isCollapsed ? tx(item.label) : undefined}
         className={({ isActive }) =>
           cn(
-            'flex items-center gap-3 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors',
+            'relative flex items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors lg:py-1.5',
             'focus-visible:outline-2 focus-visible:outline-accent-500',
             isCollapsed && 'justify-center px-0 py-2',
             nested && !isCollapsed && 'ps-9 font-normal',
             isActive
-              ? 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300'
-              : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100',
+              ? 'bg-gradient-to-r from-indigo-500/[0.12] to-fuchsia-500/[0.08] text-accent-700 shadow-[inset_0_0_0_1px_rgb(99_102_241/0.15)] before:absolute before:inset-y-1.5 before:-start-3 before:w-1 before:rounded-e-full before:bg-gradient-to-b before:from-indigo-500 before:to-fuchsia-500 rtl:bg-gradient-to-l dark:from-indigo-400/[0.16] dark:to-fuchsia-400/[0.08] dark:text-accent-200'
+              : 'text-zinc-600 hover:bg-zinc-900/[0.04] hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/[0.05] dark:hover:text-zinc-100',
           )
         }
       >
@@ -112,9 +112,9 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
           aria-expanded={expanded}
           onClick={() => toggleGroup(title)}
           className={cn(
-            'flex w-full items-center gap-3 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors',
+            'flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium transition-colors lg:py-1.5',
             'focus-visible:outline-2 focus-visible:outline-accent-500',
-            hasActive ? 'text-zinc-900 dark:text-white' : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/70 dark:hover:text-zinc-100',
+            hasActive ? 'text-zinc-900 dark:text-white' : 'text-zinc-600 hover:bg-zinc-900/[0.04] hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/[0.05] dark:hover:text-zinc-100',
           )}
         >
           {Icon && <Icon className="size-[18px] shrink-0" aria-hidden="true" />}
@@ -166,7 +166,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
       </nav>
 
       <div
-        className={cn('flex items-center gap-3 border-t border-zinc-200 px-4 py-3 dark:border-zinc-800', isCollapsed && 'justify-center px-0')}
+        className={cn('flex items-center gap-3 border-t border-zinc-200/70 px-4 py-3 dark:border-white/[0.06]', isCollapsed && 'justify-center px-0')}
         title={isCollapsed ? `${user.fullName} · ${roleLabel(user.role)}` : undefined}
       >
         <Avatar name={user.fullName} size="sm" />
@@ -186,7 +186,7 @@ export function Sidebar({ collapsed, onToggleCollapsed, mobile, onNavigate }: Si
         )}
       </div>
       {!mobile && isCollapsed && (
-        <div className="flex justify-center border-t border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="flex justify-center border-t border-zinc-200/70 p-3 dark:border-white/[0.06]">
           <IconButton label="Expand sidebar" onClick={onToggleCollapsed}>
             <PanelLeftOpen className="size-[18px]" />
           </IconButton>
