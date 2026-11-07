@@ -51,6 +51,7 @@ import { formatCurrency, formatDate, formatDateTimeUtc, todayIso } from '../../l
 import { useDebounced } from '../../lib/hooks';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { AssetStatusBadge, HandOverModal, TakeBackModal } from './shared';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type Tab = 'inventory' | 'requests' | 'types' | 'kits';
 
@@ -88,6 +89,7 @@ export function AssetsPage() {
         description="Company property: what you have, who has it, and what needs handing over."
         actions={
           <>
+            <ModuleSettingsButton to="?tab=types" />
             <ImportButton kind="assets" invalidate={[qk.assets, qk.assetsSummary]} />
             <Button
               variant="secondary"

@@ -58,6 +58,7 @@ import { useDebounced } from '../../lib/hooks';
 import { CandidateFields, careersUrl, cvProblem, JobPostModal, PipelineMix, PostStatusBadge, StageBadge, useCopy } from './shared';
 import { tx, txf } from '../../lib/i18n';
 import { InterviewTemplatesTab } from './InterviewTemplates';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type Tab = 'jobs' | 'requests' | 'candidates' | 'interviews' | 'templates' | 'openings' | 'report';
 
@@ -95,7 +96,11 @@ export function RecruitmentPage() {
   };
   return (
     <>
-      <PageHeader title="Recruitment" description={team ? 'Jobs, candidates, interviews and offers.' : 'Open jobs, referrals and your interviews.'} />
+      <PageHeader
+        title="Recruitment"
+        description={team ? 'Jobs, candidates, interviews and offers.' : 'Open jobs, referrals and your interviews.'}
+        actions={team && <ModuleSettingsButton to="?tab=templates" />}
+      />
       {team && <RecruitmentOverview />}
       <Tabs<Tab> className="mb-5" value={tab} onChange={(t) => setParams({ tab: t })} items={allowed.map((t) => ({ value: t, label: labels[t] }))} />
       {tab === 'jobs' && <JobsTab me={m} />}

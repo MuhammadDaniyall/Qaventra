@@ -27,6 +27,7 @@ import {
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatDate, formatDateTimeUtc, formatMinutes, monthLabel } from '../../lib/format';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 /** Per-person totals for a month, and closing the month so its attendance can no longer change. */
 export function MonthlyAttendancePage() {
@@ -77,17 +78,21 @@ export function MonthlyAttendancePage() {
         description="Totals per person. Close a month once it is checked, so nothing in it changes before payroll."
         back={{ to: '/attendance/daily', label: 'Daily attendance' }}
         actions={
-          hr &&
-          m &&
-          (m.closed ? (
-            <Button variant="secondary" icon={<LockOpen className="size-4" />} onClick={() => setConfirm('reopen')}>
-              Reopen month
-            </Button>
-          ) : (
-            <Button icon={<Lock className="size-4" />} disabled={!m.canClose} title={m.canClose ? undefined : 'A month can be closed once it has ended'} onClick={() => setConfirm('close')}>
-              Close month
-            </Button>
-          ))
+          hr && (
+            <>
+              <ModuleSettingsButton to="/attendance/settings" />
+              {m &&
+                (m.closed ? (
+                  <Button variant="secondary" icon={<LockOpen className="size-4" />} onClick={() => setConfirm('reopen')}>
+                    Reopen month
+                  </Button>
+                ) : (
+                  <Button icon={<Lock className="size-4" />} disabled={!m.canClose} title={m.canClose ? undefined : 'A month can be closed once it has ended'} onClick={() => setConfirm('close')}>
+                    Close month
+                  </Button>
+                ))}
+            </>
+          )
         }
       />
       <Card>

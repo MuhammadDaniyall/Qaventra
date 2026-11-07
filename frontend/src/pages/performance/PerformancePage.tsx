@@ -44,6 +44,7 @@ import { FeedbackRequestsTab, KpiLibraryTab, kpiQuery } from './PerformanceExtra
 import { StageChip, StageMix, stageProgress } from './shared';
 import { cn } from '../../lib/cn';
 import { tx, txf } from '../../lib/i18n';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type Tab = 'mine' | 'team' | 'feedback' | 'cycles' | 'kpis' | 'templates' | 'settings';
 
@@ -56,7 +57,7 @@ export function PerformancePage() {
   const showTeam = !!team.data?.length;
   return (
     <>
-      <PageHeader title="Performance" description="Goals, reviews and ratings." />
+      <PageHeader title="Performance" description="Goals, reviews and ratings." actions={<ModuleSettingsButton to="?tab=settings" />} />
       {hr && <PerformanceOverview />}
       <Tabs<Tab>
         className="mb-5"

@@ -45,10 +45,10 @@ export function SetupGuide({ className }: { className?: string }) {
   const steps = [
     { label: 'Add departments', hint: 'Production, Sales, Finance…', done: !!departments.data?.length, to: '/settings?tab=departments' },
     { label: 'Add designations', hint: 'Job titles people hold', done: !!designations.data?.length, to: '/settings?tab=designations' },
-    { label: 'Set working hours', hint: 'Shifts with start, end and grace time', done: !!shifts.data?.length, to: '/settings?tab=shifts' },
-    { label: 'Add office locations', hint: 'For geo-fenced check-in', done: !!offices.data?.length, to: '/settings?tab=offices' },
-    { label: "Add this year's holidays", hint: 'Public holidays skip attendance', done: !!holidays.data?.length, to: '/settings?tab=holidays' },
-    { label: 'Set up leave types', hint: 'Annual, casual, sick…', done: !!leaveTypes.data?.length, to: '/settings?tab=leave-types' },
+    { label: 'Set working hours', hint: 'Shifts with start, end and grace time', done: !!shifts.data?.length, to: '/attendance/settings?tab=shifts' },
+    { label: 'Add office locations', hint: 'For geo-fenced check-in', done: !!offices.data?.length, to: '/attendance/settings?tab=locations' },
+    { label: "Add this year's holidays", hint: 'Public holidays skip attendance', done: !!holidays.data?.length, to: '/attendance/settings?tab=holidays' },
+    { label: 'Set up leave types', hint: 'Annual, casual, sick…', done: !!leaveTypes.data?.length, to: '/leave/settings?tab=types' },
     { label: 'Add your employees', hint: 'One by one or from Excel', done: (employees.data?.total ?? 0) > 0, to: '/employees' },
     { label: 'Run your first payroll', hint: 'Once salaries are entered', done: !!runs.data?.length, to: '/payroll' },
   ];

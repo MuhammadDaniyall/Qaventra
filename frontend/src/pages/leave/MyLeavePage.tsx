@@ -45,6 +45,7 @@ import { tx, txf } from '../../lib/i18n';
 import { formatDate, formatNumber, formatTime, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import type { HalfDayPart, LeaveBalance, LeaveDuration, LeaveRequest } from '../../types';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 export function MyLeavePage() {
   const toast = useToast();
@@ -75,6 +76,7 @@ export function MyLeavePage() {
         description={`Balances for ${new Date().getFullYear()}.`}
         actions={
           <>
+            <ModuleSettingsButton to="/leave/settings" />
             <Button variant="secondary" icon={<CalendarPlus className="size-4" />} onClick={() => setClaiming(true)}>
               Claim comp-off
             </Button>

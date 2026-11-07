@@ -36,6 +36,7 @@ import { cn } from '../../lib/cn';
 import { formatCurrency, formatDateTimeUtc, humanize, todayIso } from '../../lib/format';
 import type { ExpenseCategory, ReceiptUpload } from '../../types/workflows';
 import { CategoryIcon, ClaimDrawer, EXPENSE_CATEGORIES } from './shared';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 export function MyExpensesPage() {
   const [creating, setCreating] = useState(false);
@@ -60,6 +61,7 @@ export function MyExpensesPage() {
         description="Claim back what you spent for work. Approved claims are paid with your salary."
         actions={
           <>
+            <ModuleSettingsButton to="/expenses/setup" />
             <AdvanceButton />
             <Button icon={<Plus className="size-4" />} onClick={() => setCreating(true)}>
               New claim

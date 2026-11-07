@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
 import { Receipt } from 'lucide-react';
 import { expensesApi } from '../../api/expenses';
 import { qk } from '../../api/keys';
@@ -9,7 +8,6 @@ import { isHr } from '../../auth/roles';
 import { ExportRangeButton } from '../../components/excel/ExcelButtons';
 import { RecordStampCell } from '../../components/RecordStamp';
 import {
-  Button,
   Avatar,
   Card,
   EmptyState,
@@ -28,11 +26,11 @@ import {
 import { formatCurrency, formatDateTimeUtc } from '../../lib/format';
 import type { ExpenseStatus } from '../../types/workflows';
 import { ClaimDrawer } from './shared';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type TabValue = Extract<ExpenseStatus, 'Pending' | 'Approved' | 'Paid' | 'Rejected'>;
 
 export function ExpenseApprovalsPage() {
-  const navigate = useNavigate();
   const hr = isHr(useUser());
   const [status, setStatus] = useState<TabValue>('Pending');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -52,9 +50,7 @@ export function ExpenseApprovalsPage() {
         actions={
           hr && (
             <>
-              <Button variant="secondary" onClick={() => navigate('/expenses/setup')}>
-                Expense setup
-              </Button>
+              <ModuleSettingsButton to="/expenses/setup" />
               <ExportRangeButton path="/exports/expenses" name="expenses" />
             </>
           )

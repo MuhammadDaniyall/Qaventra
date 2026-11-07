@@ -34,6 +34,7 @@ import { RecordStampCell } from '../../components/RecordStamp';
 import { formatDate, todayIso } from '../../lib/format';
 import type { SeparationSummary, SeparationType } from '../../types/workflows';
 import { SEPARATION_TYPES, typeLabel } from './shared';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type TabValue = 'open' | 'Completed' | 'closed';
 
@@ -61,9 +62,7 @@ export function SeparationsPage() {
         }
         actions={
           <>
-            <Button variant="secondary" onClick={() => navigate('/separations/setup')}>
-              Templates
-            </Button>
+            <ModuleSettingsButton to="/separations/setup" />
             <Button icon={<Plus className="size-4" />} onClick={() => setStarting(true)}>
               Start separation
             </Button>

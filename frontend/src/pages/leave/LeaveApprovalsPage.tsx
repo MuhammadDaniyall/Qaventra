@@ -36,6 +36,7 @@ import { StatCard } from '../../components/ui/StatCard';
 import { txf } from '../../lib/i18n';
 import { formatDate, formatDateTimeUtc, formatNumber } from '../../lib/format';
 import type { LeaveRequest, LeaveStatus } from '../../types';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type TabValue = Extract<LeaveStatus, 'Pending' | 'Approved' | 'Rejected'>;
 
@@ -75,6 +76,7 @@ export function LeaveApprovalsPage() {
         actions={
           hr && (
             <>
+              <ModuleSettingsButton to="/leave/settings" />
               <Button variant="secondary" icon={<Scale className="size-4" />} onClick={() => navigate('/leave/opening-balances')}>
                 Opening balances
               </Button>

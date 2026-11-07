@@ -46,6 +46,7 @@ import { tx, txf } from '../../lib/i18n';
 import { formatDate, timeFromInput } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { TaskList } from './shared';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type Tab = 'active' | 'tasks' | 'completed' | 'templates';
 
@@ -62,9 +63,12 @@ export function OnboardingPage() {
         description={hr ? 'Welcome new joiners: who does what before and after their first day.' : 'Tasks you have for colleagues who are joining.'}
         actions={
           hr && (
-            <Button icon={<Rocket className="size-4" />} onClick={() => setStarting(true)}>
-              Start onboarding
-            </Button>
+            <>
+              <ModuleSettingsButton to="?tab=templates" />
+              <Button icon={<Rocket className="size-4" />} onClick={() => setStarting(true)}>
+                Start onboarding
+              </Button>
+            </>
           )
         }
       />

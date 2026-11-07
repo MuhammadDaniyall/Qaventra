@@ -41,6 +41,7 @@ import { formatDate, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import type { LetterAutoUse, LetterCategory, LetterTemplate, SaveLetterTemplateRequest } from '../../types/workflows';
 import { BodyEditor, categoryLabel, Highlighted, LETTER_CATEGORIES } from './shared';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type TabValue = 'issued' | 'templates';
 
@@ -54,9 +55,12 @@ export function LettersPage() {
         title="HR letters"
         description="Offer, appointment, experience, salary certificates and more, filled from employee records."
         actions={
-          <Button icon={<FilePlus2 className="size-4" />} onClick={() => setIssuing('blank')}>
-            Issue letter
-          </Button>
+          <>
+            <ModuleSettingsButton onClick={() => setTab('templates')} />
+            <Button icon={<FilePlus2 className="size-4" />} onClick={() => setIssuing('blank')}>
+              Issue letter
+            </Button>
+          </>
         }
       />
       <Tabs<TabValue>

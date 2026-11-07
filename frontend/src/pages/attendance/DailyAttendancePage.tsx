@@ -33,6 +33,7 @@ import {
 } from '../../components/ui';
 import { formatDate, formatMinutes, formatTime, timeFromInput, toIsoDate, todayIso } from '../../lib/format';
 import type { DailyRow } from '../../types';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 function shiftDate(iso: string, days: number) {
   const [y, m, d] = iso.split('-').map(Number);
@@ -73,6 +74,7 @@ export function DailyAttendancePage() {
         actions={
           hr && (
             <>
+              <ModuleSettingsButton to="/attendance/settings" />
               <ImportButton kind="attendance" invalidate={[qk.attendance, qk.dashboard]} />
               <ExportRangeButton path="/exports/attendance" name="attendance" />
               <Button variant="secondary" onClick={() => navigate('/attendance/monthly')}>

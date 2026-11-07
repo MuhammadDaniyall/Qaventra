@@ -27,6 +27,7 @@ import {
 import { cn } from '../../lib/cn';
 import { formatDate, formatTime, toIsoDate } from '../../lib/format';
 import type { DayOfWeek } from '../../types';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 const PALETTE = [
   'bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-200',
@@ -92,6 +93,7 @@ export function RosterPage() {
         actions={
           hr && (
             <>
+              <ModuleSettingsButton to="/attendance/settings" />
               <Button variant="secondary" icon={<Copy className="size-4" />} onClick={() => setCopying(true)}>
                 Copy forward
               </Button>

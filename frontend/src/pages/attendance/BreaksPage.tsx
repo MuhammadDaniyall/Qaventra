@@ -24,6 +24,7 @@ import {
 } from '../../components/ui';
 import { formatDate, formatMinutes, formatTime, todayIso } from '../../lib/format';
 import { tx } from '../../lib/i18n';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 /** Who took breaks, for how long, and who went over the shift's allowance. */
 export function BreaksPage() {
@@ -55,7 +56,11 @@ export function BreaksPage() {
 
   return (
     <>
-      <PageHeader title="Breaks" description="Lunch, prayer, tea and personal breaks marked from the check-in card. Longest over the allowance first." />
+      <PageHeader
+        title="Breaks"
+        description="Lunch, prayer, tea and personal breaks marked from the check-in card. Longest over the allowance first."
+        actions={<ModuleSettingsButton to="/attendance/settings" />}
+      />
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         <StatCard label="On a break now" value={totals.onBreak} icon={Coffee} tone="blue" loading={breaks.isLoading} />
         <StatCard label="Over the allowance" value={totals.over} icon={AlarmClockPlus} tone="red" loading={breaks.isLoading} />

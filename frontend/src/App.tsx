@@ -82,7 +82,6 @@ const LettersPage = lazy(() => import('./pages/letters/LettersPage').then((m) =>
 const IdCardsPage = lazy(() => import('./pages/employees/IdCardsPage').then((m) => ({ default: m.IdCardsPage })));
 const AccountingPage = lazy(() => import('./pages/payroll/AccountingPage').then((m) => ({ default: m.AccountingPage })));
 const BreaksPage = lazy(() => import('./pages/attendance/BreaksPage').then((m) => ({ default: m.BreaksPage })));
-const MachinesPage = lazy(() => import('./pages/attendance/MachinesPage').then((m) => ({ default: m.MachinesPage })));
 const AiReportsPage = lazy(() => import('./pages/aiteam/AiReportsPage').then((m) => ({ default: m.AiReportsPage })));
 const AiTeamPage = lazy(() => import('./pages/aiteam/AiTeamPage').then((m) => ({ default: m.AiTeamPage })));
 const InsightsPage = lazy(() => import('./pages/insights/InsightsPage').then((m) => ({ default: m.InsightsPage })));
@@ -93,6 +92,8 @@ const MyExitPage = lazy(() => import('./pages/separations/MyExitPage').then((m) 
 const SeparationDetailPage = lazy(() => import('./pages/separations/SeparationDetailPage').then((m) => ({ default: m.SeparationDetailPage })));
 const SeparationsPage = lazy(() => import('./pages/separations/SeparationsPage').then((m) => ({ default: m.SeparationsPage })));
 const OrganizationPage = lazy(() => import('./pages/settings/OrganizationPage').then((m) => ({ default: m.OrganizationPage })));
+const AttendanceSettingsPage = lazy(() => import('./pages/settings/AttendanceSettingsPage').then((m) => ({ default: m.AttendanceSettingsPage })));
+const LeaveSettingsPage = lazy(() => import('./pages/settings/LeaveSettingsPage').then((m) => ({ default: m.LeaveSettingsPage })));
 
 function Lazy() {
   return (
@@ -216,10 +217,12 @@ export default function App() {
               <Route path="/separations/setup" element={<SeparationSetupPage />} />
                 <Route path="/leave/opening-balances" element={<OpeningBalancesPage />} />
                 <Route path="/settings" element={<OrganizationPage />} />
+                <Route path="/attendance/settings" element={<AttendanceSettingsPage />} />
+                <Route path="/leave/settings" element={<LeaveSettingsPage />} />
                 <Route path="/insights" element={<InsightsPage />} />
                 <Route path="/ai-team" element={<AiTeamPage />} />
                 <Route path="/ai-reports" element={<AiReportsPage />} />
-                <Route path="/attendance/machines" element={<MachinesPage />} />
+                <Route path="/attendance/machines" element={<Navigate to="/attendance/settings?tab=devices" replace />} />
                 <Route path="/alerts" element={<ScheduledPage />} />
                 <Route path="/budget" element={<BudgetPage />} />
                 <Route path="/letters" element={<LettersPage />} />

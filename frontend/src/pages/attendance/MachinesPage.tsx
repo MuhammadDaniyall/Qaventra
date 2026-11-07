@@ -16,7 +16,6 @@ import {
   IconButton,
   Input,
   Modal,
-  PageHeader,
   Select,
   SkeletonRows,
   Switch,
@@ -33,7 +32,7 @@ import { tx } from '../../lib/i18n';
 
 const KEY = ['biometric', 'devices'] as const;
 
-/** HR's list of attendance machines, with the one-time token each needs to send punches. */
+/** HR's list of attendance machines (a tab of Attendance settings), with the one-time token each needs to send punches. */
 export function MachinesPage() {
   const toast = useToast();
   const qc = useQueryClient();
@@ -64,15 +63,14 @@ export function MachinesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Attendance machines"
-        description="Fingerprint or face machines that send punches straight into attendance. Match people by their punch code."
-        actions={
-          <Button icon={<Plus className="size-4" />} onClick={() => setEditing('new')}>
-            Add machine
-          </Button>
-        }
-      />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          {tx('Fingerprint or face machines that send punches straight into attendance. Match people by their punch code.')}
+        </p>
+        <Button icon={<Plus className="size-4" />} onClick={() => setEditing('new')}>
+          Add machine
+        </Button>
+      </div>
       <Card>
         {devices.isLoading ? (
           <SkeletonRows rows={3} cols={4} />

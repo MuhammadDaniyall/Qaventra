@@ -153,7 +153,7 @@ export function DashboardPage() {
             </Card>
             <div className="flex flex-col gap-6 md:col-span-2 md:grid md:grid-cols-2 lg:col-span-1 lg:flex">
               {payroll && <LastPayrollCard d={d} loading={loading} />}
-              <HolidaysCard holidays={d?.upcomingHolidays} loading={loading} seeAllTo={hr ? '/settings?tab=holidays' : undefined} />
+              <HolidaysCard holidays={d?.upcomingHolidays} loading={loading} seeAllTo={hr ? '/attendance/settings?tab=holidays' : undefined} />
             </div>
           </div>
 

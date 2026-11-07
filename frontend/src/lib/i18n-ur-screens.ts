@@ -1418,4 +1418,13 @@ export const UR_SCREENS: Record<string, string> = {
   "{n} already started": "{n} شروع ہو چکی",
   "Open tickets": "کھلے ٹکٹ",
   "Assigned to me": "مجھے سونپے گئے",
+  "Settings": "ترتیبات",
+  "Attendance settings": "حاضری کی ترتیبات",
+  "Leave settings": "چھٹی کی ترتیبات",
+  "Late and penalty rules": "تاخیر اور جرمانے کے اصول",
+  "Opening balances": "ابتدائی بیلنس",
+  "Working hours, late and absence rules, where people may check in, holidays and attendance machines.": "کام کے اوقات، تاخیر اور غیر حاضری کے اصول، لوگ کہاں سے چیک اِن کر سکتے ہیں، تعطیلات اور حاضری مشینیں۔",
+  "Leave types, yearly quotas, carry forward and reasons, and the holidays leave does not count.": "چھٹیوں کی اقسام، سالانہ کوٹہ، اگلے سال منتقلی اور وجوہات، اور وہ تعطیلات جو چھٹی میں شمار نہیں ہوتیں۔",
+  "Company structure, lists, approval chains, email and documents. Module settings (attendance, leave, payroll…) are inside each module.": "کمپنی کا ڈھانچہ، فہرستیں، منظوری کی زنجیریں، ای میل اور دستاویزات۔ ماڈیول کی ترتیبات (حاضری، چھٹی، پے رول…) ہر ماڈیول کے اندر ہیں۔",
+  "Module settings": "ماڈیول کی ترتیبات",
 };

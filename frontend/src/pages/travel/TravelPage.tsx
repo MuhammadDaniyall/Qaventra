@@ -48,6 +48,7 @@ import { formatCurrency, formatDate, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { TripStatusBadge } from './shared';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 type Tab = 'mine' | 'desk' | 'report' | 'settings';
 
@@ -69,9 +70,12 @@ export function TravelPage() {
         title="Travel"
         description="Request business trips, get them booked, and settle expenses when you are back."
         actions={
-          <Button icon={<Plus className="size-4" />} onClick={() => setCreating(true)}>
-            New trip
-          </Button>
+          <>
+            <ModuleSettingsButton to="?tab=settings" />
+            <Button icon={<Plus className="size-4" />} onClick={() => setCreating(true)}>
+              New trip
+            </Button>
+          </>
         }
       />
       {allowed.length > 1 && (

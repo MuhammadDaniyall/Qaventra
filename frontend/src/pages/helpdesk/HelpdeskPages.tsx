@@ -39,6 +39,7 @@ import { useDebounced } from '../../lib/hooks';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { NewTicketModal, TicketTable, useHelpdeskLabels } from './shared';
 import { toIsoDate } from '../../lib/format';
+import { ModuleSettingsButton } from '../../components/ModuleSettingsButton';
 
 /** Everyone: tickets I raised, am the subject of, or was pulled into. */
 export function MyTicketsPage() {
@@ -103,9 +104,12 @@ export function HelpdeskQueuePage() {
         description="Tickets for the categories you handle. Take one, reply, and resolve it."
         back={{ to: '/helpdesk', label: 'Help desk' }}
         actions={
-          <Button icon={<Plus className="size-4" />} onClick={() => setRaising(true)}>
-            Raise ticket
-          </Button>
+          <>
+            <ModuleSettingsButton to="?tab=categories" />
+            <Button icon={<Plus className="size-4" />} onClick={() => setRaising(true)}>
+              Raise ticket
+            </Button>
+          </>
         }
       />
       <Tabs<QueueTab>
