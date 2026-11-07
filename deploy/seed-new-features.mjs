@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Adds demo data for the features built on 2026-11-04 to companies that were seeded earlier, signed in as their HR
+// Adds demo data for the features built since 2026-11-04 (course quizzes and certificates too) to companies that were seeded earlier, signed in as their HR
 // manager (from a logins file written by seed-demo.mjs). Safe to run again: it skips what is already there.
 //
 //   node deploy/seed-new-features.mjs --logins deploy/secrets/logins-alnoor.txt,deploy/secrets/logins-indus.txt
@@ -25,6 +25,8 @@ function readLogins(file) {
     company: text.split('\n')[0].replace(/ on https?:.*$/, '').trim(),
     password: text.match(/Password for the logins below[^:]*:\s*(\S+)/)[1],
     hr: text.match(/HR manager\s+(\S+)/)[1],
+    // People who can take a quiz: employees first, then the manager and HR.
+    employees: ['Employee', 'Manager', 'HR manager'].flatMap((role) => [...text.matchAll(new RegExp(`^${role}\\s+(\\S+)`, 'gm'))].map((m) => m[1])),
   };
 }
 
@@ -32,10 +34,10 @@ async function run(file) {
   const l = readLogins(file);
   let token = null;
   let failures = 0;
-  const call = async (method, path, body) => {
+  const call = async (method, path, body, as = token) => {
     const res = await fetch(`${BASE}/api${path}`, {
       method,
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      headers: { ...(as ? { Authorization: `Bearer ${as}` } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
     const text = await res.text();
@@ -212,6 +214,97 @@ async function run(file) {
       await step(`Positions with codes and salary bands (${lines.length})`, 'PUT', `/budget/plans/${plan.id}/positions`, { positions: lines });
     }
   }
+  // Course quizzes with certificates: employees take them, some pass (certificate) and one fails.
+  const QUIZZES = [
+    {
+      course: 'Information Security Awareness', mode: 'Online', hours: 1,
+      description: 'Passwords, phishing emails, locking your screen and keeping company data safe.',
+      title: 'Information security quiz', pass: 70, minutes: 10, attempts: 3,
+      questions: [
+        ['An email asks you to confirm your password through a link. What do you do?', ['Click and confirm', 'Reply with the password', 'Report it to IT and delete it', 'Forward it to colleagues'], 2],
+        ['Which password is the strongest?', ['ahmed123', 'Pakistan2026', 'Tea-Kettle-Rain-47', 'password'], 2],
+        ['You leave your desk for lunch. What should you do with your computer?', ['Leave it open', 'Lock the screen', 'Turn off the monitor only', 'Ask a colleague to watch it'], 1],
+        ['Where may you keep customer data?', ['Personal Gmail', 'A USB drive at home', 'Company systems only', 'WhatsApp'], 2],
+        ['A visitor without a badge walks into the office. What do you do?', ['Ignore it', 'Politely take them to reception', 'Give them your badge', 'Let them in'], 1],
+      ],
+      takers: [[0, true], [1, true], [2, false]],
+    },
+    {
+      course: 'Fire Safety and Evacuation', mode: 'Classroom', hours: 2,
+      description: 'Fire exits, assembly point, using an extinguisher and what to do when the alarm rings.',
+      title: 'Fire safety quiz', pass: 60, minutes: 8, attempts: 2,
+      questions: [
+        ['The fire alarm rings. What is the first thing to do?', ['Finish your work', 'Leave by the nearest fire exit', 'Take the lift', 'Call home'], 1],
+        ['Which extinguisher is for electrical fires?', ['Water', 'CO2', 'Sand bucket only', 'None'], 1],
+        ['Where do staff gather after leaving the building?', ['Car park exit', 'The assembly point', 'Canteen', 'Their cars'], 1],
+        ['Should you use the lift during a fire?', ['Yes', 'Only if it is fast', 'No, never', 'Only with a manager'], 2],
+      ],
+      takers: [[1, true], [3, true]],
+    },
+  ];
+  const programs = (await call('GET', '/training/programs')).data ?? [];
+  const quizzes = (await call('GET', '/training/quizzes')).data ?? [];
+  const tokens = {};
+  const signIn = async (email) => {
+    if (!(email in tokens)) {
+      let r = await call('POST', '/auth/login', { email, password: l.password }, null);
+      // Sign-ins are rate limited per minute: wait and try again.
+      for (let i = 0; r.status === 429 && i < 3; i++) {
+        await new Promise((ok) => setTimeout(ok, 30_000));
+        r = await call('POST', '/auth/login', { email, password: l.password }, null);
+      }
+      tokens[email] = r.ok ? r.data.token : null;
+    }
+    return tokens[email];
+  };
+  for (const q of QUIZZES) {
+    let program = programs.find((p) => p.title === q.course);
+    if (!program) {
+      const r = await step(`Course ${q.course}`, 'POST', '/training/programs', {
+        title: q.course, categoryId: null, description: q.description, mode: q.mode, durationHours: q.hours, link: null,
+        isMandatory: false, departmentIds: [], completeWithinDays: null, repeatEveryMonths: null, isActive: true,
+      });
+      if (r.ok) program = ((await call('GET', '/training/programs')).data ?? []).find((p) => p.title === q.course);
+    }
+    if (!program) continue;
+    let quiz = quizzes.find((x) => x.title === q.title);
+    if (!quiz) {
+      const r = await step(`Quiz ${q.title} (${q.questions.length} questions)`, 'POST', '/training/quizzes', {
+        programId: program.id, title: q.title, instructions: 'Choose one answer for each question. You can see the right answers after you submit.',
+        passPercent: q.pass, timeLimitMinutes: q.minutes, maxAttempts: q.attempts, isActive: true,
+        questions: q.questions.map(([text, options, correctIndex]) => ({ text, options, correctIndex })),
+      });
+      if (!r.ok) continue;
+      quiz = ((await call('GET', '/training/quizzes')).data ?? []).find((x) => x.title === q.title);
+      if (!quiz) continue;
+    } else if (quiz.takers > 0) continue;
+    for (const [i, pass] of q.takers) {
+      const email = l.employees[i];
+      const as = email && (await signIn(email));
+      if (!as) {
+        console.log(`  - ${email ?? `person ${i + 1}`}: ${email ? 'cannot sign in' : 'not in the logins file'}, quiz attempt skipped`);
+        continue;
+      }
+      const paper = await call('POST', `/training/quizzes/${quiz.id}/start`, null, as);
+      if (!paper.ok) {
+        console.log(`  - ${email}: ${paper.data?.detail ?? paper.status}`);
+        continue;
+      }
+      const answers = {};
+      paper.data.questions.forEach((pq, n) => {
+        const right = q.questions.find(([text]) => text === pq.text)?.[2] ?? 0;
+        // Someone who fails gets the first two wrong.
+        answers[pq.id] = pass || n >= 2 ? right : (right + 1) % pq.options.length;
+      });
+      const r = await call('POST', `/training/quizzes/attempts/${paper.data.attemptId}/submit`, { answers }, as);
+      if (r.ok) console.log(`  ✓ ${email} took ${q.title}: ${r.data.scorePercent}%${r.data.certificateCode ? `, certificate ${r.data.certificateCode}` : ''}`);
+      else {
+        failures++;
+        console.log(`  ✗ ${email} ${q.title}: ${r.status}`);
+      }
+    }
+  }
+
   return failures;
 }
 
