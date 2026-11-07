@@ -171,7 +171,7 @@ export const NAV: NavSection[] = [
       { to: '/budget', label: 'Manpower budget', icon: Calculator, roles: HR_ROLES, module: 'budget' },
       { to: '/insights', label: 'Workforce insights', icon: ChartLine, roles: HR_ROLES, module: 'reports' },
       { to: '/alerts', label: 'Alerts and reports', icon: BellRing, roles: HR_ROLES, module: 'reports' },
-      { to: '/settings', label: 'Organization', icon: Settings2, roles: HR_ROLES, module: 'organization' },
+      { to: '/settings', label: 'Organization', icon: Settings2, roles: HR_ROLES, module: 'organization', end: true },
       { to: '/settings/access', label: 'Access', icon: ShieldCheck, roles: ['CompanyAdmin'] },
       { to: '/audit-logs', label: 'Audit logs', icon: ScrollText, roles: ['CompanyAdmin'] },
       { to: '/billing', label: 'Billing', icon: CreditCard, roles: ['CompanyAdmin'] },
