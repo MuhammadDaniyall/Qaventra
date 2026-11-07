@@ -3,6 +3,12 @@
  * components). Kept apart from i18n-ur.ts, which holds the hand-picked core terms; those win on a clash.
  */
 export const UR_SCREENS: Record<string, string> = {
+  "Clear": "صاف کریں",
+  "Time format": "وقت کا انداز",
+  "How times show for everyone in the company: screens, reports, scheduled emails and Excel.": "کمپنی میں سب کے لیے وقت کیسے دکھے: اسکرینیں، رپورٹس، شیڈول ای میلز اور ایکسل۔",
+  "12 hours": "12 گھنٹے",
+  "24 hours": "24 گھنٹے",
+  "General": "عمومی",
   "Type to search": "تلاش کے لیے لکھیں",
   "No matches": "کچھ نہیں ملا",
   "0 = any": "0 = کوئی بھی",

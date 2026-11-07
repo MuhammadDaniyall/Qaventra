@@ -7,7 +7,7 @@ import { ACCESS_BLOCK_CODES, ApiError, errorMessage, getPlatformToken, isAccessB
 import { platformApi } from '../api/platform';
 import { Button, EmptyState, useToast } from '../components/ui';
 import type { LoginRequest, Me, Session } from '../types';
-import { setCurrency } from '../lib/format';
+import { setCurrency, setUse24HourTime } from '../lib/format';
 
 interface AuthState {
   user: Me | null;
@@ -193,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
   // Money on every screen shows the company's payroll currency (PKR, AED or SAR).
   setCurrency(user?.currency);
+  setUse24HourTime(!!user?.use24HourTime);
   const value = useMemo(
     () => ({ user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged }),
     [user, notice, clearNotice, initializing, login, logout, enterCompany, exitCompany, passwordChanged],

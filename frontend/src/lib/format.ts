@@ -45,13 +45,31 @@ export function formatDate(value: string | null | undefined): string {
   return `${p[2]} ${MONTHS[p[1] - 1]} ${p[0]}`;
 }
 
-/** "20 Oct 2026, 09:14" for UTC timestamps, shown in the browser's local time. */
+let use24 = false;
+
+/** The company's clock: false shows "6:30 PM", true shows "18:30". Set from the signed-in session. */
+export function setUse24HourTime(value: boolean) {
+  use24 = value;
+}
+
+/** "6:30 PM" or "18:30", as the company chose. */
+export function clock(hours: number, minutes: number): string {
+  if (use24) return `${pad(hours)}:${pad(minutes)}`;
+  return `${hours % 12 === 0 ? 12 : hours % 12}:${pad(minutes)} ${hours >= 12 ? 'PM' : 'AM'}`;
+}
+
+/** The time of a Date in the browser's timezone, in the company's clock. */
+export function formatClock(d: Date): string {
+  return clock(d.getHours(), d.getMinutes());
+}
+
+/** "20 Oct 2026, 9:14 AM" for UTC timestamps, shown in the browser's local time. */
 export function formatDateTimeUtc(value: string | null | undefined): string {
   if (!value) return '—';
   const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return value;
-  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}, ${formatClock(d)}`;
 }
 
 const pkDateTime = new Intl.DateTimeFormat('en-GB', {
@@ -64,25 +82,22 @@ const pkDateTime = new Intl.DateTimeFormat('en-GB', {
   hourCycle: 'h23',
 });
 
-/** "3 Nov 2026, 10:42" for UTC timestamps, always in Pakistan time whatever the browser's timezone. */
+/** "3 Nov 2026, 10:42 AM" for UTC timestamps, always in Pakistan time whatever the browser's timezone. */
 export function formatDateTimePk(value: string | null | undefined): string {
   if (!value) return '—';
   const iso = /[zZ]|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return value;
   const p = Object.fromEntries(pkDateTime.formatToParts(d).map((x) => [x.type, x.value]));
-  return `${p.day} ${p.month} ${p.year}, ${p.hour}:${p.minute}`;
+  return `${p.day} ${p.month} ${p.year}, ${clock(Number(p.hour), Number(p.minute))}`;
 }
 
-/** "09:14" from a company-local date-time ("2026-10-20T09:14:33") or a TimeOnly ("09:14:00"). */
+/** "9:14 AM" (or "09:14") from a company-local date-time ("2026-10-20T09:14:33") or a TimeOnly ("09:14:00"). */
 export function formatTime(value: string | null | undefined): string {
   if (!value) return '—';
   const m = /(\d{2}):(\d{2})(?::\d{2})?(?:\.\d+)?$/.exec(value.replace(/[zZ]$/, ''));
   if (!m) return value;
-  const h = Number(m[1]);
-  const suffix = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${m[2]} ${suffix}`;
+  return clock(Number(m[1]), Number(m[2]));
 }
 
 export function formatMinutes(minutes: number | null | undefined): string {

@@ -156,6 +156,7 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
                 var leave = await db.LeaveRequests.Where(l => l.Status == LeaveStatus.Approved && l.FromDate <= day && l.ToDate >= day && ids.Contains(l.EmployeeId))
                     .Select(l => new { l.EmployeeId, Type = l.LeaveType!.Name }).ToListAsync();
                 var rows = new List<List<string>>();
+                var h24 = await TimeText.Use24HourAsync(db);
                 foreach (var p in people)
                 {
                     var rec = recs.FirstOrDefault(x => x.EmployeeId == p.Id);
@@ -165,8 +166,8 @@ public class ScheduledService(HrmsDbContext db, TenantClock clock, NotificationS
                     if (status == "Off")
                         continue;
                     rows.Add([p.EmployeeCode, p.Name, p.Department, status,
-                        rec is null ? "" : (await clock.ToLocalAsync(rec.CheckInUtc)).ToString("HH:mm"),
-                        rec?.CheckOutUtc is { } co ? (await clock.ToLocalAsync(co)).ToString("HH:mm") : ""]);
+                        rec is null ? "" : TimeText.Of(await clock.ToLocalAsync(rec.CheckInUtc), h24),
+                        rec?.CheckOutUtc is { } co ? TimeText.Of(await clock.ToLocalAsync(co), h24) : ""]);
                 }
                 var present = rows.Count(x => x[4] != "");
                 return new($"Attendance, {day:ddd d MMM yyyy}", $"{present} in, {rows.Count(x => x[3] == "Absent")} absent, {rows.Count(x => x[3].StartsWith("On leave"))} on leave",

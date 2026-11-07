@@ -8,7 +8,7 @@ import { Button, Card, Skeleton, StatusBadge, useToast } from '../../components/
 import type { BreakKind } from '../../types';
 import { tx } from '../../lib/i18n';
 import { cn } from '../../lib/cn';
-import { formatDate, formatMinutes, formatTime, pad } from '../../lib/format';
+import { formatClock, formatDate, formatMinutes, formatTime } from '../../lib/format';
 import { getCurrentPosition, type Coords } from '../../lib/geo';
 
 function useClock() {
@@ -101,8 +101,10 @@ export function CheckInCard({ className }: { className?: string }) {
         <div className="min-w-0">
           <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{formatDate(t.date)}</p>
           <p className="mt-1 text-4xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
-            {pad(now.getHours() % 12 === 0 ? 12 : now.getHours() % 12)}:{pad(now.getMinutes())}
-            <span className="ms-1.5 text-lg font-medium text-zinc-500 dark:text-zinc-400">{now.getHours() >= 12 ? 'PM' : 'AM'}</span>
+            {formatClock(now).replace(/ [AP]M$/, '')}
+            {/[AP]M$/.test(formatClock(now)) && (
+              <span className="ms-1.5 text-lg font-medium text-zinc-500 dark:text-zinc-400">{formatClock(now).slice(-2)}</span>
+            )}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-zinc-500 dark:text-zinc-400">
             {t.shiftName && (

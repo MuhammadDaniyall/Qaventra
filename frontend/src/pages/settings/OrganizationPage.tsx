@@ -1,8 +1,9 @@
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
-import { Settings2, Briefcase, GitBranch, Layers, FolderOpen, ListPlus, Mail, ShieldCheck, Tags } from 'lucide-react';
+import { Settings2, Clock, Briefcase, GitBranch, Layers, FolderOpen, ListPlus, Mail, ShieldCheck, Tags } from 'lucide-react';
 import { useUser } from '../../auth/AuthContext';
 import { isCompanyAdmin } from '../../auth/roles';
 import { EmailTab } from './EmailTab';
+import { GeneralTab } from './GeneralTab';
 import { DocumentsTab } from './DocumentsTab';
 import { SecurityTab } from './SecurityTab';
 import { PageHeader, Tabs } from '../../components/ui';
@@ -14,8 +15,8 @@ import { DepartmentsTab } from './DepartmentsTab';
 import { DesignationsTab } from './DesignationsTab';
 import { LookupsTab } from './LookupsTab';
 
-type Tab = 'departments' | 'designations' | 'lists' | 'approvals' | 'custom-fields' | 'email' | 'documents' | 'security';
-const TABS: Tab[] = ['departments', 'designations', 'lists', 'approvals', 'custom-fields', 'email', 'documents', 'security'];
+type Tab = 'general' | 'departments' | 'designations' | 'lists' | 'approvals' | 'custom-fields' | 'email' | 'documents' | 'security';
+const TABS: Tab[] = ['general', 'departments', 'designations', 'lists', 'approvals', 'custom-fields', 'email', 'documents', 'security'];
 
 /** Tabs that moved into their module's own settings; old links and bookmarks land there. */
 const MOVED: Record<string, string> = {
@@ -81,6 +82,7 @@ export function OrganizationPage() {
         onChange={(t) => setParams({ tab: t }, { replace: true })}
         items={[
           { value: 'departments', label: 'Departments', icon: <Layers className="size-4" /> },
+          { value: 'general', label: 'General', icon: <Clock className="size-4" /> },
           { value: 'designations', label: 'Designations', icon: <Briefcase className="size-4" /> },
           { value: 'lists', label: 'Grades and groups', icon: <Tags className="size-4" /> },
           { value: 'approvals', label: 'Approval chains', icon: <GitBranch className="size-4" /> },
@@ -90,6 +92,7 @@ export function OrganizationPage() {
           ...(admin ? [{ value: 'security' as const, label: 'Security', icon: <ShieldCheck className="size-4" /> }] : []),
         ]}
       />
+      {tab === 'general' && <GeneralTab />}
       {tab === 'departments' && <DepartmentsTab />}
       {tab === 'designations' && <DesignationsTab />}
       {tab === 'lists' && <LookupsTab />}

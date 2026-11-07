@@ -7,6 +7,8 @@ public class Tenant : BaseEntity
     public string Name { get; set; } = "";
     /// <summary>IANA time zone used for attendance dates and shift times.</summary>
     public string TimeZoneId { get; set; } = "Asia/Karachi";
+    /// <summary>Show times as 18:30 instead of 6:30 PM (screens, reports, Excel).</summary>
+    public bool Use24HourTime { get; set; }
     public bool IsActive { get; set; } = true;
     public string? Phone { get; set; }
     public string? City { get; set; }

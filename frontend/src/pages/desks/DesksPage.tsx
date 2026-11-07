@@ -36,12 +36,12 @@ import {
   useToast,
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { formatDate, todayIso } from '../../lib/format';
+import { formatDate, formatTime, todayIso } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 
 type Tab = 'book' | 'mine' | 'who' | 'setup' | 'usage';
 
-const time = (t: string | null) => (t ? t.slice(0, 5) : '');
+const time = (t: string | null) => (t ? formatTime(t) : '');
 
 /** Book a desk for the day or a room by the hour; see who is in; HR sets up floors and spaces. */
 export function DesksPage() {

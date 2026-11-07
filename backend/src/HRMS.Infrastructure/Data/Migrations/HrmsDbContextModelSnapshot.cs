@@ -10234,6 +10234,9 @@ namespace HRMS.Infrastructure.Data.Migrations
                     b.Property<DateOnly?>("TrialEndsOn")
                         .HasColumnType("date");
 
+                    b.Property<bool>("Use24HourTime")
+                        .HasColumnType("bit");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CareersSlug")

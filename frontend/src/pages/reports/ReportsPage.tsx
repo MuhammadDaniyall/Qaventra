@@ -19,6 +19,7 @@ import {
   Users,
   Wallet,
   type LucideIcon,
+  RotateCcw,
 } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments, useEmployeeLookup } from '../../api/hooks';
@@ -218,7 +219,7 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
   const people = useEmployeeLookup(def.filters.includes('employee'));
   const signatures = useQuery({ queryKey: qk.reportSettings, queryFn: reportsApi.settings });
   const now = new Date();
-  const [f, setF] = useState({
+  const initial = () => ({
     from: new Date(now.getFullYear(), now.getMonth(), 1).toLocaleDateString('en-CA'),
     to: todayIso(),
     date: todayIso(),
@@ -230,6 +231,7 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
     employee: '',
     includeLeft: false,
   });
+  const [f, setF] = useState(initial);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((x) => ({ ...x, [k]: v }));
   const has = (x: string) => def.filters.includes(x as never);
   const request = (): ReportRequest => {
@@ -327,6 +329,16 @@ function ReportRunner({ def, company }: { def: ReportDefinition; company: string
           <div className="flex gap-2 pb-0.5">
             <Button icon={<Play className="size-4" />} loading={run.isPending} onClick={() => run.mutate()}>
               Run
+            </Button>
+            <Button
+              variant="ghost"
+              icon={<RotateCcw className="size-4" />}
+              onClick={() => {
+                setF(initial());
+                run.reset();
+              }}
+            >
+              Clear
             </Button>
             <Button variant="secondary" icon={<Download className="size-4" />} loading={excel.isPending} onClick={() => excel.mutate()}>
               Excel

@@ -3,6 +3,12 @@
  * the sign-in page. Keys are the exact English strings; anything missing stays in English (see i18n.ts).
  */
 export const AR: Record<string, string> = {
+  "Clear": "مسح",
+  "Time format": "تنسيق الوقت",
+  "How times show for everyone in the company: screens, reports, scheduled emails and Excel.": "كيف يظهر الوقت للجميع في الشركة: الشاشات والتقارير والرسائل المجدولة وإكسل.",
+  "12 hours": "12 ساعة",
+  "24 hours": "24 ساعة",
+  "General": "عام",
   "Type to search": "اكتب للبحث",
   "No matches": "لا توجد نتائج",
   // Navigation

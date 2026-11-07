@@ -105,6 +105,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
 
     public async Task<ReportResult> RunAsync(string key, ReportRequest f)
     {
+        h24 = await TimeText.Use24HourAsync(db);
         var def = All.FirstOrDefault(r => r.Key == key) ?? throw new NotFoundException("Report");
         if (def.HrOnly && !me.IsHr())
             throw new ForbiddenException("Only HR can run this report.");
@@ -196,7 +197,7 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
                 foreach (var a in recs)
                 {
                     var s = staff.First(x => x.Id == a.EmployeeId);
-                    rows.Add(L(D(a.Date), s.EmployeeCode, s.Name, s.Department, a.CheckOutUtc is { } o ? (await clock.ToLocalAsync(o)).ToString("HH:mm") : "", N(a.EarlyLeaveMinutes)));
+                    rows.Add(L(D(a.Date), s.EmployeeCode, s.Name, s.Department, a.CheckOutUtc is { } o ? Time(await clock.ToLocalAsync(o)) : "", N(a.EarlyLeaveMinutes)));
                 }
                 return T(def, $"{range}: {recs.Count} early leaves", ["Date", "Code", "Name", "Department", "Out", "Minutes early"], [5], rows, totals: true);
             }
@@ -857,7 +858,8 @@ public class ReportCatalog(HrmsDbContext db, ICurrentUser me, TenantClock clock,
     private static string Num(decimal n) => n.ToString("0.##");
     /// <summary>Whole amounts as before (PKR); AED / SAR fils and halalas keep up to two decimals.</summary>
     private static string M(decimal n) => n.ToString("#,0.##");
-    private static string Time(DateTime t) => t.ToString("HH:mm");
+    private bool h24;
+    private string Time(DateTime t) => TimeText.Of(t, h24);
     private static string Hours(int minutes) => $"{minutes / 60m:0.#} h";
 
     private static string Status(EmploymentStatus s, DateOnly? left) =>

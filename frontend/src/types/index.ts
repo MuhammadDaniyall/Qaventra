@@ -46,6 +46,8 @@ export interface Me {
   /** Company payroll currency (PKR, AED, SAR) and country (PK, AE, SA). */
   currency?: string;
   payrollCountry?: string;
+  /** The company shows times as 18:30 instead of 6:30 PM. */
+  use24HourTime?: boolean;
 }
 
 export interface Session {

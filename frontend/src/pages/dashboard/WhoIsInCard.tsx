@@ -5,7 +5,7 @@ import { Download, Users } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
 import { Button, Card, CardHeader, EmptyState, Skeleton } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { todayIso } from '../../lib/format';
+import { formatClock, todayIso } from '../../lib/format';
 import type { Dashboard, DailyRow } from '../../types';
 
 type Tab = 'in' | 'leave' | 'out';
@@ -16,7 +16,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'out', label: 'Not in' },
 ];
 
-const timeOf = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const timeOf = (iso: string) => formatClock(new Date(iso));
 
 function bucket(r: DailyRow): Tab {
   if (r.record) return 'in';
