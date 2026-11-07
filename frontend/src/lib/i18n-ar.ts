@@ -266,4 +266,5 @@ export const AR: Record<string, string> = {
   "Nothing waits for your approval.": "لا شيء بانتظار موافقتك.",
   "Everything in one place": "كل شيء في مكان واحد",
   "Every module your company uses, one click away.": "كل وحدة تستخدمها شركتك، بنقرة واحدة.",
+  "Open the approvals inbox ({n} waiting)": "افتح صندوق الموافقات ({n} بالانتظار)",
 };

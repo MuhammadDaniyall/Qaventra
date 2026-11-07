@@ -1363,4 +1363,5 @@ export const UR_SCREENS: Record<string, string> = {
   "Nothing waits for your approval.": "کوئی چیز آپ کی منظوری کی منتظر نہیں۔",
   "Everything in one place": "سب کچھ ایک جگہ",
   "Every module your company uses, one click away.": "آپ کی کمپنی کا ہر ماڈیول، ایک کلک پر۔",
+  "Open the approvals inbox ({n} waiting)": "منظوریوں کا ان باکس کھولیں ({n} منتظر)",
 };

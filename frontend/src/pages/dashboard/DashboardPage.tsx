@@ -157,9 +157,14 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-3">
-            <ApprovalsPreview className="min-w-0 self-start" />
-            <div className="min-w-0 lg:col-span-2">{news}</div>
+          {/* Both columns end on one line: the approvals card stretches to the news column, and the last news card
+              grows to the approvals card. With no news, approvals take the full width. */}
+          <div className="mt-6 grid gap-6 lg:grid-cols-3 lg:has-[>.news-col:empty]:grid-cols-1">
+            <ApprovalsPreview className="min-w-0" />
+            <div className="news-col flex min-w-0 flex-col gap-6 empty:hidden lg:col-span-2 [&>*:last-child]:flex-1">
+              <DashboardNews />
+              <CelebrationsCard />
+            </div>
           </div>
           {showCheckIn && <MyRequestsCard className="mt-6" />}
 
