@@ -15,7 +15,7 @@ const icon = {
 } as const;
 
 function who(step: ApprovalStep) {
-  if (step.kind === 'Hr') return 'HR';
+  if (step.kind === 'Hr') return step.approverName ? `HR (${step.approverName})` : 'HR';
   return step.approverName ? `${step.approverName} (${APPROVER_LABELS[step.kind].toLowerCase()})` : APPROVER_LABELS[step.kind];
 }
 
@@ -62,7 +62,9 @@ export function ApprovalTimeline({ type, subjectId, className }: { type: Approva
                 </p>
                 {step.decidedAtUtc && (
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {step.decidedByName && step.decidedByName !== step.approverName ? `${step.decidedByName}, ` : ''}
+                    {step.decidedByName && step.decidedByName !== step.approverName
+                      ? `${step.status === 'Rejected' ? 'Rejected by' : step.status === 'Approved' ? 'Approved by' : 'By'} ${step.decidedByName}, `
+                      : ''}
                     {formatDateTimeUtc(step.decidedAtUtc)}
                   </p>
                 )}

@@ -154,8 +154,13 @@ public class ApprovalsController(HrmsDbContext db, ICurrentUser me, ApprovalEngi
             throw new NotFoundException("Approval");
 
         var names = await EmployeeNamesAsync(a.Steps.Select(s => s.ApproverEmployeeId));
+        // An HR step names the people who can act on it, so everyone sees whose desk it is on.
+        var hr = a.Steps.Any(s => s.Kind == ApproverKind.Hr && s.ApproverEmployeeId is null && s.DecidedAtUtc is null)
+            ? string.Join(", ", await db.Users.Where(u => u.IsActive && (u.Role == UserRole.HrManager || u.Role == UserRole.CompanyAdmin))
+                .OrderBy(u => u.Role).ThenBy(u => u.FullName).Select(u => u.FullName).Take(4).ToListAsync())
+            : null;
         return new ApprovalTimelineDto(a.Status, a.Steps.OrderBy(s => s.Order).Select(s => new ApprovalStepDto(
-            s.Order, s.Kind, s.ApproverEmployeeId is { } id ? names.GetValueOrDefault(id) : null,
+            s.Order, s.Kind, s.ApproverEmployeeId is { } id ? names.GetValueOrDefault(id) : s.Kind == ApproverKind.Hr && s.DecidedAtUtc is null ? hr : null,
             s.Status, s.DecidedByName, s.DecidedAtUtc, s.Note)).ToList(), a.Forced, a.FiledByName);
     }
 
