@@ -80,6 +80,7 @@ builder.Services.AddSingleton(builder.Configuration.GetSection("HelpdeskInbox").
 builder.Services.AddSingleton<HelpdeskInbox>();
 builder.Services.AddHostedService<HelpdeskInboxService>();
 builder.Services.AddHostedService<ScheduledWorkService>();
+builder.Services.AddHostedService<SubscriptionReminderService>();
 builder.Services.AddHostedService<RobotWorkService>();
 builder.Services.AddScoped<LeaveService>();
 builder.Services.AddScoped<LetterService>();
@@ -94,6 +95,7 @@ builder.Services.AddSingleton(builder.Configuration.GetSection("Payments").Get<P
 builder.Services.AddScoped<IPaymentGateway, ManualBankGateway>();
 builder.Services.AddScoped<IPaymentGateway, SafepayGateway>();
 builder.Services.AddScoped<BillingService>();
+builder.Services.AddScoped<SubscriptionReminders>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<TenantAccessChecker>();
 

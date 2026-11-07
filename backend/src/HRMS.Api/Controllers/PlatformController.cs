@@ -19,7 +19,7 @@ public record CompanyDto(
     string? Phone, string? City, string? Address, int? MaxEmployees,
     BillingCycle? BillingCycle, decimal? PlanPrice, decimal? PricePerEmployee, decimal? AmountPerCycle, DateOnly? SubscriptionEndsOn, int? DaysLeft,
     int Employees, int Users, string? AdminName, string? AdminEmail, DateTime? LastActivityUtc, DateOnly? LastPaymentOn, int? EmailQuotaPerMonth,
-    RecordStampsDto Stamps);
+    RecordStampsDto Stamps, string? LastReminder = null, DateTime? LastReminderAtUtc = null);
 
 public record PlatformStatsDto(
     int Companies, int ActiveCompanies, int InactiveCompanies, int ExpiredCompanies, int ExpiringSoon,
@@ -87,6 +87,7 @@ public class PlatformController(
     SessionService sessions,
     TenantAccessChecker access,
     AuditWriter audit,
+    SubscriptionReminders reminders,
     ICurrentUser me) : ControllerBase
 {
     private const int ExpiringWithinDays = 7;
@@ -128,6 +129,18 @@ public class PlatformController(
     [HttpGet("companies/{id:guid}")]
     public async Task<CompanyDto> Company(Guid id) =>
         (await LoadCompanies(db.Tenants.Where(t => t.Id == id))).FirstOrDefault() ?? throw new NotFoundException("Company");
+
+    /// <summary>Sends the company's admins a renewal reminder now (in the app and by email), whatever the date.</summary>
+    [HttpPost("companies/{id:guid}/remind")]
+    public async Task<CompanyDto> Remind(Guid id)
+    {
+        var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == id) ?? throw new NotFoundException("Company");
+        if (tenant.SubscriptionEndsOn is null)
+            throw new DomainException("Set the subscription end date first.");
+        if (!await reminders.RunAsync(id, force: true))
+            throw new DomainException("A reminder was already sent today.");
+        return await Company(id);
+    }
 
     /// <summary>Creates the company and its Company Super Admin login in one step.</summary>
     [HttpPost("companies")]
@@ -227,7 +240,19 @@ public class PlatformController(
     [HttpPost("companies/{id:guid}/payments")]
     public async Task<CompanyDto> RecordPayment(Guid id, RecordPaymentRequest req)
     {
-        await subscriptions.RecordPaymentAsync(id, new NewPayment(req.Amount, req.PaidOn, req.Periods, req.Method, req.Reference, req.Notes));
+        var payment = await subscriptions.RecordPaymentAsync(id, new NewPayment(req.Amount, req.PaidOn, req.Periods, req.Method, req.Reference, req.Notes));
+        // The company's open invoice for this amount and these cycles is what was paid: close it, so it is not paid twice.
+        var invoice = await db.TenantInvoices
+            .Where(i => i.TenantId == id && (i.Status == InvoiceStatus.Unpaid || i.Status == InvoiceStatus.AwaitingApproval) && i.Amount == req.Amount && i.Periods == req.Periods)
+            .OrderByDescending(i => i.CreatedAtUtc).FirstOrDefaultAsync();
+        if (invoice is not null)
+        {
+            invoice.Status = InvoiceStatus.Paid;
+            invoice.PaidAtUtc = DateTime.UtcNow;
+            invoice.PaymentId = payment.Id;
+            payment.Notes ??= $"Invoice {invoice.Number}";
+            await db.SaveChangesAsync();
+        }
         return await Company(id);
     }
 
@@ -277,7 +302,9 @@ public class PlatformController(
             Users = db.Users.IgnoreQueryFilters().Count(u => u.TenantId == t.Id),
             Admin = db.Users.IgnoreQueryFilters().Where(u => u.TenantId == t.Id && u.Role == UserRole.CompanyAdmin)
                 .OrderBy(u => u.CreatedAtUtc).Select(u => new { u.FullName, u.Email }).FirstOrDefault(),
-            LastActivity = db.AuditLogs.Where(l => l.TenantId == t.Id).Max(l => (DateTime?)l.TimestampUtc),
+            LastActivity = db.AuditLogs.Where(l => l.TenantId == t.Id && l.Action != SubscriptionReminders.Action).Max(l => (DateTime?)l.TimestampUtc),
+            Reminder = db.AuditLogs.Where(l => l.TenantId == t.Id && l.Action == SubscriptionReminders.Action).OrderByDescending(l => l.TimestampUtc)
+                .Select(l => new { l.Changes, l.TimestampUtc }).FirstOrDefault(),
             LastPayment = db.TenantPayments.Where(p => p.TenantId == t.Id).Max(p => (DateOnly?)p.PaidOn),
         }).ToListAsync();
 
@@ -290,7 +317,7 @@ public class PlatformController(
                 t.BillingCycle, t.PlanPrice, t.PricePerEmployee, t.AmountPerCycle(r.Employees), t.SubscriptionEndsOn,
                 t.SubscriptionEndsOn is { } end ? end.DayNumber - today.DayNumber : null,
                 r.Employees, r.Users, r.Admin?.FullName, r.Admin?.Email, r.LastActivity, r.LastPayment, t.EmailQuotaPerMonth,
-                RecordStampsDto.Of(t));
+                RecordStampsDto.Of(t), r.Reminder?.Changes, r.Reminder?.TimestampUtc);
         }).ToList();
     }
 }

@@ -31,10 +31,9 @@ public class SubscriptionService(HrmsDbContext db, TenantAccessChecker access, I
         var cycle = tenant.BillingCycle ?? throw new DomainException("Set the company's billing cycle (monthly, quarterly, yearly) before recording a payment.");
 
         var today = access.LocalToday(tenant.TimeZoneId);
-        var from = tenant.SubscriptionEndsOn is { } end && end >= today ? end.AddDays(1) : today;
-        // AddMonths clamps to the month end (31 Jan + 1 month = 28 Feb); a clamped date is already the last covered day.
-        var next = from.AddMonths(Months(cycle) * input.Periods);
-        var to = next.Day < from.Day ? next : next.AddDays(-1);
+        if (input.PaidOn > today.AddDays(1))
+            throw new DomainException("The payment date cannot be in the future.");
+        var (from, to) = NextPeriod(tenant.SubscriptionEndsOn, today, cycle, input.Periods);
 
         var payment = new TenantPayment
         {
@@ -53,6 +52,18 @@ public class SubscriptionService(HrmsDbContext db, TenantAccessChecker access, I
         await db.SaveChangesAsync();
         access.Invalidate(tenantId);
         return payment;
+    }
+
+    /// <summary>
+    /// The days a payment for <paramref name="periods"/> cycles covers: from the day after the current end date, or from
+    /// today when the subscription has lapsed (or never started).
+    /// </summary>
+    public static (DateOnly From, DateOnly To) NextPeriod(DateOnly? endsOn, DateOnly today, BillingCycle cycle, int periods)
+    {
+        var from = endsOn is { } end && end >= today ? end.AddDays(1) : today;
+        // AddMonths clamps to the month end (31 Jan + 1 month = 28 Feb); a clamped date is already the last covered day.
+        var next = from.AddMonths(Months(cycle) * periods);
+        return (from, next.Day < from.Day ? next : next.AddDays(-1));
     }
 
     /// <summary>Permanently deletes the company and every row it owns. Audit logs are kept as the permanent record.</summary>

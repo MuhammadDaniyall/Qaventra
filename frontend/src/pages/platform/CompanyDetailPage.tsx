@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { CompanyPlanCard } from '../billing/BillingPages';
-import { Activity, Banknote, KeyRound, LogIn, Pencil, Power, Receipt, Trash2, UserCog, Users } from 'lucide-react';
+import { Activity, Banknote, BellRing, KeyRound, LogIn, Pencil, Power, Receipt, Trash2, UserCog, Users } from 'lucide-react';
 import { platformApi } from '../../api/platform';
 import { qk } from '../../api/keys';
 import {
@@ -22,6 +22,7 @@ import {
   Th,
   THead,
   Tr,
+  useToast,
 } from '../../components/ui';
 import { accessKind, CYCLE_LABELS, daysLeftLabel } from '../../lib/billing';
 import { cn } from '../../lib/cn';
@@ -188,6 +189,17 @@ export function CompanyDetailPage() {
 
 function SubscriptionCard({ company: c, onRecordPayment, onEdit }: { company: Company; onRecordPayment: () => void; onEdit: () => void }) {
   const kind = accessKind(c);
+  const qc = useQueryClient();
+  const toast = useToast();
+  const remind = useMutation({
+    mutationFn: () => platformApi.remind(c.id),
+    onSuccess: () => {
+      toast.success('Reminder sent', `${c.adminEmail ?? 'The company admin'} gets it in the app and by email.`);
+      qc.invalidateQueries({ queryKey: ['platform'] });
+    },
+    onError: (err) => toast.error(err),
+  });
+  const reminded = c.lastReminder && c.lastReminderAtUtc ? `Reminded ${formatDateTimeUtc(c.lastReminderAtUtc)}: ${c.lastReminder}` : 'No renewal reminder sent yet';
   const pct = c.maxEmployees ? Math.min(100, (c.employees / c.maxEmployees) * 100) : 0;
   return (
     <Card className="mt-6">
@@ -197,12 +209,24 @@ function SubscriptionCard({ company: c, onRecordPayment, onEdit }: { company: Co
             Subscription <AccessBadge company={c} />
           </span>
         }
-        description={c.lastPaymentOn ? `Last payment ${formatDate(c.lastPaymentOn)}` : 'No payments recorded yet'}
+        description={
+          <>
+            {c.lastPaymentOn ? `Last payment ${formatDate(c.lastPaymentOn)}` : 'No payments recorded yet'}
+            {c.subscriptionEndsOn && <span className="mt-0.5 block text-xs">{reminded}</span>}
+          </>
+        }
         actions={
           <div className="flex flex-col items-end gap-1">
-            <Button size="sm" icon={<Banknote className="size-3.5" />} disabled={!c.billingCycle} onClick={onRecordPayment}>
-              Record payment
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {c.subscriptionEndsOn && (
+                <Button size="sm" variant="secondary" icon={<BellRing className="size-3.5" />} loading={remind.isPending} onClick={() => remind.mutate()}>
+                  Send reminder
+                </Button>
+              )}
+              <Button size="sm" icon={<Banknote className="size-3.5" />} disabled={!c.billingCycle} onClick={onRecordPayment}>
+                Record payment
+              </Button>
+            </div>
             {!c.billingCycle && (
               <button type="button" onClick={onEdit} className="text-xs text-accent-600 hover:underline dark:text-accent-400">
                 Set a billing cycle first

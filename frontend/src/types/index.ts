@@ -114,6 +114,9 @@ export interface Company {
   /** Negative when expired. */
   daysLeft: number | null;
   lastPaymentOn: string | null;
+  /** The latest renewal reminder sent to the company's admins, and when (UTC). */
+  lastReminder?: string | null;
+  lastReminderAtUtc?: string | null;
   /** Active + probation employees. */
   employees: number;
   users: number;

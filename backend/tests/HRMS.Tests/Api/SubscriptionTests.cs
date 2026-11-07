@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -129,5 +130,92 @@ public class SubscriptionTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Equal(150m * 30 * 12, tenant.AmountPerCycle(currentEmployees: 20));
         tenant.BillingCycle = null;
         Assert.Null(tenant.AmountPerCycle(20));
+    }
+
+    [Theory]
+    [InlineData(30, null)]
+    [InlineData(8, null)]
+    [InlineData(7, 7)]
+    [InlineData(5, 7)]
+    [InlineData(3, 3)]
+    [InlineData(1, 1)]
+    [InlineData(0, 0)]
+    [InlineData(-1, -1)]
+    [InlineData(-6, -1)]
+    [InlineData(-40, -7)]
+    public void Reminder_stage_is_the_latest_one_reached(int daysLeft, int? stage) =>
+        Assert.Equal(stage, HRMS.Api.Services.SubscriptionReminders.StageFor(daysLeft));
+
+    [Theory]
+    [InlineData("2026-01-30", "2026-01-15", BillingCycle.Monthly, 1, "2026-01-31", "2026-02-28")]
+    [InlineData("2026-03-31", "2026-03-10", BillingCycle.Monthly, 1, "2026-04-01", "2026-04-30")]
+    [InlineData("2026-06-30", "2026-06-01", BillingCycle.Quarterly, 2, "2026-07-01", "2026-12-31")]
+    [InlineData("2025-12-31", "2026-02-10", BillingCycle.Yearly, 1, "2026-02-10", "2027-02-09")]
+    public void Next_period_follows_the_end_date_or_restarts_today(string endsOn, string today, BillingCycle cycle, int periods, string from, string to)
+    {
+        var (f, t) = HRMS.Api.Services.SubscriptionService.NextPeriod(DateOnly.Parse(endsOn), DateOnly.Parse(today), cycle, periods);
+        Assert.Equal((DateOnly.Parse(from), DateOnly.Parse(to)), (f, t));
+    }
+
+    [Fact]
+    public async Task Ending_subscription_reminds_the_admin_once_and_the_owner_sees_it()
+    {
+        var (admin, _, id) = await factory.CreateCompanyAsync("Ri");
+        var owner = await factory.SignInAsOwnerAsync();
+        var inThreeDays = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(5)).AddDays(3);
+        await Read(await owner.PutAsJsonAsync($"/api/platform/companies/{id}",
+            Plan($"Ri Reminded {Guid.NewGuid():N}", BillingCycle.Monthly, maxEmployees: 10, basePrice: 0, perEmployee: 500, endsOn: inThreeDays.ToString("yyyy-MM-dd"))));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var reminders = scope.ServiceProvider.GetRequiredService<HRMS.Api.Services.SubscriptionReminders>();
+            Assert.True(await reminders.RunAsync(id));
+        }
+        using (var scope = factory.Services.CreateScope())
+            Assert.False(await scope.ServiceProvider.GetRequiredService<HRMS.Api.Services.SubscriptionReminders>().RunAsync(id));
+
+        var notes = (await Read(await admin.GetAsync("/api/notifications"))).ToString();
+        Assert.Contains("ends in 3 days", notes);
+        Assert.Contains("Rs 5,000 per monthly cycle", notes);
+        var company = await Read(await owner.GetAsync($"/api/platform/companies/{id}"));
+        Assert.Contains("ends in 3 days", company.GetProperty("lastReminder").GetString());
+
+        // The owner can send one more by hand, once a day.
+        Assert.Equal(HttpStatusCode.OK, (await owner.PostAsync($"/api/platform/companies/{id}/remind", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsync($"/api/platform/companies/{id}/remind", null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Invoice_names_the_package_and_period_and_replaces_a_stale_one()
+    {
+        var (admin, _, id) = await factory.CreateCompanyAsync("Iv");
+        var owner = await factory.SignInAsOwnerAsync();
+        var endsOn = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(5)).AddDays(10);
+        await Read(await owner.PutAsJsonAsync($"/api/platform/companies/{id}",
+            Plan($"Iv Billed {Guid.NewGuid():N}", BillingCycle.Monthly, maxEmployees: 10, basePrice: 1_000, perEmployee: 100, endsOn: endsOn.ToString("yyyy-MM-dd"))));
+
+        var first = await Read(await admin.PostAsJsonAsync("/api/billing/invoices", new { periods = 2 }));
+        Assert.Equal(4_000m, first.GetProperty("amount").GetDecimal());
+        var from = endsOn.AddDays(1);
+        var (_, to) = HRMS.Api.Services.SubscriptionService.NextPeriod(endsOn, endsOn.AddDays(-10), BillingCycle.Monthly, 2);
+        Assert.Contains($"{from:d MMM yyyy} to {to:d MMM yyyy}, 10 employees", first.GetProperty("description").GetString());
+
+        // The price changes: a new invoice replaces the old unpaid one.
+        await Read(await owner.PutAsJsonAsync($"/api/platform/companies/{id}",
+            Plan($"Iv Billed {Guid.NewGuid():N}", BillingCycle.Monthly, maxEmployees: 20, basePrice: 1_000, perEmployee: 100, endsOn: endsOn.ToString("yyyy-MM-dd"))));
+        var second = await Read(await admin.PostAsJsonAsync("/api/billing/invoices", new { periods = 2 }));
+        Assert.Equal(6_000m, second.GetProperty("amount").GetDecimal());
+        var billing = (await Read(await admin.GetAsync("/api/billing"))).ToString();
+        Assert.Contains("Cancelled", billing);
+
+        // The owner records the bank transfer: the open invoice is closed with it.
+        await Read(await owner.PostAsJsonAsync($"/api/platform/companies/{id}/payments",
+            new { amount = 6_000, paidOn = endsOn.AddDays(-10).ToString("yyyy-MM-dd"), periods = 2, method = "Bank transfer" }));
+        var invoices = (await Read(await admin.GetAsync("/api/billing"))).GetProperty("invoices");
+        Assert.Equal("Paid", invoices.EnumerateArray().First(i => i.GetProperty("amount").GetDecimal() == 6_000m).GetProperty("status").GetString());
+
+        // A payment dated in the future is refused.
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsJsonAsync($"/api/platform/companies/{id}/payments",
+            new { amount = 6_000, paidOn = endsOn.AddDays(30).ToString("yyyy-MM-dd"), periods = 1 })).StatusCode);
     }
 }

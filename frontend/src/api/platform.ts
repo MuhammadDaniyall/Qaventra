@@ -25,6 +25,8 @@ export const platformApi = {
     http.post<CompanyAdminCredentials>(`/platform/companies/${id}/reset-admin-password`, { password }),
   payments: (id: string) => http.get<Payment[]>(`/platform/companies/${id}/payments`),
   recordPayment: (id: string, b: RecordPaymentRequest) => http.post<Company>(`/platform/companies/${id}/payments`, b),
+  /** Emails and notifies the company's admins about renewal now (once a day). */
+  remind: (id: string) => http.post<Company>(`/platform/companies/${id}/remind`, {}),
   /** Permanent. confirmName must equal the company name exactly. */
   deleteCompany: (id: string, confirmName: string) =>
     request<void>(`/platform/companies/${id}`, { method: 'DELETE', body: { confirmName } }),

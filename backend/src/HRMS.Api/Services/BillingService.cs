@@ -32,10 +32,26 @@ public class BillingService(HrmsDbContext db, SubscriptionService subscriptions,
         if (perCycle is not > 0)
             throw new DomainException("Your package has no price set yet. Ask your HR software provider to set it up.");
         var amount = perCycle.Value * periods;
-        var open = await db.TenantInvoices.FirstOrDefaultAsync(i => i.TenantId == tenantId && i.Status == InvoiceStatus.Unpaid && i.Periods == periods && i.Amount == amount);
-        if (open is not null)
-            return open;
         var today = access.LocalToday(tenant.TimeZoneId);
+        var cycle = tenant.BillingCycle ?? BillingCycle.Monthly;
+        var (from, to) = SubscriptionService.NextPeriod(tenant.SubscriptionEndsOn, today, cycle, periods);
+        var package = tenant.PlanId is { } planId ? await db.SubscriptionPlans.Where(p => p.Id == planId).Select(p => p.Name).FirstOrDefaultAsync() : null;
+        var seats = tenant.MaxEmployees ?? await HeadcountAsync(tenantId);
+        var description = $"{package ?? "Qaventra"} package, {cycle} x {periods}: {from:d MMM yyyy} to {to:d MMM yyyy}, {seats} employees";
+        if (description.Length > 200)
+            description = description[..200];
+        // An open invoice for the same cycles, price and period is reused; older open ones (another price or period) are
+        // cancelled so the company cannot pay a stale amount. One already sent to a payment gateway is left alone: its payment
+        // may still arrive.
+        var unpaid = await db.TenantInvoices.Where(i => i.TenantId == tenantId && i.Status == InvoiceStatus.Unpaid).ToListAsync();
+        var open = unpaid.FirstOrDefault(i => i.Periods == periods && i.Amount == amount && i.Description == description);
+        foreach (var stale in unpaid.Where(i => i != open && i.Provider == null))
+            stale.Status = InvoiceStatus.Cancelled;
+        if (open is not null)
+        {
+            await db.SaveChangesAsync();
+            return open;
+        }
         var invoice = new TenantInvoice
         {
             TenantId = tenantId,
@@ -43,7 +59,7 @@ public class BillingService(HrmsDbContext db, SubscriptionService subscriptions,
             Amount = amount,
             Periods = periods,
             IssuedOn = today,
-            Description = $"{tenant.BillingCycle} subscription x {periods}",
+            Description = description,
             Status = InvoiceStatus.Unpaid,
         };
         db.TenantInvoices.Add(invoice);
@@ -109,7 +125,8 @@ public class BillingService(HrmsDbContext db, SubscriptionService subscriptions,
         else if (!notice.Paid) result = "Not a successful payment.";
         else if (invoice.Status == InvoiceStatus.Paid) result = "Invoice already paid.";
         else if (invoice.Status == InvoiceStatus.Cancelled) result = "Invoice was cancelled.";
-        else if (notice.Amount is { } paid && paid != invoice.Amount) result = $"Amount {paid} does not match the invoice ({invoice.Amount}).";
+        else if (notice.Amount is not { } paid) result = "The provider did not say how much was paid.";
+        else if (paid != invoice.Amount) result = $"Amount {paid} does not match the invoice ({invoice.Amount}).";
         else
         {
             invoice.Provider = provider;

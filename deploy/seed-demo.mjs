@@ -8,6 +8,9 @@
 // fills that admin's own company instead (stops if the demo people are already there). Then departments, people, logins, attendance from a biometric
 // machine, leave, a finalized payroll with its journal, performance reviews, hiring, training, helpdesk and more.
 // The demo logins are written to deploy/secrets/demo-logins.txt (git-ignored), or to --out <file>.
+//
+//   node deploy/seed-demo.mjs --history "Al-Noor Textiles Ltd" [--months 24]   # owner login: two years of past months
+//   (holidays, leave, expense claims, machine punches and a paid payroll for each month before the first payroll)
 
 import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
@@ -658,10 +661,226 @@ async function moreModules(admin, emp, dept, me) {
 
 // ---------- Run ----------
 
+// ---------- Two years of history ----------
+
+// Public holidays by year (Eid dates move every year).
+const HOLIDAYS = {
+  fixed: [['02-05', 'Kashmir Solidarity Day'], ['03-23', 'Pakistan Day'], ['05-01', 'Labour Day'], ['08-14', 'Independence Day'], ['11-09', 'Iqbal Day'], ['12-25', 'Quaid-e-Azam Day']],
+  2024: [['04-10', 'Eid ul Fitr'], ['04-11', 'Eid ul Fitr'], ['04-12', 'Eid ul Fitr'], ['06-17', 'Eid ul Adha'], ['06-18', 'Eid ul Adha'], ['07-16', 'Ashura'], ['07-17', 'Ashura'], ['09-17', 'Eid Milad un Nabi']],
+  2025: [['03-31', 'Eid ul Fitr'], ['04-01', 'Eid ul Fitr'], ['04-02', 'Eid ul Fitr'], ['05-28', 'Youm-e-Takbeer'], ['06-07', 'Eid ul Adha'], ['06-08', 'Eid ul Adha'], ['07-05', 'Ashura'], ['07-06', 'Ashura'], ['09-06', 'Eid Milad un Nabi']],
+  2026: [['03-20', 'Eid ul Fitr'], ['03-21', 'Eid ul Fitr'], ['05-27', 'Eid ul Adha'], ['05-28', 'Eid ul Adha'], ['06-25', 'Ashura'], ['08-26', 'Eid Milad un Nabi']],
+};
+const HISTORY_EXPENSES = [
+  ['Client visit', [['Fuel', 'Fuel for the client visit', 3500, 8000], ['Meals', 'Lunch on the way back', 1200, 2500]]],
+  ['Islamabad trip', [['Travel', 'Daewoo Express ticket Lahore to Islamabad and back', 6000, 8500], ['Accommodation', 'Hotel one night, Blue Area', 14000, 24000]]],
+  ['Careem rides for client meetings', [['Travel', 'Careem to the client office and back', 1200, 3500]]],
+  ['Mobile bill', [['Mobile', 'Postpaid bill, official calls', 2000, 4500]]],
+  ['Team dinner', [['Meals', 'Team dinner during the month-end close', 6000, 15000]]],
+  ['Office supplies', [['OfficeSupplies', 'Printer toner and A4 paper', 4500, 9000]]],
+  ['Doctor visit', [['Medical', 'OPD consultation and medicines', 2500, 7000]]],
+  ['Karachi visit', [['Travel', 'PIA return ticket LHE-KHI', 28000, 48000], ['Accommodation', 'Hotel two nights, Shahrah-e-Faisal', 28000, 44000]]],
+];
+
+/**
+ * Fills the months before the company's first payroll, up to --months back (default 24), as the owner entering the
+ * company: holidays, leave, expense claims, machine punches and a finalized, paid payroll for every month (loans are left out:
+ * the app rightly refuses repayments that start in a past month), oldest
+ * first so tax, loan balances and leave balances build up the way they would have. Months that already have a monthly
+ * payroll are skipped, so it is safe to run again.
+ */
+async function history(owner) {
+  const name = arg('history');
+  const months = Math.min(36, Math.max(1, Number(arg('months', '24')) || 24));
+  const company = (await owner.get('/platform/companies')).find((c) => c.name.toLowerCase() === name.toLowerCase());
+  if (!company) throw new Error(`No company named "${name}".`);
+  const session = await owner.post(`/platform/companies/${company.id}/enter`);
+  const admin = new Api(session.token);
+  console.log(`Adding ${months} months of history to "${company.name}" on ${BASE}\n`);
+
+  const runs = (await admin.get('/payroll/runs')).filter((r) => r.frequency === 'Monthly');
+  const done = new Set(runs.map((r) => `${r.year}-${r.month}`));
+  // Only months before the first payroll, so tax and loan balances run in order.
+  const firstRun = runs.reduce((min, r) => (!min || r.periodStart < min ? r.periodStart : min), null);
+  const stop = firstRun ? new Date(`${firstRun}T00:00:00Z`) : new Date(Date.UTC(TODAY.getUTCFullYear(), TODAY.getUTCMonth(), 1));
+  const plan = [];
+  for (let i = months; i >= 1; i--) {
+    const first = new Date(Date.UTC(TODAY.getUTCFullYear(), TODAY.getUTCMonth() - i, 1));
+    if (first < stop && !done.has(`${first.getUTCFullYear()}-${first.getUTCMonth() + 1}`)) plan.push(first);
+  }
+  if (!plan.length) {
+    console.log('History is already here. Nothing was changed.');
+    return;
+  }
+  console.log(`Months: ${iso(plan[0]).slice(0, 7)} to ${iso(plan.at(-1)).slice(0, 7)}\n`);
+
+  // Payroll needs the tax year a month falls in; 2024-25 (Finance Act 2024) is older than the years the app ships with.
+  if (iso(plan[0]) < '2025-07-01')
+    await step('Tax year 2024-25', async () => {
+      if ((await owner.get('/platform/tax-years')).some((t) => t.code === '2024-25')) return;
+      await owner.post('/platform/tax-years', {
+        code: '2024-25', startDate: '2024-07-01', endDate: '2025-06-30', surchargeThreshold: 10_000_000, surchargeRate: 0.1,
+        slabs: [
+          { fromAmount: 0, toAmount: 600000, fixedTax: 0, rate: 0 },
+          { fromAmount: 600000, toAmount: 1200000, fixedTax: 0, rate: 0.05 },
+          { fromAmount: 1200000, toAmount: 2200000, fixedTax: 30000, rate: 0.15 },
+          { fromAmount: 2200000, toAmount: 3200000, fixedTax: 180000, rate: 0.25 },
+          { fromAmount: 3200000, toAmount: 4100000, fixedTax: 430000, rate: 0.3 },
+          { fromAmount: 4100000, toAmount: null, fixedTax: 700000, rate: 0.35 },
+        ],
+      });
+    });
+
+  const staff = [];
+  await step('People and punch codes', async () => {
+    const list = [];
+    for (let page = 1; ; page++) {
+      const r = await admin.get(`/employees?page=${page}&pageSize=200`);
+      list.push(...r.items);
+      if (list.length >= r.total || !r.items.length) break;
+    }
+    for (const [i, e] of list.entries()) {
+      const p = await admin.get(`/employees/${e.id}`);
+      if (!p.joiningDate) continue;
+      const file = (await admin.get(`/employees/${e.id}/file`)) ?? {};
+      let code = file.punchCode;
+      if (!code) {
+        code = String(5000 + i);
+        await admin.put(`/employees/${e.id}/file`, { ...file, punchCode: code });
+      }
+      staff.push({ id: e.id, code, joined: new Date(`${p.joiningDate.slice(0, 10)}T00:00:00Z`), left: p.exitDate ? new Date(`${p.exitDate.slice(0, 10)}T00:00:00Z`) : null });
+    }
+  });
+  const workingOn = (s, d) => s.joined <= d && (!s.left || d <= s.left);
+
+  const holidays = new Set();
+  await step('Public holidays for past years', async () => {
+    for (let y = plan[0].getUTCFullYear(); y <= TODAY.getUTCFullYear(); y++) {
+      const have = new Set((await admin.get(`/setup/holidays?year=${y}`)).map((h) => h.date));
+      for (const [md, title] of [...HOLIDAYS.fixed, ...(HOLIDAYS[y] ?? [])]) {
+        if (!have.has(`${y}-${md}`)) await admin.post('/setup/holidays', { date: `${y}-${md}`, name: title, kind: 'Public' });
+        holidays.add(`${y}-${md}`);
+      }
+      for (const d of have) holidays.add(d);
+    }
+  });
+  const isWorkday = (d) => !isWeekend(d) && !holidays.has(iso(d));
+
+  const leaveTypes = Object.fromEntries((await admin.get('/setup/leave-types')).map((t) => [t.code, t.id]));
+  // Leave types that ask for a reason from a list (Sick Leave usually does): the first that needs no document.
+  const leaveReasons = {};
+  for (const r of await admin.get('/leave-rules/reasons').catch(() => []))
+    if (!r.requiresDocument && r.isActive !== false) leaveReasons[r.leaveTypeId] ??= r.id;
+  const device = await step('Old attendance machine for the imported punches', async () => {
+    const had = (await admin.get('/biometric/devices')).find((d) => d.name === 'Head Office Gate (old)');
+    if (had) return admin.post(`/biometric/devices/${had.id}/token`);
+    return admin.post('/biometric/devices', { name: 'Head Office Gate (old)', serialNumber: `ZK-OLD-${company.id.slice(0, 4).toUpperCase()}`, location: 'Ground floor, replaced in 2026' });
+  });
+
+  // Approves until nothing is waiting (a flow can have several steps).
+  const approve = async (path) => {
+    for (let k = 0; k < 4; k++) {
+      try {
+        await admin.post(path, { note: 'Approved' });
+      } catch {
+        return k > 0;
+      }
+    }
+    return true;
+  };
+  const count = { leave: 0, claims: 0, punches: 0, payrolls: 0, refused: 0 };
+  const reasons = new Map();
+  const refused = (e) => {
+    count.refused++;
+    const why = e.message.match(/"title":"([^"]+)"/)?.[1] ?? e.message.slice(0, 120);
+    reasons.set(why, (reasons.get(why) ?? 0) + 1);
+  };
+
+  for (const first of plan) {
+    const y = first.getUTCFullYear(), m = first.getUTCMonth() + 1;
+    const last = new Date(Date.UTC(y, m, 0));
+    const days = [];
+    for (let d = first; d <= last; d = addDays(d, 1)) if (isWorkday(d)) days.push(d);
+    const label = `${y}-${pad(m)}`;
+    const onLeave = new Set();
+
+    await step(`${label}: leave, expenses, attendance and payroll`, async () => {
+      // Leave: about one person in five takes some days off each month.
+      for (const s of staff) {
+        if (rand() > 0.2) continue;
+        const code = pick(['AL', 'AL', 'CL', 'CL', 'SL']);
+        if (!leaveTypes[code]) continue;
+        const n = code === 'AL' ? 1 + Math.floor(rand() * 3) : 1;
+        const start = Math.floor(rand() * Math.max(1, days.length - n));
+        const span = days.slice(start, start + n).filter((d) => workingOn(s, d));
+        if (!span.length) continue;
+        const reason = pick({ AL: ['Family wedding', 'Visiting parents', 'Trip to the northern areas', 'Moving house'], CL: ['Bank work', 'Child’s school meeting', 'Personal errand'], SL: ['Flu', 'Fever', 'Dentist appointment'] }[code]);
+        try {
+          const l = await admin.post('/leave', { leaveTypeId: leaveTypes[code], fromDate: iso(span[0]), toDate: iso(span.at(-1)), reason, reasonId: leaveReasons[leaveTypes[code]] ?? null, employeeId: s.id });
+          if (rand() < 0.08) await admin.post(`/leave/${l.id}/reject`, { note: 'Month-end close, please move it' });
+          else if (await approve(`/leave/${l.id}/approve`)) {
+            span.forEach((d) => onLeave.add(`${s.id}|${iso(d)}`));
+            count.leave++;
+          }
+        } catch (e) {
+          refused(e);
+        }
+      }
+
+      // Expense claims: two to four a month, most approved (the app takes none older than a year).
+      for (let c = (TODAY - last) / 86_400_000 < 330 ? 2 + Math.floor(rand() * 3) : 0; c > 0; c--) {
+        const day = pick(days);
+        const s = pick(staff.filter((x) => workingOn(x, day)));
+        if (!s) continue;
+        const [title, lines] = pick(HISTORY_EXPENSES);
+        const items = lines.map(([category, description, min, max]) => ({ date: iso(day), category, description, amount: Math.round((min + rand() * (max - min)) / 50) * 50 }));
+        try {
+          const claim = await admin.post('/expenses', { title, items, employeeId: s.id });
+          if (rand() < 0.1) await admin.post(`/expenses/${claim.id}/reject`, { note: 'Not a business expense' });
+          else if (await approve(`/expenses/${claim.id}/approve`)) count.claims++;
+        } catch (e) {
+          refused(e);
+        }
+      }
+
+      // Machine punches for the month.
+      const punches = [];
+      for (const d of days)
+        for (const s of staff) {
+          if (!workingOn(s, d) || onLeave.has(`${s.id}|${iso(d)}`) || rand() < 0.02) continue;
+          const late = rand() < 0.1;
+          const inMin = late ? 20 + Math.floor(rand() * 50) : Math.floor(rand() * 18) - 10;
+          const outMin = Math.floor(rand() * 75) - (rand() < 0.05 ? 120 : 0);
+          const at = (h, mm) => `${iso(d)}T${pad(h + Math.floor(mm / 60))}:${pad(((mm % 60) + 60) % 60)}:00`;
+          punches.push({ punchCode: s.code, time: inMin < 0 ? at(8, 60 + inMin) : at(9, inMin) });
+          punches.push({ punchCode: s.code, time: at(18, outMin < 0 ? 0 : outMin) });
+        }
+      for (let i = 0; i < punches.length; i += 4000) await new Api().post('/biometric/punches', { punches: punches.slice(i, i + 4000) }, { 'X-Device-Token': device.token });
+      count.punches += punches.length;
+
+      // Payroll, finalized (through approval when the company requires it) and paid.
+      const run = (await admin.post('/payroll/runs', { year: y, month: m })).run;
+      try {
+        await admin.post(`/payroll/runs/${run.id}/finalize`);
+      } catch (e) {
+        if (!/approval/i.test(e.message)) throw e;
+        await admin.post(`/payroll/runs/${run.id}/submit`).catch(() => {});
+        await admin.post(`/payroll/runs/${run.id}/decide`, { approve: true, note: 'Checked' });
+        await admin.post(`/payroll/runs/${run.id}/finalize`);
+      }
+      await admin.post(`/payroll/runs/${run.id}/disburse`, { via: pick(['Meezan Bank bulk transfer', 'HBL bulk transfer']) });
+      count.payrolls++;
+    });
+  }
+  console.log(`\n${count.payrolls} payrolls, ${count.leave} leave, ${count.claims} expense claims, ${count.punches} punches; ${count.refused} requests refused by the app.`);
+  for (const [why, n] of reasons) console.log(`  ${n} × ${why}`);
+  finish();
+}
+
 async function main() {
   console.log(`Seeding demo data on ${BASE}\n`);
   const owner = ownerLogin();
   const first = await signIn(owner.email, owner.password);
+  if (arg('history')) return history(first);
   const password = `Demo-${randomBytes(6).toString('base64url')}-26`;
   const ownCompany = first.me.role !== 'SuperAdmin' && first.me.role !== 0;
   let admin, adminEmail;
