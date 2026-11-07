@@ -16,11 +16,17 @@ interface Tool {
   render: () => ReactNode;
 }
 
+/** Pakistan's tax year runs July to June, e.g. "2026-27" from July 2026. */
+function currentTaxYear(today = new Date()) {
+  const start = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+  return `${start}-${String((start + 1) % 100).padStart(2, '0')}`;
+}
+
 const TOOLS: Tool[] = [
   {
     slug: 'salary-tax-calculator',
     title: 'Salary income tax calculator',
-    seoTitle: 'Pakistan Salary Tax Calculator 2025-26 (FBR slabs)',
+    seoTitle: `Pakistan Salary Tax Calculator ${currentTaxYear()} (FBR slabs)`,
     description: 'Monthly and yearly income tax on your salary with the latest FBR slabs, and your take-home pay.',
     icon: Landmark,
     render: () => <SalaryTax />,

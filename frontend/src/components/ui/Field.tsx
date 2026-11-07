@@ -70,14 +70,24 @@ export function Field({ label, hint, error, required, className, action, childre
 }
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(function Input(
-  { className, ...rest },
+  { className, onChange, onFocus, ...rest },
   ref,
 ) {
+  const number = rest.type === 'number';
   return (
     <input
       ref={ref}
       className={cn(control, 'h-10 sm:h-9', borderFor(rest['aria-invalid'] === true), className)}
       {...rest}
+      // A cleared number field shows 0 again; typing after it must give "15", not "015".
+      onChange={(e) => {
+        if (number && /^-?0\d/.test(e.target.value)) e.target.value = e.target.value.replace(/^(-?)0+(?=\d)/, '$1');
+        onChange?.(e);
+      }}
+      onFocus={(e) => {
+        if (number) e.target.select();
+        onFocus?.(e);
+      }}
       placeholder={tx(rest.placeholder)}
     />
   );

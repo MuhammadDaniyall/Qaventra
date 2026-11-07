@@ -56,6 +56,8 @@ public class SmokeTests(ApiFactory factory) : IClassFixture<ApiFactory>
         await Ok(await admin.PostAsJsonAsync($"/api/employees/{workerId}/login", new { email = workerEmail, password = "Amna-Pass-1", role = "Employee" }));
         var mgr = await factory.SignInAsync(mgrEmail, "Faisal-Pass-1");
         var emp = await factory.SignInAsync(workerEmail, "Amna-Pass-1");
+        // A login HR made with a temporary password must be changed at the first sign-in.
+        Assert.True((await Ok(await emp.GetAsync("/api/auth/me"))).GetProperty("mustChangePassword").GetBoolean());
 
         // Attendance: no office locations yet, so no location is required.
         await Ok(await emp.PostAsJsonAsync("/api/attendance/check-in", new { source = "Web" }));

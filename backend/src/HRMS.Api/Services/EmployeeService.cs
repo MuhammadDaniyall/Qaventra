@@ -106,7 +106,7 @@ public class EmployeeService(
         if (await db.Users.AnyAsync(u => u.EmployeeId == employee.Id))
             throw new DomainException("This employee already has a login.");
 
-        var user = new User { Email = email, FullName = employee.FullName, Role = role, EmployeeId = employee.Id };
+        var user = new User { Email = email, FullName = employee.FullName, Role = role, EmployeeId = employee.Id, MustChangePassword = true };
         user.PasswordHash = hasher.HashPassword(user, password);
         db.Users.Add(user);
         await db.SaveChangesAsync();
