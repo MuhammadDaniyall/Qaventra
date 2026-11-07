@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ClipboardCheck, Paperclip, Scale, X } from 'lucide-react';
+import { CalendarClock, CalendarDays, Check, ClipboardCheck, Inbox, Palmtree, Paperclip, Scale, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { leaveApi } from '../../api/leave';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
@@ -32,10 +32,31 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { StatCard } from '../../components/ui/StatCard';
+import { txf } from '../../lib/i18n';
 import { formatDate, formatDateTimeUtc, formatNumber } from '../../lib/format';
 import type { LeaveRequest, LeaveStatus } from '../../types';
 
 type TabValue = Extract<LeaveStatus, 'Pending' | 'Approved' | 'Rejected'>;
+
+/** What waits for a decision: requests, days asked for, and how soon they start. */
+function LeaveOverview({ pending, loading }: { pending: LeaveRequest[] | undefined; loading: boolean }) {
+  const list = pending ?? [];
+  const today = new Date().toISOString().slice(0, 10);
+  const week = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  const days = list.reduce((n, r) => n + r.days, 0);
+  const soon = list.filter((r) => r.fromDate <= week).length;
+  const started = list.filter((r) => r.fromDate <= today).length;
+  const types = new Set(list.map((r) => r.leaveType)).size;
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatCard label="Waiting for you" value={list.length} icon={Inbox} tone="violet" loading={loading} />
+      <StatCard label="Days asked for" value={formatNumber(days)} icon={CalendarDays} tone="blue" loading={loading} />
+      <StatCard label="Starting within a week" value={soon} icon={CalendarClock} tone={soon ? 'amber' : 'green'} loading={loading} hint={started ? txf('{n} already started', { n: started }) : undefined} />
+      <StatCard label="Leave types" value={types} icon={Palmtree} tone="green" loading={loading} />
+    </div>
+  );
+}
 
 export function LeaveApprovalsPage() {
   const hr = isHr(useUser());
@@ -62,6 +83,7 @@ export function LeaveApprovalsPage() {
           )
         }
       />
+      <LeaveOverview pending={pendingCount.data} loading={pendingCount.isLoading} />
       <Tabs<TabValue>
         className="mb-4"
         value={status}

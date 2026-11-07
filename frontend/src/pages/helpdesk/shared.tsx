@@ -7,7 +7,7 @@ import { useEmployeeLookup } from '../../api/hooks';
 import { helpdeskApi, PRIORITIES, TICKET_STATUS_LABELS, type TicketListItem, type TicketPriority, type TicketStatus } from '../../api/helpdesk';
 import { qk } from '../../api/keys';
 import { RecordStampCell } from '../../components/RecordStamp';
-import { Badge, Button, Field, FormError, Input, Modal, Select, Table, TBody, Td, Textarea, Th, THead, Tr, useToast } from '../../components/ui';
+import { Avatar, Badge, Button, Field, FormError, Input, Modal, Select, Table, TBody, Td, Textarea, Th, THead, Tr, useToast } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatDateTimeUtc } from '../../lib/format';
 
@@ -20,6 +20,7 @@ const STATUS_TONES: Record<TicketStatus, 'blue' | 'accent' | 'amber' | 'green' |
   Cancelled: 'gray',
 };
 
+const PRIORITY_BARS: Record<TicketPriority, string> = { Low: 'bg-zinc-300 dark:bg-zinc-600', Medium: 'bg-sky-400', High: 'bg-amber-400', Urgent: 'bg-rose-500' };
 const PRIORITY_TONES: Record<TicketPriority, 'gray' | 'blue' | 'amber' | 'red'> = { Low: 'gray', Medium: 'blue', High: 'amber', Urgent: 'red' };
 
 /** The company's names for statuses and priorities (defaults until loaded). */
@@ -72,7 +73,9 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
       <TBody>
         {tickets.map((t) => (
           <Tr key={t.id} onClick={() => navigate(`/helpdesk/${t.id}`)} className="cursor-pointer">
-            <Td>
+            <Td className="relative">
+              {/* The priority as a coloured edge: urgent red, high amber, medium blue, low grey. */}
+              <span className={cn('absolute inset-y-2 start-0 w-1 rounded-e-full', PRIORITY_BARS[t.priority])} aria-hidden="true" />
               <p className="font-medium text-zinc-900 dark:text-zinc-100">{t.subject}</p>
               <p className="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
                 <span className="font-mono">{t.code}</span> · {t.category}
@@ -86,8 +89,13 @@ export function TicketTable({ tickets, showRequester }: { tickets: TicketListIte
             </Td>
             {showRequester && (
               <Td>
-                <p className="text-zinc-900 dark:text-zinc-100">{t.employeeName}</p>
-                <p className="text-xs text-zinc-500">{t.department ?? t.employeeCode}</p>
+                <span className="flex items-center gap-2.5">
+                  <Avatar name={t.employeeName} />
+                  <span>
+                    <span className="block text-zinc-900 dark:text-zinc-100">{t.employeeName}</span>
+                    <span className="block text-xs text-zinc-500">{t.department ?? t.employeeCode}</span>
+                  </span>
+                </span>
               </Td>
             )}
             <Td>

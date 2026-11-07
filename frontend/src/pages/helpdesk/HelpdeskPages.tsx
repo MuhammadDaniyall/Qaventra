@@ -34,6 +34,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 import { useDebounced } from '../../lib/hooks';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { NewTicketModal, TicketTable, useHelpdeskLabels } from './shared';
@@ -151,27 +152,29 @@ function Queue() {
       }}
       aria-pressed={scope === key && status === 'open'}
       className={cn(
-        'flex items-center gap-3 rounded-xl border bg-white p-4 text-start transition dark:bg-zinc-900',
-        scope === key && status === 'open' ? 'border-accent-500 ring-2 ring-accent-500/20' : 'border-zinc-200 hover:border-zinc-300 dark:border-zinc-800',
+        'relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-white/90 p-4 text-start shadow-[0_1px_2px_rgb(16_24_40/0.04),0_12px_32px_-18px_rgb(79_70_229/0.18)] transition-all hover:-translate-y-0.5 dark:bg-zinc-900/75',
+        scope === key && status === 'open'
+          ? 'border-indigo-400 ring-4 ring-indigo-500/10 dark:border-indigo-400/60'
+          : 'border-zinc-200/70 hover:border-zinc-300 dark:border-white/[0.07]',
       )}
     >
-      <span className={cn('flex size-9 items-center justify-center rounded-lg', tone)}>
-        <Icon className="size-4" />
+      <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-lg ring-1 ring-inset ring-white/20', tone)}>
+        <Icon className="size-[18px]" />
       </span>
       <span>
-        <span className="block text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{value ?? '–'}</span>
-        <span className="block text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
+        <span className="block text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">{value ?? '–'}</span>
+        <span className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">{tx(label)}</span>
       </span>
     </button>
   );
 
   return (
     <>
-      <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        {tile('all', 'Open tickets', s ? s.open + s.inProgress + s.waiting : undefined, Inbox, 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300')}
-        {tile('mine', 'Assigned to me', s?.mine, UserCheck, 'bg-accent-100 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300')}
-        {tile('unassigned', 'Unassigned', s?.unassigned, UserX, 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300')}
-        {tile('overdue', 'Overdue', s?.overdue, AlertTriangle, 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300')}
+      <div className="mb-5 grid grid-cols-2 gap-4 md:grid-cols-4">
+        {tile('all', 'Open tickets', s ? s.open + s.inProgress + s.waiting : undefined, Inbox, 'from-sky-500 to-cyan-500 shadow-sky-500/30')}
+        {tile('mine', 'Assigned to me', s?.mine, UserCheck, 'from-indigo-500 to-violet-500 shadow-indigo-500/30')}
+        {tile('unassigned', 'Unassigned', s?.unassigned, UserX, 'from-amber-400 to-orange-500 shadow-amber-500/30')}
+        {tile('overdue', 'Overdue', s?.overdue, AlertTriangle, 'from-rose-500 to-red-500 shadow-rose-500/30')}
       </div>
       <Card>
         <div className="flex flex-col gap-3 border-b border-zinc-100 p-4 sm:flex-row sm:items-center dark:border-zinc-800">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { BookOpen, CalendarClock, ExternalLink, GraduationCap, Plus, ShieldCheck, Star } from 'lucide-react';
+import { AlertTriangle, BookOpen, CalendarClock, ExternalLink, GraduationCap, Plus, ShieldCheck, Star } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments, useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -30,8 +30,10 @@ import {
   Input,
   Modal,
   PageHeader,
+  ProgressRing,
   Select,
   SkeletonRows,
+  StatCard,
   StatusBadge,
   Table,
   TBody,
@@ -43,6 +45,8 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { cn } from '../../lib/cn';
+import { tx, txf } from '../../lib/i18n';
 import { formatCurrency, formatDate, formatDateTimeUtc, toIsoDate, todayIso } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { ComplianceBadge, Rating } from './shared';
@@ -88,6 +92,7 @@ export function TrainingPage() {
           </Button>
         }
       />
+      {(m.isHr || m.hasTeam) && <TrainingOverview hr={m.isHr} />}
       <Tabs<Tab> className="mb-5" value={tab} onChange={(t) => setParams({ tab: t })} items={allowed.map((t) => ({ value: t, label: labels[t] }))} />
       {tab === 'mine' && <MineTab />}
       {tab === 'sessions' && <SessionsTab me={m} />}
@@ -98,6 +103,44 @@ export function TrainingPage() {
       {tab === 'report' && <ReportTab />}
       {asking && <RequestModal program={asking === 'outside' ? null : asking} onClose={() => setAsking(null)} />}
     </>
+  );
+}
+
+// ---------- Overview ----------
+
+/** Required training at a glance (HR: everyone, managers: their team); each tile opens the tab behind it. */
+function TrainingOverview({ hr }: { hr: boolean }) {
+  const programs = useQuery({ queryKey: qk.trainingPrograms, queryFn: trainingApi.programs });
+  const c = useQuery({ queryKey: qk.trainingCompliance(''), queryFn: () => trainingApi.compliance('') });
+  const d = c.data;
+  const total = d ? d.done + d.dueSoon + d.overdue + d.notDone : 0;
+  const share = total ? d!.done / total : 0;
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <Link
+        to="/training?tab=compliance"
+        className="col-span-2 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 lg:col-span-1"
+      >
+        <Card className="flex h-full items-center gap-4 p-4 transition-all hover:-translate-y-0.5">
+          <ProgressRing value={share} size={64} stroke={7} />
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">{tx(hr ? 'Required training done' : 'My team is up to date')}</p>
+            <p className="text-lg font-semibold text-zinc-900 tabular-nums dark:text-white">{d ? txf('{done} of {total}', { done: d.done, total }) : '—'}</p>
+          </div>
+        </Card>
+      </Link>
+      <StatCard label="Due soon" value={d?.dueSoon} icon={CalendarClock} tone="amber" loading={c.isLoading} to="/training?tab=compliance" />
+      <StatCard label="Overdue" value={d?.overdue} icon={AlertTriangle} tone={d?.overdue ? 'red' : 'green'} loading={c.isLoading} to="/training?tab=compliance" />
+      <StatCard
+        label="Courses"
+        value={programs.data?.filter((p) => p.isActive).length}
+        icon={BookOpen}
+        tone="violet"
+        loading={programs.isLoading}
+        hint={txf('{n} required', { n: programs.data?.filter((p) => p.isActive && p.isMandatory).length ?? 0 })}
+        to="/training?tab=catalog"
+      />
+    </div>
   );
 }
 
@@ -542,53 +585,58 @@ function CatalogTab({ me, onAsk }: { me: TrainingMe; onAsk: (p: TrainingProgram)
         ) : !programs.data?.length ? (
           <EmptyState icon={BookOpen} title="No courses yet" description={me.isHr ? 'Add courses to the catalog, then schedule sessions.' : undefined} />
         ) : (
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+          <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-2 2xl:grid-cols-3">
             {programs.data.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-start gap-3 px-5 py-3.5">
-                <GraduationCap className="mt-0.5 size-4 text-zinc-500 dark:text-zinc-400" />
-                <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 font-medium text-zinc-900 dark:text-white">
-                    {p.title}
-                    {p.isMandatory && (
-                      <Badge tone="violet">
-                        <ShieldCheck className="size-3" /> Required{p.repeatEveryMonths ? `, every ${p.repeatEveryMonths} months` : ''}
-                      </Badge>
-                    )}
-                    {!p.isActive && <Badge>Off</Badge>}
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {[p.category, MODE_LABELS[p.mode], p.durationHours ? `${p.durationHours} h` : null, me.isHr ? `${p.completed} completed` : null]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
-                  {p.description && <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">{p.description}</p>}
-                  {p.link && (
-                    <a
-                      href={p.link}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="mt-1 inline-flex items-center gap-1 text-xs text-accent-600 hover:underline"
-                    >
-                      Course material <ExternalLink className="size-3" />
-                    </a>
+              <div
+                key={p.id}
+                className={cn(
+                  'flex min-w-0 flex-col rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white to-indigo-50/40 p-4 dark:border-white/[0.07] dark:from-white/[0.02] dark:to-indigo-500/[0.04]',
+                  !p.isActive && 'opacity-60',
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-indigo-500/25 ring-1 ring-inset ring-white/20">
+                    <GraduationCap className="size-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-zinc-900 dark:text-white">{p.title}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {[p.category, MODE_LABELS[p.mode], p.durationHours ? `${p.durationHours} h` : null].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                  {me.isHr && <RowActions label={p.title} onEdit={() => setEditing(p)} onDelete={p.sessions ? undefined : () => setDeleting(p)} />}
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {p.isMandatory && (
+                    <Badge tone="violet">
+                      <ShieldCheck className="size-3" /> Required{p.repeatEveryMonths ? `, every ${p.repeatEveryMonths} months` : ''}
+                    </Badge>
+                  )}
+                  {!p.isActive && <Badge>Off</Badge>}
+                  {me.isHr && (
+                    <Badge tone="green" dot>
+                      {txf('{n} completed', { n: p.completed })}
+                    </Badge>
                   )}
                 </div>
-                {me.isHr && (
-                  <div className="hidden sm:block">
-                    <RecordStampCell stamps={p.stamps} />
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
+                {p.description && <p className="mt-3 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">{p.description}</p>}
+                <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-4">
+                  {p.link ? (
+                    <a href={p.link} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 text-xs font-medium text-accent-600 hover:underline">
+                      Course material <ExternalLink className="size-3" />
+                    </a>
+                  ) : (
+                    <span />
+                  )}
                   {p.isActive && (
                     <Button size="sm" variant="secondary" onClick={() => onAsk(p)}>
                       Ask to attend
                     </Button>
                   )}
-                  {me.isHr && <RowActions label={p.title} onEdit={() => setEditing(p)} onDelete={p.sessions ? undefined : () => setDeleting(p)} />}
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </Card>
       {me.isHr && (

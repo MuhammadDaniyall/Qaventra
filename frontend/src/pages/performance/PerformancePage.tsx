@@ -113,7 +113,7 @@ function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; qu
           key={r.id}
           type="button"
           onClick={() => navigate(`/performance/reviews/${r.id}`)}
-          className="group text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 rounded-2xl"
+          className="group min-w-0 text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 rounded-2xl"
         >
           <Card className="h-full p-4 transition-all group-hover:-translate-y-0.5 group-hover:shadow-[0_18px_40px_-20px_rgb(79_70_229/0.35)]">
             <div className="flex items-start gap-3">

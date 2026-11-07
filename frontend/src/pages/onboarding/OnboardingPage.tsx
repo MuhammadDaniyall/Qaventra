@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ClipboardCheck, ListChecks, Plus, Rocket, Trash2, UserPlus, Users } from 'lucide-react';
+import { AlarmClock, CalendarDays, ClipboardCheck, ListChecks, Plus, Rocket, Trash2, UserPlus, Users } from 'lucide-react';
 import { assetsApi } from '../../api/assets';
 import { errorMessage } from '../../api/client';
 import { useEmployeeLookup } from '../../api/hooks';
@@ -18,6 +18,7 @@ import {
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import {
+  Avatar,
   Badge,
   Button,
   Card,
@@ -30,20 +31,18 @@ import {
   Input,
   Modal,
   PageHeader,
+  ProgressBar,
+  ProgressRing,
   Select,
   SkeletonRows,
-  Table,
-  TBody,
+  StatCard,
   Tabs,
-  Td,
   Textarea,
-  Th,
-  THead,
-  Tr,
   useToast,
 } from '../../components/ui';
-import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
+import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
+import { tx, txf } from '../../lib/i18n';
 import { formatDate, timeFromInput } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
 import { TaskList } from './shared';
@@ -69,6 +68,7 @@ export function OnboardingPage() {
           )
         }
       />
+      {hr && <OnboardingOverview />}
       {hr && (
         <Tabs<Tab>
           className="mb-5"
@@ -117,49 +117,69 @@ function List({ status }: { status: 'InProgress' | 'Completed' }) {
       </Card>
     );
   return (
-    <Card>
-      <Table>
-        <THead>
-          <tr>
-            <Th>New joiner</Th>
-            <Th>Joins</Th>
-            <Th>Progress</Th>
-            <Th>Template</Th>
-            <Th>Added / modified</Th>
-          </tr>
-        </THead>
-        <TBody>
-          {list.data.map((o) => {
-            const pct = o.total ? Math.round((o.done / o.total) * 100) : 100;
-            return (
-              <Tr key={o.id} onClick={() => navigate(`/onboarding/${o.id}`)}>
-                <Td>
-                  <p className="font-medium text-zinc-900 dark:text-zinc-100">{o.employeeName}</p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{[o.designation, o.department].filter(Boolean).join(' · ') || o.employeeCode}</p>
-                </Td>
-                <Td className="text-sm">{formatDate(o.joiningDate)}</Td>
-                <Td>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-24 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                      <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
-                      {o.done}/{o.total}
-                    </span>
-                    {o.overdue > 0 && <Badge tone="red">{o.overdue} late</Badge>}
-                    {o.introduced && <Badge tone="green">Introduced</Badge>}
-                  </div>
-                </Td>
-                <Td className="text-sm text-zinc-600 dark:text-zinc-300">{o.templateName}</Td>
-                <Td>
-                  <RecordStampCell stamps={o.stamps} />
-                </Td>
-              </Tr>
-            );
-          })}
-        </TBody>
-      </Table>
-    </Card>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {list.data.map((o) => {
+        const share = o.total ? o.done / o.total : 1;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            onClick={() => navigate(`/onboarding/${o.id}`)}
+            className="group min-w-0 rounded-2xl text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500"
+          >
+            <Card className="flex h-full flex-col p-4 transition-all group-hover:-translate-y-0.5 group-hover:shadow-[0_18px_40px_-20px_rgb(79_70_229/0.35)]">
+              <div className="flex items-start gap-3">
+                <Avatar name={o.employeeName} size="lg" className="!size-11 !text-sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-zinc-900 dark:text-white">{o.employeeName}</p>
+                  <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{[o.designation, o.department].filter(Boolean).join(' · ') || o.employeeCode}</p>
+                  <p className="mt-1 inline-flex items-center gap-1 text-xs text-zinc-600 dark:text-zinc-300">
+                    <CalendarDays className="size-3.5 text-indigo-500" aria-hidden="true" />
+                    {tx('Joins')} {formatDate(o.joiningDate)}
+                  </p>
+                </div>
+                <ProgressRing value={share} size={52} stroke={6} label={`${o.done}/${o.total}`} title={txf('{done} of {total}', { done: o.done, total: o.total })} />
+              </div>
+              <ProgressBar value={share} tone={o.overdue > 0 ? 'amber' : share >= 1 ? 'green' : 'brand'} className="mt-4" />
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                {o.overdue > 0 && (
+                  <Badge tone="red" dot>
+                    {txf('{n} late', { n: o.overdue })}
+                  </Badge>
+                )}
+                {o.introduced && (
+                  <Badge tone="green" dot>
+                    Introduced
+                  </Badge>
+                )}
+                <span className="ms-auto truncate text-xs text-zinc-500 dark:text-zinc-400">{o.templateName}</span>
+              </div>
+            </Card>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** HR's onboarding at a glance; each tile opens the list behind it. */
+function OnboardingOverview() {
+  const active = useQuery({ queryKey: [...qk.onboarding, 'list', 'InProgress'], queryFn: () => onboardingApi.list('InProgress') });
+  const list = active.data ?? [];
+  const late = list.reduce((n, o) => n + o.overdue, 0);
+  const tasks = list.reduce((n, o) => n + (o.total - o.done), 0);
+  const soon = list.filter((o) => {
+    const d = (new Date(o.joiningDate).getTime() - Date.now()) / 86400000;
+    return d >= -1 && d <= 14;
+  }).length;
+  const loading = active.isLoading;
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatCard label="Being onboarded" value={list.length} icon={Users} loading={loading} to="/onboarding" />
+      <StatCard label="Joining in 2 weeks" value={soon} icon={CalendarDays} tone="blue" loading={loading} />
+      <StatCard label="Open tasks" value={tasks} icon={ListChecks} tone="violet" loading={loading} to="/onboarding?tab=tasks" />
+      <StatCard label="Late tasks" value={late} icon={AlarmClock} tone={late ? 'red' : 'green'} loading={loading} />
+    </div>
   );
 }
 

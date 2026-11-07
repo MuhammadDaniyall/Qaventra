@@ -26,6 +26,7 @@ import {
   Input,
   Modal,
   PageHeader,
+  ProgressRing,
   Select,
   Skeleton,
   SkeletonRows,
@@ -40,6 +41,7 @@ import {
   Tr,
   useToast,
 } from '../../components/ui';
+import { tx, txf } from '../../lib/i18n';
 import { formatDate, formatNumber, formatTime, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
 import type { HalfDayPart, LeaveBalance, LeaveDuration, LeaveRequest } from '../../types';
@@ -225,24 +227,45 @@ function BalanceCard({ b }: { b: LeaveBalance }) {
     b.adjustment !== 0 ? `${b.adjustment > 0 ? '+' : ''}${formatNumber(b.adjustment)} adjusted by HR` : null,
   ].filter(Boolean);
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">{b.leaveType}</p>
-        <span className="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[10px] text-zinc-500 dark:text-zinc-400 dark:bg-zinc-800">{b.code}</span>
+    <Card className="relative overflow-hidden p-4">
+      <div className="pointer-events-none absolute -end-10 -top-12 size-32 rounded-full bg-indigo-400/15 blur-2xl" aria-hidden="true" />
+      <div className="relative flex items-center gap-4">
+        <ProgressRing
+          value={total > 0 ? b.available / total : 0}
+          size={76}
+          stroke={8}
+          label={
+            <span className="flex flex-col items-center leading-none">
+              <span className="text-lg font-semibold">{formatNumber(b.available)}</span>
+              <span className="mt-0.5 text-[10px] font-normal text-zinc-500 dark:text-zinc-400">/ {formatNumber(total)}</span>
+            </span>
+          }
+          title={txf('{left} of {total} days left', { left: formatNumber(b.available), total: formatNumber(total) })}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate font-semibold text-zinc-900 dark:text-white">{b.leaveType}</p>
+            <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">{b.code}</span>
+          </div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{tx('days left')}</p>
+          <div className="mt-2.5 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/[0.07]" aria-hidden="true">
+            <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${usedPct}%` }} />
+            <div className="h-full rounded-full bg-amber-400" style={{ width: `${pendingPct}%` }} />
+          </div>
+          <p className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="inline-flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-indigo-500" aria-hidden="true" />
+              {formatNumber(b.used)} {tx('used')}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <span className="size-1.5 rounded-full bg-amber-400" aria-hidden="true" />
+              {formatNumber(b.pending)} {tx('pending')}
+            </span>
+          </p>
+        </div>
       </div>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 tabular-nums dark:text-white">
-        {formatNumber(b.available)}
-        <span className="ms-1 text-sm font-normal text-zinc-500 dark:text-zinc-400">/ {formatNumber(total)} days</span>
-      </p>
-      <div className="mt-3 flex h-1.5 gap-0.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800" aria-hidden="true">
-        <div className="h-full rounded-full bg-accent-500" style={{ width: `${usedPct}%` }} />
-        <div className="h-full rounded-full bg-amber-400" style={{ width: `${pendingPct}%` }} />
-      </div>
-      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-        {formatNumber(b.used)} used · {formatNumber(b.pending)} pending
-      </p>
       {extras.length > 0 && (
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400" title={b.adjustmentNote ?? undefined}>
+        <p className="relative mt-3 border-t border-zinc-100 pt-2 text-xs text-zinc-500 dark:border-white/[0.06] dark:text-zinc-400" title={b.adjustmentNote ?? undefined}>
           {extras.join(' · ')}
         </p>
       )}
