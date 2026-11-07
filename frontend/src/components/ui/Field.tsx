@@ -15,13 +15,15 @@ import { tx } from '../../lib/i18n';
 
 const control =
   // text-base below sm stops iOS Safari from zooming into a focused field.
-  'block w-full rounded-lg border bg-white px-3 text-base text-zinc-900 shadow-xs transition-colors placeholder:text-zinc-400 sm:text-sm ' +
-  'focus:outline-none focus:ring-2 focus:ring-accent-500/30 focus:border-accent-500 ' +
-  'disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 ' +
-  'dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:disabled:bg-zinc-800/50';
+  'block w-full rounded-xl border bg-white/90 px-3.5 text-base text-zinc-900 shadow-[inset_0_1px_2px_rgb(16_24_40/0.04)] transition-[border-color,box-shadow,background-color] duration-150 placeholder:text-zinc-400 sm:text-sm ' +
+  'hover:border-zinc-300 focus:bg-white focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 ' +
+  'disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 disabled:hover:border-zinc-200 ' +
+  'dark:bg-white/[0.03] dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:hover:border-white/20 dark:focus:bg-white/[0.05] dark:focus:border-indigo-400/70 dark:focus:ring-indigo-400/15 dark:disabled:bg-white/[0.02]';
 
 function borderFor(invalid?: boolean) {
-  return invalid ? 'border-red-400 dark:border-red-500/70' : 'border-zinc-200 dark:border-zinc-700';
+  return invalid
+    ? 'border-red-400 focus:border-red-400 focus:ring-red-500/10 dark:border-red-500/70'
+    : 'border-zinc-200/90 dark:border-white/10';
 }
 
 interface FieldProps {
@@ -49,7 +51,7 @@ export function Field({ label, hint, error, required, className, action, childre
   return (
     <div className={cn('space-y-1.5', className)}>
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={id} className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label htmlFor={id} className="block text-[13px] font-medium text-zinc-700 dark:text-zinc-300">
           {tx(label)}
           {required && <span className="ms-0.5 text-red-500">*</span>}
         </label>
@@ -57,7 +59,7 @@ export function Field({ label, hint, error, required, className, action, childre
       </div>
       {child}
       {error ? (
-        <p id={descId} className="text-xs text-red-600 dark:text-red-400">
+        <p id={descId} className="flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400">
           {error}
         </p>
       ) : hint ? (
@@ -99,7 +101,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
       <textarea
         ref={ref}
         rows={rows}
-        className={cn(control, 'py-2', borderFor(rest['aria-invalid'] === true), className)}
+        className={cn(control, 'py-2.5', borderFor(rest['aria-invalid'] === true), className)}
         {...rest}
         placeholder={tx(rest.placeholder)}
       />
@@ -140,7 +142,7 @@ export function Checkbox({
       <input
         id={id}
         type="checkbox"
-        className="mt-0.5 size-4 rounded border-zinc-300 accent-accent-600 focus:ring-2 focus:ring-accent-500/30 dark:border-zinc-600"
+        className="mt-0.5 size-4 rounded border-zinc-300 accent-indigo-600 focus:ring-2 focus:ring-indigo-500/30 dark:border-zinc-600"
         {...rest}
       />
       <label htmlFor={id} className="text-sm leading-5 select-none">
@@ -183,12 +185,14 @@ export function Switch({
         className={cn(
           'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors',
           'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 disabled:opacity-50',
-          checked ? 'bg-accent-600' : 'bg-zinc-300 dark:bg-zinc-700',
+          checked
+            ? 'bg-gradient-to-r from-indigo-500 to-violet-500 shadow-inner shadow-indigo-900/20 rtl:bg-gradient-to-l'
+            : 'bg-zinc-200 dark:bg-zinc-700',
         )}
       >
         <span
           className={cn(
-            'inline-block size-5 rounded-full bg-white shadow transition-transform',
+            'inline-block size-5 rounded-full bg-white shadow-md ring-1 ring-black/5 transition-transform',
             checked ? 'translate-x-5.5 rtl:-translate-x-5.5' : 'translate-x-0.5 rtl:-translate-x-0.5',
           )}
         />
@@ -202,7 +206,7 @@ export function FormError({ message }: { message?: string | null }) {
   return (
     <div
       role="alert"
-      className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+      className="rounded-xl border border-red-200/80 bg-gradient-to-r from-red-50 to-rose-50/60 px-3.5 py-2.5 text-sm text-red-700 rtl:bg-gradient-to-l dark:border-red-500/30 dark:from-red-500/10 dark:to-rose-500/5 dark:text-red-300"
     >
       {message}
     </div>

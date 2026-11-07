@@ -1,5 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { Card } from './Card';
 import { Skeleton } from './Spinner';
@@ -22,6 +24,7 @@ export function StatCard({
   tone = 'accent',
   hint,
   loading,
+  to,
 }: {
   label: string;
   value: ReactNode;
@@ -29,8 +32,10 @@ export function StatCard({
   tone?: keyof typeof iconTones;
   hint?: ReactNode;
   loading?: boolean;
+  /** Makes the tile a link to the list behind the number. */
+  to?: string;
 }) {
-  return (
+  const card = (
     <Card className="group relative overflow-hidden p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-20px_rgb(79_70_229/0.35)]">
       <div className={cn('pointer-events-none absolute -end-8 -top-10 size-28 rounded-full blur-2xl', iconTones[tone][1])} aria-hidden="true" />
       <div className="relative flex items-start justify-between gap-3">
@@ -49,6 +54,19 @@ export function StatCard({
           <Icon className="size-4.5" aria-hidden="true" />
         </div>
       </div>
+      {to && (
+        <ChevronRight
+          className="absolute end-3 bottom-3 size-4 text-zinc-300 transition-all group-hover:translate-x-0.5 group-hover:text-indigo-500 rtl:group-hover:-translate-x-0.5 dark:text-zinc-600"
+          aria-hidden="true"
+        />
+      )}
     </Card>
+  );
+  return to ? (
+    <Link to={to} className="block rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500">
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }

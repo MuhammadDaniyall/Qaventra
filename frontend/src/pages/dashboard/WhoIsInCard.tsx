@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { Download, Users } from 'lucide-react';
 import { attendanceApi } from '../../api/attendance';
 import { Button, Card, CardHeader, EmptyState, Skeleton } from '../../components/ui';
@@ -24,7 +25,7 @@ function bucket(r: DailyRow): Tab {
 }
 
 /** Who is available today (managers see their team), with a download of the day and the dashboard numbers. */
-export function WhoIsInCard({ d, className }: { d: Dashboard | undefined; className?: string }) {
+export function WhoIsInCard({ d, className, linkPeople }: { d: Dashboard | undefined; className?: string; /** HR: names open the employee file. */ linkPeople?: boolean }) {
   const today = todayIso();
   const daily = useQuery({ queryKey: ['attendance', 'daily', today], queryFn: () => attendanceApi.daily(today) });
   const [tab, setTab] = useState<Tab>('in');
@@ -109,7 +110,13 @@ export function WhoIsInCard({ d, className }: { d: Dashboard | undefined; classN
             {shown.map((r) => (
               <li key={r.employeeId} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-zinc-900 dark:text-zinc-100">{r.fullName}</span>
+                  {linkPeople ? (
+                    <Link to={`/employees/${r.employeeId}`} className="block truncate font-medium text-zinc-900 hover:text-indigo-600 hover:underline dark:text-zinc-100 dark:hover:text-indigo-300">
+                      {r.fullName}
+                    </Link>
+                  ) : (
+                    <span className="block truncate font-medium text-zinc-900 dark:text-zinc-100">{r.fullName}</span>
+                  )}
                   <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">{r.department ?? r.employeeCode}</span>
                 </span>
                 <span className="shrink-0 text-xs text-zinc-500 tabular-nums dark:text-zinc-400">

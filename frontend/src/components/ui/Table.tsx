@@ -57,7 +57,7 @@ export function Tr({
 
 export function Th({ className, children, ...rest }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
-    <th scope="col" className={cn('px-4 py-2.5 font-medium whitespace-nowrap', className)} {...rest}>
+    <th scope="col" className={cn('px-4 py-3 font-semibold whitespace-nowrap', className)} {...rest}>
       {tx(children)}
     </th>
   );
@@ -83,8 +83,11 @@ export function Pagination({
   const to = Math.min(total, page * pageSize);
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-100/80 px-4 py-3 text-xs text-zinc-500 dark:border-white/[0.06] dark:text-zinc-400">
-      <span>
-        {from}–{to} of {total.toLocaleString()}
+      <span className="tabular-nums">
+        <span className="font-medium text-zinc-700 dark:text-zinc-200">
+          {from}–{to}
+        </span>{' '}
+        of {total.toLocaleString()}
       </span>
       <div className="flex items-center gap-2">
         <Button
@@ -96,7 +99,7 @@ export function Pagination({
         >
           Previous
         </Button>
-        <span className="tabular-nums">
+        <span className="rounded-lg bg-zinc-100 px-2.5 py-1 font-medium text-zinc-700 tabular-nums dark:bg-white/[0.06] dark:text-zinc-200">
           Page {page} of {pages}
         </span>
         <Button variant="secondary" size="sm" onClick={() => onPage(page + 1)} disabled={page >= pages}>

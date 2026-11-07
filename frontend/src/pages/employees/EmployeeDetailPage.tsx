@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { ArrowUpRight, FolderOpen, GraduationCap, History, IdCard, KeyRound, Laptop, Palmtree, Phone, UserRound, UserRoundCheck, Wallet } from 'lucide-react';
+import { ArrowUpRight, Building2, CalendarDays, FolderOpen, GraduationCap, History, IdCard, KeyRound, Laptop, Palmtree, Phone, UserRound, UserRoundCheck, UsersRound, Wallet } from 'lucide-react';
 import { employeesApi } from '../../api/employees';
 import { AttachmentList } from '../../components/attachments/AttachmentList';
 import { RecordStamp } from '../../components/RecordStamp';
@@ -11,6 +11,7 @@ import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
 import { Avatar, Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, StatusBadge, Tabs, useToast } from '../../components/ui';
 import { formatDate, roleLabel } from '../../lib/format';
+import { tx } from '../../lib/i18n';
 import type { Employee, SaveEmployeeRequest } from '../../types';
 import { EmployeeForm, toSaveRequest } from './EmployeeForm';
 import { LeaveTab } from './LeaveTab';
@@ -54,50 +55,72 @@ export function EmployeeDetailPage() {
       <PageHeader back={{ to: '/employees', label: 'Employees' }} title={<span className="sr-only">{e.firstName} {e.lastName}</span>} />
 
       <Card className="-mt-4 mb-6 overflow-hidden">
-        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-start sm:p-6">
-          <Avatar name={`${e.firstName} ${e.lastName}`} size="lg" />
-          <div className="min-w-0 flex-1">
+        {/* Brand cover band, as on the home dashboard header. */}
+        <div className="relative h-24 overflow-hidden bg-brand sm:h-28" aria-hidden="true">
+          <div className="absolute -top-16 -end-10 size-56 rounded-full bg-white/20 blur-3xl" />
+          <div className="absolute -bottom-20 start-1/4 size-56 rounded-full bg-fuchsia-300/30 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgb(255_255_255/0.22)_1px,transparent_0)] [background-size:18px_18px] [mask-image:linear-gradient(to_bottom,black,transparent)]" />
+        </div>
+        <div className="relative px-5 pb-5 sm:px-6 sm:pb-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <Avatar
+              name={`${e.firstName} ${e.lastName}`}
+              size="xl"
+              className="-mt-10 shadow-lg shadow-indigo-500/20 ring-4 ring-white sm:-mt-12 dark:ring-zinc-900"
+            />
+            {hr && (
+              <div className="flex flex-wrap gap-2 pt-3">
+                <HistoryButton entityType="Employee" entityId={e.id} label="Profile change history" />
+                {current ? (
+                  <Button variant="secondary" icon={<ArrowUpRight className="size-4" />} onClick={() => setDialog('change')}>
+                    Promote / transfer
+                  </Button>
+                ) : (
+                  <Button icon={<UserRoundCheck className="size-4" />} onClick={() => setDialog('rehire')}>
+                    Re-hire
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="mt-3 min-w-0">
             <h2 className="truncate text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl dark:text-white">
               {e.firstName} {e.lastName}
             </h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
               {e.designation && <span className="text-zinc-600 dark:text-zinc-300">{e.designation}</span>}
-              <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400">{e.employeeCode}</span>
+              <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] text-zinc-600 dark:bg-white/[0.06] dark:text-zinc-300">
+                {e.employeeCode}
+              </span>
               <StatusBadge status={e.status} />
               {e.loginRole && <Badge tone="accent">{roleLabel(e.loginRole)}</Badge>}
             </div>
-            <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm lg:grid-cols-4">
-              {(
-                [
-                  ['Department', e.department ?? '—', null],
-                  ['Reports to', e.manager ?? '—', null],
-                  ['Joined', formatDate(e.joiningDate), tenure(e.joiningDate)],
-                  ['Contact', e.phone ?? e.email ?? '—', e.phone ? e.email : null],
-                ] as [string, string, string | null][]
-              ).map(([k, v, sub]) => (
-                <div key={k} className="min-w-0">
-                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">{k}</dt>
-                  <dd className="font-medium break-words text-zinc-900 dark:text-zinc-100">{v}</dd>
+          </div>
+          <dl className="mt-5 grid grid-cols-1 gap-2.5 text-sm min-[420px]:grid-cols-2 lg:grid-cols-4">
+            {(
+              [
+                ['Department', e.department ?? '—', null, Building2],
+                ['Reports to', e.manager ?? '—', null, UsersRound],
+                ['Joined', formatDate(e.joiningDate), tenure(e.joiningDate), CalendarDays],
+                ['Contact', e.phone ?? e.email ?? '—', e.phone ? e.email : null, Phone],
+              ] as [string, string, string | null, typeof Phone][]
+            ).map(([k, v, sub, Icon]) => (
+              <div
+                key={k}
+                className="flex min-w-0 items-start gap-3 rounded-xl border border-zinc-200/70 bg-zinc-50/70 p-3 dark:border-white/[0.06] dark:bg-white/[0.03]"
+              >
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-xs ring-1 ring-zinc-200/80 dark:bg-white/[0.06] dark:text-indigo-300 dark:ring-white/10">
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <dt className="text-xs text-zinc-500 dark:text-zinc-400">{tx(k)}</dt>
+                  <dd className="truncate font-medium text-zinc-900 dark:text-zinc-100" title={v}>{v}</dd>
                   {sub && <dd className="truncate text-xs text-zinc-500 dark:text-zinc-400" title={sub}>{sub}</dd>}
                 </div>
-              ))}
-            </dl>
-            <RecordStamp stamps={e.stamps} className="mt-4" />
-          </div>
-          {hr && (
-            <div className="flex flex-wrap gap-2 sm:justify-end">
-              <HistoryButton entityType="Employee" entityId={e.id} label="Profile change history" />
-              {current ? (
-                <Button variant="secondary" icon={<ArrowUpRight className="size-4" />} onClick={() => setDialog('change')}>
-                  Promote / transfer
-                </Button>
-              ) : (
-                <Button icon={<UserRoundCheck className="size-4" />} onClick={() => setDialog('rehire')}>
-                  Re-hire
-                </Button>
-              )}
-            </div>
-          )}
+              </div>
+            ))}
+          </dl>
+          <RecordStamp stamps={e.stamps} className="mt-4" />
         </div>
       </Card>
 

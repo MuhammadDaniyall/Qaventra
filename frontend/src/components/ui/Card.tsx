@@ -34,7 +34,7 @@ export function CardHeader({
       )}
     >
       <div className="min-w-0">
-        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{tx(title)}</h2>
+        <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{tx(title)}</h2>
         {description && <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{tx(description)}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

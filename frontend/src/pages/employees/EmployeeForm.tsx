@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
+import { BriefcaseBusiness, Landmark, UserRound, type LucideIcon } from 'lucide-react';
 import { useDepartments, useDesignations, useEmployeeLookup, useShifts } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import { orgApi } from '../../api/organization';
@@ -6,6 +7,7 @@ import { QuickCreateSelect } from './QuickCreateSelect';
 import { LookupList, lookupListId } from '../../components/LookupList';
 import { Button, Card, Field, FormError, Input, Select, Textarea } from '../../components/ui';
 import { todayIso } from '../../lib/format';
+import { tx } from '../../lib/i18n';
 import { BLOOD_GROUPS, EMPLOYMENT_STATUSES, MARITAL_STATUSES, type Employee, type EmploymentStatus, type Gender, type MaritalStatus, type SaveEmployeeRequest } from '../../types';
 
 export function emptyEmployee(): SaveEmployeeRequest {
@@ -70,13 +72,21 @@ function formatCnic(raw: string): string {
   return `${d.slice(0, 5)}-${d.slice(5, 12)}-${d.slice(12)}`;
 }
 
+const sectionIcons: Record<string, LucideIcon> = { Personal: UserRound, Job: BriefcaseBusiness, Bank: Landmark };
+
 function Section({ title, description, children }: { title: string; description: string; children: ReactNode }) {
   return (
     <Card>
       <div className="grid gap-6 p-5 md:grid-cols-[220px_1fr] md:p-6">
-        <div>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{description}</p>
+        <div className="md:border-e md:border-zinc-100 md:pe-6 dark:md:border-white/[0.06]">
+          <span className="mb-3 flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-indigo-500/25 ring-1 ring-inset ring-white/20">
+            {(() => {
+              const Icon = sectionIcons[title] ?? UserRound;
+              return <Icon className="size-[18px]" aria-hidden="true" />;
+            })()}
+          </span>
+          <h2 className="text-[15px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{tx(title)}</h2>
+          <p className="mt-1.5 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">{tx(description)}</p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
       </div>

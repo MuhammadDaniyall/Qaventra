@@ -2,7 +2,24 @@ import { useMemo, useState } from 'react';
 import { GroupFilter } from '../employees/EmployeeFile';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Download, FileBarChart, Play, Printer, Search, Settings2 } from 'lucide-react';
+import {
+  CalendarCheck,
+  Download,
+  FileBarChart,
+  FolderKanban,
+  GraduationCap,
+  Inbox,
+  Palmtree,
+  Plane,
+  Play,
+  Printer,
+  Receipt,
+  Search,
+  Settings2,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments, useEmployeeLookup } from '../../api/hooks';
 import { qk } from '../../api/keys';
@@ -26,6 +43,7 @@ import {
   useToast,
 } from '../../components/ui';
 import { cn } from '../../lib/cn';
+import { tx, txf } from '../../lib/i18n';
 import { monthLabel, todayIso } from '../../lib/format';
 
 /** One place for every report: pick, filter, view, export to Excel or print with signature lines. */
@@ -72,27 +90,43 @@ export function ReportsPage() {
           {list.isLoading ? (
             <SkeletonRows rows={8} cols={1} />
           ) : (
-            <nav className="max-h-[70vh] overflow-y-auto py-2">
-              {groups.map(([category, reports]) => (
-                <div key={category} className="mb-2">
-                  <p className="px-4 py-1 text-[11px] font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">{category}</p>
-                  {reports.map((r) => (
-                    <button
-                      key={r.key}
-                      type="button"
-                      onClick={() => setParams({ report: r.key })}
-                      className={cn(
-                        'block w-full px-4 py-1.5 text-start text-sm hover:bg-zinc-50 dark:hover:bg-zinc-800/50',
-                        r.key === key
-                          ? 'bg-accent-50 font-medium text-accent-700 dark:bg-accent-500/10 dark:text-accent-200'
-                          : 'text-zinc-700 dark:text-zinc-300',
-                      )}
-                    >
-                      {r.name}
-                    </button>
-                  ))}
-                </div>
-              ))}
+            <nav className="max-h-[70vh] overflow-y-auto px-2 py-2">
+              {groups.map(([category, reports]) => {
+                const Icon = categoryIcon(category);
+                return (
+                  <div key={category} className="mb-3">
+                    <p className="flex items-center gap-2 px-2 py-1.5 text-[11px] font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+                      <Icon className="size-3.5 text-indigo-500 dark:text-indigo-400" aria-hidden="true" />
+                      {category}
+                      <span className="ms-auto rounded-full bg-zinc-100 px-1.5 text-[10px] leading-4 font-medium text-zinc-500 tabular-nums dark:bg-white/[0.06] dark:text-zinc-400">
+                        {reports.length}
+                      </span>
+                    </p>
+                    {reports.map((r) => {
+                      const active = r.key === key;
+                      return (
+                        <button
+                          key={r.key}
+                          type="button"
+                          onClick={() => setParams({ report: r.key })}
+                          aria-current={active ? 'true' : undefined}
+                          className={cn(
+                            'relative block w-full rounded-lg px-3 py-1.5 text-start text-sm transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500',
+                            active
+                              ? 'bg-gradient-to-r from-indigo-50 to-fuchsia-50 font-medium text-indigo-700 ring-1 ring-indigo-200/60 rtl:bg-gradient-to-l dark:from-indigo-500/15 dark:to-fuchsia-500/10 dark:text-indigo-200 dark:ring-indigo-400/20'
+                              : 'text-zinc-700 hover:bg-zinc-100/70 dark:text-zinc-300 dark:hover:bg-white/[0.04]',
+                          )}
+                        >
+                          {active && (
+                            <span className="absolute inset-y-1.5 start-0 w-0.5 rounded-full bg-gradient-to-b from-indigo-500 to-fuchsia-500" aria-hidden="true" />
+                          )}
+                          {r.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
               {!groups.length && <p className="px-4 py-3 text-sm text-zinc-500 dark:text-zinc-400">No report matches.</p>}
             </nav>
           )}
@@ -100,13 +134,81 @@ export function ReportsPage() {
         {selected ? (
           <ReportRunner key={selected.key} def={selected} company={user.companyName ?? ''} />
         ) : (
-          <Card>
-            <EmptyState icon={FileBarChart} title="Pick a report" description="Choose a report on the left, set the filters and run it." />
-          </Card>
+          <ReportPicker groups={groups} onPick={(k) => setParams({ report: k })} />
         )}
       </div>
       {settings && <SignaturesModal onClose={() => setSettings(false)} />}
     </>
+  );
+}
+
+const categoryIcons: Record<string, LucideIcon> = {
+  Employees: Users,
+  Attendance: CalendarCheck,
+  Leave: Palmtree,
+  Payroll: Wallet,
+  Projects: FolderKanban,
+  Expenses: Receipt,
+  Approvals: Inbox,
+  Training: GraduationCap,
+  Travel: Plane,
+};
+const categoryIcon = (category: string) => categoryIcons[category] ?? FileBarChart;
+
+/** Before a report is chosen: each category as a card with its reports as quick picks. */
+function ReportPicker({ groups, onPick }: { groups: [string, ReportDefinition[]][]; onPick: (key: string) => void }) {
+  return (
+    <div className="min-w-0">
+      <Card className="relative mb-5 overflow-hidden p-5 sm:p-6">
+        <div className="pointer-events-none absolute -end-16 -top-20 size-56 rounded-full bg-fuchsia-400/15 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-24 start-1/3 size-56 rounded-full bg-indigo-400/15 blur-3xl" aria-hidden="true" />
+        <div className="relative flex items-center gap-4">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/30">
+            <FileBarChart className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-white">{tx('Pick a report')}</h2>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">{tx('Choose a report on the left, set the filters and run it.')}</p>
+          </div>
+        </div>
+      </Card>
+      <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+        {groups.map(([category, reports]) => {
+          const Icon = categoryIcon(category);
+          return (
+            <Card key={category} className="p-4">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/15">
+                  <Icon className="size-4" aria-hidden="true" />
+                </span>
+                <p className="font-semibold text-zinc-900 dark:text-white">{category}</p>
+                <span className="ms-auto text-xs text-zinc-500 tabular-nums dark:text-zinc-400">
+                  {txf(reports.length === 1 ? '{n} report' : '{n} reports', { n: reports.length })}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {reports.slice(0, 6).map((r) => (
+                  <button
+                    key={r.key}
+                    type="button"
+                    onClick={() => onPick(r.key)}
+                    title={r.description}
+                    className="rounded-lg border border-zinc-200/80 bg-white/70 px-2.5 py-1 text-xs text-zinc-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 focus-visible:outline-2 focus-visible:outline-accent-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:border-indigo-400/30 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-200"
+                  >
+                    {r.name}
+                  </button>
+                ))}
+                {reports.length > 6 && (
+                  <span className="px-1.5 py-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    {txf('+{n} more', { n: reports.length - 6 })}
+                  </span>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

@@ -29,20 +29,32 @@ export function RecordStamp({ stamps, className }: { stamps: RecordStamps; class
   );
 }
 
-/** Compact two-line version for a table column ("Added / modified"): when on top, who below. */
+/**
+ * Compact version for a table column ("Added / modified"): the latest change on top, who made it below, both on one
+ * short line each. The full "Added … · Modified …" text is in the tooltip.
+ */
 export function RecordStampCell({ stamps }: { stamps: RecordStamps }) {
   const { t } = useT();
-  const line = (label: string, when: string | null, who: string | null) => (
-    <span className="block" title={`${t(label)} ${formatDateTimePk(when)} · ${who ?? '—'}`}>
-      <span className="text-zinc-500 dark:text-zinc-400">{t(label)} </span>
-      <span className="tabular-nums">{formatDateTimePk(when)}</span>
-      <span className="block max-w-56 truncate text-zinc-500 dark:text-zinc-400">{who ?? '—'}</span>
-    </span>
-  );
+  const modified = wasModified(stamps);
+  const when = modified ? stamps.modifiedAtUtc : stamps.createdAtUtc;
+  const who = (modified ? stamps.modifiedBy : stamps.createdBy) ?? '—';
+  const full = [
+    `${t('Added')} ${formatDateTimePk(stamps.createdAtUtc)} · ${stamps.createdBy ?? '—'}`,
+    modified && `${t('Modified')} ${formatDateTimePk(stamps.modifiedAtUtc)} · ${stamps.modifiedBy ?? '—'}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
   return (
-    <div className="space-y-1 text-xs">
-      {line('Added', stamps.createdAtUtc, stamps.createdBy)}
-      {wasModified(stamps) && line('Modified', stamps.modifiedAtUtc, stamps.modifiedBy)}
+    <div className="text-xs leading-5" title={full}>
+      <span className="flex items-center gap-1.5">
+        <span
+          className={cn('size-1.5 shrink-0 rounded-full', modified ? 'bg-amber-400' : 'bg-emerald-400')}
+          aria-hidden="true"
+        />
+        <span className="text-zinc-500 dark:text-zinc-400">{t(modified ? 'Modified' : 'Added')}</span>
+        <span className="text-zinc-700 tabular-nums dark:text-zinc-300">{formatDateTimePk(when)}</span>
+      </span>
+      <span className="block max-w-56 truncate ps-3 text-zinc-500 dark:text-zinc-400">{who}</span>
     </div>
   );
 }

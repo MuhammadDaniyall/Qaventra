@@ -94,10 +94,11 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         )}
       >
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent" aria-hidden="true" />
-        <div className="mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-zinc-300 sm:hidden dark:bg-zinc-700" aria-hidden="true" />
-        <div className="flex items-start justify-between gap-4 px-5 pt-3 pb-3 sm:px-6 sm:pt-5">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-indigo-50/80 via-fuchsia-50/30 to-transparent dark:from-indigo-500/[0.08] dark:via-fuchsia-500/[0.03]" aria-hidden="true" />
+        <div className="relative mx-auto mt-2.5 h-1.5 w-10 shrink-0 rounded-full bg-zinc-300 sm:hidden dark:bg-zinc-700" aria-hidden="true" />
+        <div className="relative flex items-start justify-between gap-4 px-5 pt-3 pb-3 sm:px-6 sm:pt-5">
           <div>
-            <h2 id={titleId} className="text-base font-semibold text-zinc-900 dark:text-white">
+            <h2 id={titleId} className="text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white">
               {tx(title)}
             </h2>
             {description && <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{tx(description)}</p>}
@@ -108,7 +109,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
             </IconButton>
           )}
         </div>
-        {children && <div className="overscroll-contain overflow-y-auto px-5 pb-5 sm:px-6">{children}</div>}
+        {children && <div className="relative overscroll-contain overflow-y-auto px-5 pb-5 sm:px-6">{children}</div>}
         {footer && (
           <div className="flex flex-wrap justify-end gap-2 border-t border-zinc-100 bg-zinc-50/60 px-5 py-3.5 max-sm:[&>*]:min-h-11 max-sm:[&>*]:flex-1 sm:px-6 dark:border-white/[0.06] dark:bg-white/[0.02]">
             {footer}
@@ -154,9 +155,10 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
           drawerWidths[width],
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-100 px-6 py-4 dark:border-zinc-800">
+        <div className="relative flex items-start justify-between gap-4 border-b border-zinc-100 bg-gradient-to-b from-indigo-50/70 to-white px-6 py-4 dark:border-white/[0.06] dark:from-indigo-500/[0.08] dark:to-zinc-900">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent" aria-hidden="true" />
           <div className="min-w-0">
-            <h2 id={titleId} className="truncate text-base font-semibold text-zinc-900 dark:text-white">
+            <h2 id={titleId} className="truncate text-[17px] font-semibold tracking-tight text-zinc-900 dark:text-white">
               {tx(title)}
             </h2>
             {description && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{tx(description)}</p>}
@@ -167,7 +169,7 @@ export function Drawer({ open, onClose, title, description, children, footer, wi
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {footer && (
-          <div className="flex flex-wrap justify-end gap-2 border-t border-zinc-100 bg-zinc-50/60 px-6 py-3.5 dark:border-zinc-800 dark:bg-zinc-900/60">
+          <div className="flex flex-wrap justify-end gap-2 border-t border-zinc-100 bg-zinc-50/60 px-6 py-3.5 dark:border-white/[0.06] dark:bg-white/[0.02]">
             {footer}
           </div>
         )}

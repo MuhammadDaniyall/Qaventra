@@ -109,7 +109,7 @@ export function Tabs<T extends string>({
                 'after:absolute after:inset-x-2 after:-bottom-1.5 after:h-0.5 after:rounded-full after:transition-opacity',
                 'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent-500',
                 active
-                  ? 'text-accent-700 after:bg-gradient-to-r after:from-indigo-500 after:to-fuchsia-500 after:opacity-100 dark:text-accent-300'
+                  ? 'bg-indigo-50/70 text-indigo-700 after:bg-gradient-to-r after:from-indigo-500 after:to-fuchsia-500 after:opacity-100 dark:bg-indigo-500/10 dark:text-indigo-200'
                   : 'text-zinc-500 after:opacity-0 hover:bg-zinc-900/[0.04] hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-white/[0.05] dark:hover:text-zinc-200',
               )}
             >

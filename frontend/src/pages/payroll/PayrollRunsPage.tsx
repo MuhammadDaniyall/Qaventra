@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tx } from '../../lib/i18n';
+import { cn } from '../../lib/cn';
 import { useNavigate } from 'react-router-dom';
-import { Play, BookOpen, Coins, Settings2, TrendingUp, PiggyBank, Wallet } from 'lucide-react';
+import { Play, BookOpen, Coins, FilePen, Settings2, TrendingUp, PiggyBank, Users, Wallet } from 'lucide-react';
 import { payrollApi } from '../../api/payroll';
 import { errorMessage } from '../../api/client';
 import { qk } from '../../api/keys';
@@ -18,6 +19,7 @@ import {
   PageHeader,
   Select,
   SkeletonRows,
+  StatCard,
   StatusBadge,
   Table,
   TBody,
@@ -28,9 +30,36 @@ import {
   useToast,
 } from '../../components/ui';
 import { formatCurrency, formatDateTimeUtc, monthLabel, monthName } from '../../lib/format';
-import type { PayFrequency, PayPeriod, PayrollRunDetail } from '../../types';
+import type { PayFrequency, PayPeriod, PayrollRun, PayrollRunDetail } from '../../types';
 import { WarningsPanel } from './WarningsPanel';
 import { RecordStampCell } from '../../components/RecordStamp';
+
+/** The coloured edge on each run: draft amber, finalized green, anything else brand. */
+const statusBar: Record<string, string> = {
+  Draft: 'bg-amber-400',
+  Finalized: 'bg-emerald-500',
+};
+
+/** The latest run at a glance, above the list. */
+function RunsSummary({ runs }: { runs: PayrollRun[] }) {
+  const latest = runs[0];
+  const open = runs.filter((r) => r.status !== 'Finalized').length;
+  return (
+    <div className="mb-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="col-span-2 sm:col-span-1">
+      <StatCard
+        label="Latest net pay"
+        value={formatCurrency(latest.totalNet)}
+        icon={Wallet}
+        tone="violet"
+        hint={latest.label || monthLabel(latest.year, latest.month)}
+      />
+      </div>
+      <StatCard label="People in the latest run" value={latest.employees} icon={Users} tone="blue" hint={latest.label || monthLabel(latest.year, latest.month)} />
+      <StatCard label="Not finalized yet" value={open} icon={FilePen} tone={open ? 'amber' : 'green'} hint="Finalize to release payslips" />
+    </div>
+  );
+}
 
 export function PayrollRunsPage() {
   const navigate = useNavigate();
@@ -65,6 +94,7 @@ export function PayrollRunsPage() {
           </>
         }
       />
+      {!!runs.data?.length && <RunsSummary runs={runs.data} />}
       <Card>
         {runs.isLoading ? (
           <SkeletonRows rows={5} cols={6} />
@@ -99,13 +129,22 @@ export function PayrollRunsPage() {
             <TBody>
               {runs.data.map((r) => (
                 <Tr key={r.id} onClick={() => navigate(`/payroll/runs/${r.id}`)}>
-                  <Td className="font-medium text-zinc-900 dark:text-zinc-100">
-                    {r.label || monthLabel(r.year, r.month)}
-                    {r.frequency !== 'Monthly' && (
-                      <Badge tone="blue" className="ms-2">
-                        {tx(FREQUENCY_LABELS[r.frequency])}
-                      </Badge>
-                    )}
+                  <Td className="relative font-medium text-zinc-900 dark:text-zinc-100">
+                    <span className={cn('absolute inset-y-2 start-0 w-1 rounded-e-full', statusBar[r.status] ?? 'bg-indigo-400')} aria-hidden="true" />
+                    <span className="flex items-center gap-3">
+                      <span className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-fuchsia-50 leading-none ring-1 ring-indigo-100 dark:from-indigo-500/15 dark:to-fuchsia-500/10 dark:ring-indigo-400/15">
+                        <span className="text-[10px] font-semibold text-indigo-600 uppercase dark:text-indigo-300">{monthName(r.month).slice(0, 3)}</span>
+                        <span className="mt-0.5 text-[11px] font-semibold text-zinc-700 tabular-nums dark:text-zinc-200">{r.year}</span>
+                      </span>
+                      <span>
+                        {r.label || monthLabel(r.year, r.month)}
+                        {r.frequency !== 'Monthly' && (
+                          <Badge tone="blue" className="ms-2">
+                            {tx(FREQUENCY_LABELS[r.frequency])}
+                          </Badge>
+                        )}
+                      </span>
+                    </span>
                   </Td>
                   <Td>
                     <StatusBadge status={r.status} />
@@ -113,8 +152,8 @@ export function PayrollRunsPage() {
                   <Td>{r.taxYearCode}</Td>
                   <Td className="text-end tabular-nums">{r.employees}</Td>
                   <Td className="text-end tabular-nums">{formatCurrency(r.totalGross)}</Td>
-                  <Td className="text-end tabular-nums">{formatCurrency(r.totalDeductions)}</Td>
-                  <Td className="text-end font-medium text-zinc-900 tabular-nums dark:text-zinc-100">{formatCurrency(r.totalNet)}</Td>
+                  <Td className="text-end text-rose-600/90 tabular-nums dark:text-rose-400/90">{formatCurrency(r.totalDeductions)}</Td>
+                  <Td className="text-end font-semibold text-indigo-700 tabular-nums dark:text-indigo-300">{formatCurrency(r.totalNet)}</Td>
                   <Td>{formatDateTimeUtc(r.processedAtUtc)}</Td>
                   <Td>{r.stamps ? <RecordStampCell stamps={r.stamps} /> : '—'}</Td>
                 </Tr>

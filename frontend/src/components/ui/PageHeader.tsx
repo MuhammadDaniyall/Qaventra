@@ -1,8 +1,19 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import type { LucideIcon } from 'lucide-react';
 import { ChevronLeft, Sparkles } from 'lucide-react';
 import { tx } from '../../lib/i18n';
 import { cn } from '../../lib/cn';
+import { NAV } from '../layout/nav';
+
+/** The sidebar icon of the closest menu entry for a path ("/payroll/runs/7" → Payroll). */
+function navIconFor(path: string): LucideIcon | undefined {
+  let best: { to: string; icon: LucideIcon } | undefined;
+  for (const section of NAV)
+    for (const item of section.items)
+      if ((path === item.to || path.startsWith(item.to + '/')) && (!best || item.to.length > best.to.length)) best = item;
+  return best?.icon;
+}
 
 export function PageHeader({
   title,
@@ -11,6 +22,7 @@ export function PageHeader({
   back,
   hero,
   eyebrow,
+  icon,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -20,7 +32,12 @@ export function PageHeader({
   hero?: boolean;
   /** A small pill above the title, shown with `hero`. */
   eyebrow?: ReactNode;
+  /** Icon tile beside the title; defaults to the page's sidebar icon. Pass null for none. */
+  icon?: LucideIcon | null;
 }) {
+  const { pathname } = useLocation();
+  const Icon = icon === undefined ? navIconFor(pathname) : icon;
+  const showIcon = !!Icon && !hero && typeof title === 'string';
   return (
     <div
       className={cn(
@@ -52,7 +69,16 @@ export function PageHeader({
         </span>
       )}
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-3.5">
+          {showIcon && Icon && (
+            <span
+              className="relative flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/25 ring-1 ring-inset ring-white/20 sm:size-12"
+              aria-hidden="true"
+            >
+              <Icon className="size-5 sm:size-[22px]" />
+            </span>
+          )}
+          <div className="min-w-0">
           <h1
             className={cn(
               'font-semibold tracking-tight',
@@ -68,6 +94,7 @@ export function PageHeader({
           {description && (
             <p className={cn('mt-1 text-zinc-500 dark:text-zinc-400', hero ? 'text-[15px]' : 'text-sm')}>{tx(description)}</p>
           )}
+          </div>
         </div>
         {actions && <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{actions}</div>}
       </div>

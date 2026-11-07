@@ -43,7 +43,8 @@ export function EmployeesPage() {
   const hr = isHr(user);
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [departmentId, setDepartmentId] = useState('');
+  // ?department=<id> (from the home dashboard's department bars) opens the list filtered.
+  const [departmentId, setDepartmentId] = useState(() => new URLSearchParams(window.location.search).get('department') ?? '');
   const [status, setStatus] = useState<EmploymentStatus | ''>('');
   const [groupId, setGroupId] = useState('');
   const [page, setPage] = useState(1);

@@ -226,10 +226,30 @@ export function ActionCenter({ d, hr, payroll, className }: { d: Dashboard | und
   );
 }
 
-export function HolidaysCard({ holidays, loading, className }: { holidays: Holiday[] | undefined; loading: boolean; className?: string }) {
+export function HolidaysCard({
+  holidays,
+  loading,
+  className,
+  seeAllTo,
+}: {
+  holidays: Holiday[] | undefined;
+  loading: boolean;
+  className?: string;
+  /** The holiday list (HR: settings → Holidays). */
+  seeAllTo?: string;
+}) {
   return (
     <Card className={className}>
-      <CardHeader title="Upcoming holidays" />
+      <CardHeader
+        title="Upcoming holidays"
+        actions={
+          seeAllTo && (
+            <Link to={seeAllTo} className={linkCls}>
+              {tx('See all')}
+            </Link>
+          )
+        }
+      />
       {loading ? (
         <div className="p-5">
           <Skeleton className="h-24 w-full" />
