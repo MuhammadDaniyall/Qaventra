@@ -2,14 +2,22 @@ import {
   cloneElement,
   forwardRef,
   isValidElement,
+  useCallback,
+  useEffect,
   useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
   type InputHTMLAttributes,
   type ReactElement,
   type ReactNode,
+  type RefObject,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Check, ChevronDown, Search } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { tx } from '../../lib/i18n';
 
@@ -109,26 +117,263 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   },
 );
 
+/** Lists longer than this get a search box (people, departments, filters…). */
+const SEARCH_FROM = 8;
+
+interface Choice {
+  value: string;
+  label: string;
+  group?: string;
+  disabled: boolean;
+}
+
+/**
+ * A select. Long lists open a searchable list instead of the browser's own; the real <select> stays in the page (hidden), so
+ * value, onChange, refs and form libraries work exactly as before.
+ */
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(
   { className, children, ...rest },
   ref,
 ) {
+  const inner = useRef<HTMLSelectElement | null>(null);
+  const setRefs = useCallback(
+    (el: HTMLSelectElement | null) => {
+      inner.current = el;
+      if (typeof ref === 'function') ref(el);
+      else if (ref) ref.current = el;
+    },
+    [ref],
+  );
+  const [count, setCount] = useState(0);
+  const [label, setLabel] = useState('');
+  // Options come from the rendered <select>, so any children (option, optgroup, mapped lists) work.
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el) return;
+    if (el.options.length !== count) setCount(el.options.length);
+    const text = el.selectedOptions[0]?.text ?? '';
+    if (text !== label) setLabel(text);
+  });
+  const searchable = count > SEARCH_FROM && !rest.multiple && !rest.size;
+
   return (
     <div className="relative">
       <select
-        ref={ref}
-        className={cn(control, 'h-10 appearance-none pe-9 sm:h-9', borderFor(rest['aria-invalid'] === true), className)}
+        ref={setRefs}
+        className={cn(
+          control,
+          'h-10 appearance-none pe-9 sm:h-9',
+          borderFor(rest['aria-invalid'] === true),
+          className,
+          searchable && 'sr-only',
+        )}
+        tabIndex={searchable ? -1 : rest.tabIndex}
         {...rest}
+        onChange={(e) => {
+          setLabel(e.target.selectedOptions[0]?.text ?? '');
+          rest.onChange?.(e);
+        }}
       >
         {children}
       </select>
+      {searchable ? (
+        <SearchList select={inner} label={label} className={className} invalid={rest['aria-invalid'] === true} disabled={rest.disabled} id={rest.id} />
+      ) : (
+        <ChevronDown
+          className="pointer-events-none absolute top-1/2 end-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400"
+          aria-hidden="true"
+        />
+      )}
+    </div>
+  );
+});
+
+function SearchList({
+  select,
+  label,
+  className,
+  invalid,
+  disabled,
+  id,
+}: {
+  select: RefObject<HTMLSelectElement | null>;
+  label: string;
+  className?: string;
+  invalid: boolean;
+  disabled?: boolean;
+  id?: string;
+}) {
+  const button = useRef<HTMLButtonElement>(null);
+  const list = useRef<HTMLUListElement>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const [choices, setChoices] = useState<Choice[]>([]);
+  const [place, setPlace] = useState<{ left: number; width: number; top?: number; bottom?: number }>({ left: 0, width: 0 });
+  const listId = useId();
+
+  const place_ = useCallback(() => {
+    const r = button.current?.getBoundingClientRect();
+    if (!r) return;
+    const below = window.innerHeight - r.bottom;
+    // Open upwards when there is little room below (bottom of a dialog, phone keyboard).
+    setPlace(below < 300 && r.top > below ? { left: r.left, width: r.width, bottom: window.innerHeight - r.top + 4 } : { left: r.left, width: r.width, top: r.bottom + 4 });
+  }, []);
+
+  const show = () => {
+    const el = select.current;
+    if (!el || disabled) return;
+    const all: Choice[] = Array.from(el.options).map((o) => ({
+      value: o.value,
+      label: o.text,
+      group: o.parentElement instanceof HTMLOptGroupElement ? o.parentElement.label : undefined,
+      disabled: o.disabled,
+    }));
+    setChoices(all);
+    setQuery('');
+    setActive(Math.max(0, all.findIndex((c) => c.value === el.value)));
+    place_();
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!button.current?.contains(t) && !list.current?.parentElement?.contains(t)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    window.addEventListener('resize', place_);
+    window.addEventListener('scroll', place_, true);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      window.removeEventListener('resize', place_);
+      window.removeEventListener('scroll', place_, true);
+    };
+  }, [open, place_]);
+
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = choices.filter((c) => words.every((w) => `${c.label} ${c.group ?? ''}`.toLowerCase().includes(w)));
+
+  useEffect(() => {
+    list.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' });
+  }, [active, open]);
+
+  const pick = (c: Choice) => {
+    const el = select.current;
+    if (!el || c.disabled) return;
+    if (el.value !== c.value) {
+      // Set the value the way the browser would, so React's onChange and form libraries see a normal change.
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(el, c.value);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    setOpen(false);
+    button.current?.focus();
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActive((a) => Math.min(shown.length - 1, a + 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActive((a) => Math.max(0, a - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (shown[active]) pick(shown[active]);
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      e.stopPropagation();
+      setOpen(false);
+      if (e.key === 'Escape') button.current?.focus();
+    }
+  };
+
+  let lastGroup: string | undefined;
+  return (
+    <>
+      <button
+        ref={button}
+        id={id ? `${id}-search` : undefined}
+        type="button"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-haspopup="listbox"
+        disabled={disabled}
+        onClick={() => (open ? setOpen(false) : show())}
+        onKeyDown={(e) => {
+          if (!open && (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            show();
+          }
+        }}
+        className={cn(control, 'flex h-10 items-center pe-9 text-start sm:h-9', borderFor(invalid), className)}
+      >
+        <span className="truncate">{label}</span>
+      </button>
       <ChevronDown
         className="pointer-events-none absolute top-1/2 end-3 size-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400"
         aria-hidden="true"
       />
-    </div>
+      {open &&
+        createPortal(
+          <div
+            className="fixed z-[70] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl shadow-zinc-900/10 dark:border-white/10 dark:bg-zinc-900"
+            style={{ left: place.left, top: place.top, bottom: place.bottom, width: Math.max(place.width, 240) }}
+            dir={document.documentElement.dir || undefined}
+          >
+            <div className="flex items-center gap-2 border-b border-zinc-100 px-3 dark:border-white/10">
+              <Search className="size-4 shrink-0 text-zinc-400" aria-hidden="true" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActive(0);
+                }}
+                onKeyDown={onKey}
+                placeholder={tx('Type to search')}
+                aria-label={tx('Type to search')}
+                aria-controls={listId}
+                className="h-10 w-full bg-transparent text-base text-zinc-900 placeholder:text-zinc-400 focus:outline-none sm:text-sm dark:text-zinc-100"
+              />
+            </div>
+            <ul ref={list} id={listId} role="listbox" className="max-h-64 overflow-y-auto p-1">
+              {shown.length === 0 && <li className="px-3 py-2 text-sm text-zinc-500">{tx('No matches')}</li>}
+              {shown.map((c, i) => {
+                const heading = c.group && c.group !== lastGroup ? c.group : null;
+                lastGroup = c.group;
+                const selected = c.value === select.current?.value;
+                return (
+                  <li key={`${c.value}-${i}`} role="presentation">
+                    {heading && <div className="px-3 pt-2 pb-1 text-xs font-medium text-zinc-500">{heading}</div>}
+                    <div
+                      role="option"
+                      aria-selected={selected}
+                      aria-disabled={c.disabled}
+                      data-index={i}
+                      onMouseEnter={() => setActive(i)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => pick(c)}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200',
+                        i === active && 'bg-indigo-50 text-indigo-900 dark:bg-indigo-500/15 dark:text-indigo-100',
+                        c.disabled && 'cursor-not-allowed opacity-50',
+                      )}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{c.label || '\u00a0'}</span>
+                      {selected && <Check className="size-4 shrink-0 text-indigo-600 dark:text-indigo-300" aria-hidden="true" />}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>,
+          document.body,
+        )}
+    </>
   );
-});
+}
 
 export function Checkbox({
   label,

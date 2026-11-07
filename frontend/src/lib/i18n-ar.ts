@@ -3,6 +3,8 @@
  * the sign-in page. Keys are the exact English strings; anything missing stays in English (see i18n.ts).
  */
 export const AR: Record<string, string> = {
+  "Type to search": "اكتب للبحث",
+  "No matches": "لا توجد نتائج",
   // Navigation
   Home: 'الرئيسية',
   Requests: 'الطلبات',

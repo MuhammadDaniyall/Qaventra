@@ -3,6 +3,8 @@
  * components). Kept apart from i18n-ur.ts, which holds the hand-picked core terms; those win on a clash.
  */
 export const UR_SCREENS: Record<string, string> = {
+  "Type to search": "تلاش کے لیے لکھیں",
+  "No matches": "کچھ نہیں ملا",
   "0 = any": "0 = کوئی بھی",
   "0 = at once": "0 = فوراً",
   "0 = none": "0 = کوئی نہیں",
