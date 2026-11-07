@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { BookMarked, MessageSquareQuote, NotebookPen, Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
+import { BookMarked, Gauge, MessageSquareQuote, NotebookPen, Pencil, Plus, Trash2, UserPlus } from 'lucide-react';
 import { http } from '../../api/client';
 import { employeesApi } from '../../api/employees';
 import { qk } from '../../api/keys';
@@ -20,6 +20,7 @@ import {
   IconButton,
   Input,
   Modal,
+  ProgressBar,
   Select,
   SkeletonRows,
   Textarea,
@@ -87,6 +88,8 @@ const api = {
 };
 
 const KPIS = ['performance', 'kpis'] as const;
+/** The KPI library query, shared with the Performance overview tiles. */
+export const kpiQuery = { queryKey: KPIS, queryFn: () => api.kpis() };
 
 /** "Q4 2026" for today. */
 function currentQuarter() {
@@ -154,32 +157,52 @@ export function KpiLibraryTab() {
           />
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {groups.map(([category, kpis]) => (
-            <Card key={category}>
-              <CardHeader title={category || tx('Other')} />
-              <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <section key={category}>
+              <div className="mb-3 flex items-center gap-2">
+                <span className="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-fuchsia-500" aria-hidden="true" />
+                <h2 className="text-[15px] font-semibold text-zinc-900 dark:text-white">{category || tx('Other')}</h2>
+                <span className="rounded-full bg-zinc-100 px-2 text-xs leading-5 font-medium text-zinc-500 tabular-nums dark:bg-white/[0.06] dark:text-zinc-400">{kpis.length}</span>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {kpis.map((k) => (
-                  <li key={k.id} className="flex items-center gap-3 px-5 py-3">
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                        {k.name} {!k.isActive && <Badge tone="gray">{tx('Off')}</Badge>}
+                  <Card key={k.id} className={cn('group flex min-w-0 flex-col p-4', !k.isActive && 'opacity-60')}>
+                    <div className="flex items-start gap-3">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-fuchsia-50 text-indigo-600 ring-1 ring-indigo-100 dark:from-indigo-500/15 dark:to-fuchsia-500/10 dark:text-indigo-300 dark:ring-indigo-400/15">
+                        <Gauge className="size-[18px]" aria-hidden="true" />
                       </span>
-                      <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
-                        {[k.defaultTarget && `${tx('Target')}: ${k.defaultTarget}${k.unit ? ` ${k.unit}` : ''}`, `${tx('Weight')} ${k.defaultWeight}`].filter(Boolean).join(' · ')}
-                      </span>
-                      <RecordStamp stamps={k.stamps} />
-                    </span>
-                    <IconButton label="Edit" onClick={() => setEditing(k)}>
-                      <Pencil className="size-4" />
-                    </IconButton>
-                    <IconButton label="Delete" onClick={() => setRemoving(k)}>
-                      <Trash2 className="size-4" />
-                    </IconButton>
-                  </li>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-zinc-900 dark:text-white">
+                          {k.name} {!k.isActive && <Badge tone="gray">{tx('Off')}</Badge>}
+                        </p>
+                        {k.defaultTarget && (
+                          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                            {tx('Target')}: <span className="font-medium text-zinc-800 dark:text-zinc-200">{k.defaultTarget}{k.unit ? ` ${k.unit}` : ''}</span>
+                          </p>
+                        )}
+                      </div>
+                      <div className="-me-2 -mt-1 flex opacity-70 transition-opacity group-hover:opacity-100">
+                        <IconButton label="Edit" onClick={() => setEditing(k)}>
+                          <Pencil className="size-4" />
+                        </IconButton>
+                        <IconButton label="Delete" onClick={() => setRemoving(k)}>
+                          <Trash2 className="size-4" />
+                        </IconButton>
+                      </div>
+                    </div>
+                    <div className="mt-4 mb-3">
+                      <div className="mb-1.5 flex items-center justify-between text-xs">
+                        <span className="text-zinc-500 dark:text-zinc-400">{tx('Weight')}</span>
+                        <span className="font-semibold text-zinc-900 tabular-nums dark:text-white">{k.defaultWeight}%</span>
+                      </div>
+                      <ProgressBar value={k.defaultWeight / 100} />
+                    </div>
+                    <RecordStamp stamps={k.stamps} className="mt-auto truncate border-t border-zinc-100 pt-2.5 text-[11px] dark:border-white/[0.06]" />
+                  </Card>
                 ))}
-              </ul>
-            </Card>
+              </div>
+            </section>
           ))}
         </div>
       )}

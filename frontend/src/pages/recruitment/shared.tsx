@@ -7,6 +7,7 @@ import { qk } from '../../api/keys';
 import {
   CV_ACCEPT,
   EMPLOYMENT_LABELS,
+  PIPELINE,
   recruitmentApi,
   SOURCE_LABELS,
   STAGE_LABELS,
@@ -23,6 +24,7 @@ import { Badge, Button, Checkbox, Field, FormError, Input, Modal, Select, Textar
 import type { Tone } from '../../components/ui/Badge';
 import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 import { errorMessage } from '../../api/client';
 
 const STAGE_TONES: Record<ApplicationStage, Tone> = {
@@ -42,6 +44,45 @@ export function StageBadge({ stage }: { stage: ApplicationStage }) {
     <Badge tone={STAGE_TONES[stage]} dot>
       {STAGE_LABELS[stage]}
     </Badge>
+  );
+}
+
+/** One colour per hiring stage: column headers on the board, the pipeline bar and its legend. */
+export const PIPE_COLORS: Record<ApplicationStage, { dot: string; bar: string; col: string; text: string }> = {
+  Applied: { dot: 'bg-sky-400', bar: 'from-sky-400 to-cyan-400', col: 'from-sky-50/90 dark:from-sky-500/[0.07]', text: 'text-sky-700 dark:text-sky-300' },
+  Shortlisted: { dot: 'bg-indigo-500', bar: 'from-indigo-500 to-blue-500', col: 'from-indigo-50/90 dark:from-indigo-500/[0.08]', text: 'text-indigo-700 dark:text-indigo-300' },
+  Test: { dot: 'bg-violet-500', bar: 'from-violet-500 to-purple-500', col: 'from-violet-50/90 dark:from-violet-500/[0.08]', text: 'text-violet-700 dark:text-violet-300' },
+  Interview: { dot: 'bg-amber-400', bar: 'from-amber-400 to-orange-400', col: 'from-amber-50/90 dark:from-amber-500/[0.07]', text: 'text-amber-700 dark:text-amber-300' },
+  Offer: { dot: 'bg-fuchsia-500', bar: 'from-fuchsia-500 to-pink-500', col: 'from-fuchsia-50/90 dark:from-fuchsia-500/[0.08]', text: 'text-fuchsia-700 dark:text-fuchsia-300' },
+  Hired: { dot: 'bg-emerald-500', bar: 'from-emerald-500 to-teal-400', col: 'from-emerald-50/90 dark:from-emerald-500/[0.08]', text: 'text-emerald-700 dark:text-emerald-300' },
+  Rejected: { dot: 'bg-rose-400', bar: 'from-rose-400 to-red-400', col: 'from-rose-50/80 dark:from-rose-500/[0.06]', text: 'text-rose-700 dark:text-rose-300' },
+  Withdrawn: { dot: 'bg-zinc-400', bar: 'from-zinc-400 to-zinc-500', col: 'from-zinc-100/80 dark:from-white/[0.03]', text: 'text-zinc-600 dark:text-zinc-300' },
+  OnHold: { dot: 'bg-orange-400', bar: 'from-orange-400 to-amber-400', col: 'from-orange-50/80 dark:from-orange-500/[0.06]', text: 'text-orange-700 dark:text-orange-300' },
+};
+
+/** A job's candidates by stage: one coloured segment each, with a legend of counts. */
+export function PipelineMix({ byStage, compact, className }: { byStage: Partial<Record<ApplicationStage, number>>; compact?: boolean; className?: string }) {
+  const parts = PIPELINE.map((s) => [s, byStage[s] ?? 0] as const).filter(([, n]) => n > 0);
+  const total = parts.reduce((n, [, c]) => n + c, 0);
+  if (!total) return <p className={cn('text-xs text-zinc-400', className)}>{tx('No candidates yet')}</p>;
+  return (
+    <div className={className}>
+      <div className="flex h-2 gap-0.5 overflow-hidden rounded-full" aria-hidden="true">
+        {parts.map(([s, n]) => (
+          <span key={s} className={cn('h-full rounded-full bg-gradient-to-r rtl:bg-gradient-to-l', PIPE_COLORS[s].bar)} style={{ width: `${(n / total) * 100}%` }} />
+        ))}
+      </div>
+      {!compact && (
+        <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+          {parts.map(([s, n]) => (
+            <li key={s} className="inline-flex items-center gap-1.5">
+              <span className={cn('size-2 rounded-full', PIPE_COLORS[s].dot)} aria-hidden="true" />
+              {tx(STAGE_LABELS[s])} <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-100">{n}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

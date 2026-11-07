@@ -13,3 +13,4 @@ export { StatCard } from './StatCard';
 export { Tabs } from './Tabs';
 export { Avatar } from './Avatar';
 export { LanguagePicker } from './LanguagePicker';
+export { ProgressRing, ProgressBar } from './ProgressRing';

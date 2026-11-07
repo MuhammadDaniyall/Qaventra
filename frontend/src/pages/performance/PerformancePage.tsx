@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CalendarRange, ClipboardList, Plus, Rocket, Settings2, Target, Trash2, Users, BookMarked, MessageSquareQuote } from 'lucide-react';
+import { CalendarRange, ChevronRight, CircleCheck, ClipboardList, Plus, Rocket, Settings2, Target, Trash2, Users, BookMarked, MessageSquareQuote } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments } from '../../api/hooks';
 import { qk } from '../../api/keys';
 import {
   performanceApi,
-  STAGE_LABELS,
   type PerformanceSettings,
   type PerformanceTemplate,
   type ReviewCycle,
@@ -16,11 +15,14 @@ import {
 } from '../../api/performance';
 import { useUser } from '../../auth/AuthContext';
 import { isHr } from '../../auth/roles';
-import { RecordStamp, RecordStampCell } from '../../components/RecordStamp';
+import { RecordStamp } from '../../components/RecordStamp';
 import {
+  Avatar,
   Badge,
   Button,
   Card,
+  ProgressRing,
+  StatCard,
   Checkbox,
   ConfirmDialog,
   EmptyState,
@@ -32,19 +34,16 @@ import {
   PageHeader,
   Select,
   SkeletonRows,
-  Table,
-  TBody,
   Tabs,
-  Td,
   Textarea,
-  Th,
-  THead,
-  Tr,
   useToast,
 } from '../../components/ui';
 import { formatDate } from '../../lib/format';
 import { DeleteConfirm, RowActions } from '../settings/shared';
-import { FeedbackRequestsTab, KpiLibraryTab } from './PerformanceExtras';
+import { FeedbackRequestsTab, KpiLibraryTab, kpiQuery } from './PerformanceExtras';
+import { StageChip, StageMix, stageProgress } from './shared';
+import { cn } from '../../lib/cn';
+import { tx, txf } from '../../lib/i18n';
 
 type Tab = 'mine' | 'team' | 'feedback' | 'cycles' | 'kpis' | 'templates' | 'settings';
 
@@ -58,6 +57,7 @@ export function PerformancePage() {
   return (
     <>
       <PageHeader title="Performance" description="Goals, reviews and ratings." />
+      {hr && <PerformanceOverview />}
       <Tabs<Tab>
         className="mb-5"
         value={tab}
@@ -107,41 +107,80 @@ function ReviewList({ query, mine }: { query: { queryKey: readonly unknown[]; qu
       </Card>
     );
   return (
-    <Card>
-      <Table>
-        <THead>
-          <tr>
-            <Th>{mine ? 'Cycle' : 'Employee'}</Th>
-            <Th>Stage</Th>
-            <Th className="text-end">Self</Th>
-            <Th className="text-end">Manager</Th>
-            <Th className="text-end">Final</Th>
-            <Th>Added / modified</Th>
-          </tr>
-        </THead>
-        <TBody>
-          {list.data.map((r) => (
-            <Tr key={r.id} onClick={() => navigate(`/performance/reviews/${r.id}`)}>
-              <Td>
-                <p className="font-medium text-zinc-900 dark:text-zinc-100">{mine ? r.cycle : r.employeeName}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {mine ? (r.reviewer ? `Reviewer: ${r.reviewer}` : 'Reviewed by HR') : `${r.cycle}${r.department ? ` · ${r.department}` : ''}`}
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {list.data.map((r) => (
+        <button
+          key={r.id}
+          type="button"
+          onClick={() => navigate(`/performance/reviews/${r.id}`)}
+          className="group text-start focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 rounded-2xl"
+        >
+          <Card className="h-full p-4 transition-all group-hover:-translate-y-0.5 group-hover:shadow-[0_18px_40px_-20px_rgb(79_70_229/0.35)]">
+            <div className="flex items-start gap-3">
+              {mine ? (
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-indigo-500/25">
+                  <Target className="size-[18px]" aria-hidden="true" />
+                </span>
+              ) : (
+                <Avatar name={r.employeeName} size="lg" className="!size-10 !text-sm" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-zinc-900 dark:text-white">{mine ? r.cycle : r.employeeName}</p>
+                <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                  {mine ? (r.reviewer ? `${tx('Reviewer')}: ${r.reviewer}` : tx('Reviewed by HR')) : `${r.cycle}${r.department ? ` · ${r.department}` : ''}`}
                 </p>
-              </Td>
-              <Td>
-                <Badge tone={r.stage === 'Done' ? 'green' : r.stage === 'SignOff' ? 'violet' : 'amber'}>{STAGE_LABELS[r.stage]}</Badge>
-              </Td>
-              <Td className="text-end tabular-nums">{r.selfScore ?? '—'}</Td>
-              <Td className="text-end tabular-nums">{r.managerScore ?? '—'}</Td>
-              <Td className="text-end font-medium tabular-nums">{r.finalRating ?? '—'}</Td>
-              <Td>
-                <RecordStampCell stamps={r.stamps} />
-              </Td>
-            </Tr>
-          ))}
-        </TBody>
-      </Table>
-    </Card>
+              </div>
+              <ProgressRing value={stageProgress(r.stage)} size={44} stroke={5} />
+            </div>
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <StageChip stage={r.stage} />
+              <ChevronRight className="size-4 text-zinc-300 transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5 dark:text-zinc-600" aria-hidden="true" />
+            </div>
+            <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
+              {(
+                [
+                  ['Self', r.selfScore],
+                  ['Manager', r.managerScore],
+                  ['Final', r.finalRating],
+                ] as const
+              ).map(([k, v]) => (
+                <div key={k} className={cn('rounded-xl px-2 py-2', k === 'Final' && v != null ? 'bg-gradient-to-br from-indigo-50 to-fuchsia-50 ring-1 ring-indigo-100 dark:from-indigo-500/10 dark:to-fuchsia-500/10 dark:ring-indigo-400/15' : 'bg-zinc-50 dark:bg-white/[0.03]')}>
+                  <dt className="text-[11px] text-zinc-500 dark:text-zinc-400">{tx(k)}</dt>
+                  <dd className="text-base font-semibold text-zinc-900 tabular-nums dark:text-white">{v ?? '—'}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** HR's view of the whole module at a glance; each tile opens the tab behind it. */
+function PerformanceOverview() {
+  const cycles = useQuery({ queryKey: qk.performanceCycles, queryFn: performanceApi.cycles });
+  const kpis = useQuery(kpiQuery);
+  const active = (cycles.data ?? []).filter((c) => c.status === 'Active');
+  const reviews = active.reduce((n, c) => n + c.reviews, 0);
+  const done = active.reduce((n, c) => n + (c.byStage.Done ?? 0) + (c.byStage.SignOff ?? 0), 0);
+  const withHr = active.reduce((n, c) => n + (c.byStage.Calibration ?? 0), 0);
+  const loading = cycles.isLoading;
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatCard label="Active cycles" value={active.length} icon={CalendarRange} loading={loading} hint={active[0]?.name} to="/performance?tab=cycles" />
+      <StatCard label="Reviews in progress" value={reviews - done} icon={Target} tone="amber" loading={loading} hint={txf('{n} with HR', { n: withHr })} to="/performance?tab=cycles" />
+      <StatCard
+        label="Reviews done"
+        value={reviews ? `${Math.round((done / reviews) * 100)}%` : '—'}
+        icon={CircleCheck}
+        tone="green"
+        loading={loading}
+        hint={txf('{done} of {total}', { done, total: reviews })}
+        to="/performance?tab=cycles"
+      />
+      <StatCard label="KPIs in the library" value={kpis.data?.filter((k) => k.isActive).length} icon={BookMarked} tone="violet" loading={kpis.isLoading} hint="Ready to pick as goals" to="/performance?tab=kpis" />
+    </div>
   );
 }
 
@@ -176,57 +215,65 @@ function Cycles() {
       {!list.data?.length ? (
         <EmptyState icon={CalendarRange} title="No review cycles" description="Make a template first, then start e.g. “Annual review 2026”." />
       ) : (
-        <Table>
-          <THead>
-            <tr>
-              <Th>Cycle</Th>
-              <Th>Status</Th>
-              <Th>Progress</Th>
-              <Th>Added / modified</Th>
-              <Th className="text-end">
-                <span className="sr-only">Actions</span>
-              </Th>
-            </tr>
-          </THead>
-          <TBody>
-            {list.data.map((c) => {
-              const done = (c.byStage.Done ?? 0) + (c.byStage.SignOff ?? 0);
-              return (
-                <Tr key={c.id} onClick={c.status === 'Draft' ? undefined : () => navigate(`/performance/cycles/${c.id}`)}>
-                  <Td>
-                    <p className="font-medium text-zinc-900 dark:text-zinc-100">{c.name}</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {formatDate(c.periodFrom)} – {formatDate(c.periodTo)} · {c.template} · {c.departments.length ? c.departments.join(', ') : 'Everyone'}
+        <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-2">
+          {list.data.map((c) => {
+            const done = (c.byStage.Done ?? 0) + (c.byStage.SignOff ?? 0);
+            const open = c.status !== 'Draft';
+            return (
+              <div
+                key={c.id}
+                role={open ? 'link' : undefined}
+                tabIndex={open ? 0 : undefined}
+                onClick={open ? () => navigate(`/performance/cycles/${c.id}`) : undefined}
+                onKeyDown={open ? (e) => e.key === 'Enter' && navigate(`/performance/cycles/${c.id}`) : undefined}
+                className={cn(
+                  'relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white to-indigo-50/40 p-4 transition-all dark:border-white/[0.07] dark:from-white/[0.02] dark:to-indigo-500/[0.04]',
+                  open && 'cursor-pointer hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-[0_18px_40px_-22px_rgb(79_70_229/0.4)] focus-visible:outline-2 focus-visible:outline-accent-500 dark:hover:border-indigo-400/25',
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  {open ? (
+                    <ProgressRing value={c.reviews ? done / c.reviews : 0} size={64} stroke={7} title={txf('{done} of {total}', { done, total: c.reviews })} />
+                  ) : (
+                    <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20">
+                      <Rocket className="size-6" aria-hidden="true" />
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate font-semibold text-zinc-900 dark:text-white">{c.name}</p>
+                      <Badge tone={c.status === 'Active' ? 'green' : c.status === 'Draft' ? 'amber' : 'gray'} dot>
+                        {c.status}
+                      </Badge>
+                    </div>
+                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                      {formatDate(c.periodFrom)} – {formatDate(c.periodTo)} · {c.template}
                     </p>
-                  </Td>
-                  <Td>
-                    <Badge tone={c.status === 'Active' ? 'green' : c.status === 'Draft' ? 'amber' : 'gray'}>{c.status}</Badge>
-                  </Td>
-                  <Td className="text-xs text-zinc-600 dark:text-zinc-300">
-                    {c.status === 'Draft'
-                      ? '—'
-                      : `${done}/${c.reviews} released · ${c.byStage.Calibration ?? 0} with HR · ${(c.byStage.ManagerReview ?? 0) + (c.byStage.SelfReview ?? 0) + (c.byStage.Goals ?? 0) + (c.byStage.GoalsSubmitted ?? 0)} in progress`}
-                  </Td>
-                  <Td>
-                    <RecordStampCell stamps={c.stamps} />
-                  </Td>
-                  <Td className="text-end" onClick={(e) => e.stopPropagation()}>
+                    <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{c.departments.length ? c.departments.join(', ') : tx('Everyone')}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-1" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
                     {c.status === 'Draft' ? (
-                      <div className="flex justify-end gap-1">
+                      <>
                         <Button size="sm" icon={<Rocket className="size-3.5" />} onClick={() => setLaunching(c)}>
                           Launch
                         </Button>
                         <RowActions label={c.name} onEdit={() => setEditing(c)} onDelete={() => setDeleting(c)} />
-                      </div>
+                      </>
                     ) : (
                       <RowActions label={c.name} onEdit={c.status === 'Active' ? () => setEditing(c) : undefined} />
                     )}
-                  </Td>
-                </Tr>
-              );
-            })}
-          </TBody>
-        </Table>
+                  </div>
+                </div>
+                {open ? (
+                  <StageMix byStage={c.byStage} total={c.reviews} className="mt-4" />
+                ) : (
+                  <p className="mt-4 text-xs text-zinc-500 dark:text-zinc-400">{tx('Launch it to start reviews for everyone in scope.')}</p>
+                )}
+                <RecordStamp stamps={c.stamps} className="mt-3 border-t border-zinc-100 pt-2.5 dark:border-white/[0.06]" />
+              </div>
+            );
+          })}
+        </div>
       )}
       {editing && <CycleModal item={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
       <ConfirmDialog

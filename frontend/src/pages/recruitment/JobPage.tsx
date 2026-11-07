@@ -19,6 +19,7 @@ import {
   type PipelineCard,
 } from '../../api/recruitment';
 import {
+  Avatar,
   Badge,
   Button,
   Card,
@@ -39,7 +40,8 @@ import { RecordStamp } from '../../components/RecordStamp';
 import { cn } from '../../lib/cn';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { relative } from '../helpdesk/shared';
-import { CandidateFields, careersUrl, cvProblem, JobPostModal, PostStatusBadge, Stars, StageBadge, useCopy } from './shared';
+import { CandidateFields, careersUrl, cvProblem, JobPostModal, PIPE_COLORS, PostStatusBadge, Stars, StageBadge, useCopy } from './shared';
+import { tx } from '../../lib/i18n';
 
 type Column = ApplicationStage | 'Closed';
 const COLUMNS: Column[] = [...PIPELINE, 'Closed'];
@@ -248,14 +250,19 @@ export function JobPage() {
                   onDragLeave={() => setDragOver((c) => (c === col ? null : c))}
                   onDrop={(e) => drop(col, e)}
                   className={cn(
-                    'flex min-h-72 flex-col rounded-xl bg-zinc-100/70 p-2 transition dark:bg-zinc-900/60',
+                    'flex min-h-72 flex-col rounded-2xl border border-zinc-200/70 bg-gradient-to-b to-zinc-50/40 p-2 transition dark:border-white/[0.06] dark:to-transparent',
+                    PIPE_COLORS[col === 'Closed' ? 'Rejected' : col].col,
                     dragOver === col && 'ring-2 ring-accent-400',
                   )}
                   aria-label={col === 'Closed' ? 'Not going ahead' : STAGE_LABELS[col]}
                 >
-                  <h2 className="mb-2 flex items-center justify-between px-1 text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400 uppercase">
-                    {col === 'Closed' ? 'Not going ahead' : STAGE_LABELS[col]}
-                    <span className="rounded-full bg-white px-1.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{list.length}</span>
+                  <div className={cn('mb-2 h-1 rounded-full bg-gradient-to-r rtl:bg-gradient-to-l', PIPE_COLORS[col === 'Closed' ? 'Rejected' : col].bar)} aria-hidden="true" />
+                  <h2 className={cn('mb-2 flex items-center justify-between gap-2 px-1 text-xs font-semibold', PIPE_COLORS[col === 'Closed' ? 'Rejected' : col].text)}>
+                    <span className="flex items-center gap-1.5">
+                      <span className={cn('size-2 rounded-full', PIPE_COLORS[col === 'Closed' ? 'Rejected' : col].dot)} aria-hidden="true" />
+                      {tx(col === 'Closed' ? 'Not going ahead' : STAGE_LABELS[col])}
+                    </span>
+                    <span className="min-w-6 rounded-full bg-white px-1.5 text-center text-[11px] leading-5 text-zinc-700 shadow-xs ring-1 ring-zinc-200/80 tabular-nums dark:bg-white/[0.08] dark:text-zinc-200 dark:ring-white/10">{list.length}</span>
                   </h2>
                   <div className="flex flex-1 flex-col gap-2">
                     {list.map((c) => (
@@ -295,15 +302,20 @@ function CandidateCard({ card }: { card: PipelineCard }) {
       to={`/recruitment/applications/${card.id}`}
       draggable={card.stage !== 'Hired'}
       onDragStart={(e) => e.dataTransfer.setData('text/plain', card.id)}
-      className="block rounded-lg border border-zinc-200 bg-white p-2.5 text-start shadow-xs transition hover:border-accent-300 dark:border-zinc-700 dark:bg-zinc-900"
+      className="block rounded-xl border border-zinc-200/80 bg-white p-2.5 text-start shadow-xs transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md active:cursor-grabbing dark:border-white/10 dark:bg-zinc-900"
     >
-      <p className="flex items-center gap-1 text-sm font-medium text-zinc-900 dark:text-white">
-        <span className="truncate">{card.name}</span>
-        {card.isBlacklisted && <Ban className="size-3.5 shrink-0 text-red-500" aria-label="Do not hire" />}
-      </p>
-      <p className="truncate text-xs text-zinc-500">
-        {[card.currentTitle, card.experienceYears != null ? `${card.experienceYears} yrs` : null].filter(Boolean).join(' · ') || card.email}
-      </p>
+      <div className="flex items-center gap-2">
+        <Avatar name={card.name} size="sm" />
+        <div className="min-w-0">
+          <p className="flex items-center gap-1 text-sm font-medium text-zinc-900 dark:text-white">
+            <span className="truncate">{card.name}</span>
+            {card.isBlacklisted && <Ban className="size-3.5 shrink-0 text-red-500" aria-label="Do not hire" />}
+          </p>
+          <p className="truncate text-xs text-zinc-500">
+            {[card.currentTitle, card.experienceYears != null ? `${card.experienceYears} yrs` : null].filter(Boolean).join(' · ') || card.email}
+          </p>
+        </div>
+      </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         {card.rating ? <Stars value={card.rating} size="sm" /> : null}
         {card.interviews > 0 && (

@@ -4,6 +4,7 @@ import { Check } from 'lucide-react';
 import { qk } from '../../api/keys';
 import { performanceApi, POTENTIAL_LABELS, STAGE_LABELS, STAGE_ORDER, type ReviewListItem, type ReviewStage } from '../../api/performance';
 import { cn } from '../../lib/cn';
+import { tx } from '../../lib/i18n';
 
 /** 1–5 buttons with the company's rating names. */
 export function RatingPicker({ value, onChange, labels }: { value: number | null; onChange: (v: number) => void; labels?: string[] }) {
@@ -82,6 +83,55 @@ export function StageBar({
         );
       })}
     </ol>
+  );
+}
+
+/** One colour per review stage, used by chips, the stage mix bar and its legend. */
+export const STAGE_COLORS: Record<ReviewStage, { dot: string; chip: string }> = {
+  Goals: { dot: 'bg-amber-400', chip: 'bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300' },
+  GoalsSubmitted: { dot: 'bg-orange-400', chip: 'bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-500/10 dark:text-orange-300' },
+  SelfReview: { dot: 'bg-sky-400', chip: 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-300' },
+  ManagerReview: { dot: 'bg-indigo-500', chip: 'bg-indigo-50 text-indigo-700 ring-indigo-600/20 dark:bg-indigo-500/10 dark:text-indigo-300' },
+  FinalReview: { dot: 'bg-violet-500', chip: 'bg-violet-50 text-violet-700 ring-violet-600/20 dark:bg-violet-500/10 dark:text-violet-300' },
+  Calibration: { dot: 'bg-fuchsia-500', chip: 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-600/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-300' },
+  SignOff: { dot: 'bg-teal-500', chip: 'bg-teal-50 text-teal-700 ring-teal-600/20 dark:bg-teal-500/10 dark:text-teal-300' },
+  Done: { dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-300' },
+};
+
+/** A review stage as a coloured chip with a dot. */
+export function StageChip({ stage }: { stage: ReviewStage }) {
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset', STAGE_COLORS[stage].chip)}>
+      <span className={cn('size-1.5 rounded-full', STAGE_COLORS[stage].dot)} aria-hidden="true" />
+      {tx(STAGE_LABELS[stage])}
+    </span>
+  );
+}
+
+/** How far a review has come through the stages, 0–1 (Done = 1). */
+export function stageProgress(stage: ReviewStage) {
+  return stage === 'Done' ? 1 : STAGE_ORDER.indexOf(stage) / (STAGE_ORDER.length - 1);
+}
+
+/** Where a cycle's reviews are: one coloured segment per stage, with a legend of counts. */
+export function StageMix({ byStage, total, className }: { byStage: Partial<Record<ReviewStage, number>>; total: number; className?: string }) {
+  const parts = STAGE_ORDER.map((s) => [s, byStage[s] ?? 0] as const).filter(([, n]) => n > 0);
+  return (
+    <div className={className}>
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/[0.07]" aria-hidden="true">
+        {parts.map(([s, n]) => (
+          <span key={s} className={cn('h-full first:rounded-s-full last:rounded-e-full', STAGE_COLORS[s].dot)} style={{ width: `${(n / Math.max(1, total)) * 100}%` }} />
+        ))}
+      </div>
+      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+        {parts.map(([s, n]) => (
+          <li key={s} className="inline-flex items-center gap-1.5">
+            <span className={cn('size-2 rounded-full', STAGE_COLORS[s].dot)} aria-hidden="true" />
+            {tx(STAGE_LABELS[s])} <span className="font-semibold text-zinc-900 tabular-nums dark:text-zinc-100">{n}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

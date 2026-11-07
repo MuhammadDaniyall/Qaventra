@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Ban, BarChart3, Briefcase, CalendarClock, Copy, Gift, Link2, MapPin, Pencil, Plus, Search, UserPlus, Users } from 'lucide-react';
+import { Ban, BarChart3, Briefcase, CalendarClock, Copy, Gift, Link2, MapPin, Pencil, Plus, Search, UserCheck, UserPlus, Users } from 'lucide-react';
 import { errorMessage } from '../../api/client';
 import { useDepartments, useDesignations, useEmployeeLookup } from '../../api/hooks';
 import { budgetApi } from '../../api/budget';
@@ -38,8 +38,10 @@ import {
   Input,
   Modal,
   PageHeader,
+  ProgressRing,
   Select,
   SkeletonRows,
+  StatCard,
   StatusBadge,
   Table,
   TBody,
@@ -53,7 +55,8 @@ import {
 } from '../../components/ui';
 import { formatCurrency, formatDate, formatDateTimeUtc, todayIso } from '../../lib/format';
 import { useDebounced } from '../../lib/hooks';
-import { CandidateFields, careersUrl, cvProblem, JobPostModal, PostStatusBadge, StageBadge, useCopy } from './shared';
+import { CandidateFields, careersUrl, cvProblem, JobPostModal, PipelineMix, PostStatusBadge, StageBadge, useCopy } from './shared';
+import { tx, txf } from '../../lib/i18n';
 import { InterviewTemplatesTab } from './InterviewTemplates';
 
 type Tab = 'jobs' | 'requests' | 'candidates' | 'interviews' | 'templates' | 'openings' | 'report';
@@ -93,6 +96,7 @@ export function RecruitmentPage() {
   return (
     <>
       <PageHeader title="Recruitment" description={team ? 'Jobs, candidates, interviews and offers.' : 'Open jobs, referrals and your interviews.'} />
+      {team && <RecruitmentOverview />}
       <Tabs<Tab> className="mb-5" value={tab} onChange={(t) => setParams({ tab: t })} items={allowed.map((t) => ({ value: t, label: labels[t] }))} />
       {tab === 'jobs' && <JobsTab me={m} />}
       {tab === 'requests' && <RequestsTab me={m} />}
@@ -102,6 +106,27 @@ export function RecruitmentPage() {
       {tab === 'openings' && <OpeningsTab />}
       {tab === 'report' && <ReportTab />}
     </>
+  );
+}
+
+// ---------- Overview ----------
+
+/** The hiring funnel at a glance; each tile opens the tab behind it. */
+function RecruitmentOverview() {
+  const jobs = useQuery({ queryKey: qk.jobPosts, queryFn: recruitmentApi.jobs });
+  const list = jobs.data ?? [];
+  const open = list.filter((j) => j.status === 'Open');
+  const sum = (stage: ApplicationStage) => list.reduce((n, j) => n + (j.byStage[stage] ?? 0), 0);
+  const inPipeline = (['Applied', 'Shortlisted', 'Test', 'Interview', 'Offer'] as ApplicationStage[]).reduce((n, s) => n + sum(s), 0);
+  const positions = open.reduce((n, j) => n + j.positions, 0);
+  const loading = jobs.isLoading;
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <StatCard label="Open jobs" value={open.length} icon={Briefcase} loading={loading} hint={txf('{n} positions', { n: positions })} to="/recruitment?tab=jobs" />
+      <StatCard label="In the pipeline" value={inPipeline} icon={Users} tone="blue" loading={loading} hint={txf('{n} shortlisted', { n: sum('Shortlisted') })} to="/recruitment?tab=candidates" />
+      <StatCard label="Interviewing" value={sum('Interview')} icon={CalendarClock} tone="amber" loading={loading} hint={txf('{n} with an offer', { n: sum('Offer') })} to="/recruitment?tab=candidates" />
+      <StatCard label="Hired" value={sum('Hired')} icon={UserCheck} tone="green" loading={loading} hint="Across all jobs" to="/recruitment?tab=report" />
+    </div>
   );
 }
 
@@ -141,59 +166,55 @@ function JobsTab({ me }: { me: RecruitmentMe }) {
             description={me.isHr ? 'Create a job, open it, and share the careers link.' : 'Jobs you recruit for show up here.'}
           />
         ) : (
-          <Table>
-            <THead>
-              <Tr>
-                <Th>Job</Th>
-                <Th>Status</Th>
-                <Th>Pipeline</Th>
-                <Th>Team</Th>
-                <Th className="text-end">Candidates</Th>
-                <Th>Added / modified</Th>
-              </Tr>
-            </THead>
-            <TBody>
-              {jobs.data.map((j) => (
-                <Tr key={j.id} className="cursor-pointer" onClick={() => navigate(`/recruitment/jobs/${j.id}`)}>
-                  <Td>
-                    <Link
-                      to={`/recruitment/jobs/${j.id}`}
-                      className="font-medium text-zinc-900 hover:text-accent-600 dark:text-white"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {j.title}
-                    </Link>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      {[j.department, j.location, EMPLOYMENT_LABELS[j.employmentType], `${j.positions} position${j.positions === 1 ? '' : 's'}`]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                  </Td>
-                  <Td>
-                    <PostStatusBadge status={j.status} />
-                    {j.closesOn && j.status === 'Open' && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Closes {formatDate(j.closesOn)}</p>}
-                  </Td>
-                  <Td>
-                    <div className="flex flex-wrap gap-1">
-                      {PIPELINE.filter((s) => j.byStage[s]).map((s) => (
-                        <span key={s} className="rounded bg-zinc-100 px-1.5 py-0.5 text-[11px] text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-                          {STAGE_LABELS[s]} {j.byStage[s]}
-                        </span>
-                      ))}
+          <div className="grid gap-4 p-4 sm:p-5 md:grid-cols-2 2xl:grid-cols-3">
+            {jobs.data.map((j) => {
+              const hired = j.byStage.Hired ?? 0;
+              return (
+                <Link
+                  key={j.id}
+                  to={`/recruitment/jobs/${j.id}`}
+                  className="group relative flex flex-col overflow-hidden rounded-2xl border border-zinc-200/80 bg-gradient-to-br from-white to-indigo-50/40 p-4 transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-[0_18px_40px_-22px_rgb(79_70_229/0.4)] focus-visible:outline-2 focus-visible:outline-accent-500 dark:border-white/[0.07] dark:from-white/[0.02] dark:to-indigo-500/[0.04] dark:hover:border-indigo-400/25"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-md shadow-indigo-500/25 ring-1 ring-inset ring-white/20">
+                      <Briefcase className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-zinc-900 group-hover:text-indigo-700 dark:text-white dark:group-hover:text-indigo-300">{j.title}</p>
+                      <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        {[j.department, j.location, EMPLOYMENT_LABELS[j.employmentType]].filter(Boolean).join(' · ')}
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <PostStatusBadge status={j.status} />
+                        {j.closesOn && j.status === 'Open' && (
+                          <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {tx('Closes')} {formatDate(j.closesOn)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </Td>
-                  <Td className="text-xs text-zinc-600 dark:text-zinc-300">
-                    {j.recruiter && <p>Recruiter: {j.recruiter}</p>}
-                    {j.hiringManager && <p>Manager: {j.hiringManager}</p>}
-                  </Td>
-                  <Td className="text-end tabular-nums">{j.total}</Td>
-                  <Td>
-                    <RecordStampCell stamps={j.stamps} />
-                  </Td>
-                </Tr>
-              ))}
-            </TBody>
-          </Table>
+                    <ProgressRing
+                      value={j.positions ? hired / j.positions : 0}
+                      size={52}
+                      stroke={6}
+                      label={`${hired}/${j.positions}`}
+                      title={txf('{hired} of {positions} positions filled', { hired, positions: j.positions })}
+                    />
+                  </div>
+                  <PipelineMix byStage={j.byStage} className="mt-4" />
+                  <div className="mt-auto flex items-center justify-between gap-2 border-t border-zinc-100 pt-3 text-xs text-zinc-500 dark:border-white/[0.06] dark:text-zinc-400">
+                    <span className="truncate">
+                      {[j.recruiter && `${tx('Recruiter')}: ${j.recruiter}`, j.hiringManager && `${tx('Manager')}: ${j.hiringManager}`].filter(Boolean).join(' · ') || '—'}
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1 font-medium text-zinc-700 dark:text-zinc-200">
+                      <Users className="size-3.5" aria-hidden="true" />
+                      {j.total}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         )}
       </Card>
       {creating && <JobPostModal onClose={() => setCreating(false)} onSaved={(p) => navigate(`/recruitment/jobs/${p.id}`)} />}

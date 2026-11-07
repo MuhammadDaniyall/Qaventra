@@ -2,10 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Lock, Send } from 'lucide-react';
 import { qk } from '../../api/keys';
-import { performanceApi, POTENTIAL_LABELS, STAGE_LABELS } from '../../api/performance';
+import { performanceApi, POTENTIAL_LABELS, type ReviewStage } from '../../api/performance';
 import { RecordStampCell } from '../../components/RecordStamp';
-import { Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, Table, TBody, Td, Th, THead, Tr, useToast } from '../../components/ui';
-import { NineBox } from './shared';
+import { Badge, Button, Card, CardBody, CardHeader, ErrorState, PageHeader, PageSpinner, ProgressRing, Table, TBody, Td, Th, THead, Tr, useToast } from '../../components/ui';
+import { NineBox, StageChip, StageMix } from './shared';
+import { tx, txf } from '../../lib/i18n';
 
 /** HR: everyone in a cycle with the 9-box, the bell curve against target, suggested raises, and releasing reviews. */
 export function CalibrationPage() {
@@ -42,6 +43,8 @@ export function CalibrationPage() {
   const d = data.data;
   const withHr = d.reviews.filter((r) => r.stage === 'Calibration').length;
   const max = Math.max(1, ...d.bellTarget, ...d.bellActual);
+  const byStage = d.reviews.reduce<Partial<Record<ReviewStage, number>>>((acc, r) => ((acc[r.stage] = (acc[r.stage] ?? 0) + 1), acc), {});
+  const doneCount = (byStage.Done ?? 0) + (byStage.SignOff ?? 0);
   return (
     <>
       <PageHeader
@@ -61,6 +64,18 @@ export function CalibrationPage() {
           )
         }
       />
+      {/* Where everyone is: a completion ring and the stage mix, before the 9-box. */}
+      <Card className="mb-6 flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
+        <div className="flex items-center gap-4">
+          <ProgressRing value={d.reviews.length ? doneCount / d.reviews.length : 0} size={76} stroke={8} />
+          <div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{tx('Reviews done')}</p>
+            <p className="text-xl font-semibold text-zinc-900 tabular-nums dark:text-white">{txf('{done} of {total}', { done: doneCount, total: d.reviews.length })}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">{txf('{n} with HR', { n: withHr })}</p>
+          </div>
+        </div>
+        <StageMix byStage={byStage} total={d.reviews.length} className="min-w-0 flex-1 sm:border-s sm:border-zinc-100 sm:ps-5 dark:sm:border-white/[0.06]" />
+      </Card>
       <div className="mb-6 grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader title="9-box" description="Click a name to open their review." />
@@ -76,7 +91,7 @@ export function CalibrationPage() {
                 <div key={l} className="flex flex-1 flex-col items-center gap-1">
                   <div className="flex h-44 w-full items-end justify-center gap-1">
                     <div className="w-1/3 rounded-t bg-zinc-200 dark:bg-zinc-700" style={{ height: `${(d.bellTarget[i] / max) * 100}%` }} title={`Target ${d.bellTarget[i]}%`} />
-                    <div className="w-1/3 rounded-t bg-accent-500" style={{ height: `${(d.bellActual[i] / max) * 100}%` }} title={`Actual ${d.bellActual[i]}%`} />
+                    <div className="w-1/3 rounded-t bg-gradient-to-t from-indigo-500 to-fuchsia-500" style={{ height: `${(d.bellActual[i] / max) * 100}%` }} title={`Actual ${d.bellActual[i]}%`} />
                   </div>
                   <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{i + 1}</span>
                   <span className="text-center text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -118,7 +133,7 @@ export function CalibrationPage() {
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">{[r.department, r.reviewer && `by ${r.reviewer}`].filter(Boolean).join(' · ')}</p>
                 </Td>
                 <Td>
-                  <Badge tone={r.stage === 'Done' ? 'green' : r.stage === 'Calibration' ? 'violet' : 'amber'}>{STAGE_LABELS[r.stage]}</Badge>
+                  <StageChip stage={r.stage} />
                   {r.employeeAgrees === false && <Badge tone="red">Disagrees</Badge>}
                 </Td>
                 <Td className="text-end tabular-nums">{r.selfScore ?? '—'}</Td>
